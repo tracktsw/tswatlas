@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, ThumbsUp, Plus, Send, Loader2 } from 'lucide-react';
+import { Users, ThumbsUp, ThumbsDown, Plus, Send, Loader2 } from 'lucide-react';
 import { useLocalStorage } from '@/contexts/LocalStorageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -21,7 +21,8 @@ interface Treatment {
 interface TreatmentWithVotes extends Treatment {
   totalVotes: number;
   helpfulVotes: number;
-  userVoted: boolean;
+  harmfulVotes: number;
+  userVote: 'helps' | 'harms' | null;
 }
 
 const categories = [
@@ -64,13 +65,16 @@ const CommunityPage = () => {
       const treatmentsWithVotes: TreatmentWithVotes[] = (treatmentData || []).map(treatment => {
         const votes = voteData?.filter(v => v.treatment_id === treatment.id) || [];
         const helpfulVotes = votes.filter(v => v.helps).length;
-        const userVoted = votes.some(v => v.voter_id === voterId);
+        const harmfulVotes = votes.filter(v => !v.helps).length;
+        const userVoteData = votes.find(v => v.voter_id === voterId);
+        const userVote = userVoteData ? (userVoteData.helps ? 'helps' : 'harms') : null;
 
         return {
           ...treatment,
           totalVotes: votes.length,
           helpfulVotes,
-          userVoted,
+          harmfulVotes,
+          userVote,
         };
       });
 
@@ -78,37 +82,43 @@ const CommunityPage = () => {
         if (a.totalVotes === 0 && b.totalVotes === 0) return 0;
         if (a.totalVotes === 0) return 1;
         if (b.totalVotes === 0) return -1;
-        const aPercent = a.helpfulVotes / a.totalVotes;
-        const bPercent = b.helpfulVotes / b.totalVotes;
-        return bPercent - aPercent || b.totalVotes - a.totalVotes;
+        const aScore = (a.helpfulVotes - a.harmfulVotes) / a.totalVotes;
+        const bScore = (b.helpfulVotes - b.harmfulVotes) / b.totalVotes;
+        return bScore - aScore || b.totalVotes - a.totalVotes;
       });
     },
   });
 
   // Vote mutation
   const voteMutation = useMutation({
-    mutationFn: async (treatmentId: string) => {
+    mutationFn: async ({ treatmentId, helps }: { treatmentId: string; helps: boolean }) => {
       const existing = treatments.find(t => t.id === treatmentId);
       
-      if (existing?.userVoted) {
-        // Remove vote
-        const { error } = await supabase
+      if (existing?.userVote) {
+        // User already voted - delete existing vote first
+        await supabase
           .from('treatment_votes')
           .delete()
           .eq('treatment_id', treatmentId)
           .eq('voter_id', voterId);
-        if (error) throw error;
-      } else {
-        // Add vote
-        const { error } = await supabase
-          .from('treatment_votes')
-          .insert({
-            treatment_id: treatmentId,
-            voter_id: voterId,
-            helps: true,
-          });
-        if (error) throw error;
+        
+        // If clicking the same button, just remove (toggle off)
+        const isSameVote = (existing.userVote === 'helps' && helps) || 
+                          (existing.userVote === 'harms' && !helps);
+        if (isSameVote) {
+          return;
+        }
       }
+      
+      // Add new vote
+      const { error } = await supabase
+        .from('treatment_votes')
+        .insert({
+          treatment_id: treatmentId,
+          voter_id: voterId,
+          helps,
+        });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['treatments'] });
@@ -145,8 +155,8 @@ const CommunityPage = () => {
     },
   });
 
-  const handleVote = (treatmentId: string) => {
-    voteMutation.mutate(treatmentId);
+  const handleVote = (treatmentId: string, helps: boolean) => {
+    voteMutation.mutate({ treatmentId, helps });
   };
 
   const handleSuggest = () => {
@@ -157,9 +167,14 @@ const CommunityPage = () => {
     suggestMutation.mutate();
   };
 
-  const getPercentage = (treatment: TreatmentWithVotes) => {
+  const getHelpfulPercentage = (treatment: TreatmentWithVotes) => {
     if (treatment.totalVotes === 0) return 0;
     return Math.round((treatment.helpfulVotes / treatment.totalVotes) * 100);
+  };
+
+  const getHarmfulPercentage = (treatment: TreatmentWithVotes) => {
+    if (treatment.totalVotes === 0) return 0;
+    return Math.round((treatment.harmfulVotes / treatment.totalVotes) * 100);
   };
 
   return (
@@ -240,7 +255,7 @@ const CommunityPage = () => {
           <div>
             <h2 className="font-semibold text-foreground">Anonymous Voting</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Tap "This helps me" on treatments that work for you. See what's helping the TSW community heal.
+              Vote on what helps or worsens your symptoms. Help others learn from the community's experience.
             </p>
           </div>
         </div>
@@ -254,21 +269,24 @@ const CommunityPage = () => {
       ) : (
         <div className="space-y-3">
           {treatments.map((treatment, index) => {
-            const percentage = getPercentage(treatment);
+            const helpfulPercent = getHelpfulPercentage(treatment);
+            const harmfulPercent = getHarmfulPercentage(treatment);
+            
             return (
               <div 
                 key={treatment.id} 
                 className={cn(
                   'glass-card p-4 transition-all',
-                  treatment.userVoted && 'ring-2 ring-primary'
+                  treatment.userVote === 'helps' && 'ring-2 ring-primary',
+                  treatment.userVote === 'harms' && 'ring-2 ring-destructive'
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       {index < 3 && treatment.totalVotes > 0 && (
                         <span className={cn(
-                          'text-xs font-bold px-2 py-0.5 rounded-full',
+                          'text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
                           index === 0 && 'bg-yellow-500/20 text-yellow-700',
                           index === 1 && 'bg-gray-400/20 text-gray-600',
                           index === 2 && 'bg-amber-600/20 text-amber-700'
@@ -283,37 +301,68 @@ const CommunityPage = () => {
                         {treatment.description}
                       </p>
                     )}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs bg-muted px-2 py-0.5 rounded-full capitalize">
                         {treatment.category}
                       </span>
                       {treatment.totalVotes > 0 && (
                         <span className="text-xs text-muted-foreground">
-                          {percentage}% find this helpful ({treatment.totalVotes} votes)
+                          {treatment.totalVotes} votes
                         </span>
                       )}
                     </div>
                   </div>
-                  <Button
-                    variant={treatment.userVoted ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => handleVote(treatment.id)}
-                    disabled={voteMutation.isPending}
-                    className="shrink-0 gap-1"
-                  >
-                    <ThumbsUp className={cn(
-                      'w-4 h-4',
-                      treatment.userVoted && 'fill-current'
-                    )} />
-                    {treatment.userVoted ? 'Voted' : 'Helps me'}
-                  </Button>
+                  <div className="flex gap-1 shrink-0">
+                    <Button
+                      variant={treatment.userVote === 'helps' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleVote(treatment.id, true)}
+                      disabled={voteMutation.isPending}
+                      className="gap-1 px-2"
+                    >
+                      <ThumbsUp className={cn(
+                        'w-4 h-4',
+                        treatment.userVote === 'helps' && 'fill-current'
+                      )} />
+                      <span className="sr-only sm:not-sr-only">Helps</span>
+                    </Button>
+                    <Button
+                      variant={treatment.userVote === 'harms' ? 'destructive' : 'outline'}
+                      size="sm"
+                      onClick={() => handleVote(treatment.id, false)}
+                      disabled={voteMutation.isPending}
+                      className="gap-1 px-2"
+                    >
+                      <ThumbsDown className={cn(
+                        'w-4 h-4',
+                        treatment.userVote === 'harms' && 'fill-current'
+                      )} />
+                      <span className="sr-only sm:not-sr-only">Worsens</span>
+                    </Button>
+                  </div>
                 </div>
+                
+                {/* Vote breakdown bar */}
                 {treatment.totalVotes > 0 && (
-                  <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary rounded-full transition-all"
-                      style={{ width: `${percentage}%` }}
-                    />
+                  <div className="mt-3 space-y-1">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span className="text-primary font-medium">
+                        👍 {helpfulPercent}% helps ({treatment.helpfulVotes})
+                      </span>
+                      <span className="text-destructive font-medium">
+                        👎 {harmfulPercent}% worsens ({treatment.harmfulVotes})
+                      </span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden flex">
+                      <div 
+                        className="h-full bg-primary transition-all"
+                        style={{ width: `${helpfulPercent}%` }}
+                      />
+                      <div 
+                        className="h-full bg-destructive transition-all"
+                        style={{ width: `${harmfulPercent}%` }}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
