@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import PaywallGuard from '@/components/PaywallGuard';
 import { LeafIllustration, HeartIllustration } from '@/components/illustrations';
+import { SparkleEffect } from '@/components/SparkleEffect';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 
@@ -19,6 +20,7 @@ const JournalPage = () => {
   const [newMood, setNewMood] = useState<number | undefined>();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
+  const [showSparkles, setShowSparkles] = useState(false);
 
   const handleSave = () => {
     if (!newContent.trim()) {
@@ -31,6 +33,9 @@ const JournalPage = () => {
       content: newContent.trim(),
       mood: newMood,
     });
+    
+    // Show celebration sparkles
+    setShowSparkles(true);
     
     setNewContent('');
     setNewMood(undefined);
@@ -63,6 +68,9 @@ const JournalPage = () => {
   return (
     <PaywallGuard feature="Journal">
     <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
+      {/* Sparkle celebration effect */}
+      <SparkleEffect isActive={showSparkles} onComplete={() => setShowSparkles(false)} />
+      
       {/* Decorative elements */}
       <div className="decorative-blob w-36 h-36 bg-primary/25 -top-10 -right-10 fixed" />
       <div className="decorative-blob w-40 h-40 bg-honey/20 bottom-32 -left-16 fixed" />
