@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Camera, CheckCircle, BarChart3, Users, BookOpen, Settings, Sparkles, Calendar as CalendarIcon, Flame, Pencil } from 'lucide-react';
+import tswAtlasLogo from '@/assets/tsw-atlas-logo.png';
 import { useLocalStorage } from '@/contexts/LocalStorageContext';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -66,13 +67,16 @@ const HomePage = () => {
     <div className="px-4 py-6 space-y-6 max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-foreground">
-            TSW Atlas
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Your healing journey, one day at a time
-          </p>
+        <div className="flex items-center gap-3">
+          <img src={tswAtlasLogo} alt="TSW Atlas" className="w-10 h-10 rounded-xl" />
+          <div>
+            <h1 className="font-display text-2xl font-bold text-foreground">
+              TSW Atlas
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Your healing journey, one day at a time
+            </p>
+          </div>
         </div>
         <Link 
           to="/settings" 
