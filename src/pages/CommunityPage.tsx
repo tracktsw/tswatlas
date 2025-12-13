@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, ThumbsUp, ThumbsDown, Plus, Send, Loader2 } from 'lucide-react';
+import { Users, ThumbsUp, ThumbsDown, Plus, Send, Loader2, Heart, Sparkles } from 'lucide-react';
 import { useLocalStorage } from '@/contexts/LocalStorageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -180,36 +180,41 @@ const CommunityPage = () => {
 
   return (
     <PaywallGuard feature="Community">
-    <div className="px-4 py-6 space-y-6 max-w-lg mx-auto">
-      <div className="flex items-center justify-between">
+    <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
+      {/* Decorative elements */}
+      <div className="decorative-blob w-36 h-36 bg-terracotta/25 -top-10 -right-10 fixed" />
+      <div className="decorative-blob w-44 h-44 bg-primary/20 bottom-32 -left-16 fixed" />
+      
+      <div className="flex items-center justify-between animate-fade-in">
         <div>
-          <h1 className="font-display text-2xl font-bold text-foreground">Community</h1>
-          <p className="text-sm text-muted-foreground">What's helping others heal</p>
+          <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">Community</h1>
+          <p className="text-muted-foreground">What's helping others heal</p>
         </div>
         <Dialog open={suggestionOpen} onOpenChange={setSuggestionOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-1">
+            <Button variant="outline" size="sm" className="gap-1.5 rounded-xl">
               <Plus className="w-4 h-4" />
               Suggest
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-sm">
             <DialogHeader>
-              <DialogTitle>Suggest a Treatment</DialogTitle>
+              <DialogTitle className="font-display text-xl">Suggest a Treatment</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Treatment Name</label>
+                <label className="text-sm font-semibold mb-2 block">Treatment Name</label>
                 <Input 
                   placeholder="e.g., Vitamin D supplements"
                   value={newTreatmentName}
                   onChange={(e) => setNewTreatmentName(e.target.value)}
+                  className="h-11 rounded-xl border-2"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Category</label>
+                <label className="text-sm font-semibold mb-2 block">Category</label>
                 <Select value={newTreatmentCategory} onValueChange={setNewTreatmentCategory}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11 rounded-xl border-2">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -222,17 +227,19 @@ const CommunityPage = () => {
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Description (optional)</label>
+                <label className="text-sm font-semibold mb-2 block">Description (optional)</label>
                 <Textarea 
                   placeholder="Brief description of how it helps..."
                   value={newTreatmentDesc}
                   onChange={(e) => setNewTreatmentDesc(e.target.value)}
                   rows={2}
+                  className="rounded-xl border-2 resize-none"
                 />
               </div>
               <Button 
                 onClick={handleSuggest} 
-                className="w-full gap-2"
+                variant="warm"
+                className="w-full h-11 gap-2"
                 disabled={suggestMutation.isPending}
               >
                 {suggestMutation.isPending ? (
@@ -248,14 +255,14 @@ const CommunityPage = () => {
       </div>
 
       {/* Info Card */}
-      <div className="glass-card p-4 warm-gradient">
-        <div className="flex items-start gap-3">
-          <div className="p-2 rounded-full bg-primary/20">
-            <Users className="w-5 h-5 text-primary" />
+      <div className="glass-card-warm p-5 animate-slide-up" style={{ animationDelay: '0.05s' }}>
+        <div className="flex items-start gap-4">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-terracotta/20 to-coral-light shadow-warm-sm animate-float">
+            <Users className="w-6 h-6 text-terracotta" />
           </div>
           <div>
-            <h2 className="font-semibold text-foreground">Anonymous Voting</h2>
-            <p className="text-sm text-muted-foreground mt-1">
+            <h2 className="font-display font-bold text-lg text-foreground">Anonymous Voting</h2>
+            <p className="text-muted-foreground mt-1">
               Vote on what helps or worsens your symptoms. Help others learn from the community's experience.
             </p>
           </div>
@@ -265,10 +272,10 @@ const CommunityPage = () => {
       {/* Treatments List */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <Loader2 className="w-8 h-8 animate-spin text-coral" />
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {treatments.map((treatment, index) => {
             const helpfulPercent = getHelpfulPercentage(treatment);
             const harmfulPercent = getHarmfulPercentage(treatment);
@@ -277,25 +284,26 @@ const CommunityPage = () => {
               <div 
                 key={treatment.id} 
                 className={cn(
-                  'glass-card p-4 transition-all',
+                  'glass-card p-5 transition-all duration-300 animate-slide-up hover:shadow-warm',
                   treatment.userVote === 'helps' && 'ring-2 ring-primary',
                   treatment.userVote === 'harms' && 'ring-2 ring-destructive'
                 )}
+                style={{ animationDelay: `${0.1 + index * 0.03}s` }}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                       {index < 3 && treatment.totalVotes > 0 && (
                         <span className={cn(
-                          'text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
-                          index === 0 && 'bg-yellow-500/20 text-yellow-700',
-                          index === 1 && 'bg-gray-400/20 text-gray-600',
-                          index === 2 && 'bg-amber-600/20 text-amber-700'
+                          'text-xs font-bold px-2.5 py-1 rounded-full shrink-0',
+                          index === 0 && 'bg-gradient-to-r from-honey/30 to-honey/10 text-honey',
+                          index === 1 && 'bg-muted text-muted-foreground',
+                          index === 2 && 'bg-gradient-to-r from-terracotta/20 to-coral-light/20 text-terracotta'
                         )}>
                           #{index + 1}
                         </span>
                       )}
-                      <h3 className="font-semibold text-foreground">{treatment.name}</h3>
+                      <h3 className="font-display font-bold text-foreground">{treatment.name}</h3>
                     </div>
                     {treatment.description && (
                       <p className="text-sm text-muted-foreground mb-2">
@@ -303,7 +311,7 @@ const CommunityPage = () => {
                       </p>
                     )}
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs bg-muted px-2 py-0.5 rounded-full capitalize">
+                      <span className="text-xs bg-muted font-medium px-2.5 py-1 rounded-full capitalize">
                         {treatment.category}
                       </span>
                       {treatment.totalVotes > 0 && (
@@ -313,13 +321,13 @@ const CommunityPage = () => {
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-1 shrink-0">
+                  <div className="flex gap-2 shrink-0">
                     <Button
                       variant={treatment.userVote === 'helps' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleVote(treatment.id, true)}
                       disabled={voteMutation.isPending}
-                      className="gap-1 px-2"
+                      className="gap-1.5 px-3 rounded-xl"
                     >
                       <ThumbsUp className={cn(
                         'w-4 h-4',
@@ -332,7 +340,7 @@ const CommunityPage = () => {
                       size="sm"
                       onClick={() => handleVote(treatment.id, false)}
                       disabled={voteMutation.isPending}
-                      className="gap-1 px-2"
+                      className="gap-1.5 px-3 rounded-xl"
                     >
                       <ThumbsDown className={cn(
                         'w-4 h-4',
@@ -345,22 +353,22 @@ const CommunityPage = () => {
                 
                 {/* Vote breakdown bar */}
                 {treatment.totalVotes > 0 && (
-                  <div className="mt-3 space-y-1">
+                  <div className="mt-4 space-y-2">
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span className="text-primary font-medium">
+                      <span className="text-primary font-semibold">
                         👍 {helpfulPercent}% helps ({treatment.helpfulVotes})
                       </span>
-                      <span className="text-destructive font-medium">
+                      <span className="text-destructive font-semibold">
                         👎 {harmfulPercent}% worsens ({treatment.harmfulVotes})
                       </span>
                     </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden flex">
+                    <div className="h-2.5 bg-muted rounded-full overflow-hidden flex">
                       <div 
-                        className="h-full bg-primary transition-all"
+                        className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500"
                         style={{ width: `${helpfulPercent}%` }}
                       />
                       <div 
-                        className="h-full bg-destructive transition-all"
+                        className="h-full bg-gradient-to-r from-destructive/80 to-destructive transition-all duration-500"
                         style={{ width: `${harmfulPercent}%` }}
                       />
                     </div>

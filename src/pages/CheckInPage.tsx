@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle, Sun, Moon, Check, Plus } from 'lucide-react';
+import { CheckCircle, Sun, Moon, Check, Plus, Heart } from 'lucide-react';
 import { useLocalStorage } from '@/contexts/LocalStorageContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -82,49 +82,55 @@ const CheckInPage = () => {
                     (timeOfDay === 'evening' && !hasEveningCheckIn);
 
   return (
-    <div className="px-4 py-6 space-y-6 max-w-lg mx-auto">
+    <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
+      {/* Decorative elements */}
+      <div className="decorative-blob w-32 h-32 bg-honey/30 -top-10 -left-10 fixed" />
+      <div className="decorative-blob w-40 h-40 bg-primary/20 bottom-40 -right-20 fixed" />
+      
       {/* Header */}
-      <div>
-        <h1 className="font-display text-2xl font-bold text-foreground">Daily Check-in</h1>
-        <p className="text-sm text-muted-foreground">How are you feeling today?</p>
+      <div className="animate-fade-in">
+        <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">Daily Check-in</h1>
+        <p className="text-muted-foreground">How are you feeling today?</p>
       </div>
 
       {/* Time of Day Toggle */}
-      <div className="flex gap-2">
+      <div className="flex gap-3 animate-slide-up" style={{ animationDelay: '0.05s' }}>
         <Button
-          variant={timeOfDay === 'morning' ? 'default' : 'outline'}
+          variant={timeOfDay === 'morning' ? 'warm' : 'outline'}
           className={cn(
-            'flex-1 gap-2',
+            'flex-1 gap-2 h-12 rounded-2xl',
             hasMorningCheckIn && 'opacity-50'
           )}
           onClick={() => setTimeOfDay('morning')}
           disabled={hasMorningCheckIn}
         >
-          <Sun className="w-4 h-4" />
+          <Sun className="w-5 h-5" />
           Morning
-          {hasMorningCheckIn && <Check className="w-4 h-4 text-primary" />}
+          {hasMorningCheckIn && <Check className="w-4 h-4" />}
         </Button>
         <Button
           variant={timeOfDay === 'evening' ? 'default' : 'outline'}
           className={cn(
-            'flex-1 gap-2',
+            'flex-1 gap-2 h-12 rounded-2xl',
             hasEveningCheckIn && 'opacity-50'
           )}
           onClick={() => setTimeOfDay('evening')}
           disabled={hasEveningCheckIn}
         >
-          <Moon className="w-4 h-4" />
+          <Moon className="w-5 h-5" />
           Evening
-          {hasEveningCheckIn && <Check className="w-4 h-4 text-primary" />}
+          {hasEveningCheckIn && <Check className="w-4 h-4" />}
         </Button>
       </div>
 
       {/* All done message */}
       {hasMorningCheckIn && hasEveningCheckIn && (
-        <div className="glass-card p-4 text-center warm-gradient">
-          <CheckCircle className="w-8 h-8 text-primary mx-auto mb-2" />
-          <p className="font-semibold text-foreground">All done for today!</p>
-          <p className="text-sm text-muted-foreground">
+        <div className="glass-card-warm p-6 text-center animate-scale-in">
+          <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-primary/20 to-sage-light flex items-center justify-center">
+            <CheckCircle className="w-8 h-8 text-primary" />
+          </div>
+          <p className="font-display font-bold text-lg text-foreground">All done for today!</p>
+          <p className="text-muted-foreground mt-1">
             You've completed both check-ins. Great job taking care of yourself!
           </p>
         </div>
@@ -133,36 +139,36 @@ const CheckInPage = () => {
       {canSubmit && (
         <>
           {/* Treatments */}
-          <div className="space-y-3">
-            <h3 className="font-display font-semibold text-foreground">
+          <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+            <h3 className="font-display font-bold text-lg text-foreground">
               What did you use today?
             </h3>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               {treatments.map(({ id, label, description }) => (
                 <button
                   key={id}
                   onClick={() => toggleTreatment(id)}
                   className={cn(
-                    'glass-card p-3 text-left transition-all',
+                    'glass-card p-4 text-left transition-all duration-300 hover:-translate-y-0.5',
                     selectedTreatments.includes(id) 
-                      ? 'ring-2 ring-primary bg-primary/5' 
-                      : 'hover:bg-muted/50'
+                      ? 'ring-2 ring-coral bg-coral/5 shadow-warm' 
+                      : 'hover:bg-muted/50 hover:shadow-warm-sm'
                   )}
                 >
                   <div className="flex items-center gap-2">
                     <div className={cn(
-                      'w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors',
+                      'w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300',
                       selectedTreatments.includes(id) 
-                        ? 'border-primary bg-primary' 
+                        ? 'border-coral bg-coral' 
                         : 'border-muted-foreground'
                     )}>
                       {selectedTreatments.includes(id) && (
-                        <Check className="w-3 h-3 text-primary-foreground" />
+                        <Check className="w-3.5 h-3.5 text-white" />
                       )}
                     </div>
-                    <span className="font-medium text-foreground text-sm">{label}</span>
+                    <span className="font-semibold text-foreground">{label}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1 ml-7">
+                  <p className="text-xs text-muted-foreground mt-1.5 ml-8">
                     {description}
                   </p>
                 </button>
@@ -171,32 +177,32 @@ const CheckInPage = () => {
             
             {/* Custom treatments as buttons */}
             {customTreatments.length > 0 && (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 {customTreatments.map((treatment) => (
                   <button
                     key={treatment}
                     onClick={() => toggleTreatment(treatment)}
                     className={cn(
-                      'glass-card p-3 text-left transition-all',
+                      'glass-card p-4 text-left transition-all duration-300 hover:-translate-y-0.5',
                       selectedTreatments.includes(treatment) 
-                        ? 'ring-2 ring-primary bg-primary/5' 
-                        : 'hover:bg-muted/50'
+                        ? 'ring-2 ring-coral bg-coral/5 shadow-warm' 
+                        : 'hover:bg-muted/50 hover:shadow-warm-sm'
                     )}
                   >
                     <div className="flex items-center gap-2">
                       <div className={cn(
-                        'w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors',
+                        'w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300',
                         selectedTreatments.includes(treatment) 
-                          ? 'border-primary bg-primary' 
+                          ? 'border-coral bg-coral' 
                           : 'border-muted-foreground'
                       )}>
                         {selectedTreatments.includes(treatment) && (
-                          <Check className="w-3 h-3 text-primary-foreground" />
+                          <Check className="w-3.5 h-3.5 text-white" />
                         )}
                       </div>
-                      <span className="font-medium text-foreground text-sm">{treatment}</span>
+                      <span className="font-semibold text-foreground">{treatment}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1 ml-7">
+                    <p className="text-xs text-muted-foreground mt-1.5 ml-8">
                       Custom treatment
                     </p>
                   </button>
@@ -211,7 +217,7 @@ const CheckInPage = () => {
                 value={customTreatment}
                 onChange={(e) => setCustomTreatment(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddCustomTreatment()}
-                className="flex-1"
+                className="flex-1 h-11 rounded-xl border-2"
               />
               <Button
                 type="button"
@@ -219,15 +225,16 @@ const CheckInPage = () => {
                 size="icon"
                 onClick={handleAddCustomTreatment}
                 disabled={!customTreatment.trim()}
+                className="h-11 w-11 rounded-xl"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
               </Button>
             </div>
           </div>
 
           {/* Mood Rating */}
-          <div className="space-y-3">
-            <h3 className="font-display font-semibold text-foreground">
+          <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.15s' }}>
+            <h3 className="font-display font-bold text-lg text-foreground">
               How's your mood?
             </h3>
             <div className="flex justify-between gap-2">
@@ -236,10 +243,10 @@ const CheckInPage = () => {
                   key={idx}
                   onClick={() => setMood(idx + 1)}
                   className={cn(
-                    'flex-1 py-3 text-2xl rounded-xl transition-all',
+                    'flex-1 py-4 text-2xl rounded-2xl transition-all duration-300',
                     mood === idx + 1 
-                      ? 'bg-primary/20 ring-2 ring-primary scale-110' 
-                      : 'bg-muted/50 hover:bg-muted'
+                      ? 'bg-gradient-to-br from-honey/30 to-coral-light shadow-warm scale-110' 
+                      : 'bg-muted/50 hover:bg-muted hover:scale-105'
                   )}
                 >
                   {emoji}
@@ -249,8 +256,8 @@ const CheckInPage = () => {
           </div>
 
           {/* Skin Feeling Rating */}
-          <div className="space-y-3">
-            <h3 className="font-display font-semibold text-foreground">
+          <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <h3 className="font-display font-bold text-lg text-foreground">
               How's your skin feeling?
             </h3>
             <div className="flex justify-between gap-2">
@@ -259,25 +266,25 @@ const CheckInPage = () => {
                   key={idx}
                   onClick={() => setSkinFeeling(idx + 1)}
                   className={cn(
-                    'flex-1 py-3 text-2xl rounded-xl transition-all',
+                    'flex-1 py-4 text-2xl rounded-2xl transition-all duration-300',
                     skinFeeling === idx + 1 
-                      ? 'bg-primary/20 ring-2 ring-primary scale-110' 
-                      : 'bg-muted/50 hover:bg-muted'
+                      ? 'bg-gradient-to-br from-primary/20 to-sage-light shadow-warm scale-110' 
+                      : 'bg-muted/50 hover:bg-muted hover:scale-105'
                   )}
                 >
                   {emoji}
                 </button>
               ))}
             </div>
-            <div className="flex justify-between text-xs text-muted-foreground px-2">
+            <div className="flex justify-between text-xs text-muted-foreground px-2 font-medium">
               <span>Flaring</span>
               <span>Healing</span>
             </div>
           </div>
 
           {/* Notes */}
-          <div className="space-y-3">
-            <h3 className="font-display font-semibold text-foreground">
+          <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
+            <h3 className="font-display font-bold text-lg text-foreground">
               Any notes? (optional)
             </h3>
             <Textarea 
@@ -285,16 +292,18 @@ const CheckInPage = () => {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
+              className="rounded-2xl border-2 resize-none"
             />
           </div>
 
           {/* Submit */}
           <Button 
             onClick={handleSubmit} 
-            className="w-full sage-gradient text-primary-foreground"
+            variant="warm"
+            className="w-full h-12 text-base"
             size="lg"
           >
-            <CheckCircle className="w-4 h-4 mr-2" />
+            <CheckCircle className="w-5 h-5 mr-2" />
             Save Check-in
           </Button>
         </>
@@ -302,29 +311,40 @@ const CheckInPage = () => {
 
       {/* Recent Check-ins */}
       {todayCheckIns.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="font-display font-semibold text-foreground">Today's Check-ins</h3>
+        <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.3s' }}>
+          <h3 className="font-display font-bold text-lg text-foreground">Today's Check-ins</h3>
           {todayCheckIns.map(checkIn => (
-            <div key={checkIn.id} className="glass-card p-4">
-              <div className="flex items-center gap-2 mb-2">
-                {checkIn.timeOfDay === 'morning' ? (
-                  <Sun className="w-4 h-4 text-accent" />
-                ) : (
-                  <Moon className="w-4 h-4 text-primary" />
-                )}
-                <span className="font-medium capitalize">{checkIn.timeOfDay}</span>
-                <span className="text-xs text-muted-foreground">
+            <div key={checkIn.id} className="glass-card-warm p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className={cn(
+                  'p-2 rounded-xl',
+                  checkIn.timeOfDay === 'morning' ? 'bg-honey/20' : 'bg-primary/20'
+                )}>
+                  {checkIn.timeOfDay === 'morning' ? (
+                    <Sun className="w-4 h-4 text-honey" />
+                  ) : (
+                    <Moon className="w-4 h-4 text-primary" />
+                  )}
+                </div>
+                <span className="font-semibold capitalize">{checkIn.timeOfDay}</span>
+                <span className="text-xs text-muted-foreground ml-auto">
                   {format(new Date(checkIn.timestamp), 'h:mm a')}
                 </span>
               </div>
               <div className="flex items-center gap-4 text-sm">
-                <span>Mood: {moodEmojis[checkIn.mood - 1]}</span>
-                <span>Skin: {skinEmojis[checkIn.skinFeeling - 1]}</span>
+                <span className="flex items-center gap-1">
+                  <span className="text-muted-foreground">Mood:</span> 
+                  <span className="text-lg">{moodEmojis[checkIn.mood - 1]}</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="text-muted-foreground">Skin:</span> 
+                  <span className="text-lg">{skinEmojis[checkIn.skinFeeling - 1]}</span>
+                </span>
               </div>
               {checkIn.treatments.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
+                <div className="flex flex-wrap gap-1.5 mt-3">
                   {checkIn.treatments.map(t => (
-                    <span key={t} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                    <span key={t} className="text-xs bg-coral/10 text-coral font-medium px-2.5 py-1 rounded-full">
                       {treatments.find(tr => tr.id === t)?.label || t}
                     </span>
                   ))}
