@@ -4,7 +4,7 @@ import { Camera, CheckCircle, BarChart3, Users, BookOpen, Settings, Sparkles, Ca
 import { LeafIllustration, PlantIllustration, SparkleIllustration } from '@/components/illustrations';
 import tswAtlasLogo from '@/assets/tsw-atlas-logo.png';
 import { useUserData } from '@/contexts/UserDataContext';
-import { format, differenceInDays, parseISO } from 'date-fns';
+import { format, differenceInDays, parseISO, subDays, startOfDay } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,35 @@ const HomePage = () => {
   const daysSinceTsw = tswStartDate 
     ? differenceInDays(new Date(), parseISO(tswStartDate)) 
     : null;
+
+  // Calculate check-in streak
+  const calculateStreak = () => {
+    if (checkIns.length === 0) return 0;
+    
+    // Get unique days with at least one check-in
+    const checkInDays = new Set(
+      checkIns.map(c => format(new Date(c.timestamp), 'yyyy-MM-dd'))
+    );
+    
+    let streak = 0;
+    let currentDate = startOfDay(new Date());
+    
+    // Check if today has a check-in, if not start from yesterday
+    const todayStr = format(currentDate, 'yyyy-MM-dd');
+    if (!checkInDays.has(todayStr)) {
+      currentDate = subDays(currentDate, 1);
+    }
+    
+    // Count consecutive days backwards
+    while (checkInDays.has(format(currentDate, 'yyyy-MM-dd'))) {
+      streak++;
+      currentDate = subDays(currentDate, 1);
+    }
+    
+    return streak;
+  };
+
+  const checkInStreak = calculateStreak();
 
   const handleSaveDate = () => {
     if (selectedDate) {
@@ -218,18 +247,25 @@ const HomePage = () => {
       {/* Today's Status */}
       <div className="glass-card p-5 animate-slide-up" style={{ animationDelay: '0.2s' }}>
         <h3 className="font-display font-bold text-lg text-foreground mb-4">Today's Status</h3>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-coral/10 to-coral-light/50 shadow-warm-sm">
-            <p className="text-3xl font-bold text-coral">{photos.length}</p>
+        <div className="grid grid-cols-4 gap-2">
+          <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-coral/10 to-coral-light/50 shadow-warm-sm">
+            <p className="text-2xl font-bold text-coral">{photos.length}</p>
             <p className="text-xs text-muted-foreground font-medium mt-1">Photos</p>
           </div>
-          <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-primary/10 to-sage-light/50 shadow-warm-sm">
-            <p className="text-3xl font-bold text-primary">{todayCheckIns.length}/2</p>
+          <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-primary/10 to-sage-light/50 shadow-warm-sm">
+            <p className="text-2xl font-bold text-primary">{todayCheckIns.length}/2</p>
             <p className="text-xs text-muted-foreground font-medium mt-1">Check-ins</p>
           </div>
-          <div className="text-center p-4 rounded-2xl bg-gradient-to-br from-honey/10 to-cream-dark/50 shadow-warm-sm">
-            <p className="text-3xl font-bold text-honey">{journalEntries.length}</p>
+          <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-honey/10 to-cream-dark/50 shadow-warm-sm">
+            <p className="text-2xl font-bold text-honey">{journalEntries.length}</p>
             <p className="text-xs text-muted-foreground font-medium mt-1">Journal</p>
+          </div>
+          <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-orange-500/10 to-orange-300/30 shadow-warm-sm relative overflow-hidden">
+            <div className="flex items-center justify-center gap-1">
+              <p className="text-2xl font-bold text-orange-500">{checkInStreak}</p>
+              {checkInStreak > 0 && <span className="text-lg">🔥</span>}
+            </div>
+            <p className="text-xs text-muted-foreground font-medium mt-1">Streak</p>
           </div>
         </div>
       </div>
