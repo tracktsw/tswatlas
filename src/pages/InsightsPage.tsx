@@ -195,7 +195,10 @@ const InsightsPage = () => {
               <p className="text-sm text-muted-foreground">
                 Based on your recent check-ins
               </p>
-      </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Calendar View */}
       <div className="space-y-3">
@@ -334,9 +337,6 @@ const InsightsPage = () => {
           </div>
         </DialogContent>
       </Dialog>
-          </div>
-        </div>
-      )}
 
       {/* Weekly Overview */}
       <div className="space-y-3">
