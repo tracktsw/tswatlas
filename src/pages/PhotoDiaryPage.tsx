@@ -1,14 +1,15 @@
-import { useState, useRef } from 'react';
-import { Camera, Plus, Trash2, Image, Sparkles } from 'lucide-react';
+import { useState, useRef, useMemo } from 'react';
+import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown } from 'lucide-react';
 import { useUserData, BodyPart, Photo } from '@/contexts/UserDataContext';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, startOfDay, isToday } from 'date-fns';
 import { cn } from '@/lib/utils';
-import PaywallGuard from '@/components/PaywallGuard';
+import { useSubscription } from '@/hooks/useSubscription';
+import { supabase } from '@/integrations/supabase/client';
 import { LeafIllustration, SparkleIllustration } from '@/components/illustrations';
 import { SparkleEffect } from '@/components/SparkleEffect';
 
@@ -23,8 +24,11 @@ const bodyParts: { value: BodyPart; label: string; emoji: string }[] = [
   { value: 'back', label: 'Back', emoji: '🔙' },
 ];
 
+const FREE_DAILY_PHOTO_LIMIT = 2;
+
 const PhotoDiaryPage = () => {
   const { photos, addPhoto, deletePhoto, getPhotosByBodyPart } = useUserData();
+  const { isPremium } = useSubscription();
   const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | 'all'>('all');
   const [isCapturing, setIsCapturing] = useState(false);
   const [newPhotoBodyPart, setNewPhotoBodyPart] = useState<BodyPart>('face');
@@ -32,11 +36,59 @@ const PhotoDiaryPage = () => {
   const [compareMode, setCompareMode] = useState(false);
   const [selectedPhotos, setSelectedPhotos] = useState<Photo[]>([]);
   const [showSparkles, setShowSparkles] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Count photos uploaded today
+  const photosUploadedToday = useMemo(() => {
+    return photos.filter(photo => {
+      const photoDate = new Date(photo.timestamp);
+      return isToday(photoDate);
+    }).length;
+  }, [photos]);
+
+  const canUploadMore = isPremium || photosUploadedToday < FREE_DAILY_PHOTO_LIMIT;
+  const remainingUploads = FREE_DAILY_PHOTO_LIMIT - photosUploadedToday;
 
   const filteredPhotos = selectedBodyPart === 'all' 
     ? photos 
     : getPhotosByBodyPart(selectedBodyPart);
+
+  const handleUpgrade = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please sign in to subscribe');
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) {
+        toast.error('Failed to start checkout');
+        return;
+      }
+
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (err) {
+      console.error('Checkout error:', err);
+      toast.error('Failed to start checkout');
+    }
+  };
+
+  const handleAddPhotoClick = () => {
+    if (!canUploadMore) {
+      setShowUpgradePrompt(true);
+    } else {
+      setIsCapturing(true);
+    }
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -80,7 +132,6 @@ const PhotoDiaryPage = () => {
   };
 
   return (
-    <PaywallGuard feature="Photo Diary">
     <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
       {/* Sparkle celebration effect */}
       <SparkleEffect isActive={showSparkles} onComplete={() => setShowSparkles(false)} />
@@ -174,14 +225,67 @@ const PhotoDiaryPage = () => {
         ))}
       </div>
 
+      {/* Free user limit indicator */}
+      {!isPremium && (
+        <div className="glass-card p-4 flex items-center justify-between animate-fade-in">
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              {canUploadMore 
+                ? `${remainingUploads} photo${remainingUploads !== 1 ? 's' : ''} left today`
+                : 'Daily limit reached'
+              }
+            </p>
+            <p className="text-xs text-muted-foreground">Free accounts: 2 photos/day</p>
+          </div>
+          {!canUploadMore && (
+            <Button size="sm" onClick={handleUpgrade} className="gap-1.5 rounded-xl">
+              <Crown className="w-4 h-4" />
+              Upgrade
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Upgrade Prompt Dialog */}
+      <Dialog open={showUpgradePrompt} onOpenChange={setShowUpgradePrompt}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl flex items-center gap-2">
+              <Lock className="w-5 h-5 text-primary" />
+              Daily Limit Reached
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-center">
+            <p className="text-muted-foreground">
+              You've uploaded {FREE_DAILY_PHOTO_LIMIT} photos today. Upgrade to Premium for unlimited photo uploads!
+            </p>
+            <div className="p-4 bg-muted/50 rounded-xl">
+              <p className="text-sm text-muted-foreground">Your limit resets tomorrow</p>
+            </div>
+            <Button onClick={handleUpgrade} className="w-full gap-2">
+              <Crown className="w-4 h-4" />
+              Upgrade to Premium - £5.99/month
+            </Button>
+            <Button variant="ghost" onClick={() => setShowUpgradePrompt(false)} className="w-full">
+              Maybe Later
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Photo Button */}
+      <Button 
+        variant="warm" 
+        className="w-full gap-2 h-12"
+        onClick={handleAddPhotoClick}
+      >
+        <Plus className="w-5 h-5" />
+        Add Photo
+        {!isPremium && !canUploadMore && <Lock className="w-4 h-4 ml-1" />}
+      </Button>
+
       {/* Add Photo Dialog */}
       <Dialog open={isCapturing} onOpenChange={setIsCapturing}>
-        <DialogTrigger asChild>
-          <Button variant="warm" className="w-full gap-2 h-12">
-            <Plus className="w-5 h-5" />
-            Add Photo
-          </Button>
-        </DialogTrigger>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="font-display text-xl">Add New Photo</DialogTitle>
@@ -290,7 +394,6 @@ const PhotoDiaryPage = () => {
         </div>
       )}
     </div>
-    </PaywallGuard>
   );
 };
 
