@@ -52,7 +52,7 @@ serve(async (req) => {
       logStep("No existing customer found, will create new");
     }
 
-    // TSW Tracker Premium - £5.99/month
+    // TSW Atlas Premium - £5.99/month
     const PRICE_ID = "price_1Sds17P0aIdhyRtPgqdWL7HM";
 
     const session = await stripe.checkout.sessions.create({

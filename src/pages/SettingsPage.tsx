@@ -185,7 +185,7 @@ const SettingsPage = () => {
 
       {/* About */}
       <div className="glass-card p-4">
-        <h3 className="font-semibold text-foreground mb-2">About TSW Tracker</h3>
+        <h3 className="font-semibold text-foreground mb-2">About TSW Atlas</h3>
         <p className="text-sm text-muted-foreground">
           A privacy-focused app to help you track your Topical Steroid Withdrawal journey. 
           Remember: healing is not linear, and every day you're getting closer to healthy skin.
