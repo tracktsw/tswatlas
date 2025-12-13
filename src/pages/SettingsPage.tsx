@@ -1,35 +1,34 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLocalStorage } from '@/contexts/LocalStorageContext';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-
+import SubscriptionCard from '@/components/SubscriptionCard';
+import { useSubscription } from '@/hooks/useSubscription';
 const SettingsPage = () => {
   const { reminderSettings, updateReminderSettings, photos, checkIns, journalEntries } = useLocalStorage();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { isAdmin, refreshSubscription } = useSubscription();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
+  // Handle subscription success/cancel from Stripe redirect
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: roles } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .maybeSingle();
-        
-        setIsAdmin(!!roles);
-      }
-    };
+    const subscriptionStatus = searchParams.get('subscription');
+    if (subscriptionStatus === 'success') {
+      toast.success('Subscription activated! Welcome to Premium.');
+      refreshSubscription();
+      // Clean up URL
+      window.history.replaceState({}, '', '/settings');
+    } else if (subscriptionStatus === 'cancelled') {
+      toast.info('Subscription checkout was cancelled.');
+      window.history.replaceState({}, '', '/settings');
+    }
+  }, [searchParams, refreshSubscription]);
 
-    checkAdminStatus();
-  }, []);
 
   const handleToggleReminders = (enabled: boolean) => {
     updateReminderSettings({ ...reminderSettings, enabled });
@@ -65,6 +64,9 @@ const SettingsPage = () => {
           <p className="text-sm text-muted-foreground">Customize your experience</p>
         </div>
       </div>
+
+      {/* Subscription */}
+      <SubscriptionCard />
 
       {/* Reminders */}
       <div className="glass-card p-4 space-y-4">

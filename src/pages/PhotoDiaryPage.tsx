@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-
+import PaywallGuard from '@/components/PaywallGuard';
 const bodyParts: { value: BodyPart; label: string; emoji: string }[] = [
   { value: 'face', label: 'Face', emoji: '😊' },
   { value: 'neck', label: 'Neck', emoji: '🦒' },
@@ -68,8 +68,8 @@ const PhotoDiaryPage = () => {
   };
 
   return (
+    <PaywallGuard feature="Photo Diary">
     <div className="px-4 py-6 space-y-6 max-w-lg mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground">Photo Diary</h1>
@@ -258,6 +258,7 @@ const PhotoDiaryPage = () => {
         </div>
       )}
     </div>
+    </PaywallGuard>
   );
 };
 

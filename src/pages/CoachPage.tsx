@@ -1,11 +1,12 @@
 import { Sparkles } from 'lucide-react';
 import { CoachChat } from '@/components/CoachChat';
 import { useAICoach } from '@/hooks/useAICoach';
-
+import PaywallGuard from '@/components/PaywallGuard';
 const CoachPage = () => {
   const { messages, isLoading, sendMessage, clearChat } = useAICoach();
 
   return (
+    <PaywallGuard feature="AI Coach">
     <div className="flex flex-col h-[calc(100vh-8rem)]">
       {/* Header */}
       <div className="px-4 py-3 border-b border-border">
@@ -28,6 +29,7 @@ const CoachPage = () => {
         onClearChat={clearChat}
       />
     </div>
+    </PaywallGuard>
   );
 };
 
