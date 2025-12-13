@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { HeartIllustration, SunIllustration, LeafIllustration } from '@/components/illustrations';
 
 const treatments = [
   { id: 'nmt', label: 'NMT', description: 'No Moisture Treatment' },
@@ -87,6 +88,10 @@ const CheckInPage = () => {
       <div className="decorative-blob w-32 h-32 bg-honey/30 -top-10 -left-10 fixed" />
       <div className="decorative-blob w-40 h-40 bg-primary/20 bottom-40 -right-20 fixed" />
       
+      {/* Decorative illustrations */}
+      <SunIllustration variant="rising" className="w-28 h-20 fixed top-16 right-0 opacity-30 pointer-events-none" />
+      <HeartIllustration variant="floating" className="w-12 h-16 fixed bottom-52 left-2 opacity-25 pointer-events-none" />
+      
       {/* Header */}
       <div className="animate-fade-in">
         <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">Daily Check-in</h1>
@@ -125,8 +130,9 @@ const CheckInPage = () => {
 
       {/* All done message */}
       {hasMorningCheckIn && hasEveningCheckIn && (
-        <div className="glass-card-warm p-6 text-center animate-scale-in">
-          <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-primary/20 to-sage-light flex items-center justify-center">
+        <div className="glass-card-warm p-6 text-center animate-scale-in relative overflow-hidden">
+          <LeafIllustration variant="cluster" className="w-20 h-20 absolute -right-4 -top-4 opacity-20" />
+          <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-primary/20 to-sage-light flex items-center justify-center relative">
             <CheckCircle className="w-8 h-8 text-primary" />
           </div>
           <p className="font-display font-bold text-lg text-foreground">All done for today!</p>

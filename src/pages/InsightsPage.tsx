@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PaywallGuard from '@/components/PaywallGuard';
 import { useSubscription } from '@/hooks/useSubscription';
+import { PlantIllustration, SparkleIllustration, SunIllustration } from '@/components/illustrations';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
@@ -155,12 +156,16 @@ const InsightsPage = () => {
         <div className="decorative-blob w-36 h-36 bg-honey/25 -top-10 -right-10 fixed" />
         <div className="decorative-blob w-44 h-44 bg-primary/20 bottom-32 -left-16 fixed" />
         
+        {/* Decorative illustrations */}
+        <SunIllustration variant="rays" className="w-20 h-20 fixed top-20 right-4 opacity-25 pointer-events-none" />
+        
         <div className="animate-fade-in">
           <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">Insights</h1>
           <p className="text-muted-foreground">Track your healing patterns</p>
         </div>
-        <div className="glass-card-warm p-8 text-center animate-slide-up">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-honey/20 to-coral-light flex items-center justify-center animate-float">
+        <div className="glass-card-warm p-8 text-center animate-slide-up relative overflow-hidden">
+          <PlantIllustration variant="sprout" className="w-16 h-16 absolute -left-2 -bottom-2 opacity-20" />
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-honey/20 to-coral-light flex items-center justify-center animate-float relative">
             <BarChart3 className="w-8 h-8 text-honey" />
           </div>
           <p className="font-display font-bold text-lg text-foreground">No data yet</p>
@@ -178,6 +183,10 @@ const InsightsPage = () => {
       <div className="decorative-blob w-36 h-36 bg-honey/25 -top-10 -right-10 fixed" />
       <div className="decorative-blob w-44 h-44 bg-primary/20 bottom-32 -left-16 fixed" />
       
+      {/* Decorative illustrations */}
+      <PlantIllustration variant="growing" className="w-20 h-24 fixed top-20 right-0 opacity-25 pointer-events-none" />
+      <SparkleIllustration variant="cluster" className="w-16 h-16 fixed bottom-48 left-2 opacity-20 pointer-events-none animate-pulse-soft" />
+      
       {/* Header */}
       <div className="animate-fade-in">
         <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">Insights</h1>
@@ -187,10 +196,13 @@ const InsightsPage = () => {
       {/* Overall Trend */}
       {overallTrend && (
         <div className={cn(
-          'glass-card-warm p-5 animate-slide-up',
+          'glass-card-warm p-5 animate-slide-up relative overflow-hidden',
           overallTrend === 'improving' && 'ring-2 ring-primary/30'
         )} style={{ animationDelay: '0.05s' }}>
-          <div className="flex items-center gap-4">
+          {overallTrend === 'improving' && (
+            <PlantIllustration variant="growing" className="w-16 h-20 absolute -right-2 -bottom-4 opacity-15" />
+          )}
+          <div className="flex items-center gap-4 relative">
             <div className={cn(
               'w-14 h-14 rounded-2xl flex items-center justify-center shadow-warm-sm',
               overallTrend === 'improving' 

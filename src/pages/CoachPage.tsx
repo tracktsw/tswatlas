@@ -2,6 +2,7 @@ import { Sparkles, Heart } from 'lucide-react';
 import { CoachChat } from '@/components/CoachChat';
 import { useAICoach } from '@/hooks/useAICoach';
 import PaywallGuard from '@/components/PaywallGuard';
+import { SparkleIllustration, HeartIllustration } from '@/components/illustrations';
 
 const CoachPage = () => {
   const { messages, isLoading, sendMessage, clearChat } = useAICoach();
@@ -12,6 +13,10 @@ const CoachPage = () => {
       {/* Decorative elements */}
       <div className="decorative-blob w-32 h-32 bg-coral/20 -top-10 -right-10 fixed" />
       <div className="decorative-blob w-40 h-40 bg-primary/15 bottom-40 -left-16 fixed" />
+      
+      {/* Decorative illustrations */}
+      <SparkleIllustration variant="cluster" className="w-20 h-20 fixed top-16 right-2 opacity-25 pointer-events-none" />
+      <HeartIllustration variant="floating" className="w-14 h-18 fixed bottom-48 left-0 opacity-20 pointer-events-none" />
       
       {/* Header */}
       <div className="px-4 py-4 border-b border-border/60 bg-card/50 backdrop-blur-sm">
