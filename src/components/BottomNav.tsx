@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, Camera, CheckCircle, BarChart3, Users, BookOpen } from 'lucide-react';
+import { Home, Camera, CheckCircle, BarChart3, Users, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -8,7 +8,7 @@ const navItems = [
   { path: '/check-in', icon: CheckCircle, label: 'Check-in' },
   { path: '/insights', icon: BarChart3, label: 'Insights' },
   { path: '/community', icon: Users, label: 'Community' },
-  { path: '/journal', icon: BookOpen, label: 'Journal' },
+  { path: '/coach', icon: Sparkles, label: 'Coach' },
 ];
 
 const BottomNav = () => {

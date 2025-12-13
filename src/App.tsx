@@ -12,6 +12,7 @@ import CheckInPage from "@/pages/CheckInPage";
 import InsightsPage from "@/pages/InsightsPage";
 import CommunityPage from "@/pages/CommunityPage";
 import JournalPage from "@/pages/JournalPage";
+import CoachPage from "@/pages/CoachPage";
 import SettingsPage from "@/pages/SettingsPage";
 import AuthPage from "@/pages/AuthPage";
 import AdminPage from "@/pages/AdminPage";
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="insights" element={<InsightsPage />} />
               <Route path="community" element={<CommunityPage />} />
               <Route path="journal" element={<JournalPage />} />
+              <Route path="coach" element={<CoachPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="admin" element={<AdminPage />} />
             </Route>
