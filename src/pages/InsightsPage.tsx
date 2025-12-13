@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import PaywallGuard from '@/components/PaywallGuard';
+import { useSubscription } from '@/hooks/useSubscription';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
@@ -35,6 +37,7 @@ const bodyParts: { value: BodyPart; label: string; emoji: string }[] = [
 
 const InsightsPage = () => {
   const { checkIns, photos } = useLocalStorage();
+  const { isPremium } = useSubscription();
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -229,35 +232,38 @@ const InsightsPage = () => {
         </div>
       </div>
 
-      {/* Treatment Effectiveness */}
+      {/* Treatment Effectiveness - Premium */}
       {treatmentStats.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
-            <Heart className="w-4 h-4" />
-            What's Helping You
-          </h3>
-          <div className="glass-card p-4 space-y-3">
-            {treatmentStats.map(({ id, label, count, effectiveness }) => (
-              <div key={id} className="space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">{label}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {effectiveness}% good days ({count} uses)
-                  </span>
+        <PaywallGuard feature="Treatment Insights" showBlurred>
+          <div className="space-y-3">
+            <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
+              <Heart className="w-4 h-4" />
+              What's Helping You
+            </h3>
+            <div className="glass-card p-4 space-y-3">
+              {treatmentStats.map(({ id, label, count, effectiveness }) => (
+                <div key={id} className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">{label}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {effectiveness}% good days ({count} uses)
+                    </span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary rounded-full transition-all"
+                      style={{ width: `${effectiveness}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-primary rounded-full transition-all"
-                    style={{ width: `${effectiveness}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        </PaywallGuard>
       )}
 
-      {/* Calendar Button */}
+      {/* Calendar Button - Premium */}
+      <PaywallGuard feature="History Calendar" showBlurred>
       <Dialog open={!!selectedDate || calendarOpen} onOpenChange={(open) => {
         if (!open) {
           setSelectedDate(null);
@@ -437,6 +443,7 @@ const InsightsPage = () => {
           )}
         </DialogContent>
       </Dialog>
+      </PaywallGuard>
 
       {/* Stats Summary */}
       <div className="glass-card p-4">

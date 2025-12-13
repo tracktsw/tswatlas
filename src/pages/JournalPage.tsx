@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import PaywallGuard from '@/components/PaywallGuard';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 
@@ -59,8 +60,8 @@ const JournalPage = () => {
   };
 
   return (
+    <PaywallGuard feature="Journal">
     <div className="px-4 py-6 space-y-6 max-w-lg mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground">Journal</h1>
@@ -191,6 +192,7 @@ const JournalPage = () => {
         </div>
       )}
     </div>
+    </PaywallGuard>
   );
 };
 
