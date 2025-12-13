@@ -11,17 +11,18 @@ import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { LeafIllustration, SparkleIllustration } from '@/components/illustrations';
+import { bodyPartIllustrations } from '@/components/illustrations/BodyPartIllustrations';
 import { SparkleEffect } from '@/components/SparkleEffect';
 
-const bodyParts: { value: BodyPart; label: string; emoji: string }[] = [
-  { value: 'face', label: 'Face', emoji: '😊' },
-  { value: 'neck', label: 'Neck', emoji: '🦒' },
-  { value: 'arms', label: 'Arms', emoji: '💪' },
-  { value: 'hands', label: 'Hands', emoji: '🤲' },
-  { value: 'legs', label: 'Legs', emoji: '🦵' },
-  { value: 'feet', label: 'Feet', emoji: '🦶' },
-  { value: 'torso', label: 'Torso', emoji: '👕' },
-  { value: 'back', label: 'Back', emoji: '🔙' },
+const bodyParts: { value: BodyPart; label: string }[] = [
+  { value: 'face', label: 'Face' },
+  { value: 'neck', label: 'Neck' },
+  { value: 'arms', label: 'Arms' },
+  { value: 'hands', label: 'Hands' },
+  { value: 'legs', label: 'Legs' },
+  { value: 'feet', label: 'Feet' },
+  { value: 'torso', label: 'Torso' },
+  { value: 'back', label: 'Back' },
 ];
 
 const FREE_DAILY_PHOTO_LIMIT = 2;
@@ -212,17 +213,21 @@ const PhotoDiaryPage = () => {
         >
           All
         </Button>
-        {bodyParts.map(({ value, label, emoji }) => (
-          <Button
-            key={value}
-            variant={selectedBodyPart === value ? 'warm' : 'outline'}
-            size="sm"
-            onClick={() => setSelectedBodyPart(value)}
-            className="shrink-0 rounded-xl"
-          >
-            {emoji} {label}
-          </Button>
-        ))}
+        {bodyParts.map(({ value, label }) => {
+          const Icon = bodyPartIllustrations[value];
+          return (
+            <Button
+              key={value}
+              variant={selectedBodyPart === value ? 'warm' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedBodyPart(value)}
+              className="shrink-0 rounded-xl gap-1.5"
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+            </Button>
+          );
+        })}
       </div>
 
       {/* Free user limit indicator */}
@@ -317,11 +322,17 @@ const PhotoDiaryPage = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {bodyParts.map(({ value, label, emoji }) => (
-                    <SelectItem key={value} value={value}>
-                      {emoji} {label}
-                    </SelectItem>
-                  ))}
+                  {bodyParts.map(({ value, label }) => {
+                    const Icon = bodyPartIllustrations[value];
+                    return (
+                      <SelectItem key={value} value={value}>
+                        <span className="flex items-center gap-2">
+                          <Icon className="w-4 h-4" />
+                          {label}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -372,6 +383,7 @@ const PhotoDiaryPage = () => {
           {filteredPhotos.map((photo, index) => {
             const isSelected = selectedPhotos.find(p => p.id === photo.id);
             const bodyPartInfo = bodyParts.find(b => b.value === photo.bodyPart);
+            const BodyPartIcon = bodyPartIllustrations[photo.bodyPart];
             
             return (
               <div 
@@ -391,8 +403,9 @@ const PhotoDiaryPage = () => {
                 />
                 <div className="p-3 space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold bg-coral/10 text-coral px-2.5 py-1 rounded-full">
-                      {bodyPartInfo?.emoji} {bodyPartInfo?.label}
+                    <span className="text-xs font-semibold bg-coral/10 text-coral px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                      <BodyPartIcon className="w-3.5 h-3.5" />
+                      {bodyPartInfo?.label}
                     </span>
                     {!compareMode && (
                       <button 
