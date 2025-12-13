@@ -1,9 +1,43 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { DayPicker } from "react-day-picker";
+import { DayPicker, DropdownProps } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+function CustomDropdown({ value, onChange, children, caption, ...props }: DropdownProps) {
+  // Extract options from children (which are <option> elements)
+  const options = React.Children.toArray(children) as React.ReactElement<React.HTMLProps<HTMLOptionElement>>[];
+  
+  const handleChange = (newValue: string) => {
+    const syntheticEvent = {
+      target: { value: newValue },
+    } as React.ChangeEvent<HTMLSelectElement>;
+    onChange?.(syntheticEvent);
+  };
+
+  return (
+    <Select value={value?.toString()} onValueChange={handleChange}>
+      <SelectTrigger className="h-7 w-auto min-w-[80px] text-sm font-medium focus:ring-0 focus:ring-offset-0 gap-1">
+        <SelectValue>{caption}</SelectValue>
+      </SelectTrigger>
+      <SelectContent className="max-h-60">
+        {options.map((option, index) => (
+          <SelectItem key={index} value={option.props.value?.toString() ?? ""}>
+            {option.props.children}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
@@ -19,11 +53,8 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
         caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-sm font-medium",
+        caption_label: "hidden",
         caption_dropdowns: "flex gap-1",
-        dropdown: "appearance-none bg-transparent border border-input rounded-md px-2 py-1 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer",
-        dropdown_month: "",
-        dropdown_year: "",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
@@ -51,6 +82,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
       components={{
         IconLeft: ({ ..._props }) => <ChevronLeft className="h-4 w-4" />,
         IconRight: ({ ..._props }) => <ChevronRight className="h-4 w-4" />,
+        Dropdown: CustomDropdown,
       }}
       {...props}
     />
