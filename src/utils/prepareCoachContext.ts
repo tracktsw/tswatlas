@@ -1,4 +1,4 @@
-import { CheckIn, JournalEntry, Photo } from '@/contexts/LocalStorageContext';
+import { CheckIn, JournalEntry, Photo } from '@/contexts/UserDataContext';
 import { format, subDays, startOfDay, differenceInDays } from 'date-fns';
 
 interface CoachContext {

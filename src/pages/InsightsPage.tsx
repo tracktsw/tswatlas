@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
-import { useLocalStorage, BodyPart } from '@/contexts/LocalStorageContext';
+import { useUserData, BodyPart } from '@/contexts/UserDataContext';
 import { format, subDays, startOfDay, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isSameMonth, addMonths, subMonths, getDay, setMonth, setYear } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,7 @@ const bodyParts: { value: BodyPart; label: string; emoji: string }[] = [
 ];
 
 const InsightsPage = () => {
-  const { checkIns, photos } = useLocalStorage();
+  const { checkIns, photos } = useUserData();
   const { isPremium } = useSubscription();
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -366,7 +366,7 @@ const InsightsPage = () => {
                     {selectedDayPhotos.map((photo, idx) => (
                       <div key={idx} className="aspect-square rounded-xl overflow-hidden shadow-warm-sm">
                         <img 
-                          src={photo.dataUrl} 
+                          src={photo.photoUrl} 
                           alt={photo.bodyPart}
                           className="w-full h-full object-cover"
                         />

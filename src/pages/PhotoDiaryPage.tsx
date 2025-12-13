@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Camera, Plus, Trash2, Image, Sparkles } from 'lucide-react';
-import { useLocalStorage, BodyPart, Photo } from '@/contexts/LocalStorageContext';
+import { useUserData, BodyPart, Photo } from '@/contexts/UserDataContext';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -24,7 +24,7 @@ const bodyParts: { value: BodyPart; label: string; emoji: string }[] = [
 ];
 
 const PhotoDiaryPage = () => {
-  const { photos, addPhoto, deletePhoto, getPhotosByBodyPart } = useLocalStorage();
+  const { photos, addPhoto, deletePhoto, getPhotosByBodyPart } = useUserData();
   const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | 'all'>('all');
   const [isCapturing, setIsCapturing] = useState(false);
   const [newPhotoBodyPart, setNewPhotoBodyPart] = useState<BodyPart>('face');
@@ -38,30 +38,37 @@ const PhotoDiaryPage = () => {
     ? photos 
     : getPhotosByBodyPart(selectedBodyPart);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const dataUrl = event.target?.result as string;
-      addPhoto({
-        dataUrl,
-        bodyPart: newPhotoBodyPart,
-        timestamp: new Date().toISOString(),
-        notes: newPhotoNotes || undefined,
-      });
-      setNewPhotoNotes('');
-      setIsCapturing(false);
-      setShowSparkles(true);
-      toast.success('Photo saved locally');
+      try {
+        await addPhoto({
+          dataUrl,
+          bodyPart: newPhotoBodyPart,
+          notes: newPhotoNotes || undefined,
+        });
+        setNewPhotoNotes('');
+        setIsCapturing(false);
+        setShowSparkles(true);
+        toast.success('Photo saved to cloud');
+      } catch (error) {
+        toast.error('Failed to save photo');
+      }
     };
     reader.readAsDataURL(file);
   };
 
-  const handleDelete = (id: string) => {
-    deletePhoto(id);
-    toast.success('Photo deleted');
+  const handleDelete = async (id: string) => {
+    try {
+      await deletePhoto(id);
+      toast.success('Photo deleted');
+    } catch (error) {
+      toast.error('Failed to delete photo');
+    }
   };
 
   const togglePhotoSelection = (photo: Photo) => {
@@ -124,7 +131,7 @@ const PhotoDiaryPage = () => {
             {selectedPhotos.map((photo, idx) => (
               <div key={photo.id} className="space-y-2">
                 <img 
-                  src={photo.dataUrl} 
+                  src={photo.photoUrl}
                   alt={`Comparison ${idx + 1}`}
                   className="w-full aspect-square object-cover rounded-2xl shadow-warm"
                 />
@@ -255,7 +262,7 @@ const PhotoDiaryPage = () => {
                 onClick={() => compareMode && togglePhotoSelection(photo)}
               >
                 <img 
-                  src={photo.dataUrl} 
+                  src={photo.photoUrl}
                   alt={`${photo.bodyPart} photo`}
                   className="w-full aspect-square object-cover"
                 />
