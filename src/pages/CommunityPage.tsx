@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Users, ThumbsUp, ThumbsDown, Plus, Send, Loader2, Heart, Sparkles } from 'lucide-react';
-import { useLocalStorage } from '@/contexts/LocalStorageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -39,12 +38,21 @@ const categories = [
 ];
 
 const CommunityPage = () => {
-  const { voterId } = useLocalStorage();
+  const [voterId, setVoterId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const [suggestionOpen, setSuggestionOpen] = useState(false);
   const [newTreatmentName, setNewTreatmentName] = useState('');
   const [newTreatmentDesc, setNewTreatmentDesc] = useState('');
   const [newTreatmentCategory, setNewTreatmentCategory] = useState('general');
+
+  // Get user ID for voting
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setVoterId(user?.id || null);
+    };
+    getUser();
+  }, []);
 
   // Fetch treatments with votes
   const { data: treatments = [], isLoading } = useQuery({
