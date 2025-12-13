@@ -68,7 +68,7 @@ const HomePage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground">
-            TSW Tracker
+            TSW Atlas
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Your healing journey, one day at a time
