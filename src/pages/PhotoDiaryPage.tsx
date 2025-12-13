@@ -215,7 +215,7 @@ const PhotoDiaryPage = () => {
         {bodyParts.map(({ value, label, emoji }) => (
           <Button
             key={value}
-            variant={selectedBodyPart === value ? 'default' : 'outline'}
+            variant={selectedBodyPart === value ? 'warm' : 'outline'}
             size="sm"
             onClick={() => setSelectedBodyPart(value)}
             className="shrink-0 rounded-xl"
