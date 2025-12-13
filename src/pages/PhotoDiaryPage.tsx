@@ -236,7 +236,7 @@ const PhotoDiaryPage = () => {
                   : 'Daily limit reached'
                 }
               </p>
-              <p className="text-xs text-muted-foreground">Free accounts: 2 photos/day</p>
+              
             </div>
             {!canUploadMore && (
               <Button size="sm" onClick={handleUpgrade} className="gap-1.5 rounded-xl">
