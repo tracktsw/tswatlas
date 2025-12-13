@@ -39,6 +39,7 @@ interface LocalStorageContextType {
   checkIns: CheckIn[];
   journalEntries: JournalEntry[];
   reminderSettings: ReminderSettings;
+  customTreatments: string[];
   voterId: string;
   addPhoto: (photo: Omit<Photo, 'id'>) => void;
   deletePhoto: (id: string) => void;
@@ -47,6 +48,7 @@ interface LocalStorageContextType {
   updateJournalEntry: (id: string, content: string) => void;
   deleteJournalEntry: (id: string) => void;
   updateReminderSettings: (settings: ReminderSettings) => void;
+  addCustomTreatment: (treatment: string) => void;
   getPhotosByBodyPart: (bodyPart: BodyPart) => Photo[];
 }
 
@@ -66,6 +68,7 @@ export const LocalStorageProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+  const [customTreatments, setCustomTreatments] = useState<string[]>([]);
   const [reminderSettings, setReminderSettings] = useState<ReminderSettings>({
     enabled: true,
     morningTime: '08:00',
@@ -80,11 +83,13 @@ export const LocalStorageProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const storedCheckIns = localStorage.getItem('tsw_check_ins');
       const storedJournalEntries = localStorage.getItem('tsw_journal_entries');
       const storedReminderSettings = localStorage.getItem('tsw_reminder_settings');
+      const storedCustomTreatments = localStorage.getItem('tsw_custom_treatments');
 
       if (storedPhotos) setPhotos(JSON.parse(storedPhotos));
       if (storedCheckIns) setCheckIns(JSON.parse(storedCheckIns));
       if (storedJournalEntries) setJournalEntries(JSON.parse(storedJournalEntries));
       if (storedReminderSettings) setReminderSettings(JSON.parse(storedReminderSettings));
+      if (storedCustomTreatments) setCustomTreatments(JSON.parse(storedCustomTreatments));
     } catch (error) {
       console.error('Error loading from localStorage:', error);
     }
@@ -106,6 +111,10 @@ export const LocalStorageProvider: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     localStorage.setItem('tsw_reminder_settings', JSON.stringify(reminderSettings));
   }, [reminderSettings]);
+
+  useEffect(() => {
+    localStorage.setItem('tsw_custom_treatments', JSON.stringify(customTreatments));
+  }, [customTreatments]);
 
   const addPhoto = useCallback((photo: Omit<Photo, 'id'>) => {
     const newPhoto = { ...photo, id: generateId() };
@@ -138,6 +147,13 @@ export const LocalStorageProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setReminderSettings(settings);
   }, []);
 
+  const addCustomTreatment = useCallback((treatment: string) => {
+    setCustomTreatments(prev => {
+      if (prev.includes(treatment)) return prev;
+      return [...prev, treatment];
+    });
+  }, []);
+
   const getPhotosByBodyPart = useCallback((bodyPart: BodyPart) => {
     return photos.filter(p => p.bodyPart === bodyPart).sort((a, b) => 
       new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
@@ -151,6 +167,7 @@ export const LocalStorageProvider: React.FC<{ children: React.ReactNode }> = ({ 
         checkIns,
         journalEntries,
         reminderSettings,
+        customTreatments,
         voterId,
         addPhoto,
         deletePhoto,
@@ -159,6 +176,7 @@ export const LocalStorageProvider: React.FC<{ children: React.ReactNode }> = ({ 
         updateJournalEntry,
         deleteJournalEntry,
         updateReminderSettings,
+        addCustomTreatment,
         getPhotosByBodyPart,
       }}
     >

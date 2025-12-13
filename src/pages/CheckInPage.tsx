@@ -23,7 +23,7 @@ const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
 
 const CheckInPage = () => {
-  const { checkIns, addCheckIn } = useLocalStorage();
+  const { checkIns, addCheckIn, customTreatments, addCustomTreatment } = useLocalStorage();
   const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
   const [customTreatment, setCustomTreatment] = useState('');
   const [mood, setMood] = useState(3);
@@ -45,10 +45,13 @@ const CheckInPage = () => {
     );
   };
 
-  const addCustomTreatment = () => {
+  const handleAddCustomTreatment = () => {
     const trimmed = customTreatment.trim();
-    if (trimmed && !selectedTreatments.includes(trimmed)) {
-      setSelectedTreatments(prev => [...prev, trimmed]);
+    if (trimmed) {
+      addCustomTreatment(trimmed);
+      if (!selectedTreatments.includes(trimmed)) {
+        setSelectedTreatments(prev => [...prev, trimmed]);
+      }
       setCustomTreatment('');
     }
   };
@@ -166,43 +169,60 @@ const CheckInPage = () => {
               ))}
             </div>
             
+            {/* Custom treatments as buttons */}
+            {customTreatments.length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {customTreatments.map((treatment) => (
+                  <button
+                    key={treatment}
+                    onClick={() => toggleTreatment(treatment)}
+                    className={cn(
+                      'glass-card p-3 text-left transition-all',
+                      selectedTreatments.includes(treatment) 
+                        ? 'ring-2 ring-primary bg-primary/5' 
+                        : 'hover:bg-muted/50'
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={cn(
+                        'w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors',
+                        selectedTreatments.includes(treatment) 
+                          ? 'border-primary bg-primary' 
+                          : 'border-muted-foreground'
+                      )}>
+                        {selectedTreatments.includes(treatment) && (
+                          <Check className="w-3 h-3 text-primary-foreground" />
+                        )}
+                      </div>
+                      <span className="font-medium text-foreground text-sm">{treatment}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 ml-7">
+                      Custom treatment
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+            
             {/* Custom treatment input */}
             <div className="flex gap-2">
               <Input
                 placeholder="Add your own treatment..."
                 value={customTreatment}
                 onChange={(e) => setCustomTreatment(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addCustomTreatment()}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddCustomTreatment()}
                 className="flex-1"
               />
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
-                onClick={addCustomTreatment}
+                onClick={handleAddCustomTreatment}
                 disabled={!customTreatment.trim()}
               >
                 <Plus className="w-4 h-4" />
               </Button>
             </div>
-            
-            {/* Show custom treatments */}
-            {selectedTreatments.filter(t => !treatments.find(tr => tr.id === t)).length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {selectedTreatments
-                  .filter(t => !treatments.find(tr => tr.id === t))
-                  .map(t => (
-                    <button
-                      key={t}
-                      onClick={() => toggleTreatment(t)}
-                      className="flex items-center gap-1 text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full ring-2 ring-primary"
-                    >
-                      <Check className="w-3 h-3" />
-                      {t}
-                    </button>
-                  ))}
-              </div>
-            )}
           </div>
 
           {/* Mood Rating */}
