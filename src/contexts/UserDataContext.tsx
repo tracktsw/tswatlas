@@ -48,6 +48,7 @@ interface UserDataContextType {
   addPhoto: (photo: { dataUrl: string; bodyPart: BodyPart; notes?: string }) => Promise<void>;
   deletePhoto: (id: string) => Promise<void>;
   addCheckIn: (checkIn: Omit<CheckIn, 'id' | 'timestamp'>) => Promise<void>;
+  updateCheckIn: (id: string, checkIn: Omit<CheckIn, 'id' | 'timestamp'>) => Promise<void>;
   addJournalEntry: (entry: Omit<JournalEntry, 'id' | 'timestamp'>) => Promise<void>;
   updateJournalEntry: (id: string, content: string) => Promise<void>;
   deleteJournalEntry: (id: string) => Promise<void>;
@@ -446,6 +447,42 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [userId]);
 
+  const updateCheckIn = useCallback(async (id: string, checkIn: Omit<CheckIn, 'id' | 'timestamp'>) => {
+    if (!userId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('user_check_ins')
+        .update({
+          time_of_day: checkIn.timeOfDay,
+          treatments: checkIn.treatments,
+          mood: checkIn.mood,
+          skin_feeling: checkIn.skinFeeling,
+          notes: checkIn.notes || null,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const updatedCheckIn: CheckIn = {
+        id: data.id,
+        timestamp: data.created_at,
+        timeOfDay: data.time_of_day as 'morning' | 'evening',
+        treatments: data.treatments,
+        mood: data.mood,
+        skinFeeling: data.skin_feeling,
+        notes: data.notes || undefined,
+      };
+
+      setCheckIns(prev => prev.map(c => c.id === id ? updatedCheckIn : c));
+    } catch (error) {
+      console.error('Error updating check-in:', error);
+      throw error;
+    }
+  }, [userId]);
+
   const addJournalEntry = useCallback(async (entry: Omit<JournalEntry, 'id' | 'timestamp'>) => {
     if (!userId) return;
 
@@ -595,6 +632,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addPhoto,
         deletePhoto,
         addCheckIn,
+        updateCheckIn,
         addJournalEntry,
         updateJournalEntry,
         deleteJournalEntry,
