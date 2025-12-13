@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2 } from 'lucide-react';
+import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useTheme } from 'next-themes';
 import { useUserData } from '@/contexts/UserDataContext';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 const SettingsPage = () => {
   const { reminderSettings, updateReminderSettings, photos, checkIns, journalEntries, isLoading, isSyncing } = useUserData();
   const { isAdmin, refreshSubscription } = useSubscription();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -80,6 +82,30 @@ const SettingsPage = () => {
 
       {/* Subscription */}
       <SubscriptionCard />
+
+      {/* Appearance */}
+      <div className="glass-card p-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-full bg-primary/10">
+            {theme === 'dark' ? (
+              <Moon className="w-5 h-5 text-primary" />
+            ) : (
+              <Sun className="w-5 h-5 text-primary" />
+            )}
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-foreground">Night Mode</h3>
+            <p className="text-sm text-muted-foreground">Easier on your eyes in the dark</p>
+          </div>
+          <Switch 
+            checked={theme === 'dark'}
+            onCheckedChange={(checked) => {
+              setTheme(checked ? 'dark' : 'light');
+              toast.success(checked ? 'Night mode enabled' : 'Light mode enabled');
+            }}
+          />
+        </div>
+      </div>
 
       {/* Reminders */}
       <div className="glass-card p-4 space-y-4">
