@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LocalStorageProvider } from "@/contexts/LocalStorageContext";
+import AuthGuard from "@/components/AuthGuard";
 import Layout from "@/components/Layout";
 import HomePage from "@/pages/HomePage";
 import PhotoDiaryPage from "@/pages/PhotoDiaryPage";
@@ -26,7 +27,18 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Layout />}>
+            {/* Public route - Auth page */}
+            <Route path="/auth" element={<AuthPage />} />
+            
+            {/* Protected routes - require authentication */}
+            <Route
+              path="/"
+              element={
+                <AuthGuard>
+                  <Layout />
+                </AuthGuard>
+              }
+            >
               <Route index element={<HomePage />} />
               <Route path="photos" element={<PhotoDiaryPage />} />
               <Route path="check-in" element={<CheckInPage />} />
@@ -34,9 +46,9 @@ const App = () => (
               <Route path="community" element={<CommunityPage />} />
               <Route path="journal" element={<JournalPage />} />
               <Route path="settings" element={<SettingsPage />} />
-              <Route path="auth" element={<AuthPage />} />
               <Route path="admin" element={<AdminPage />} />
             </Route>
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

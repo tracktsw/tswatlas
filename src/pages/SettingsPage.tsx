@@ -1,13 +1,35 @@
-import { ArrowLeft, Bell, Clock, Shield, Info, UserCog } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useLocalStorage } from '@/contexts/LocalStorageContext';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const SettingsPage = () => {
   const { reminderSettings, updateReminderSettings, photos, checkIns, journalEntries } = useLocalStorage();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: roles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+        
+        setIsAdmin(!!roles);
+      }
+    };
+
+    checkAdminStatus();
+  }, []);
 
   const handleToggleReminders = (enabled: boolean) => {
     updateReminderSettings({ ...reminderSettings, enabled });
@@ -20,6 +42,12 @@ const SettingsPage = () => {
 
   const handleEveningTimeChange = (time: string) => {
     updateReminderSettings({ ...reminderSettings, eveningTime: time });
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast.success('Signed out successfully');
+    navigate('/auth');
   };
 
   return (
@@ -131,25 +159,27 @@ const SettingsPage = () => {
         </div>
       </div>
 
-      {/* Admin Access */}
-      <div className="glass-card p-4">
-        <div className="flex items-start gap-3">
-          <div className="p-2 rounded-full bg-primary/10">
-            <UserCog className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-foreground">Admin Panel</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Review and approve treatment suggestions from the community.
-            </p>
-            <Link to="/auth">
-              <Button variant="outline" size="sm" className="mt-3">
-                Admin Login
-              </Button>
-            </Link>
+      {/* Admin Access - Only shown to admins */}
+      {isAdmin && (
+        <div className="glass-card p-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-full bg-primary/10">
+              <UserCog className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-foreground">Admin Panel</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Review and approve treatment suggestions from the community.
+              </p>
+              <Link to="/admin">
+                <Button variant="outline" size="sm" className="mt-3">
+                  Open Admin Panel
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* About */}
       <div className="glass-card p-4">
@@ -161,6 +191,22 @@ const SettingsPage = () => {
         <p className="text-xs text-muted-foreground mt-3">
           Version 1.0.0 • Made with care
         </p>
+      </div>
+
+      {/* Sign Out */}
+      <div className="glass-card p-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-full bg-destructive/10">
+            <LogOut className="w-5 h-5 text-destructive" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-foreground">Sign Out</h3>
+            <p className="text-sm text-muted-foreground">Sign out of your account</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleLogout}>
+            Sign Out
+          </Button>
+        </div>
       </div>
     </div>
   );
