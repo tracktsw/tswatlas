@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Check, X, LogOut, Shield, Loader2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, X, LogOut, Shield, Loader2, Trash2, Plus, Pencil } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -18,10 +22,25 @@ interface Suggestion {
   suggested_by: string | null;
 }
 
+interface Treatment {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string;
+  is_approved: boolean;
+}
+
+const CATEGORIES = ['moisturizers', 'diet', 'supplements', 'lifestyle', 'topical', 'general'];
+
 const AdminPage = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingTreatment, setEditingTreatment] = useState<Treatment | null>(null);
+  const [formName, setFormName] = useState('');
+  const [formDescription, setFormDescription] = useState('');
+  const [formCategory, setFormCategory] = useState('general');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -152,6 +171,89 @@ const AdminPage = () => {
       toast.error(error.message || 'Failed to remove treatment');
     },
   });
+
+  const addTreatmentMutation = useMutation({
+    mutationFn: async (data: { name: string; description: string; category: string }) => {
+      const { error } = await supabase
+        .from('treatments')
+        .insert({
+          name: data.name.trim(),
+          description: data.description.trim() || null,
+          category: data.category,
+          is_approved: true,
+        });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['treatments'] });
+      toast.success('Treatment added successfully');
+      resetForm();
+      setShowAddModal(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to add treatment');
+    },
+  });
+
+  const updateTreatmentMutation = useMutation({
+    mutationFn: async (data: { id: string; name: string; description: string; category: string }) => {
+      const { error } = await supabase
+        .from('treatments')
+        .update({
+          name: data.name.trim(),
+          description: data.description.trim() || null,
+          category: data.category,
+        })
+        .eq('id', data.id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['treatments'] });
+      toast.success('Treatment updated successfully');
+      resetForm();
+      setEditingTreatment(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to update treatment');
+    },
+  });
+
+  const resetForm = () => {
+    setFormName('');
+    setFormDescription('');
+    setFormCategory('general');
+  };
+
+  const openEditModal = (treatment: Treatment) => {
+    setEditingTreatment(treatment);
+    setFormName(treatment.name);
+    setFormDescription(treatment.description || '');
+    setFormCategory(treatment.category);
+  };
+
+  const handleSubmit = () => {
+    if (!formName.trim()) {
+      toast.error('Treatment name is required');
+      return;
+    }
+
+    if (editingTreatment) {
+      updateTreatmentMutation.mutate({
+        id: editingTreatment.id,
+        name: formName,
+        description: formDescription,
+        category: formCategory,
+      });
+    } else {
+      addTreatmentMutation.mutate({
+        name: formName,
+        description: formDescription,
+        category: formCategory,
+      });
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -287,12 +389,18 @@ const AdminPage = () => {
 
       {/* Community Treatments */}
       <div className="space-y-3">
-        <h2 className="font-semibold text-lg flex items-center gap-2">
-          Community Treatments
-          {treatments && treatments.length > 0 && (
-            <Badge variant="secondary">{treatments.length}</Badge>
-          )}
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-lg flex items-center gap-2">
+            Community Treatments
+            {treatments && treatments.length > 0 && (
+              <Badge variant="secondary">{treatments.length}</Badge>
+            )}
+          </h2>
+          <Button size="sm" onClick={() => setShowAddModal(true)}>
+            <Plus className="w-4 h-4 mr-1" />
+            Add
+          </Button>
+        </div>
 
         {loadingTreatments ? (
           <div className="flex items-center justify-center py-8">
@@ -310,15 +418,24 @@ const AdminPage = () => {
                   <span className="font-medium">{treatment.name}</span>
                   <Badge variant="outline" className="ml-2">{treatment.category}</Badge>
                 </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={() => deleteTreatmentMutation.mutate(treatment.id)}
-                  disabled={deleteTreatmentMutation.isPending}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => openEditModal(treatment)}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => deleteTreatmentMutation.mutate(treatment.id)}
+                    disabled={deleteTreatmentMutation.isPending}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
               {treatment.description && (
                 <p className="text-sm text-muted-foreground mt-2">{treatment.description}</p>
@@ -344,6 +461,66 @@ const AdminPage = () => {
           ))}
         </div>
       )}
+
+      {/* Add/Edit Treatment Modal */}
+      <Dialog open={showAddModal || !!editingTreatment} onOpenChange={(open) => {
+        if (!open) {
+          setShowAddModal(false);
+          setEditingTreatment(null);
+          resetForm();
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingTreatment ? 'Edit Treatment' : 'Add Treatment'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Name</label>
+              <Input
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                placeholder="Treatment name"
+                maxLength={100}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Category</label>
+              <Select value={formCategory} onValueChange={setFormCategory}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Description (optional)</label>
+              <Textarea
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+                placeholder="Brief description..."
+                maxLength={500}
+              />
+            </div>
+            <Button 
+              className="w-full" 
+              onClick={handleSubmit}
+              disabled={addTreatmentMutation.isPending || updateTreatmentMutation.isPending}
+            >
+              {addTreatmentMutation.isPending || updateTreatmentMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
+              {editingTreatment ? 'Save Changes' : 'Add Treatment'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
