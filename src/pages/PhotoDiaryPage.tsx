@@ -11,7 +11,6 @@ import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { LeafIllustration, SparkleIllustration } from '@/components/illustrations';
-import { bodyPartIllustrations } from '@/components/illustrations/BodyPartIllustrations';
 import { SparkleEffect } from '@/components/SparkleEffect';
 
 const bodyParts: { value: BodyPart; label: string }[] = [
@@ -213,21 +212,17 @@ const PhotoDiaryPage = () => {
         >
           All
         </Button>
-        {bodyParts.map(({ value, label }) => {
-          const Icon = bodyPartIllustrations[value];
-          return (
-            <Button
-              key={value}
-              variant={selectedBodyPart === value ? 'warm' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedBodyPart(value)}
-              className="shrink-0 rounded-xl gap-1.5"
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </Button>
-          );
-        })}
+        {bodyParts.map(({ value, label }) => (
+          <Button
+            key={value}
+            variant={selectedBodyPart === value ? 'warm' : 'outline'}
+            size="sm"
+            onClick={() => setSelectedBodyPart(value)}
+            className="shrink-0 rounded-xl"
+          >
+            {label}
+          </Button>
+        ))}
       </div>
 
       {/* Free user limit indicator */}
@@ -322,17 +317,11 @@ const PhotoDiaryPage = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {bodyParts.map(({ value, label }) => {
-                    const Icon = bodyPartIllustrations[value];
-                    return (
-                      <SelectItem key={value} value={value}>
-                        <span className="flex items-center gap-2">
-                          <Icon className="w-4 h-4" />
-                          {label}
-                        </span>
-                      </SelectItem>
-                    );
-                  })}
+                  {bodyParts.map(({ value, label }) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -383,7 +372,6 @@ const PhotoDiaryPage = () => {
           {filteredPhotos.map((photo, index) => {
             const isSelected = selectedPhotos.find(p => p.id === photo.id);
             const bodyPartInfo = bodyParts.find(b => b.value === photo.bodyPart);
-            const BodyPartIcon = bodyPartIllustrations[photo.bodyPart];
             
             return (
               <div 
@@ -403,8 +391,7 @@ const PhotoDiaryPage = () => {
                 />
                 <div className="p-3 space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold bg-coral/10 text-coral px-2.5 py-1 rounded-full flex items-center gap-1.5">
-                      <BodyPartIcon className="w-3.5 h-3.5" />
+                    <span className="text-xs font-semibold bg-coral/10 text-coral px-2.5 py-1 rounded-full">
                       {bodyPartInfo?.label}
                     </span>
                     {!compareMode && (
