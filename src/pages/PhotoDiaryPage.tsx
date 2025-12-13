@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import PaywallGuard from '@/components/PaywallGuard';
 import { LeafIllustration, SparkleIllustration } from '@/components/illustrations';
+import { SparkleEffect } from '@/components/SparkleEffect';
 
 const bodyParts: { value: BodyPart; label: string; emoji: string }[] = [
   { value: 'face', label: 'Face', emoji: '😊' },
@@ -30,6 +31,7 @@ const PhotoDiaryPage = () => {
   const [newPhotoNotes, setNewPhotoNotes] = useState('');
   const [compareMode, setCompareMode] = useState(false);
   const [selectedPhotos, setSelectedPhotos] = useState<Photo[]>([]);
+  const [showSparkles, setShowSparkles] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredPhotos = selectedBodyPart === 'all' 
@@ -51,6 +53,7 @@ const PhotoDiaryPage = () => {
       });
       setNewPhotoNotes('');
       setIsCapturing(false);
+      setShowSparkles(true);
       toast.success('Photo saved locally');
     };
     reader.readAsDataURL(file);
@@ -72,6 +75,9 @@ const PhotoDiaryPage = () => {
   return (
     <PaywallGuard feature="Photo Diary">
     <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
+      {/* Sparkle celebration effect */}
+      <SparkleEffect isActive={showSparkles} onComplete={() => setShowSparkles(false)} />
+      
       {/* Decorative elements */}
       <div className="decorative-blob w-32 h-32 bg-coral/25 -top-10 -left-10 fixed" />
       <div className="decorative-blob w-44 h-44 bg-honey/20 bottom-32 -right-16 fixed" />

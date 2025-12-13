@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { HeartIllustration, SunIllustration, LeafIllustration } from '@/components/illustrations';
+import { SparkleEffect } from '@/components/SparkleEffect';
 
 const treatments = [
   { id: 'nmt', label: 'NMT', description: 'No Moisture Treatment' },
@@ -30,6 +31,7 @@ const CheckInPage = () => {
   const [mood, setMood] = useState(3);
   const [skinFeeling, setSkinFeeling] = useState(3);
   const [notes, setNotes] = useState('');
+  const [showSparkles, setShowSparkles] = useState(false);
   
   const today = format(new Date(), 'yyyy-MM-dd');
   const currentHour = new Date().getHours();
@@ -67,6 +69,9 @@ const CheckInPage = () => {
       notes: notes || undefined,
     });
     
+    // Show celebration sparkles
+    setShowSparkles(true);
+    
     // Reset form
     setSelectedTreatments([]);
     setCustomTreatment('');
@@ -84,6 +89,9 @@ const CheckInPage = () => {
 
   return (
     <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
+      {/* Sparkle celebration effect */}
+      <SparkleEffect isActive={showSparkles} onComplete={() => setShowSparkles(false)} />
+      
       {/* Decorative elements */}
       <div className="decorative-blob w-32 h-32 bg-honey/30 -top-10 -left-10 fixed" />
       <div className="decorative-blob w-40 h-40 bg-primary/20 bottom-40 -right-20 fixed" />
