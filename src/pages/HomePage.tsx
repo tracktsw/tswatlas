@@ -1,15 +1,35 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, CheckCircle, BarChart3, Users, BookOpen, Settings, Sparkles } from 'lucide-react';
+import { Camera, CheckCircle, BarChart3, Users, BookOpen, Settings, Sparkles, Calendar as CalendarIcon, Flame, Pencil } from 'lucide-react';
 import { useLocalStorage } from '@/contexts/LocalStorageContext';
-import { format } from 'date-fns';
+import { format, differenceInDays, parseISO } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Calendar } from '@/components/ui/calendar';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 const HomePage = () => {
-  const { photos, checkIns, journalEntries } = useLocalStorage();
+  const { photos, checkIns, journalEntries, tswStartDate, setTswStartDate } = useLocalStorage();
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    tswStartDate ? parseISO(tswStartDate) : undefined
+  );
   
   const today = format(new Date(), 'yyyy-MM-dd');
   const todayCheckIns = checkIns.filter(c => c.timestamp.startsWith(today));
   const hasMorningCheckIn = todayCheckIns.some(c => c.timeOfDay === 'morning');
   const hasEveningCheckIn = todayCheckIns.some(c => c.timeOfDay === 'evening');
+
+  const daysSinceTsw = tswStartDate 
+    ? differenceInDays(new Date(), parseISO(tswStartDate)) 
+    : null;
+
+  const handleSaveDate = () => {
+    if (selectedDate) {
+      setTswStartDate(format(selectedDate, 'yyyy-MM-dd'));
+      setIsDatePickerOpen(false);
+    }
+  };
 
   const quickActions = [
     { 
@@ -62,8 +82,74 @@ const HomePage = () => {
         </Link>
       </div>
 
+      {/* TSW Journey Tracker */}
+      <Dialog open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+        <div className="glass-card p-4 warm-gradient">
+          {daysSinceTsw !== null ? (
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-full bg-primary/20">
+                <Flame className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-primary">{daysSinceTsw}</span>
+                  <span className="text-sm font-medium text-foreground">days healing</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Started: {format(parseISO(tswStartDate!), 'MMMM d, yyyy')}
+                </p>
+              </div>
+              <DialogTrigger asChild>
+                <button 
+                  className="p-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+                  onClick={() => setSelectedDate(parseISO(tswStartDate!))}
+                >
+                  <Pencil className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </DialogTrigger>
+            </div>
+          ) : (
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-full bg-primary/20">
+                <CalendarIcon className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h2 className="font-semibold text-foreground">Track Your TSW Journey</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Set the date you stopped steroids to track your healing progress.
+                </p>
+                <DialogTrigger asChild>
+                  <Button variant="secondary" size="sm" className="mt-2">
+                    Set Start Date
+                  </Button>
+                </DialogTrigger>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <DialogContent className="max-w-[340px]">
+          <DialogHeader>
+            <DialogTitle>When did you stop steroids?</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={setSelectedDate}
+              disabled={(date) => date > new Date()}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+            <Button onClick={handleSaveDate} disabled={!selectedDate} className="w-full">
+              Save Date
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Encouragement Card */}
-      <div className="glass-card p-4 warm-gradient">
+      <div className="glass-card p-4">
         <div className="flex items-start gap-3">
           <div className="p-2 rounded-full bg-primary/20">
             <Sparkles className="w-5 h-5 text-primary" />
