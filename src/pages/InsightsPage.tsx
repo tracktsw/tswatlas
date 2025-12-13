@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { useLocalStorage, BodyPart } from '@/contexts/LocalStorageContext';
 import { format, subDays, startOfDay, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isSameMonth, addMonths, subMonths, getDay, setMonth, setYear } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -150,15 +150,21 @@ const InsightsPage = () => {
 
   if (checkIns.length === 0) {
     return (
-      <div className="px-4 py-6 space-y-6 max-w-lg mx-auto">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-foreground">Insights</h1>
-          <p className="text-sm text-muted-foreground">Track your healing patterns</p>
+      <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
+        {/* Decorative elements */}
+        <div className="decorative-blob w-36 h-36 bg-honey/25 -top-10 -right-10 fixed" />
+        <div className="decorative-blob w-44 h-44 bg-primary/20 bottom-32 -left-16 fixed" />
+        
+        <div className="animate-fade-in">
+          <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">Insights</h1>
+          <p className="text-muted-foreground">Track your healing patterns</p>
         </div>
-        <div className="glass-card p-8 text-center">
-          <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-          <p className="text-muted-foreground">No data yet</p>
-          <p className="text-sm text-muted-foreground mt-1">
+        <div className="glass-card-warm p-8 text-center animate-slide-up">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-honey/20 to-coral-light flex items-center justify-center animate-float">
+            <BarChart3 className="w-8 h-8 text-honey" />
+          </div>
+          <p className="font-display font-bold text-lg text-foreground">No data yet</p>
+          <p className="text-muted-foreground mt-1">
             Start doing daily check-ins to see your insights
           </p>
         </div>
@@ -167,36 +173,43 @@ const InsightsPage = () => {
   }
 
   return (
-    <div className="px-4 py-6 space-y-6 max-w-lg mx-auto">
+    <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
+      {/* Decorative elements */}
+      <div className="decorative-blob w-36 h-36 bg-honey/25 -top-10 -right-10 fixed" />
+      <div className="decorative-blob w-44 h-44 bg-primary/20 bottom-32 -left-16 fixed" />
+      
       {/* Header */}
-      <div>
-        <h1 className="font-display text-2xl font-bold text-foreground">Insights</h1>
-        <p className="text-sm text-muted-foreground">Your healing patterns</p>
+      <div className="animate-fade-in">
+        <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">Insights</h1>
+        <p className="text-muted-foreground">Your healing patterns</p>
       </div>
+
       {/* Overall Trend */}
       {overallTrend && (
         <div className={cn(
-          'glass-card p-4',
-          overallTrend === 'improving' && 'warm-gradient'
-        )}>
-          <div className="flex items-center gap-3">
+          'glass-card-warm p-5 animate-slide-up',
+          overallTrend === 'improving' && 'ring-2 ring-primary/30'
+        )} style={{ animationDelay: '0.05s' }}>
+          <div className="flex items-center gap-4">
             <div className={cn(
-              'w-10 h-10 rounded-full flex items-center justify-center',
-              overallTrend === 'improving' ? 'bg-primary/20' : 'bg-muted'
+              'w-14 h-14 rounded-2xl flex items-center justify-center shadow-warm-sm',
+              overallTrend === 'improving' 
+                ? 'bg-gradient-to-br from-primary/20 to-sage-light' 
+                : 'bg-muted'
             )}>
               <TrendingUp className={cn(
-                'w-5 h-5',
+                'w-7 h-7',
                 overallTrend === 'improving' ? 'text-primary' : 'text-muted-foreground',
                 overallTrend === 'declining' && 'rotate-180'
               )} />
             </div>
             <div>
-              <p className="font-semibold text-foreground">
+              <p className="font-display font-bold text-lg text-foreground">
                 {overallTrend === 'improving' ? 'Skin is improving!' : 
                  overallTrend === 'declining' ? 'Skin may be flaring' : 
                  'Skin is stable'}
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground">
                 Based on your recent check-ins
               </p>
             </div>
@@ -205,25 +218,33 @@ const InsightsPage = () => {
       )}
 
       {/* Weekly Overview */}
-      <div className="space-y-3">
-        <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
-          <Calendar className="w-4 h-4" />
+      <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+        <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-honey/20">
+            <Calendar className="w-4 h-4 text-honey" />
+          </div>
           Last 7 Days
         </h3>
-        <div className="glass-card p-4">
-          <div className="flex justify-between gap-1">
-            {weeklyData.map(({ date, avgMood, avgSkin, checkIns: count }) => (
-              <div key={date.toISOString()} className="flex-1 text-center">
-                <p className="text-xs text-muted-foreground mb-2">
+        <div className="glass-card p-5">
+          <div className="flex justify-between gap-2">
+            {weeklyData.map(({ date, avgMood, avgSkin, checkIns: count }, index) => (
+              <div 
+                key={date.toISOString()} 
+                className="flex-1 text-center animate-scale-in"
+                style={{ animationDelay: `${0.15 + index * 0.03}s` }}
+              >
+                <p className="text-xs text-muted-foreground mb-2 font-medium">
                   {format(date, 'EEE')}
                 </p>
                 <div className={cn(
-                  'aspect-square rounded-lg flex items-center justify-center text-lg mb-1',
-                  count > 0 ? 'bg-primary/10' : 'bg-muted/50'
+                  'aspect-square rounded-2xl flex items-center justify-center text-lg mb-1.5 transition-all duration-300',
+                  count > 0 
+                    ? 'bg-gradient-to-br from-primary/15 to-sage-light/50 shadow-warm-sm' 
+                    : 'bg-muted/50'
                 )}>
                   {count > 0 ? skinEmojis[Math.round(avgSkin) - 1] || '—' : '—'}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm">
                   {count > 0 ? moodEmojis[Math.round(avgMood) - 1] : ''}
                 </p>
               </div>
@@ -235,23 +256,29 @@ const InsightsPage = () => {
       {/* Treatment Effectiveness - Premium */}
       {treatmentStats.length > 0 && (
         <PaywallGuard feature="Treatment Insights" showBlurred>
-          <div className="space-y-3">
-            <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
-              <Heart className="w-4 h-4" />
+          <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.15s' }}>
+            <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-coral/20">
+                <Heart className="w-4 h-4 text-coral" />
+              </div>
               What's Helping You
             </h3>
-            <div className="glass-card p-4 space-y-3">
-              {treatmentStats.map(({ id, label, count, effectiveness }) => (
-                <div key={id} className="space-y-1">
+            <div className="glass-card p-5 space-y-4">
+              {treatmentStats.map(({ id, label, count, effectiveness }, index) => (
+                <div 
+                  key={id} 
+                  className="space-y-2 animate-slide-up"
+                  style={{ animationDelay: `${0.2 + index * 0.03}s` }}
+                >
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">{label}</span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="font-semibold text-foreground">{label}</span>
+                    <span className="text-xs text-muted-foreground font-medium">
                       {effectiveness}% good days ({count} uses)
                     </span>
                   </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div className="h-3 bg-muted rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-primary rounded-full transition-all"
+                      className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-700"
                       style={{ width: `${effectiveness}%` }}
                     />
                   </div>
@@ -272,40 +299,40 @@ const InsightsPage = () => {
       }}>
         <Button 
           variant="outline" 
-          className="w-full flex items-center justify-center gap-2"
+          className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl border-2 hover:shadow-warm transition-all duration-300"
           onClick={() => setCalendarOpen(true)}
         >
-          <Calendar className="w-4 h-4" />
+          <Calendar className="w-5 h-5" />
           View History Calendar
         </Button>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="font-display text-xl">
               {selectedDate ? format(selectedDate, 'EEEE, MMMM d, yyyy') : 'History Calendar'}
             </DialogTitle>
           </DialogHeader>
           
           {selectedDate ? (
             <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-              <Button variant="ghost" size="sm" onClick={() => setSelectedDate(null)} className="mb-2">
+              <Button variant="ghost" size="sm" onClick={() => setSelectedDate(null)} className="mb-2 rounded-xl">
                 <ChevronLeft className="w-4 h-4 mr-1" /> Back to calendar
               </Button>
               {selectedDayCheckIns.length > 0 ? (
                 selectedDayCheckIns.map((checkIn, idx) => (
-                  <div key={idx} className="p-3 bg-muted/50 rounded-lg space-y-2">
+                  <div key={idx} className="p-4 bg-muted/50 rounded-2xl space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-sm text-muted-foreground font-medium">
                         {format(new Date(checkIn.timestamp), 'h:mm a')}
                       </span>
                       <div className="flex gap-2">
-                        <span title="Mood">{moodEmojis[checkIn.mood - 1]}</span>
-                        <span title="Skin">{skinEmojis[checkIn.skinFeeling - 1]}</span>
+                        <span title="Mood" className="text-lg">{moodEmojis[checkIn.mood - 1]}</span>
+                        <span title="Skin" className="text-lg">{skinEmojis[checkIn.skinFeeling - 1]}</span>
                       </div>
                     </div>
                     {checkIn.treatments.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-1.5">
                         {checkIn.treatments.map(t => (
-                          <Badge key={t} variant="secondary" className="text-xs">
+                          <Badge key={t} variant="secondary" className="text-xs rounded-full">
                             {treatments.find(tr => tr.id === t)?.label || t}
                           </Badge>
                         ))}
@@ -317,15 +344,15 @@ const InsightsPage = () => {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground text-center">No check-ins this day</p>
+                <p className="text-sm text-muted-foreground text-center py-4">No check-ins this day</p>
               )}
               
               {selectedDayPhotos.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium mb-2">Photos ({selectedDayPhotos.length})</p>
+                  <p className="font-semibold mb-2">Photos ({selectedDayPhotos.length})</p>
                   <div className="grid grid-cols-3 gap-2">
                     {selectedDayPhotos.map((photo, idx) => (
-                      <div key={idx} className="aspect-square rounded-lg overflow-hidden">
+                      <div key={idx} className="aspect-square rounded-xl overflow-hidden shadow-warm-sm">
                         <img 
                           src={photo.dataUrl} 
                           alt={photo.bodyPart}
@@ -344,6 +371,7 @@ const InsightsPage = () => {
                 <Button 
                   variant="ghost" 
                   size="icon"
+                  className="rounded-xl"
                   onClick={() => setCalendarMonth(prev => subMonths(prev, 1))}
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -353,7 +381,7 @@ const InsightsPage = () => {
                     value={calendarMonth.getMonth().toString()} 
                     onValueChange={(val) => setCalendarMonth(prev => setMonth(prev, parseInt(val)))}
                   >
-                    <SelectTrigger className="h-7 w-auto min-w-[100px] text-sm font-medium focus:ring-0 focus:ring-offset-0 gap-1">
+                    <SelectTrigger className="h-8 w-auto min-w-[100px] text-sm font-semibold focus:ring-0 focus:ring-offset-0 gap-1 rounded-xl">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="max-h-60">
@@ -368,7 +396,7 @@ const InsightsPage = () => {
                     value={calendarMonth.getFullYear().toString()} 
                     onValueChange={(val) => setCalendarMonth(prev => setYear(prev, parseInt(val)))}
                   >
-                    <SelectTrigger className="h-7 w-auto min-w-[70px] text-sm font-medium focus:ring-0 focus:ring-offset-0 gap-1">
+                    <SelectTrigger className="h-8 w-auto min-w-[70px] text-sm font-semibold focus:ring-0 focus:ring-offset-0 gap-1 rounded-xl">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="max-h-60">
@@ -383,6 +411,7 @@ const InsightsPage = () => {
                 <Button 
                   variant="ghost" 
                   size="icon"
+                  className="rounded-xl"
                   onClick={() => setCalendarMonth(prev => addMonths(prev, 1))}
                   disabled={isSameMonth(calendarMonth, new Date())}
                 >
@@ -393,14 +422,14 @@ const InsightsPage = () => {
               {/* Day Labels */}
               <div className="grid grid-cols-7 gap-1">
                 {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-                  <div key={day} className="text-center text-xs text-muted-foreground font-medium">
+                  <div key={day} className="text-center text-xs text-muted-foreground font-semibold">
                     {day}
                   </div>
                 ))}
               </div>
 
               {/* Calendar Grid */}
-              <div className="grid grid-cols-7 gap-1">
+              <div className="grid grid-cols-7 gap-1.5">
                 {calendarDays.map((date, idx) => {
                   if (!date) {
                     return <div key={`empty-${idx}`} className="aspect-square" />;
@@ -420,14 +449,14 @@ const InsightsPage = () => {
                       onClick={() => hasData && setSelectedDate(date)}
                       disabled={!hasData}
                       className={cn(
-                        'aspect-square rounded-lg flex flex-col items-center justify-center text-xs transition-colors relative',
-                        hasData ? 'hover:bg-primary/20 cursor-pointer' : 'cursor-default',
-                        isToday && 'ring-2 ring-primary',
-                        hasData && 'bg-primary/10'
+                        'aspect-square rounded-xl flex flex-col items-center justify-center text-xs transition-all duration-300 relative',
+                        hasData ? 'hover:bg-coral/20 hover:shadow-warm-sm cursor-pointer' : 'cursor-default',
+                        isToday && 'ring-2 ring-coral',
+                        hasData && 'bg-gradient-to-br from-primary/10 to-sage-light/30'
                       )}
                     >
                       <span className={cn(
-                        'font-medium',
+                        'font-semibold',
                         hasData ? 'text-foreground' : 'text-muted-foreground'
                       )}>
                         {format(date, 'd')}
@@ -446,16 +475,21 @@ const InsightsPage = () => {
       </PaywallGuard>
 
       {/* Stats Summary */}
-      <div className="glass-card p-4">
-        <h3 className="font-display font-semibold text-foreground mb-3">Summary</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="text-center p-3 bg-muted/50 rounded-xl">
-            <p className="text-2xl font-bold text-primary">{checkIns.length}</p>
-            <p className="text-xs text-muted-foreground">Total Check-ins</p>
+      <div className="glass-card-warm p-5 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+        <h3 className="font-display font-bold text-lg text-foreground mb-4 flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-primary/20">
+            <Sparkles className="w-4 h-4 text-primary" />
           </div>
-          <div className="text-center p-3 bg-muted/50 rounded-xl">
-            <p className="text-2xl font-bold text-primary">{photos.length}</p>
-            <p className="text-xs text-muted-foreground">Photos Taken</p>
+          Summary
+        </h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="text-center p-4 bg-gradient-to-br from-coral/10 to-coral-light/50 rounded-2xl shadow-warm-sm">
+            <p className="text-3xl font-bold text-coral">{checkIns.length}</p>
+            <p className="text-xs text-muted-foreground font-medium mt-1">Total Check-ins</p>
+          </div>
+          <div className="text-center p-4 bg-gradient-to-br from-primary/10 to-sage-light/50 rounded-2xl shadow-warm-sm">
+            <p className="text-3xl font-bold text-primary">{photos.length}</p>
+            <p className="text-xs text-muted-foreground font-medium mt-1">Photos Taken</p>
           </div>
         </div>
       </div>
