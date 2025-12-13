@@ -36,6 +36,7 @@ const InsightsPage = () => {
   const { checkIns, photos } = useLocalStorage();
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   
   const last7Days = useMemo(() => {
     const end = startOfDay(new Date());
@@ -168,7 +169,6 @@ const InsightsPage = () => {
         <h1 className="font-display text-2xl font-bold text-foreground">Insights</h1>
         <p className="text-sm text-muted-foreground">Your healing patterns</p>
       </div>
-
       {/* Overall Trend */}
       {overallTrend && (
         <div className={cn(
@@ -200,141 +200,209 @@ const InsightsPage = () => {
         </div>
       )}
 
-      {/* Calendar View */}
+      {/* Weekly Overview */}
       <div className="space-y-3">
         <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
           <Calendar className="w-4 h-4" />
-          History Calendar
+          Last 7 Days
         </h3>
         <div className="glass-card p-4">
-          {/* Month Navigation */}
-          <div className="flex items-center justify-between mb-4">
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => setCalendarMonth(prev => subMonths(prev, 1))}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <span className="font-medium">{format(calendarMonth, 'MMMM yyyy')}</span>
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => setCalendarMonth(prev => addMonths(prev, 1))}
-              disabled={isSameMonth(calendarMonth, new Date())}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-
-          {/* Day Labels */}
-          <div className="grid grid-cols-7 gap-1 mb-2">
-            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-              <div key={day} className="text-center text-xs text-muted-foreground font-medium">
-                {day}
+          <div className="flex justify-between gap-1">
+            {weeklyData.map(({ date, avgMood, avgSkin, checkIns: count }) => (
+              <div key={date.toISOString()} className="flex-1 text-center">
+                <p className="text-xs text-muted-foreground mb-2">
+                  {format(date, 'EEE')}
+                </p>
+                <div className={cn(
+                  'aspect-square rounded-lg flex items-center justify-center text-lg mb-1',
+                  count > 0 ? 'bg-primary/10' : 'bg-muted/50'
+                )}>
+                  {count > 0 ? skinEmojis[Math.round(avgSkin) - 1] || '—' : '—'}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {count > 0 ? moodEmojis[Math.round(avgMood) - 1] : ''}
+                </p>
               </div>
             ))}
-          </div>
-
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-1">
-            {calendarDays.map((date, idx) => {
-              if (!date) {
-                return <div key={`empty-${idx}`} className="aspect-square" />;
-              }
-              
-              const dayCheckIns = getCheckInsForDate(date);
-              const dayPhotos = getPhotosForDate(date);
-              const hasData = dayCheckIns.length > 0 || dayPhotos.length > 0;
-              const isToday = isSameDay(date, new Date());
-              const avgSkin = dayCheckIns.length 
-                ? Math.round(dayCheckIns.reduce((sum, c) => sum + c.skinFeeling, 0) / dayCheckIns.length)
-                : 0;
-              
-              return (
-                <button
-                  key={date.toISOString()}
-                  onClick={() => hasData && setSelectedDate(date)}
-                  disabled={!hasData}
-                  className={cn(
-                    'aspect-square rounded-lg flex flex-col items-center justify-center text-xs transition-colors relative',
-                    hasData ? 'hover:bg-primary/20 cursor-pointer' : 'cursor-default',
-                    isToday && 'ring-2 ring-primary',
-                    hasData && 'bg-primary/10'
-                  )}
-                >
-                  <span className={cn(
-                    'font-medium',
-                    hasData ? 'text-foreground' : 'text-muted-foreground'
-                  )}>
-                    {format(date, 'd')}
-                  </span>
-                  {hasData && avgSkin > 0 && (
-                    <span className="text-[10px] leading-none">{skinEmojis[avgSkin - 1]}</span>
-                  )}
-                </button>
-              );
-            })}
           </div>
         </div>
       </div>
 
-      {/* Selected Day Modal */}
-      <Dialog open={!!selectedDate} onOpenChange={(open) => !open && setSelectedDate(null)}>
+      {/* Treatment Effectiveness */}
+      {treatmentStats.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
+            <Heart className="w-4 h-4" />
+            What's Helping You
+          </h3>
+          <div className="glass-card p-4 space-y-3">
+            {treatmentStats.map(({ id, label, count, effectiveness }) => (
+              <div key={id} className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">{label}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {effectiveness}% good days ({count} uses)
+                  </span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-primary rounded-full transition-all"
+                    style={{ width: `${effectiveness}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Calendar Button */}
+      <Dialog open={!!selectedDate || calendarOpen} onOpenChange={(open) => {
+        if (!open) {
+          setSelectedDate(null);
+          setCalendarOpen(false);
+        }
+      }}>
+        <Button 
+          variant="outline" 
+          className="w-full flex items-center justify-center gap-2"
+          onClick={() => setCalendarOpen(true)}
+        >
+          <Calendar className="w-4 h-4" />
+          View History Calendar
+        </Button>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>
-              {selectedDate && format(selectedDate, 'EEEE, MMMM d, yyyy')}
+              {selectedDate ? format(selectedDate, 'EEEE, MMMM d, yyyy') : 'History Calendar'}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-            {selectedDayCheckIns.length > 0 ? (
-              selectedDayCheckIns.map((checkIn, idx) => (
-                <div key={idx} className="p-3 bg-muted/50 rounded-lg space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      {format(new Date(checkIn.timestamp), 'h:mm a')}
-                    </span>
-                    <div className="flex gap-2">
-                      <span title="Mood">{moodEmojis[checkIn.mood - 1]}</span>
-                      <span title="Skin">{skinEmojis[checkIn.skinFeeling - 1]}</span>
+          
+          {selectedDate ? (
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+              <Button variant="ghost" size="sm" onClick={() => setSelectedDate(null)} className="mb-2">
+                <ChevronLeft className="w-4 h-4 mr-1" /> Back to calendar
+              </Button>
+              {selectedDayCheckIns.length > 0 ? (
+                selectedDayCheckIns.map((checkIn, idx) => (
+                  <div key={idx} className="p-3 bg-muted/50 rounded-lg space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        {format(new Date(checkIn.timestamp), 'h:mm a')}
+                      </span>
+                      <div className="flex gap-2">
+                        <span title="Mood">{moodEmojis[checkIn.mood - 1]}</span>
+                        <span title="Skin">{skinEmojis[checkIn.skinFeeling - 1]}</span>
+                      </div>
                     </div>
+                    {checkIn.treatments.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {checkIn.treatments.map(t => (
+                          <Badge key={t} variant="secondary" className="text-xs">
+                            {treatments.find(tr => tr.id === t)?.label || t}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    {checkIn.notes && (
+                      <p className="text-sm text-muted-foreground italic">"{checkIn.notes}"</p>
+                    )}
                   </div>
-                  {checkIn.treatments.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {checkIn.treatments.map(t => (
-                        <Badge key={t} variant="secondary" className="text-xs">
-                          {treatments.find(tr => tr.id === t)?.label || t}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  {checkIn.notes && (
-                    <p className="text-sm text-muted-foreground italic">"{checkIn.notes}"</p>
-                  )}
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center">No check-ins this day</p>
+              )}
+              
+              {selectedDayPhotos.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium mb-2">Photos ({selectedDayPhotos.length})</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {selectedDayPhotos.map((photo, idx) => (
+                      <div key={idx} className="aspect-square rounded-lg overflow-hidden">
+                        <img 
+                          src={photo.dataUrl} 
+                          alt={photo.bodyPart}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground text-center">No check-ins this day</p>
-            )}
-            
-            {selectedDayPhotos.length > 0 && (
-              <div>
-                <p className="text-sm font-medium mb-2">Photos ({selectedDayPhotos.length})</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {selectedDayPhotos.map((photo, idx) => (
-                    <div key={idx} className="aspect-square rounded-lg overflow-hidden">
-                      <img 
-                        src={photo.dataUrl} 
-                        alt={photo.bodyPart}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ))}
-                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Month Navigation */}
+              <div className="flex items-center justify-between">
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setCalendarMonth(prev => subMonths(prev, 1))}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="font-medium">{format(calendarMonth, 'MMMM yyyy')}</span>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setCalendarMonth(prev => addMonths(prev, 1))}
+                  disabled={isSameMonth(calendarMonth, new Date())}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
               </div>
-            )}
-          </div>
+
+              {/* Day Labels */}
+              <div className="grid grid-cols-7 gap-1">
+                {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                  <div key={day} className="text-center text-xs text-muted-foreground font-medium">
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              {/* Calendar Grid */}
+              <div className="grid grid-cols-7 gap-1">
+                {calendarDays.map((date, idx) => {
+                  if (!date) {
+                    return <div key={`empty-${idx}`} className="aspect-square" />;
+                  }
+                  
+                  const dayCheckIns = getCheckInsForDate(date);
+                  const dayPhotos = getPhotosForDate(date);
+                  const hasData = dayCheckIns.length > 0 || dayPhotos.length > 0;
+                  const isToday = isSameDay(date, new Date());
+                  const avgSkin = dayCheckIns.length 
+                    ? Math.round(dayCheckIns.reduce((sum, c) => sum + c.skinFeeling, 0) / dayCheckIns.length)
+                    : 0;
+                  
+                  return (
+                    <button
+                      key={date.toISOString()}
+                      onClick={() => hasData && setSelectedDate(date)}
+                      disabled={!hasData}
+                      className={cn(
+                        'aspect-square rounded-lg flex flex-col items-center justify-center text-xs transition-colors relative',
+                        hasData ? 'hover:bg-primary/20 cursor-pointer' : 'cursor-default',
+                        isToday && 'ring-2 ring-primary',
+                        hasData && 'bg-primary/10'
+                      )}
+                    >
+                      <span className={cn(
+                        'font-medium',
+                        hasData ? 'text-foreground' : 'text-muted-foreground'
+                      )}>
+                        {format(date, 'd')}
+                      </span>
+                      {hasData && avgSkin > 0 && (
+                        <span className="text-[10px] leading-none">{skinEmojis[avgSkin - 1]}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
