@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Mail, Lock, Heart, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, Heart, ArrowLeft, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import tswAtlasLogo from '@/assets/tsw-atlas-logo.png';
 
 type AuthMode = 'login' | 'signup' | 'forgot';
 
@@ -78,7 +79,7 @@ const AuthPage = () => {
   const getTitle = () => {
     switch (mode) {
       case 'forgot': return 'Reset Password';
-      case 'signup': return 'Create Account';
+      case 'signup': return 'Join TSW Atlas';
       default: return 'Welcome Back';
     }
   };
@@ -101,43 +102,63 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-6">
-      <div className="w-full max-w-sm space-y-6">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="decorative-blob w-64 h-64 bg-coral/40 -top-20 -right-20 fixed" />
+      <div className="decorative-blob w-80 h-80 bg-sage/30 -bottom-32 -left-32 fixed" />
+      <div className="decorative-blob w-48 h-48 bg-honey/20 top-1/3 right-0 fixed" />
+      
+      {/* Dot pattern overlay */}
+      <div className="fixed inset-0 decorative-dots opacity-30 pointer-events-none" />
+      
+      <div className="w-full max-w-sm space-y-8 relative z-10">
         {/* Header */}
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-4 animate-fade-in">
           {mode === 'forgot' ? (
             <button
               onClick={() => setMode('login')}
-              className="inline-flex items-center justify-center p-3 rounded-full bg-muted hover:bg-muted/80 transition-colors mb-2"
+              className="inline-flex items-center justify-center p-3 rounded-2xl bg-muted/80 hover:bg-muted hover:shadow-warm transition-all duration-300 mb-2"
             >
               <ArrowLeft className="w-6 h-6" />
             </button>
           ) : (
-            <div className="inline-flex items-center justify-center p-3 rounded-full bg-primary/10 mb-2">
-              <Heart className="w-8 h-8 text-primary" />
+            <div className="inline-flex flex-col items-center gap-3">
+              <div className="relative">
+                <img 
+                  src={tswAtlasLogo} 
+                  alt="TSW Atlas" 
+                  className="w-20 h-20 rounded-3xl shadow-warm-lg animate-float" 
+                />
+                <div className="absolute -bottom-1 -right-1 p-1.5 bg-coral rounded-xl shadow-warm-sm">
+                  <Sparkles className="w-4 h-4 text-white" />
+                </div>
+              </div>
+              <h2 className="font-display text-lg font-semibold text-coral">TSW Atlas</h2>
             </div>
           )}
-          <h1 className="font-display text-2xl font-bold text-foreground">
-            {getTitle()}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {getSubtitle()}
-          </p>
+          <div className="space-y-2">
+            <h1 className="font-display text-3xl font-bold text-foreground text-warm-shadow">
+              {getTitle()}
+            </h1>
+            <p className="text-muted-foreground">
+              {getSubtitle()}
+            </p>
+          </div>
         </div>
 
         {/* Auth Form */}
-        <form onSubmit={handleSubmit} className="glass-card p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="glass-card-warm p-6 space-y-5 animate-slide-up">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="font-semibold">Email</Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="pl-10"
+                className="pl-11 h-12 rounded-xl border-2 focus:border-coral/50 transition-colors"
                 required
               />
             </div>
@@ -145,16 +166,16 @@ const AuthPage = () => {
 
           {mode !== 'forgot' && (
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="font-semibold">Password</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="pl-10"
+                  className="pl-11 h-12 rounded-xl border-2 focus:border-coral/50 transition-colors"
                   required
                   minLength={6}
                 />
@@ -166,13 +187,13 @@ const AuthPage = () => {
             <button
               type="button"
               onClick={() => setMode('forgot')}
-              className="text-sm text-primary hover:underline"
+              className="text-sm text-coral hover:text-coral-deep hover:underline transition-colors font-medium"
             >
               Forgot password?
             </button>
           )}
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" variant="warm" className="w-full h-12 text-base" disabled={loading}>
             {getButtonText()}
           </Button>
 
@@ -182,7 +203,7 @@ const AuthPage = () => {
               <button
                 type="button"
                 onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
-                className="text-primary hover:underline"
+                className="text-coral hover:text-coral-deep hover:underline transition-colors font-semibold"
               >
                 {mode === 'login' ? 'Sign up' : 'Sign in'}
               </button>
@@ -191,10 +212,15 @@ const AuthPage = () => {
         </form>
 
         {/* Privacy Note */}
-        <p className="text-xs text-center text-muted-foreground">
-          Your photos and personal data are stored locally on your device. 
-          Only your account info is stored securely.
-        </p>
+        <div className="glass-card p-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <div className="flex items-start gap-3">
+            <Heart className="w-5 h-5 text-coral flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Your photos and personal data are stored locally on your device. 
+              Only your account info is stored securely.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
