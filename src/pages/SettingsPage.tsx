@@ -1,8 +1,9 @@
-import { ArrowLeft, Bell, Clock, Shield, Info } from 'lucide-react';
+import { ArrowLeft, Bell, Clock, Shield, Info, UserCog } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLocalStorage } from '@/contexts/LocalStorageContext';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 const SettingsPage = () => {
@@ -126,6 +127,26 @@ const SettingsPage = () => {
           <div className="text-center p-3 bg-muted/50 rounded-xl">
             <p className="text-xl font-bold text-primary">{journalEntries.length}</p>
             <p className="text-xs text-muted-foreground">Journal</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Admin Access */}
+      <div className="glass-card p-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-full bg-primary/10">
+            <UserCog className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-foreground">Admin Panel</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Review and approve treatment suggestions from the community.
+            </p>
+            <Link to="/auth">
+              <Button variant="outline" size="sm" className="mt-3">
+                Admin Login
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

@@ -12,6 +12,8 @@ import InsightsPage from "@/pages/InsightsPage";
 import CommunityPage from "@/pages/CommunityPage";
 import JournalPage from "@/pages/JournalPage";
 import SettingsPage from "@/pages/SettingsPage";
+import AuthPage from "@/pages/AuthPage";
+import AdminPage from "@/pages/AdminPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +34,8 @@ const App = () => (
               <Route path="community" element={<CommunityPage />} />
               <Route path="journal" element={<JournalPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="auth" element={<AuthPage />} />
+              <Route path="admin" element={<AdminPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
