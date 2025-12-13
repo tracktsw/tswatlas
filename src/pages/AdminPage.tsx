@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Check, X, LogOut, Shield, Loader2 } from 'lucide-react';
+import { ArrowLeft, Check, X, LogOut, Shield, Loader2, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -69,6 +69,21 @@ const AdminPage = () => {
     enabled: !!user,
   });
 
+  const { data: treatments, isLoading: loadingTreatments } = useQuery({
+    queryKey: ['treatments'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('treatments')
+        .select('*')
+        .eq('is_approved', true)
+        .order('name', { ascending: true });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && isAdmin,
+  });
+
   const approveMutation = useMutation({
     mutationFn: async (suggestion: Suggestion) => {
       // Insert into treatments table
@@ -117,6 +132,24 @@ const AdminPage = () => {
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to reject suggestion');
+    },
+  });
+
+  const deleteTreatmentMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('treatments')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['treatments'] });
+      toast.success('Treatment removed from community list');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to remove treatment');
     },
   });
 
@@ -247,6 +280,49 @@ const AdminPage = () => {
               <p className="text-xs text-muted-foreground">
                 Submitted {new Date(suggestion.created_at).toLocaleDateString()}
               </p>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Community Treatments */}
+      <div className="space-y-3">
+        <h2 className="font-semibold text-lg flex items-center gap-2">
+          Community Treatments
+          {treatments && treatments.length > 0 && (
+            <Badge variant="secondary">{treatments.length}</Badge>
+          )}
+        </h2>
+
+        {loadingTreatments ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : !treatments || treatments.length === 0 ? (
+          <div className="glass-card p-6 text-center text-muted-foreground">
+            No treatments in the community list
+          </div>
+        ) : (
+          treatments.map((treatment) => (
+            <div key={treatment.id} className="glass-card p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-medium">{treatment.name}</span>
+                  <Badge variant="outline" className="ml-2">{treatment.category}</Badge>
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => deleteTreatmentMutation.mutate(treatment.id)}
+                  disabled={deleteTreatmentMutation.isPending}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+              {treatment.description && (
+                <p className="text-sm text-muted-foreground mt-2">{treatment.description}</p>
+              )}
             </div>
           ))
         )}
