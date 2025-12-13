@@ -1,8 +1,11 @@
-import { useMemo } from 'react';
-import { BarChart3, TrendingUp, Calendar, Heart } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLocalStorage, BodyPart } from '@/contexts/LocalStorageContext';
-import { format, subDays, startOfDay, eachDayOfInterval } from 'date-fns';
+import { format, subDays, startOfDay, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isSameMonth, addMonths, subMonths, getDay } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
@@ -31,6 +34,8 @@ const bodyParts: { value: BodyPart; label: string; emoji: string }[] = [
 
 const InsightsPage = () => {
   const { checkIns, photos } = useLocalStorage();
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   
   const last7Days = useMemo(() => {
     const end = startOfDay(new Date());
@@ -112,6 +117,32 @@ const InsightsPage = () => {
     return secondAvg > firstAvg ? 'improving' : secondAvg < firstAvg ? 'declining' : 'stable';
   }, [checkIns]);
 
+  // Calendar data
+  const calendarDays = useMemo(() => {
+    const start = startOfMonth(calendarMonth);
+    const end = endOfMonth(calendarMonth);
+    const days = eachDayOfInterval({ start, end });
+    
+    // Add padding for first week
+    const startPadding = getDay(start);
+    const paddedDays: (Date | null)[] = Array(startPadding).fill(null);
+    
+    return [...paddedDays, ...days];
+  }, [calendarMonth]);
+
+  const getCheckInsForDate = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return checkIns.filter(c => c.timestamp.startsWith(dateStr));
+  };
+
+  const getPhotosForDate = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return photos.filter(p => p.timestamp.startsWith(dateStr));
+  };
+
+  const selectedDayCheckIns = selectedDate ? getCheckInsForDate(selectedDate) : [];
+  const selectedDayPhotos = selectedDate ? getPhotosForDate(selectedDate) : [];
+
   if (checkIns.length === 0) {
     return (
       <div className="px-4 py-6 space-y-6 max-w-lg mx-auto">
@@ -164,7 +195,145 @@ const InsightsPage = () => {
               <p className="text-sm text-muted-foreground">
                 Based on your recent check-ins
               </p>
-            </div>
+      </div>
+
+      {/* Calendar View */}
+      <div className="space-y-3">
+        <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
+          <Calendar className="w-4 h-4" />
+          History Calendar
+        </h3>
+        <div className="glass-card p-4">
+          {/* Month Navigation */}
+          <div className="flex items-center justify-between mb-4">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => setCalendarMonth(prev => subMonths(prev, 1))}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <span className="font-medium">{format(calendarMonth, 'MMMM yyyy')}</span>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => setCalendarMonth(prev => addMonths(prev, 1))}
+              disabled={isSameMonth(calendarMonth, new Date())}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* Day Labels */}
+          <div className="grid grid-cols-7 gap-1 mb-2">
+            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+              <div key={day} className="text-center text-xs text-muted-foreground font-medium">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-7 gap-1">
+            {calendarDays.map((date, idx) => {
+              if (!date) {
+                return <div key={`empty-${idx}`} className="aspect-square" />;
+              }
+              
+              const dayCheckIns = getCheckInsForDate(date);
+              const dayPhotos = getPhotosForDate(date);
+              const hasData = dayCheckIns.length > 0 || dayPhotos.length > 0;
+              const isToday = isSameDay(date, new Date());
+              const avgSkin = dayCheckIns.length 
+                ? Math.round(dayCheckIns.reduce((sum, c) => sum + c.skinFeeling, 0) / dayCheckIns.length)
+                : 0;
+              
+              return (
+                <button
+                  key={date.toISOString()}
+                  onClick={() => hasData && setSelectedDate(date)}
+                  disabled={!hasData}
+                  className={cn(
+                    'aspect-square rounded-lg flex flex-col items-center justify-center text-xs transition-colors relative',
+                    hasData ? 'hover:bg-primary/20 cursor-pointer' : 'cursor-default',
+                    isToday && 'ring-2 ring-primary',
+                    hasData && 'bg-primary/10'
+                  )}
+                >
+                  <span className={cn(
+                    'font-medium',
+                    hasData ? 'text-foreground' : 'text-muted-foreground'
+                  )}>
+                    {format(date, 'd')}
+                  </span>
+                  {hasData && avgSkin > 0 && (
+                    <span className="text-[10px] leading-none">{skinEmojis[avgSkin - 1]}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Selected Day Modal */}
+      <Dialog open={!!selectedDate} onOpenChange={(open) => !open && setSelectedDate(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedDate && format(selectedDate, 'EEEE, MMMM d, yyyy')}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            {selectedDayCheckIns.length > 0 ? (
+              selectedDayCheckIns.map((checkIn, idx) => (
+                <div key={idx} className="p-3 bg-muted/50 rounded-lg space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      {format(new Date(checkIn.timestamp), 'h:mm a')}
+                    </span>
+                    <div className="flex gap-2">
+                      <span title="Mood">{moodEmojis[checkIn.mood - 1]}</span>
+                      <span title="Skin">{skinEmojis[checkIn.skinFeeling - 1]}</span>
+                    </div>
+                  </div>
+                  {checkIn.treatments.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {checkIn.treatments.map(t => (
+                        <Badge key={t} variant="secondary" className="text-xs">
+                          {treatments.find(tr => tr.id === t)?.label || t}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  {checkIn.notes && (
+                    <p className="text-sm text-muted-foreground italic">"{checkIn.notes}"</p>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center">No check-ins this day</p>
+            )}
+            
+            {selectedDayPhotos.length > 0 && (
+              <div>
+                <p className="text-sm font-medium mb-2">Photos ({selectedDayPhotos.length})</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {selectedDayPhotos.map((photo, idx) => (
+                    <div key={idx} className="aspect-square rounded-lg overflow-hidden">
+                      <img 
+                        src={photo.dataUrl} 
+                        alt={photo.bodyPart}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
           </div>
         </div>
       )}
