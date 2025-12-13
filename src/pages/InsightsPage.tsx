@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLocalStorage, BodyPart } from '@/contexts/LocalStorageContext';
-import { format, subDays, startOfDay, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isSameMonth, addMonths, subMonths, getDay } from 'date-fns';
+import { format, subDays, startOfDay, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isSameMonth, addMonths, subMonths, getDay, setMonth, setYear } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
@@ -341,7 +342,38 @@ const InsightsPage = () => {
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <span className="font-medium">{format(calendarMonth, 'MMMM yyyy')}</span>
+                <div className="flex gap-1">
+                  <Select 
+                    value={calendarMonth.getMonth().toString()} 
+                    onValueChange={(val) => setCalendarMonth(prev => setMonth(prev, parseInt(val)))}
+                  >
+                    <SelectTrigger className="h-7 w-auto min-w-[100px] text-sm font-medium focus:ring-0 focus:ring-offset-0 gap-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {Array.from({ length: 12 }, (_, i) => (
+                        <SelectItem key={i} value={i.toString()}>
+                          {format(new Date(2000, i, 1), 'MMMM')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select 
+                    value={calendarMonth.getFullYear().toString()} 
+                    onValueChange={(val) => setCalendarMonth(prev => setYear(prev, parseInt(val)))}
+                  >
+                    <SelectTrigger className="h-7 w-auto min-w-[70px] text-sm font-medium focus:ring-0 focus:ring-offset-0 gap-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {Array.from({ length: new Date().getFullYear() - 2000 + 2 }, (_, i) => 2000 + i).map(year => (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Button 
                   variant="ghost" 
                   size="icon"
