@@ -227,22 +227,41 @@ const PhotoDiaryPage = () => {
 
       {/* Free user limit indicator */}
       {!isPremium && (
-        <div className="glass-card p-4 flex items-center justify-between animate-fade-in">
-          <div>
-            <p className="text-sm font-semibold text-foreground">
-              {canUploadMore 
-                ? `${remainingUploads} photo${remainingUploads !== 1 ? 's' : ''} left today`
-                : 'Daily limit reached'
-              }
-            </p>
-            <p className="text-xs text-muted-foreground">Free accounts: 2 photos/day</p>
+        <div className="glass-card p-4 space-y-3 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                {canUploadMore 
+                  ? `${remainingUploads} photo${remainingUploads !== 1 ? 's' : ''} left today`
+                  : 'Daily limit reached'
+                }
+              </p>
+              <p className="text-xs text-muted-foreground">Free accounts: 2 photos/day</p>
+            </div>
+            {!canUploadMore && (
+              <Button size="sm" onClick={handleUpgrade} className="gap-1.5 rounded-xl">
+                <Crown className="w-4 h-4" />
+                Upgrade
+              </Button>
+            )}
           </div>
-          {!canUploadMore && (
-            <Button size="sm" onClick={handleUpgrade} className="gap-1.5 rounded-xl">
-              <Crown className="w-4 h-4" />
-              Upgrade
-            </Button>
-          )}
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{photosUploadedToday} of {FREE_DAILY_PHOTO_LIMIT} used</span>
+              <span>{Math.round((photosUploadedToday / FREE_DAILY_PHOTO_LIMIT) * 100)}%</span>
+            </div>
+            <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+              <div 
+                className={cn(
+                  "h-full rounded-full transition-all duration-500",
+                  canUploadMore 
+                    ? "bg-gradient-to-r from-primary to-primary/70" 
+                    : "bg-gradient-to-r from-coral to-destructive"
+                )}
+                style={{ width: `${Math.min((photosUploadedToday / FREE_DAILY_PHOTO_LIMIT) * 100, 100)}%` }}
+              />
+            </div>
+          </div>
         </div>
       )}
 
