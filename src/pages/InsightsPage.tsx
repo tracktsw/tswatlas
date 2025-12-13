@@ -62,17 +62,15 @@ const InsightsPage = () => {
   const treatmentStats = useMemo(() => {
     const stats: Record<string, { count: number; goodDays: number }> = {};
     
-    treatments.forEach(t => {
-      stats[t.id] = { count: 0, goodDays: 0 };
-    });
-    
+    // Collect all treatments from check-ins (including custom ones)
     checkIns.forEach(checkIn => {
       checkIn.treatments.forEach(t => {
-        if (stats[t]) {
-          stats[t].count++;
-          if (checkIn.skinFeeling >= 4) {
-            stats[t].goodDays++;
-          }
+        if (!stats[t]) {
+          stats[t] = { count: 0, goodDays: 0 };
+        }
+        stats[t].count++;
+        if (checkIn.skinFeeling >= 4) {
+          stats[t].goodDays++;
         }
       });
     });
