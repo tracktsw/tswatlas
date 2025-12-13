@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import PaywallGuard from '@/components/PaywallGuard';
+import { LeafIllustration, SparkleIllustration } from '@/components/illustrations';
 
 const bodyParts: { value: BodyPart; label: string; emoji: string }[] = [
   { value: 'face', label: 'Face', emoji: '😊' },
@@ -74,6 +75,10 @@ const PhotoDiaryPage = () => {
       {/* Decorative elements */}
       <div className="decorative-blob w-32 h-32 bg-coral/25 -top-10 -left-10 fixed" />
       <div className="decorative-blob w-44 h-44 bg-honey/20 bottom-32 -right-16 fixed" />
+      
+      {/* Decorative illustrations */}
+      <LeafIllustration variant="branch" className="w-24 h-20 fixed top-16 right-0 opacity-30 pointer-events-none" />
+      <SparkleIllustration variant="trail" className="w-28 h-10 fixed bottom-56 left-0 opacity-25 pointer-events-none" />
       
       <div className="flex items-center justify-between animate-fade-in">
         <div>
@@ -216,8 +221,9 @@ const PhotoDiaryPage = () => {
 
       {/* Photos Grid */}
       {filteredPhotos.length === 0 ? (
-        <div className="glass-card-warm p-8 text-center animate-fade-in">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-coral/20 to-coral-light flex items-center justify-center">
+        <div className="glass-card-warm p-8 text-center animate-fade-in relative overflow-hidden">
+          <LeafIllustration variant="cluster" className="w-20 h-20 absolute -right-4 -bottom-4 opacity-15" />
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-coral/20 to-coral-light flex items-center justify-center relative">
             <Image className="w-8 h-8 text-coral" />
           </div>
           <p className="font-display font-bold text-lg text-foreground">No photos yet</p>

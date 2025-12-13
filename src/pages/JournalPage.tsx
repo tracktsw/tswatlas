@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import PaywallGuard from '@/components/PaywallGuard';
+import { LeafIllustration, HeartIllustration } from '@/components/illustrations';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 
@@ -66,6 +67,10 @@ const JournalPage = () => {
       <div className="decorative-blob w-36 h-36 bg-primary/25 -top-10 -right-10 fixed" />
       <div className="decorative-blob w-40 h-40 bg-honey/20 bottom-32 -left-16 fixed" />
       
+      {/* Decorative illustrations */}
+      <LeafIllustration variant="branch" className="w-24 h-20 fixed top-20 right-0 opacity-25 pointer-events-none" />
+      <HeartIllustration variant="decorated" className="w-16 h-16 fixed bottom-52 left-0 opacity-20 pointer-events-none" />
+      
       <div className="flex items-center justify-between animate-fade-in">
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">Journal</h1>
@@ -123,8 +128,9 @@ const JournalPage = () => {
 
       {/* Entries */}
       {journalEntries.length === 0 ? (
-        <div className="glass-card-warm p-8 text-center animate-fade-in">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary/20 to-sage-light flex items-center justify-center animate-float">
+        <div className="glass-card-warm p-8 text-center animate-fade-in relative overflow-hidden">
+          <LeafIllustration variant="cluster" className="w-20 h-20 absolute -right-4 -bottom-4 opacity-15" />
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary/20 to-sage-light flex items-center justify-center animate-float relative">
             <Feather className="w-8 h-8 text-primary" />
           </div>
           <p className="font-display font-bold text-lg text-foreground">No journal entries yet</p>

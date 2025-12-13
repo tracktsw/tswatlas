@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Camera, CheckCircle, BarChart3, Users, BookOpen, Settings, Sparkles, Calendar as CalendarIcon, Flame, Pencil, Heart, Sun } from 'lucide-react';
+import { LeafIllustration, PlantIllustration, SparkleIllustration } from '@/components/illustrations';
 import tswAtlasLogo from '@/assets/tsw-atlas-logo.png';
 import { useLocalStorage } from '@/contexts/LocalStorageContext';
 import { format, differenceInDays, parseISO } from 'date-fns';
@@ -83,6 +84,10 @@ const HomePage = () => {
       {/* Decorative background elements */}
       <div className="decorative-blob w-32 h-32 bg-coral/30 -top-10 -right-10 fixed" />
       <div className="decorative-blob w-40 h-40 bg-sage/20 bottom-40 -left-20 fixed" />
+      
+      {/* Decorative illustrations */}
+      <LeafIllustration variant="branch" className="w-24 h-20 fixed top-20 right-2 opacity-40 pointer-events-none" />
+      <PlantIllustration variant="sprout" className="w-16 h-16 fixed bottom-48 left-2 opacity-30 pointer-events-none animate-float" />
       
       {/* Header */}
       <div className="flex items-center justify-between animate-fade-in">
@@ -176,8 +181,9 @@ const HomePage = () => {
       </Dialog>
 
       {/* Encouragement Card */}
-      <div className="glass-card p-5 animate-slide-up" style={{ animationDelay: '0.15s' }}>
-        <div className="flex items-start gap-4">
+      <div className="glass-card p-5 animate-slide-up relative overflow-hidden" style={{ animationDelay: '0.15s' }}>
+        <PlantIllustration variant="growing" className="w-20 h-24 absolute -right-2 -bottom-4 opacity-20" />
+        <div className="flex items-start gap-4 relative">
           <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-sage-light shadow-warm-sm animate-float">
             <Sparkles className="w-6 h-6 text-primary" />
           </div>
