@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useLocalStorage } from '@/contexts/LocalStorageContext';
+import { useUserData } from '@/contexts/UserDataContext';
 import { prepareCoachContext } from '@/utils/prepareCoachContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -14,7 +14,7 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-coach`;
 export function useAICoach() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { checkIns, journalEntries, photos, tswStartDate } = useLocalStorage();
+  const { checkIns, journalEntries, photos, tswStartDate } = useUserData();
   const { toast } = useToast();
 
   const sendMessage = useCallback(async (input: string) => {

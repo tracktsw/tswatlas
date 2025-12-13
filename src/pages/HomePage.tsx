@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, CheckCircle, BarChart3, Users, BookOpen, Settings, Sparkles, Calendar as CalendarIcon, Flame, Pencil, Heart, Sun } from 'lucide-react';
+import { Camera, CheckCircle, BarChart3, Users, BookOpen, Settings, Sparkles, Calendar as CalendarIcon, Flame, Pencil, Heart, Sun, Loader2 } from 'lucide-react';
 import { LeafIllustration, PlantIllustration, SparkleIllustration } from '@/components/illustrations';
 import tswAtlasLogo from '@/assets/tsw-atlas-logo.png';
-import { useLocalStorage } from '@/contexts/LocalStorageContext';
+import { useUserData } from '@/contexts/UserDataContext';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const HomePage = () => {
-  const { photos, checkIns, journalEntries, tswStartDate, setTswStartDate } = useLocalStorage();
+  const { photos, checkIns, journalEntries, tswStartDate, setTswStartDate, isLoading, isSyncing } = useUserData();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     tswStartDate ? parseISO(tswStartDate) : undefined
@@ -79,8 +79,27 @@ const HomePage = () => {
     },
   ];
 
+  if (isLoading) {
+    return (
+      <div className="px-4 py-6 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">Loading your data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
+      {/* Sync indicator */}
+      {isSyncing && (
+        <div className="fixed top-4 right-4 bg-primary/10 text-primary text-xs px-3 py-1.5 rounded-full flex items-center gap-2 z-50">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          Syncing...
+        </div>
+      )}
+      
       {/* Decorative background elements */}
       <div className="decorative-blob w-32 h-32 bg-coral/30 -top-10 -right-10 fixed" />
       <div className="decorative-blob w-40 h-40 bg-sage/20 bottom-40 -left-20 fixed" />

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { BookOpen, Plus, Trash2, Edit2, Save, X, Feather } from 'lucide-react';
-import { useLocalStorage } from '@/contexts/LocalStorageContext';
+import { useUserData } from '@/contexts/UserDataContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -14,7 +14,7 @@ import { SparkleEffect } from '@/components/SparkleEffect';
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 
 const JournalPage = () => {
-  const { journalEntries, addJournalEntry, updateJournalEntry, deleteJournalEntry } = useLocalStorage();
+  const { journalEntries, addJournalEntry, updateJournalEntry, deleteJournalEntry } = useUserData();
   const [isWriting, setIsWriting] = useState(false);
   const [newContent, setNewContent] = useState('');
   const [newMood, setNewMood] = useState<number | undefined>();
@@ -22,25 +22,28 @@ const JournalPage = () => {
   const [editContent, setEditContent] = useState('');
   const [showSparkles, setShowSparkles] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!newContent.trim()) {
       toast.error('Please write something first');
       return;
     }
     
-    addJournalEntry({
-      timestamp: new Date().toISOString(),
-      content: newContent.trim(),
-      mood: newMood,
-    });
-    
-    // Show celebration sparkles
-    setShowSparkles(true);
-    
-    setNewContent('');
-    setNewMood(undefined);
-    setIsWriting(false);
-    toast.success('Journal entry saved');
+    try {
+      await addJournalEntry({
+        content: newContent.trim(),
+        mood: newMood,
+      });
+      
+      // Show celebration sparkles
+      setShowSparkles(true);
+      
+      setNewContent('');
+      setNewMood(undefined);
+      setIsWriting(false);
+      toast.success('Journal entry saved');
+    } catch (error) {
+      toast.error('Failed to save entry');
+    }
   };
 
   const handleEdit = (id: string) => {
@@ -51,18 +54,26 @@ const JournalPage = () => {
     }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editingId && editContent.trim()) {
-      updateJournalEntry(editingId, editContent.trim());
-      setEditingId(null);
-      setEditContent('');
-      toast.success('Entry updated');
+      try {
+        await updateJournalEntry(editingId, editContent.trim());
+        setEditingId(null);
+        setEditContent('');
+        toast.success('Entry updated');
+      } catch (error) {
+        toast.error('Failed to update entry');
+      }
     }
   };
 
-  const handleDelete = (id: string) => {
-    deleteJournalEntry(id);
-    toast.success('Entry deleted');
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteJournalEntry(id);
+      toast.success('Entry deleted');
+    } catch (error) {
+      toast.error('Failed to delete entry');
+    }
   };
 
   return (

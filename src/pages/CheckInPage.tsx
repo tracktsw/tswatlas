@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CheckCircle, Sun, Moon, Check, Plus, Heart } from 'lucide-react';
-import { useLocalStorage } from '@/contexts/LocalStorageContext';
+import { useUserData } from '@/contexts/UserDataContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -25,7 +25,7 @@ const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
 
 const CheckInPage = () => {
-  const { checkIns, addCheckIn, customTreatments, addCustomTreatment } = useLocalStorage();
+  const { checkIns, addCheckIn, customTreatments, addCustomTreatment } = useUserData();
   const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
   const [customTreatment, setCustomTreatment] = useState('');
   const [mood, setMood] = useState(3);
@@ -59,29 +59,32 @@ const CheckInPage = () => {
     }
   };
 
-  const handleSubmit = () => {
-    addCheckIn({
-      timestamp: new Date().toISOString(),
-      timeOfDay,
-      treatments: selectedTreatments,
-      mood,
-      skinFeeling,
-      notes: notes || undefined,
-    });
-    
-    // Show celebration sparkles
-    setShowSparkles(true);
-    
-    // Reset form
-    setSelectedTreatments([]);
-    setCustomTreatment('');
-    setMood(3);
-    setSkinFeeling(3);
-    setNotes('');
-    
-    toast.success('Check-in saved!', {
-      description: 'Your progress has been recorded locally.',
-    });
+  const handleSubmit = async () => {
+    try {
+      await addCheckIn({
+        timeOfDay,
+        treatments: selectedTreatments,
+        mood,
+        skinFeeling,
+        notes: notes || undefined,
+      });
+      
+      // Show celebration sparkles
+      setShowSparkles(true);
+      
+      // Reset form
+      setSelectedTreatments([]);
+      setCustomTreatment('');
+      setMood(3);
+      setSkinFeeling(3);
+      setNotes('');
+      
+      toast.success('Check-in saved!', {
+        description: 'Your progress has been synced to the cloud.',
+      });
+    } catch (error) {
+      toast.error('Failed to save check-in');
+    }
   };
 
   const canSubmit = (timeOfDay === 'morning' && !hasMorningCheckIn) || 

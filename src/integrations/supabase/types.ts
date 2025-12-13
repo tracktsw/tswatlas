@@ -106,6 +106,93 @@ export type Database = {
         }
         Relationships: []
       }
+      user_check_ins: {
+        Row: {
+          created_at: string
+          id: string
+          mood: number
+          notes: string | null
+          skin_feeling: number
+          time_of_day: string
+          treatments: string[]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mood: number
+          notes?: string | null
+          skin_feeling: number
+          time_of_day: string
+          treatments?: string[]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mood?: number
+          notes?: string | null
+          skin_feeling?: number
+          time_of_day?: string
+          treatments?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_journal_entries: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          mood: number | null
+          photo_ids: string[] | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          mood?: number | null
+          photo_ids?: string[] | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          mood?: number | null
+          photo_ids?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_photos: {
+        Row: {
+          body_part: string
+          created_at: string
+          id: string
+          notes: string | null
+          photo_url: string
+          user_id: string
+        }
+        Insert: {
+          body_part: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          photo_url: string
+          user_id: string
+        }
+        Update: {
+          body_part?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          photo_url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -123,6 +210,42 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string
+          custom_treatments: string[]
+          evening_time: string
+          id: string
+          morning_time: string
+          reminders_enabled: boolean
+          tsw_start_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_treatments?: string[]
+          evening_time?: string
+          id?: string
+          morning_time?: string
+          reminders_enabled?: boolean
+          tsw_start_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_treatments?: string[]
+          evening_time?: string
+          id?: string
+          morning_time?: string
+          reminders_enabled?: boolean
+          tsw_start_date?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

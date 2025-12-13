@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut } from 'lucide-react';
+import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2 } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useLocalStorage } from '@/contexts/LocalStorageContext';
+import { useUserData } from '@/contexts/UserDataContext';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -9,8 +9,9 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SubscriptionCard from '@/components/SubscriptionCard';
 import { useSubscription } from '@/hooks/useSubscription';
+
 const SettingsPage = () => {
-  const { reminderSettings, updateReminderSettings, photos, checkIns, journalEntries } = useLocalStorage();
+  const { reminderSettings, updateReminderSettings, photos, checkIns, journalEntries, isLoading, isSyncing } = useUserData();
   const { isAdmin, refreshSubscription } = useSubscription();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -30,17 +31,29 @@ const SettingsPage = () => {
   }, [searchParams, refreshSubscription]);
 
 
-  const handleToggleReminders = (enabled: boolean) => {
-    updateReminderSettings({ ...reminderSettings, enabled });
-    toast.success(enabled ? 'Reminders enabled' : 'Reminders disabled');
+  const handleToggleReminders = async (enabled: boolean) => {
+    try {
+      await updateReminderSettings({ ...reminderSettings, enabled });
+      toast.success(enabled ? 'Reminders enabled' : 'Reminders disabled');
+    } catch (error) {
+      toast.error('Failed to update settings');
+    }
   };
 
-  const handleMorningTimeChange = (time: string) => {
-    updateReminderSettings({ ...reminderSettings, morningTime: time });
+  const handleMorningTimeChange = async (time: string) => {
+    try {
+      await updateReminderSettings({ ...reminderSettings, morningTime: time });
+    } catch (error) {
+      toast.error('Failed to update settings');
+    }
   };
 
-  const handleEveningTimeChange = (time: string) => {
-    updateReminderSettings({ ...reminderSettings, eveningTime: time });
+  const handleEveningTimeChange = async (time: string) => {
+    try {
+      await updateReminderSettings({ ...reminderSettings, eveningTime: time });
+    } catch (error) {
+      toast.error('Failed to update settings');
+    }
   };
 
   const handleLogout = async () => {
@@ -117,6 +130,24 @@ const SettingsPage = () => {
         )}
       </div>
 
+      {/* Cloud Sync Status */}
+      <div className="glass-card p-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-full bg-primary/10">
+            <Cloud className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-foreground">Cloud Sync</h3>
+              {isSyncing && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Your data is securely synced to the cloud. Log in on any device to access your progress.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Privacy */}
       <div className="glass-card p-4">
         <div className="flex items-start gap-3">
@@ -126,9 +157,8 @@ const SettingsPage = () => {
           <div>
             <h3 className="font-semibold text-foreground">Your Privacy</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              All your photos and personal data are stored locally on your device. 
-              Nothing is ever uploaded to the cloud. Only your anonymous treatment votes 
-              are shared with the community.
+              Your data is encrypted and only accessible by you.
+              Only your anonymous treatment votes are shared with the community.
             </p>
           </div>
         </div>
@@ -141,8 +171,8 @@ const SettingsPage = () => {
             <Info className="w-5 h-5 text-muted-foreground" />
           </div>
           <div>
-            <h3 className="font-semibold text-foreground">Your Local Data</h3>
-            <p className="text-sm text-muted-foreground">Stored on this device only</p>
+            <h3 className="font-semibold text-foreground">Your Data</h3>
+            <p className="text-sm text-muted-foreground">Synced across all your devices</p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-3">
