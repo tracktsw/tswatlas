@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import PaywallGuard from '@/components/PaywallGuard';
+
 
 interface Treatment {
   id: string;
@@ -187,7 +187,6 @@ const CommunityPage = () => {
   };
 
   return (
-    <PaywallGuard feature="Community">
     <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
       {/* Decorative elements */}
       <div className="decorative-blob w-36 h-36 bg-terracotta/25 -top-10 -right-10 fixed" />
@@ -388,7 +387,6 @@ const CommunityPage = () => {
         </div>
       )}
     </div>
-    </PaywallGuard>
   );
 };
 
