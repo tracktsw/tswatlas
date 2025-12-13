@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { CheckCircle, Sun, Moon, Check, Plus, Heart } from 'lucide-react';
-import { useUserData } from '@/contexts/UserDataContext';
+import { CheckCircle, Sun, Moon, Check, Plus, Heart, Pencil, X } from 'lucide-react';
+import { useUserData, CheckIn } from '@/contexts/UserDataContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -25,13 +25,14 @@ const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
 
 const CheckInPage = () => {
-  const { checkIns, addCheckIn, customTreatments, addCustomTreatment } = useUserData();
+  const { checkIns, addCheckIn, updateCheckIn, customTreatments, addCustomTreatment } = useUserData();
   const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
   const [customTreatment, setCustomTreatment] = useState('');
   const [mood, setMood] = useState(3);
   const [skinFeeling, setSkinFeeling] = useState(3);
   const [notes, setNotes] = useState('');
   const [showSparkles, setShowSparkles] = useState(false);
+  const [editingCheckIn, setEditingCheckIn] = useState<CheckIn | null>(null);
   
   const today = format(new Date(), 'yyyy-MM-dd');
   const currentHour = new Date().getHours();
@@ -59,18 +60,49 @@ const CheckInPage = () => {
     }
   };
 
+  const handleStartEdit = (checkIn: CheckIn) => {
+    setEditingCheckIn(checkIn);
+    setSelectedTreatments(checkIn.treatments);
+    setMood(checkIn.mood);
+    setSkinFeeling(checkIn.skinFeeling);
+    setNotes(checkIn.notes || '');
+    setTimeOfDay(checkIn.timeOfDay);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCheckIn(null);
+    setSelectedTreatments([]);
+    setMood(3);
+    setSkinFeeling(3);
+    setNotes('');
+    setTimeOfDay(suggestedTimeOfDay);
+  };
+
   const handleSubmit = async () => {
     try {
-      await addCheckIn({
-        timeOfDay,
-        treatments: selectedTreatments,
-        mood,
-        skinFeeling,
-        notes: notes || undefined,
-      });
-      
-      // Show celebration sparkles
-      setShowSparkles(true);
+      if (editingCheckIn) {
+        await updateCheckIn(editingCheckIn.id, {
+          timeOfDay: editingCheckIn.timeOfDay,
+          treatments: selectedTreatments,
+          mood,
+          skinFeeling,
+          notes: notes || undefined,
+        });
+        setEditingCheckIn(null);
+        toast.success('Check-in updated!');
+      } else {
+        await addCheckIn({
+          timeOfDay,
+          treatments: selectedTreatments,
+          mood,
+          skinFeeling,
+          notes: notes || undefined,
+        });
+        setShowSparkles(true);
+        toast.success('Check-in saved!', {
+          description: 'Your progress has been synced to the cloud.',
+        });
+      }
       
       // Reset form
       setSelectedTreatments([]);
@@ -78,16 +110,12 @@ const CheckInPage = () => {
       setMood(3);
       setSkinFeeling(3);
       setNotes('');
-      
-      toast.success('Check-in saved!', {
-        description: 'Your progress has been synced to the cloud.',
-      });
     } catch (error) {
-      toast.error('Failed to save check-in');
+      toast.error(editingCheckIn ? 'Failed to update check-in' : 'Failed to save check-in');
     }
   };
 
-  const canSubmit = (timeOfDay === 'morning' && !hasMorningCheckIn) || 
+  const canSubmit = editingCheckIn || (timeOfDay === 'morning' && !hasMorningCheckIn) || 
                     (timeOfDay === 'evening' && !hasEveningCheckIn);
 
   return (
@@ -105,42 +133,71 @@ const CheckInPage = () => {
       
       {/* Header */}
       <div className="animate-fade-in">
-        <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">Daily Check-in</h1>
-        <p className="text-muted-foreground">How are you feeling today?</p>
+        <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">
+          {editingCheckIn ? 'Edit Check-in' : 'Daily Check-in'}
+        </h1>
+        <p className="text-muted-foreground">
+          {editingCheckIn ? 'Update your check-in details' : 'How are you feeling today?'}
+        </p>
       </div>
 
-      {/* Time of Day Toggle */}
-      <div className="flex gap-3 animate-slide-up" style={{ animationDelay: '0.05s' }}>
-        <Button
-          variant={timeOfDay === 'morning' ? 'warm' : 'outline'}
-          className={cn(
-            'flex-1 gap-2 h-12 rounded-2xl',
-            hasMorningCheckIn && 'opacity-50'
-          )}
-          onClick={() => setTimeOfDay('morning')}
-          disabled={hasMorningCheckIn}
-        >
-          <Sun className="w-5 h-5" />
-          Morning
-          {hasMorningCheckIn && <Check className="w-4 h-4" />}
-        </Button>
-        <Button
-          variant={timeOfDay === 'evening' ? 'default' : 'outline'}
-          className={cn(
-            'flex-1 gap-2 h-12 rounded-2xl',
-            hasEveningCheckIn && 'opacity-50'
-          )}
-          onClick={() => setTimeOfDay('evening')}
-          disabled={hasEveningCheckIn}
-        >
-          <Moon className="w-5 h-5" />
-          Evening
-          {hasEveningCheckIn && <Check className="w-4 h-4" />}
-        </Button>
-      </div>
+      {/* Time of Day Toggle - only show when not editing */}
+      {!editingCheckIn && (
+        <div className="flex gap-3 animate-slide-up" style={{ animationDelay: '0.05s' }}>
+          <Button
+            variant={timeOfDay === 'morning' ? 'warm' : 'outline'}
+            className={cn(
+              'flex-1 gap-2 h-12 rounded-2xl',
+              hasMorningCheckIn && 'opacity-50'
+            )}
+            onClick={() => setTimeOfDay('morning')}
+            disabled={hasMorningCheckIn}
+          >
+            <Sun className="w-5 h-5" />
+            Morning
+            {hasMorningCheckIn && <Check className="w-4 h-4" />}
+          </Button>
+          <Button
+            variant={timeOfDay === 'evening' ? 'default' : 'outline'}
+            className={cn(
+              'flex-1 gap-2 h-12 rounded-2xl',
+              hasEveningCheckIn && 'opacity-50'
+            )}
+            onClick={() => setTimeOfDay('evening')}
+            disabled={hasEveningCheckIn}
+          >
+            <Moon className="w-5 h-5" />
+            Evening
+            {hasEveningCheckIn && <Check className="w-4 h-4" />}
+          </Button>
+        </div>
+      )}
 
-      {/* All done message */}
-      {hasMorningCheckIn && hasEveningCheckIn && (
+      {/* Editing indicator */}
+      {editingCheckIn && (
+        <div className="flex items-center justify-between glass-card-warm p-4 animate-slide-up">
+          <div className="flex items-center gap-2">
+            <div className={cn(
+              'p-2 rounded-xl',
+              editingCheckIn.timeOfDay === 'morning' ? 'bg-honey/20' : 'bg-primary/20'
+            )}>
+              {editingCheckIn.timeOfDay === 'morning' ? (
+                <Sun className="w-4 h-4 text-honey" />
+              ) : (
+                <Moon className="w-4 h-4 text-primary" />
+              )}
+            </div>
+            <span className="font-semibold capitalize">Editing {editingCheckIn.timeOfDay} check-in</span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
+            <X className="w-4 h-4 mr-1" />
+            Cancel
+          </Button>
+        </div>
+      )}
+
+      {/* All done message - only show when not editing */}
+      {!editingCheckIn && hasMorningCheckIn && hasEveningCheckIn && (
         <div className="glass-card-warm p-6 text-center animate-scale-in relative overflow-hidden">
           <LeafIllustration variant="cluster" className="w-20 h-20 absolute -right-4 -top-4 opacity-20" />
           <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-primary/20 to-sage-light flex items-center justify-center relative">
@@ -148,7 +205,7 @@ const CheckInPage = () => {
           </div>
           <p className="font-display font-bold text-lg text-foreground">All done for today!</p>
           <p className="text-muted-foreground mt-1">
-            You've completed both check-ins. Great job taking care of yourself!
+            You've completed both check-ins. Tap any check-in below to edit it.
           </p>
         </div>
       )}
@@ -314,15 +371,27 @@ const CheckInPage = () => {
           </div>
 
           {/* Submit */}
-          <Button 
-            onClick={handleSubmit} 
-            variant="warm"
-            className="w-full h-12 text-base"
-            size="lg"
-          >
-            <CheckCircle className="w-5 h-5 mr-2" />
-            Save Check-in
-          </Button>
+          <div className="flex gap-3">
+            {editingCheckIn && (
+              <Button 
+                onClick={handleCancelEdit} 
+                variant="outline"
+                className="flex-1 h-12 text-base rounded-2xl"
+                size="lg"
+              >
+                Cancel
+              </Button>
+            )}
+            <Button 
+              onClick={handleSubmit} 
+              variant="warm"
+              className={cn("h-12 text-base", editingCheckIn ? "flex-1" : "w-full")}
+              size="lg"
+            >
+              <CheckCircle className="w-5 h-5 mr-2" />
+              {editingCheckIn ? 'Update Check-in' : 'Save Check-in'}
+            </Button>
+          </div>
         </>
       )}
 
@@ -331,7 +400,14 @@ const CheckInPage = () => {
         <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.3s' }}>
           <h3 className="font-display font-bold text-lg text-foreground">Today's Check-ins</h3>
           {todayCheckIns.map(checkIn => (
-            <div key={checkIn.id} className="glass-card-warm p-5">
+            <div 
+              key={checkIn.id} 
+              className={cn(
+                "glass-card-warm p-5 cursor-pointer transition-all hover:shadow-warm",
+                editingCheckIn?.id === checkIn.id && "ring-2 ring-coral"
+              )}
+              onClick={() => handleStartEdit(checkIn)}
+            >
               <div className="flex items-center gap-2 mb-3">
                 <div className={cn(
                   'p-2 rounded-xl',
@@ -344,9 +420,10 @@ const CheckInPage = () => {
                   )}
                 </div>
                 <span className="font-semibold capitalize">{checkIn.timeOfDay}</span>
-                <span className="text-xs text-muted-foreground ml-auto">
+                <span className="text-xs text-muted-foreground ml-auto mr-2">
                   {format(new Date(checkIn.timestamp), 'h:mm a')}
                 </span>
+                <Pencil className="w-4 h-4 text-muted-foreground" />
               </div>
               <div className="flex items-center gap-4 text-sm">
                 <span className="flex items-center gap-1">
