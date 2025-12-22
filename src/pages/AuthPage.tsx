@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import tswAtlasLogo from '@/assets/tsw-atlas-logo.png';
+import compassLogo from '@/assets/compass-logo.png';
 
 type AuthMode = 'login' | 'signup' | 'forgot';
 
@@ -125,7 +125,7 @@ const AuthPage = () => {
             <div className="inline-flex flex-col items-center gap-3">
               <div className="relative">
                 <img 
-                  src={tswAtlasLogo} 
+                  src={compassLogo} 
                   alt="TSW Atlas" 
                   className="w-20 h-20 rounded-3xl shadow-warm-lg animate-float" 
                 />
