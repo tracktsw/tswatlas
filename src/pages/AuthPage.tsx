@@ -216,8 +216,7 @@ const AuthPage = () => {
           <div className="flex items-start gap-3">
             <Heart className="w-5 h-5 text-coral flex-shrink-0 mt-0.5" />
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Your photos and personal data are stored locally on your device. 
-              Only your account info is stored securely.
+              Your photos and personal data are stored securely with your account.
             </p>
           </div>
         </div>
