@@ -184,13 +184,15 @@ const AuthPage = () => {
           )}
 
           {mode === 'login' && (
-            <button
-              type="button"
-              onClick={() => setMode('forgot')}
-              className="text-sm text-coral hover:text-coral-deep hover:underline transition-colors font-medium"
-            >
-              Forgot password?
-            </button>
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setMode('forgot')}
+                className="text-sm text-coral hover:text-coral-deep hover:underline transition-colors font-medium"
+              >
+                Forgot password?
+              </button>
+            </div>
           )}
 
           <Button type="submit" variant="warm" className="w-full h-12 text-base" disabled={loading}>
