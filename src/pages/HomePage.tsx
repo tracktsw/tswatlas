@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Camera, CheckCircle, BarChart3, Users, BookOpen, Settings, Sparkles, Calendar as CalendarIcon, Flame, Pencil, Heart, Sun, Loader2 } from 'lucide-react';
 import { LeafIllustration, PlantIllustration, SparkleIllustration } from '@/components/illustrations';
-import tswAtlasLogo from '@/assets/tsw-atlas-logo.png';
+import compassLogo from '@/assets/compass-logo.png';
 import { useUserData } from '@/contexts/UserDataContext';
 import { format, differenceInDays, parseISO, subDays, startOfDay } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -141,7 +141,7 @@ const HomePage = () => {
       <div className="flex items-center justify-between animate-fade-in">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <img src={tswAtlasLogo} alt="TSW Atlas" className="w-12 h-12 rounded-2xl shadow-warm" />
+            <img src={compassLogo} alt="TSW Atlas" className="w-12 h-12 rounded-2xl shadow-warm" />
             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-coral rounded-full border-2 border-background animate-pulse-soft" />
           </div>
           <div>
