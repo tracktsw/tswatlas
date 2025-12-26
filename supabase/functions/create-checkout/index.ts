@@ -52,8 +52,8 @@ serve(async (req) => {
       logStep("No existing customer found, will create new");
     }
 
-    // TSW Atlas Premium - £5.99/month
-    const PRICE_ID = "price_1Sds17P0aIdhyRtPgqdWL7HM";
+    // TSW Atlas Premium - £5.99/month (active product: prod_Tb4N9ELb7DATG9)
+    const PRICE_ID = "price_1SdsESP0aIdhyRtPA0atJ80k";
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
