@@ -54,10 +54,11 @@ const CommunityPage = () => {
     getUser();
   }, []);
 
-  // Fetch treatments with votes
+  // Fetch treatments with aggregate vote counts (public) and user's own votes (private)
   const { data: treatments = [], isLoading } = useQuery({
     queryKey: ['treatments', voterId],
     queryFn: async () => {
+      // Fetch approved treatments
       const { data: treatmentData, error: treatmentError } = await supabase
         .from('treatments')
         .select('*')
@@ -65,25 +66,36 @@ const CommunityPage = () => {
 
       if (treatmentError) throw treatmentError;
 
-      const { data: voteData, error: voteError } = await supabase
-        .from('treatment_votes')
+      // Fetch aggregate vote counts from the public view (no voter IDs exposed)
+      const { data: voteCounts, error: voteCountError } = await supabase
+        .from('treatment_vote_counts')
         .select('*');
 
-      if (voteError) throw voteError;
+      if (voteCountError) throw voteCountError;
 
+      // Fetch only the current user's votes (if logged in)
+      let userVotes: { treatment_id: string; helps: boolean }[] = [];
+      if (voterId) {
+        const { data: userVoteData, error: userVoteError } = await supabase
+          .from('treatment_votes')
+          .select('treatment_id, helps');
+
+        if (!userVoteError && userVoteData) {
+          userVotes = userVoteData;
+        }
+      }
+
+      // Combine treatments with vote counts and user's vote status
       const treatmentsWithVotes: TreatmentWithVotes[] = (treatmentData || []).map(treatment => {
-        const votes = voteData?.filter(v => v.treatment_id === treatment.id) || [];
-        const helpfulVotes = votes.filter(v => v.helps).length;
-        const harmfulVotes = votes.filter(v => !v.helps).length;
-        const userVoteData = votes.find(v => v.voter_id === voterId);
-        const userVote = userVoteData ? (userVoteData.helps ? 'helps' : 'harms') : null;
-
+        const counts = voteCounts?.find(v => v.treatment_id === treatment.id);
+        const userVoteData = userVotes.find(v => v.treatment_id === treatment.id);
+        
         return {
           ...treatment,
-          totalVotes: votes.length,
-          helpfulVotes,
-          harmfulVotes,
-          userVote,
+          totalVotes: Number(counts?.total_votes || 0),
+          helpfulVotes: Number(counts?.helpful_votes || 0),
+          harmfulVotes: Number(counts?.harmful_votes || 0),
+          userVote: userVoteData ? (userVoteData.helps ? 'helps' : 'harms') : null,
         };
       });
 

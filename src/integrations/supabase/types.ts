@@ -294,7 +294,23 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      treatment_vote_counts: {
+        Row: {
+          harmful_votes: number | null
+          helpful_votes: number | null
+          total_votes: number | null
+          treatment_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treatment_votes_treatment_id_fkey"
+            columns: ["treatment_id"]
+            isOneToOne: false
+            referencedRelation: "treatments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       has_role: {
