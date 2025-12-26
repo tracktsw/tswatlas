@@ -12,6 +12,18 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
+// Safe helper to convert Stripe Unix timestamp (seconds) to ISO string
+const toIsoFromStripeSeconds = (value: unknown): string | null => {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+  try {
+    return new Date(value * 1000).toISOString();
+  } catch {
+    return null;
+  }
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -89,7 +101,18 @@ serve(async (req) => {
 
     if (hasActiveSub) {
       const subscription = subscriptions.data[0];
-      subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      
+      // Log raw values for debugging
+      logStep("Raw subscription data", { 
+        current_period_end: subscription.current_period_end,
+        current_period_end_type: typeof subscription.current_period_end,
+        item_period_end: subscription.items?.data?.[0]?.current_period_end,
+      });
+      
+      // Try primary field first, fallback to item-level period end
+      subscriptionEnd = toIsoFromStripeSeconds(subscription.current_period_end) 
+        ?? toIsoFromStripeSeconds(subscription.items?.data?.[0]?.current_period_end);
+      
       logStep("Active subscription found", { 
         subscriptionId: subscription.id, 
         endDate: subscriptionEnd 
