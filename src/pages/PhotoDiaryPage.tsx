@@ -293,13 +293,17 @@ const PhotoDiaryPage = () => {
 
   const togglePhotoSelection = useCallback(
     (photo: VirtualPhoto) => {
-      if (selectedPhotos.find((p) => p.id === photo.id)) {
-        setSelectedPhotos((prev) => prev.filter((p) => p.id !== photo.id));
-      } else if (selectedPhotos.length < 2) {
-        setSelectedPhotos((prev) => [...prev, photo]);
-      }
+      setSelectedPhotos((prev) => {
+        const isSelected = prev.find((p) => p.id === photo.id);
+        if (isSelected) {
+          return prev.filter((p) => p.id !== photo.id);
+        } else if (prev.length < 2) {
+          return [...prev, photo];
+        }
+        return prev;
+      });
     },
-    [selectedPhotos]
+    []
   );
 
   const handlePhotoSelect = useCallback(
