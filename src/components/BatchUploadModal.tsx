@@ -57,14 +57,14 @@ export const BatchUploadModal = ({
   selectedFiles,
 }: BatchUploadModalProps) => {
   const isComplete = !isUploading && items.length > 0 && stats.pending === 0 && stats.uploading === 0;
-  const hasStarted = items.length > 0;
+  const hasStarted = items.length > 0 || isUploading;
   const hasFailures = stats.failed > 0;
   const allSuccess = isComplete && stats.failed === 0;
 
   // Calculate overall progress
   const overallProgress = items.length > 0
     ? Math.round(((stats.success + stats.failed) / stats.total) * 100)
-    : 0;
+    : isUploading ? 5 : 0; // Show small progress if uploading but items not yet set
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -77,8 +77,8 @@ export const BatchUploadModal = ({
         </DialogHeader>
 
         <div className="flex-1 overflow-auto space-y-4">
-          {/* Body part selector - shown before upload starts */}
-          {!hasStarted && (
+          {/* Body part selector - only shown if not uploading yet and no items processed */}
+          {!isUploading && items.length === 0 && selectedFiles.length > 0 && (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 {selectedFiles.length} photo{selectedFiles.length !== 1 ? 's' : ''} selected
@@ -111,17 +111,19 @@ export const BatchUploadModal = ({
           )}
 
           {/* Progress view - shown during/after upload */}
-          {hasStarted && (
+          {(isUploading || items.length > 0) && (
             <div className="space-y-4">
               {/* Overall progress */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">
-                    {isUploading 
-                      ? `Uploading ${currentIndex} of ${stats.total}...`
-                      : allSuccess
-                        ? `All ${stats.total} photos uploaded!`
-                        : `${stats.success} uploaded, ${stats.failed} failed`
+                    {isUploading && items.length === 0
+                      ? 'Preparing upload...'
+                      : isUploading 
+                        ? `Uploading ${currentIndex} of ${stats.total}...`
+                        : allSuccess
+                          ? `All ${stats.total} photos uploaded!`
+                          : `${stats.success} uploaded, ${stats.failed} failed`
                     }
                   </span>
                   <span className="text-muted-foreground">{overallProgress}%</span>

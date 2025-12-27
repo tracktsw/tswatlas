@@ -45,6 +45,10 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
   const uploadSinglePhoto = async (item: UploadItem, userId: string): Promise<boolean> => {
     if (cancelledRef.current) return false;
 
+    if (import.meta.env.DEV) {
+      console.log('[BatchUpload] Starting upload for:', item.file.name);
+    }
+
     updateItem(item.id, { status: 'uploading', progress: 10 });
     let uploadedPaths: string[] = [];
 
@@ -89,8 +93,16 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
       if (!mediumResult.error) uploadedPaths.push(processed.medium.path);
       if (!originalResult.error) uploadedPaths.push(processed.original.path);
 
-      if (thumbResult.error) throw new Error(`Thumbnail upload failed`);
-      if (mediumResult.error) throw new Error(`Image upload failed`);
+      if (thumbResult.error) {
+        const errMsg = thumbResult.error.message || 'Thumbnail upload failed';
+        if (import.meta.env.DEV) console.error('[BatchUpload] Thumb error:', errMsg);
+        throw new Error(errMsg);
+      }
+      if (mediumResult.error) {
+        const errMsg = mediumResult.error.message || 'Image upload failed';
+        if (import.meta.env.DEV) console.error('[BatchUpload] Medium error:', errMsg);
+        throw new Error(errMsg);
+      }
 
       if (cancelledRef.current) {
         // Cleanup on cancel
@@ -120,7 +132,15 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
         .select()
         .single();
 
-      if (insertError) throw new Error(`Database error`);
+      if (insertError) {
+        const errMsg = insertError.message || 'Database error';
+        if (import.meta.env.DEV) console.error('[BatchUpload] DB error:', errMsg);
+        throw new Error(errMsg);
+      }
+
+      if (import.meta.env.DEV) {
+        console.log('[BatchUpload] Upload success:', item.file.name, '-> photoId:', insertedPhoto.id);
+      }
 
       updateItem(item.id, { status: 'success', progress: 100, photoId: insertedPhoto.id });
       onPhotoUploaded?.(insertedPhoto.id);
@@ -134,6 +154,9 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
       }
       
       const message = error instanceof Error ? error.message : 'Upload failed';
+      if (import.meta.env.DEV) {
+        console.error('[BatchUpload] Upload failed for:', item.file.name, '-', message);
+      }
       updateItem(item.id, { status: 'error', progress: 0, error: message });
       return false;
     }
@@ -174,10 +197,28 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
   };
 
   const startUpload = useCallback(async (files: File[]) => {
-    if (files.length === 0) return;
+    if (import.meta.env.DEV) {
+      console.log('[BatchUpload] startUpload called with', files.length, 'files');
+    }
+    
+    if (files.length === 0) {
+      if (import.meta.env.DEV) {
+        console.warn('[BatchUpload] startUpload called with empty files array');
+      }
+      return;
+    }
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+    if (!user) {
+      if (import.meta.env.DEV) {
+        console.error('[BatchUpload] User not authenticated');
+      }
+      throw new Error('Not authenticated');
+    }
+
+    if (import.meta.env.DEV) {
+      console.log('[BatchUpload] Authenticated user:', user.id);
+    }
 
     cancelledRef.current = false;
     setIsUploading(true);
@@ -190,10 +231,18 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
       progress: 0,
     }));
 
+    if (import.meta.env.DEV) {
+      console.log('[BatchUpload] Created upload items:', newItems.map(i => i.file.name));
+    }
+
     setItems(newItems);
 
     // Process queue
     const results = await processQueue(newItems, user.id);
+    
+    if (import.meta.env.DEV) {
+      console.log('[BatchUpload] Upload complete. Success:', results.success, 'Failed:', results.failed);
+    }
     
     setIsUploading(false);
     onComplete?.(results);
