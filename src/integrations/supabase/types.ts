@@ -47,23 +47,23 @@ export type Database = {
       treatment_votes: {
         Row: {
           created_at: string
-          helps: boolean
           id: string
           treatment_id: string
+          vote_type: string
           voter_id: string
         }
         Insert: {
           created_at?: string
-          helps?: boolean
           id?: string
           treatment_id: string
+          vote_type: string
           voter_id: string
         }
         Update: {
           created_at?: string
-          helps?: boolean
           id?: string
           treatment_id?: string
+          vote_type?: string
           voter_id?: string
         }
         Relationships: [
@@ -307,6 +307,7 @@ export type Database = {
         Row: {
           harmful_votes: number | null
           helpful_votes: number | null
+          neutral_votes: number | null
           total_votes: number | null
           treatment_id: string | null
         }
