@@ -1,12 +1,14 @@
-import { useState, useRef, useMemo, useCallback } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown } from 'lucide-react';
 import { useUserData, BodyPart, Photo } from '@/contexts/UserDataContext';
+import { useVirtualizedPhotos, VirtualPhoto } from '@/hooks/useVirtualizedPhotos';
+import { VirtualizedPhotoGrid } from '@/components/VirtualizedPhotoGrid';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { format, startOfDay, isToday } from 'date-fns';
+import { format, isToday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,7 +16,7 @@ import { LeafIllustration, SparkleIllustration } from '@/components/illustration
 import { SparkleEffect } from '@/components/SparkleEffect';
 import { PhotoSkeleton } from '@/components/PhotoSkeleton';
 
-// Progressive image component with skeleton loading and fade-in animation
+// Progressive image component for fullscreen/compare views
 const ProgressiveImage = ({ 
   src, 
   alt, 
@@ -31,14 +33,12 @@ const ProgressiveImage = ({
 
   return (
     <div className={cn("relative bg-muted overflow-hidden", className)}>
-      {/* Skeleton placeholder - shows while loading */}
       {!isLoaded && !hasError && (
         <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 animate-pulse">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-background/10 to-transparent animate-shimmer" />
         </div>
       )}
       
-      {/* Actual image with fade-in */}
       <img 
         src={src}
         alt={alt}
@@ -53,7 +53,6 @@ const ProgressiveImage = ({
         )}
       />
       
-      {/* Error state */}
       {hasError && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted">
           <Image className="w-8 h-8 text-muted-foreground/50" />
@@ -76,37 +75,61 @@ const bodyParts: { value: BodyPart; label: string }[] = [
 
 const FREE_DAILY_PHOTO_LIMIT = 2;
 
-// Note: Signed URLs don't support image transformations
-// Images are already compressed on upload (max 1200px, 80% quality)
-
 const PhotoDiaryPage = () => {
-  const { photos, addPhoto, deletePhoto, getPhotosByBodyPart, isLoading } = useUserData();
+  const { addPhoto, deletePhoto, photos: contextPhotos, isLoading: contextLoading } = useUserData();
   const { isPremium } = useSubscription();
   const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | 'all'>('all');
   const [isCapturing, setIsCapturing] = useState(false);
   const [newPhotoBodyPart, setNewPhotoBodyPart] = useState<BodyPart>('face');
   const [newPhotoNotes, setNewPhotoNotes] = useState('');
   const [compareMode, setCompareMode] = useState(false);
-  const [selectedPhotos, setSelectedPhotos] = useState<Photo[]>([]);
+  const [selectedPhotos, setSelectedPhotos] = useState<VirtualPhoto[]>([]);
   const [showSparkles, setShowSparkles] = useState(false);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
-  const [viewingPhoto, setViewingPhoto] = useState<Photo | null>(null);
+  const [viewingPhoto, setViewingPhoto] = useState<VirtualPhoto | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Count photos uploaded today
+  // Get user ID for virtualized photos hook
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    getUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUserId(session?.user?.id || null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Use virtualized photos with cursor-based pagination
+  const {
+    photos,
+    isLoading,
+    hasMore,
+    loadMore,
+    addPhotoToList,
+    removePhotoFromList,
+    getMediumUrl,
+    refresh,
+  } = useVirtualizedPhotos({
+    userId,
+    bodyPartFilter: selectedBodyPart,
+  });
+
+  // Count photos uploaded today (use context photos for accurate count)
   const photosUploadedToday = useMemo(() => {
-    return photos.filter(photo => {
+    return contextPhotos.filter(photo => {
       const photoDate = new Date(photo.timestamp);
       return isToday(photoDate);
     }).length;
-  }, [photos]);
+  }, [contextPhotos]);
 
   const canUploadMore = isPremium || photosUploadedToday < FREE_DAILY_PHOTO_LIMIT;
   const remainingUploads = FREE_DAILY_PHOTO_LIMIT - photosUploadedToday;
-
-  const filteredPhotos = selectedBodyPart === 'all' 
-    ? photos 
-    : getPhotosByBodyPart(selectedBodyPart);
 
   const handleUpgrade = async () => {
     try {
@@ -161,6 +184,8 @@ const PhotoDiaryPage = () => {
         setIsCapturing(false);
         setShowSparkles(true);
         toast.success('Photo saved to cloud');
+        // Refresh the virtualized list
+        refresh();
       } catch (error) {
         toast.error('Failed to save photo');
       }
@@ -171,19 +196,28 @@ const PhotoDiaryPage = () => {
   const handleDelete = async (id: string) => {
     try {
       await deletePhoto(id);
+      removePhotoFromList(id);
       toast.success('Photo deleted');
     } catch (error) {
       toast.error('Failed to delete photo');
     }
   };
 
-  const togglePhotoSelection = (photo: Photo) => {
+  const togglePhotoSelection = useCallback((photo: VirtualPhoto) => {
     if (selectedPhotos.find(p => p.id === photo.id)) {
       setSelectedPhotos(prev => prev.filter(p => p.id !== photo.id));
     } else if (selectedPhotos.length < 2) {
       setSelectedPhotos(prev => [...prev, photo]);
     }
-  };
+  }, [selectedPhotos]);
+
+  const handlePhotoSelect = useCallback((photo: VirtualPhoto) => {
+    if (compareMode) {
+      togglePhotoSelection(photo);
+    } else {
+      setViewingPhoto(photo);
+    }
+  }, [compareMode, togglePhotoSelection]);
 
   return (
     <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
@@ -228,7 +262,7 @@ const PhotoDiaryPage = () => {
         )}
       </div>
 
-      {/* Compare View - uses full resolution images */}
+      {/* Compare View - uses medium resolution images */}
       {compareMode && selectedPhotos.length === 2 && (
         <div className="glass-card-warm p-5 space-y-4 animate-scale-in">
           <h3 className="font-display font-bold text-center text-foreground">Side by Side Comparison</h3>
@@ -236,7 +270,7 @@ const PhotoDiaryPage = () => {
             {selectedPhotos.map((photo, idx) => (
               <div key={photo.id} className="space-y-2">
                 <ProgressiveImage 
-                  src={photo.photoUrl} // Full resolution for comparison
+                  src={photo.mediumUrl}
                   alt={`Comparison ${idx + 1}`}
                   className="w-full aspect-square rounded-2xl shadow-warm"
                   priority
@@ -291,7 +325,6 @@ const PhotoDiaryPage = () => {
                   : 'Daily limit reached'
                 }
               </p>
-              
             </div>
             {!canUploadMore && (
               <Button size="sm" onClick={handleUpgrade} className="gap-1.5 rounded-xl">
@@ -410,10 +443,10 @@ const PhotoDiaryPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Photos Grid */}
-      {isLoading ? (
+      {/* Photos Grid - Virtualized with cursor-based pagination */}
+      {isLoading && photos.length === 0 ? (
         <PhotoSkeleton count={4} />
-      ) : filteredPhotos.length === 0 ? (
+      ) : photos.length === 0 ? (
         <div className="glass-card-warm p-8 text-center animate-fade-in relative overflow-hidden">
           <LeafIllustration variant="cluster" className="w-20 h-20 absolute -right-4 -bottom-4 opacity-15" />
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-coral/20 to-coral-light flex items-center justify-center relative">
@@ -425,67 +458,25 @@ const PhotoDiaryPage = () => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
-          {filteredPhotos.map((photo, index) => {
-            const isSelected = selectedPhotos.find(p => p.id === photo.id);
-            const bodyPartInfo = bodyParts.find(b => b.value === photo.bodyPart);
-            
-            return (
-              <div 
-                key={photo.id} 
-                className={cn(
-                  'glass-card overflow-hidden group relative cursor-pointer transition-all duration-300 hover:shadow-warm hover:-translate-y-1 animate-scale-in',
-                  compareMode && isSelected && 'ring-2 ring-coral shadow-glow-coral',
-                  compareMode && 'hover:opacity-90'
-                )}
-                style={{ animationDelay: `${index * 0.05}s` }}
-                onClick={() => {
-                  if (compareMode) {
-                    togglePhotoSelection(photo);
-                  } else {
-                    setViewingPhoto(photo);
-                  }
-                }}
-              >
-                {/* Use thumbnail for grid view - much faster loading */}
-                <ProgressiveImage 
-                  src={photo.thumbnailUrl || photo.photoUrl}
-                  alt={`${photo.bodyPart} photo`}
-                  className="w-full aspect-square"
-                  priority={index < 4} // Prioritize first 4 images
-                />
-                <div className="p-3 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold bg-coral/10 text-coral px-2.5 py-1 rounded-full">
-                      {bodyPartInfo?.label}
-                    </span>
-                    {!compareMode && (
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleDelete(photo.id); }}
-                        className="p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-destructive/10"
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground font-medium">
-                    {format(new Date(photo.timestamp), 'MMM d, yyyy')}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <VirtualizedPhotoGrid
+          photos={photos}
+          selectedPhotos={selectedPhotos}
+          compareMode={compareMode}
+          onPhotoSelect={handlePhotoSelect}
+          onLoadMore={loadMore}
+          hasMore={hasMore}
+          bodyParts={bodyParts}
+        />
       )}
 
-      {/* Photo Viewer Dialog - uses full resolution */}
+      {/* Photo Viewer Dialog - uses medium resolution */}
       <Dialog open={!!viewingPhoto} onOpenChange={(open) => !open && setViewingPhoto(null)}>
         <DialogContent className="max-w-lg p-0 overflow-hidden">
           {viewingPhoto && (
             <>
               <div className="relative bg-black">
                 <ProgressiveImage 
-                  src={viewingPhoto.photoUrl} // Full resolution for detail view
+                  src={viewingPhoto.mediumUrl}
                   alt={`${viewingPhoto.bodyPart} photo`}
                   className="w-full max-h-[70vh]"
                   priority

@@ -72,13 +72,15 @@ export const compressImage = (
 };
 
 export interface ProcessedImages {
-  full: {
-    dataUrl: string;
+  original: {
+    blob: Blob;
+    fileName: string;
+  };
+  medium: {
     blob: Blob;
     fileName: string;
   };
   thumbnail: {
-    dataUrl: string;
     blob: Blob;
     fileName: string;
   };
@@ -89,9 +91,10 @@ export interface ProcessedImages {
 }
 
 /**
- * Process an image for upload - generates both full-size and thumbnail versions
- * Full: max 1200px, 80% quality
- * Thumbnail: max 400px, 75% quality
+ * Process an image for upload - generates three versions:
+ * - Original: full quality for export/backup
+ * - Medium: max 1200px, 85% quality for fullscreen/compare
+ * - Thumbnail: max 400px, 75% quality for grid views
  */
 export const processImageForUpload = async (
   dataUrl: string,
@@ -100,22 +103,27 @@ export const processImageForUpload = async (
   const format = getBestFormat();
   const baseFileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(2)}`;
   
-  // Generate full-size version (max 1200px)
-  const fullDataUrl = await compressImage(dataUrl, 1200, 0.8, format.mimeType);
-  const fullBlob = dataUrlToBlob(fullDataUrl, format.mimeType);
+  // Generate medium version (max 1200px) for fullscreen/compare
+  const mediumDataUrl = await compressImage(dataUrl, 1200, 0.85, format.mimeType);
+  const mediumBlob = dataUrlToBlob(mediumDataUrl, format.mimeType);
   
   // Generate thumbnail version (max 400px for grid view)
   const thumbDataUrl = await compressImage(dataUrl, 400, 0.75, format.mimeType);
   const thumbBlob = dataUrlToBlob(thumbDataUrl, format.mimeType);
   
+  // Store original in JPEG for maximum compatibility (backup/export)
+  const originalBlob = dataUrlToBlob(dataUrl, 'image/jpeg');
+  
   return {
-    full: {
-      dataUrl: fullDataUrl,
-      blob: fullBlob,
+    original: {
+      blob: originalBlob,
+      fileName: `${baseFileName}_original.jpg`,
+    },
+    medium: {
+      blob: mediumBlob,
       fileName: `${baseFileName}.${format.extension}`,
     },
     thumbnail: {
-      dataUrl: thumbDataUrl,
       blob: thumbBlob,
       fileName: `${baseFileName}_thumb.${format.extension}`,
     },
@@ -138,11 +146,21 @@ export const dataUrlToBlob = (dataUrl: string, mimeType: string): Blob => {
 };
 
 /**
- * Derive thumbnail URL from full photo URL
+ * Derive thumbnail path from medium photo path
  * Uses naming convention: filename.ext -> filename_thumb.ext
  */
-export const getThumbnailPath = (fullPath: string): string => {
-  const lastDot = fullPath.lastIndexOf('.');
-  if (lastDot === -1) return fullPath;
-  return `${fullPath.substring(0, lastDot)}_thumb${fullPath.substring(lastDot)}`;
+export const getThumbnailPath = (mediumPath: string): string => {
+  const lastDot = mediumPath.lastIndexOf('.');
+  if (lastDot === -1) return mediumPath;
+  return `${mediumPath.substring(0, lastDot)}_thumb${mediumPath.substring(lastDot)}`;
+};
+
+/**
+ * Derive original path from medium photo path
+ * Uses naming convention: filename.ext -> filename_original.jpg
+ */
+export const getOriginalPath = (mediumPath: string): string => {
+  const lastDot = mediumPath.lastIndexOf('.');
+  if (lastDot === -1) return mediumPath;
+  return `${mediumPath.substring(0, lastDot)}_original.jpg`;
 };
