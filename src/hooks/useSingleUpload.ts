@@ -46,22 +46,22 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
         throw new Error('Not authenticated');
       }
 
+      // Extract EXIF date from ORIGINAL file BEFORE any conversion
+      // (HEIC conversion strips metadata, so we must do this first)
+      if (import.meta.env.DEV) {
+        console.log('[SingleUpload] Extracting EXIF date from original file...');
+      }
+      const exifDate = await extractExifDate(file);
+      if (import.meta.env.DEV) {
+        console.log('[SingleUpload] EXIF date:', exifDate || 'not found');
+      }
+
       // Convert HEIC to JPEG if needed, returns data URL
       if (import.meta.env.DEV) {
         console.log('[SingleUpload] Converting file to data URL (HEIC if needed)...');
       }
-      setProgress(10);
+      setProgress(15);
       const dataUrl = await prepareFileForUpload(file);
-      
-      if (import.meta.env.DEV) {
-        console.log('[SingleUpload] File converted, extracting EXIF date...');
-      }
-      
-      // Extract EXIF date before processing (must use original data)
-      const exifDate = await extractExifDate(dataUrl);
-      if (import.meta.env.DEV) {
-        console.log('[SingleUpload] EXIF date:', exifDate || 'not found');
-      }
       
       setProgress(25);
 

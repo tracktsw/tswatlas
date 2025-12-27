@@ -1,45 +1,25 @@
 /**
  * EXIF date extraction utility
  * Extracts DateTimeOriginal or DateTimeDigitized from image metadata
+ * Works with JPEG, HEIC, and other image formats
  */
 
+import EXIF from 'exif-js';
+
 /**
- * Extract EXIF date from an image file or data URL.
+ * Extract EXIF date from an image file.
  * Returns the date as ISO string or null if not found.
+ * IMPORTANT: Call this with the ORIGINAL file BEFORE any conversion (HEIC->JPEG strips metadata)
  */
 export const extractExifDate = async (input: File | string): Promise<string | null> => {
   try {
-    let dataUrl: string;
-    
-    if (typeof input === 'string') {
-      dataUrl = input;
-    } else {
-      // Convert file to data URL
-      dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(input);
-      });
+    // If input is a File, use exif-js directly (works with HEIC)
+    if (input instanceof File) {
+      return await extractExifFromFile(input);
     }
-
-    // Load image and extract EXIF using canvas method for broad compatibility
-    const img = await loadImage(dataUrl);
     
-    // Try to get EXIF from the data URL directly (works for JPEG)
-    const exifDate = await extractExifFromDataUrl(dataUrl);
-    
-    if (exifDate) {
-      if (import.meta.env.DEV) {
-        console.log('[EXIF] Extracted date:', exifDate);
-      }
-      return exifDate;
-    }
-
-    if (import.meta.env.DEV) {
-      console.log('[EXIF] No date found in image metadata');
-    }
-    return null;
+    // If input is a data URL, fall back to manual parsing (for JPEG only)
+    return await extractExifFromDataUrl(input);
   } catch (error) {
     if (import.meta.env.DEV) {
       console.warn('[EXIF] Error extracting date:', error);
@@ -49,19 +29,74 @@ export const extractExifDate = async (input: File | string): Promise<string | nu
 };
 
 /**
- * Load an image from a data URL
+ * Extract EXIF date using exif-js library (works with HEIC files)
  */
-const loadImage = (dataUrl: string): Promise<HTMLImageElement> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = dataUrl;
+const extractExifFromFile = (file: File): Promise<string | null> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+      const img = new Image();
+      
+      img.onload = function() {
+        try {
+          // @ts-ignore - exif-js types are incomplete
+          EXIF.getData(img, function(this: any) {
+            // Try DateTimeOriginal first (when photo was actually taken)
+            let dateStr = EXIF.getTag(this, 'DateTimeOriginal');
+            
+            // Fall back to DateTimeDigitized
+            if (!dateStr) {
+              dateStr = EXIF.getTag(this, 'DateTimeDigitized');
+            }
+            
+            // Fall back to DateTime
+            if (!dateStr) {
+              dateStr = EXIF.getTag(this, 'DateTime');
+            }
+            
+            if (dateStr && typeof dateStr === 'string') {
+              const isoDate = parseExifDateTime(dateStr);
+              if (import.meta.env.DEV) {
+                console.log('[EXIF] Extracted date from file:', isoDate);
+              }
+              resolve(isoDate);
+            } else {
+              if (import.meta.env.DEV) {
+                console.log('[EXIF] No date found in file metadata');
+              }
+              resolve(null);
+            }
+          });
+        } catch (err) {
+          if (import.meta.env.DEV) {
+            console.warn('[EXIF] exif-js error:', err);
+          }
+          resolve(null);
+        }
+      };
+      
+      img.onerror = () => {
+        if (import.meta.env.DEV) {
+          console.warn('[EXIF] Failed to load image for EXIF extraction');
+        }
+        resolve(null);
+      };
+      
+      img.src = e.target?.result as string;
+    };
+    
+    reader.onerror = () => {
+      resolve(null);
+    };
+    
+    reader.readAsDataURL(file);
   });
 };
 
 /**
  * Extract EXIF date from a JPEG data URL by parsing the binary data
+ * (Fallback for when we only have a data URL)
  */
 const extractExifFromDataUrl = async (dataUrl: string): Promise<string | null> => {
   try {
@@ -99,7 +134,7 @@ const extractExifFromDataUrl = async (dataUrl: string): Promise<string | null> =
         // Check for "Exif\0\0" header
         const exifHeader = String.fromCharCode(...exifData.slice(0, 4));
         if (exifHeader === 'Exif') {
-          return parseExifData(exifData.slice(6));
+          return parseExifTiffData(exifData.slice(6));
         }
       }
 
@@ -126,7 +161,7 @@ const extractExifFromDataUrl = async (dataUrl: string): Promise<string | null> =
 /**
  * Parse EXIF TIFF data to find DateTimeOriginal or DateTime
  */
-const parseExifData = (data: Uint8Array): string | null => {
+const parseExifTiffData = (data: Uint8Array): string | null => {
   try {
     // Check byte order (II = little-endian, MM = big-endian)
     const byteOrder = String.fromCharCode(data[0], data[1]);
