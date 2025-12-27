@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun } from 'lucide-react';
+import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { useUserData } from '@/contexts/UserDataContext';
@@ -10,13 +10,23 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SubscriptionCard from '@/components/SubscriptionCard';
 import { useSubscription } from '@/hooks/useSubscription';
-
+import { useAppUpdate } from '@/hooks/useAppUpdate';
 const SettingsPage = () => {
   const { reminderSettings, updateReminderSettings, photos, checkIns, journalEntries, isLoading, isSyncing } = useUserData();
   const { isAdmin, refreshSubscription } = useSubscription();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { currentVersion, isChecking, checkForUpdate, performUpdate, updateAvailable } = useAppUpdate();
+
+  const handleCheckForUpdates = async () => {
+    const hasUpdate = await checkForUpdate(true);
+    if (hasUpdate) {
+      toast.success('New version available! Tap to update.');
+    } else {
+      toast.success('You are on the latest version.');
+    }
+  };
 
   // Handle subscription success/cancel from Stripe redirect
   useEffect(() => {
@@ -239,6 +249,47 @@ const SettingsPage = () => {
         </div>
       )}
 
+      {/* App Updates */}
+      <div className="glass-card p-4 space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-full bg-primary/10">
+            <RefreshCw className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-foreground">App Updates</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Current version: <span className="font-mono">{currentVersion}</span>
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleCheckForUpdates}
+            disabled={isChecking}
+            className="flex-1"
+          >
+            {isChecking ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Checking...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Check for Updates
+              </>
+            )}
+          </Button>
+          {updateAvailable && (
+            <Button size="sm" onClick={performUpdate} className="flex-1">
+              Update Now
+            </Button>
+          )}
+        </div>
+      </div>
+
       {/* About */}
       <div className="glass-card p-4">
         <h3 className="font-semibold text-foreground mb-2">About TrackTSW</h3>
@@ -247,7 +298,7 @@ const SettingsPage = () => {
           Remember: healing is not linear, and every day you're getting closer to healthy skin.
         </p>
         <p className="text-xs text-muted-foreground mt-3">
-          Version 1.0.0 • Made with care
+          Version {currentVersion} • Made with care
         </p>
       </div>
 
