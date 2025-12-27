@@ -18,9 +18,9 @@ const HomePage = () => {
   );
   
   const today = format(new Date(), 'yyyy-MM-dd');
-  const todayCheckIns = checkIns.filter(c => c.timestamp.startsWith(today));
-  const hasMorningCheckIn = todayCheckIns.some(c => c.timeOfDay === 'morning');
-  const hasEveningCheckIn = todayCheckIns.some(c => c.timeOfDay === 'evening');
+  const todayCheckIns = checkIns.filter((c) => format(new Date(c.timestamp), 'yyyy-MM-dd') === today);
+  const hasMorningCheckIn = todayCheckIns.some((c) => c.timeOfDay === 'morning');
+  const hasEveningCheckIn = todayCheckIns.some((c) => c.timeOfDay === 'evening');
 
   const daysSinceTsw = tswStartDate 
     ? differenceInDays(new Date(), parseISO(tswStartDate)) 

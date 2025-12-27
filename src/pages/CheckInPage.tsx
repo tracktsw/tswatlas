@@ -40,7 +40,7 @@ const CheckInPage = () => {
   const suggestedTimeOfDay = currentHour < 14 ? 'morning' : 'evening';
   const [timeOfDay, setTimeOfDay] = useState<'morning' | 'evening'>(suggestedTimeOfDay);
 
-  const todayCheckIns = checkIns.filter((c) => c.timestamp.startsWith(today));
+  const todayCheckIns = checkIns.filter((c) => format(new Date(c.timestamp), 'yyyy-MM-dd') === today);
   const hasMorningCheckIn = todayCheckIns.some((c) => c.timeOfDay === 'morning');
   const hasEveningCheckIn = todayCheckIns.some((c) => c.timeOfDay === 'evening');
 

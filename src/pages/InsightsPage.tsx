@@ -52,7 +52,7 @@ const InsightsPage = () => {
   const weeklyData = useMemo(() => {
     return last7Days.map(date => {
       const dateStr = format(date, 'yyyy-MM-dd');
-      const dayCheckIns = checkIns.filter(c => c.timestamp.startsWith(dateStr));
+      const dayCheckIns = checkIns.filter((c) => format(new Date(c.timestamp), 'yyyy-MM-dd') === dateStr);
       const avgMood = dayCheckIns.length 
         ? dayCheckIns.reduce((sum, c) => sum + c.mood, 0) / dayCheckIns.length 
         : 0;
@@ -138,12 +138,12 @@ const InsightsPage = () => {
 
   const getCheckInsForDate = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    return checkIns.filter(c => c.timestamp.startsWith(dateStr));
+    return checkIns.filter((c) => format(new Date(c.timestamp), 'yyyy-MM-dd') === dateStr);
   };
 
   const getPhotosForDate = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    return photos.filter(p => p.timestamp.startsWith(dateStr));
+    return photos.filter((p) => format(new Date(p.timestamp), 'yyyy-MM-dd') === dateStr);
   };
 
   const selectedDayCheckIns = selectedDate ? getCheckInsForDate(selectedDate) : [];
