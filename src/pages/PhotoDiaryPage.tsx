@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useCallback } from 'react';
 import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown } from 'lucide-react';
 import { useUserData, BodyPart, Photo } from '@/contexts/UserDataContext';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { LeafIllustration, SparkleIllustration } from '@/components/illustrations';
 import { SparkleEffect } from '@/components/SparkleEffect';
+import { PhotoSkeleton } from '@/components/PhotoSkeleton';
 
 const bodyParts: { value: BodyPart; label: string }[] = [
   { value: 'face', label: 'Face' },
@@ -26,8 +27,16 @@ const bodyParts: { value: BodyPart; label: string }[] = [
 
 const FREE_DAILY_PHOTO_LIMIT = 2;
 
+// Helper to add thumbnail transform params to signed URL
+const getThumbnailUrl = (url: string, size: number = 300) => {
+  if (!url) return '';
+  // Add Supabase image transformation parameters
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}width=${size}&height=${size}&resize=cover&quality=80`;
+};
+
 const PhotoDiaryPage = () => {
-  const { photos, addPhoto, deletePhoto, getPhotosByBodyPart } = useUserData();
+  const { photos, addPhoto, deletePhoto, getPhotosByBodyPart, isLoading } = useUserData();
   const { isPremium } = useSubscription();
   const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | 'all'>('all');
   const [isCapturing, setIsCapturing] = useState(false);
@@ -356,7 +365,9 @@ const PhotoDiaryPage = () => {
       </Dialog>
 
       {/* Photos Grid */}
-      {filteredPhotos.length === 0 ? (
+      {isLoading ? (
+        <PhotoSkeleton count={4} />
+      ) : filteredPhotos.length === 0 ? (
         <div className="glass-card-warm p-8 text-center animate-fade-in relative overflow-hidden">
           <LeafIllustration variant="cluster" className="w-20 h-20 absolute -right-4 -bottom-4 opacity-15" />
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-coral/20 to-coral-light flex items-center justify-center relative">
@@ -385,9 +396,11 @@ const PhotoDiaryPage = () => {
                 onClick={() => compareMode && togglePhotoSelection(photo)}
               >
                 <img 
-                  src={photo.photoUrl}
+                  src={getThumbnailUrl(photo.photoUrl)}
                   alt={`${photo.bodyPart} photo`}
-                  className="w-full aspect-square object-cover"
+                  className="w-full aspect-square object-cover bg-muted"
+                  loading="lazy"
+                  decoding="async"
                 />
                 <div className="p-3 space-y-1.5">
                   <div className="flex items-center justify-between">
