@@ -3,6 +3,7 @@ import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown, X } from 'lucide-re
 import { useUserData, BodyPart, Photo } from '@/contexts/UserDataContext';
 import { useVirtualizedPhotos, VirtualPhoto } from '@/hooks/useVirtualizedPhotos';
 import { VirtualizedPhotoGrid } from '@/components/VirtualizedPhotoGrid';
+import { ComparisonViewer } from '@/components/ComparisonViewer';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogContentFullscreen, DialogDescription, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -84,70 +85,6 @@ const ModalImage = ({
   );
 };
 
-// Compare view progressive image - shows thumbnail, swaps to medium
-const CompareImage = ({
-  thumbnailSrc,
-  mediumSrc,
-  alt,
-  className,
-}: {
-  thumbnailSrc?: string;
-  mediumSrc?: string;
-  alt: string;
-  className?: string;
-}) => {
-  const [thumbLoaded, setThumbLoaded] = useState(false);
-  const [mediumLoaded, setMediumLoaded] = useState(false);
-  const [hasError, setHasError] = useState(false);
-
-  const hasThumb = typeof thumbnailSrc === "string" && thumbnailSrc.length > 0;
-  const hasMedium = typeof mediumSrc === "string" && mediumSrc.length > 0;
-
-  return (
-    <div className={cn("relative bg-muted overflow-hidden", className)}>
-      {!thumbLoaded && !hasError && (
-        <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 animate-pulse">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-background/10 to-transparent animate-shimmer" />
-        </div>
-      )}
-
-      {hasThumb && (
-        <img
-          src={thumbnailSrc}
-          alt={alt}
-          loading="eager"
-          onLoad={() => setThumbLoaded(true)}
-          onError={() => setHasError(true)}
-          className={cn(
-            "absolute inset-0 w-full h-full object-cover transition-opacity duration-300",
-            thumbLoaded ? "opacity-100" : "opacity-0",
-            mediumLoaded ? "opacity-0" : "opacity-100"
-          )}
-        />
-      )}
-
-      {hasMedium && thumbLoaded && (
-        <img
-          src={mediumSrc}
-          alt={alt}
-          loading="eager"
-          onLoad={() => setMediumLoaded(true)}
-          onError={() => setHasError(true)}
-          className={cn(
-            "absolute inset-0 w-full h-full object-cover transition-opacity duration-500",
-            mediumLoaded ? "opacity-100" : "opacity-0"
-          )}
-        />
-      )}
-
-      {hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted">
-          <Image className="w-8 h-8 text-muted-foreground/50" />
-        </div>
-      )}
-    </div>
-  );
-};
 
 const bodyParts: { value: BodyPart; label: string }[] = [
   { value: 'face', label: 'Face' },
@@ -416,26 +353,15 @@ const PhotoDiaryPage = () => {
         )}
       </div>
 
-      {/* Compare View - uses medium resolution images */}
+      {/* Immersive Compare View - fullscreen overlay */}
       {compareMode && selectedPhotos.length === 2 && (
-        <div className="glass-card-warm p-5 space-y-4 animate-scale-in">
-          <h3 className="font-display font-bold text-center text-foreground">Side by Side Comparison</h3>
-          <div className="grid grid-cols-2 gap-3">
-            {selectedPhotos.map((photo, idx) => (
-              <div key={photo.id} className="space-y-2">
-                <CompareImage 
-                  thumbnailSrc={photo.thumbnailUrl}
-                  mediumSrc={photo.mediumUrl}
-                  alt={`Comparison ${idx + 1}`}
-                  className="w-full aspect-square rounded-2xl shadow-warm"
-                />
-                <p className="text-xs text-muted-foreground text-center font-medium">
-                  {format(new Date(photo.timestamp), 'MMM d, yyyy')}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
+        <ComparisonViewer
+          photos={selectedPhotos}
+          onExit={() => {
+            setCompareMode(false);
+            setSelectedPhotos([]);
+          }}
+        />
       )}
 
       {compareMode && selectedPhotos.length < 2 && (
