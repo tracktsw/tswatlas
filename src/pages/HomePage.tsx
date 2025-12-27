@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Camera, CheckCircle, BarChart3, Users, BookOpen, Settings, Calendar as CalendarIcon, Flame, Pencil, Leaf, Sun, Loader2 } from 'lucide-react';
 import { LeafIllustration, PlantIllustration } from '@/components/illustrations';
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const HomePage = () => {
-  const { photos, checkIns, journalEntries, tswStartDate, setTswStartDate, isLoading, isSyncing } = useUserData();
+  const { photos, checkIns, journalEntries, tswStartDate, setTswStartDate, isLoading, isSyncing, refreshPhotos } = useUserData();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     tswStartDate ? parseISO(tswStartDate) : undefined
@@ -58,6 +58,31 @@ const HomePage = () => {
       setIsDatePickerOpen(false);
     }
   };
+
+  /**
+   * iOS PWA lifecycle handling:
+   * When the app returns from background (or another page), refresh photos.
+   * This ensures the homepage always shows the latest data without a manual refresh.
+   */
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Silently refresh photos when page becomes visible
+        refreshPhotos();
+      }
+    };
+
+    // Listen for visibility changes (iOS PWA returning from background)
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Also refresh on focus (handles some edge cases)
+    window.addEventListener('focus', refreshPhotos);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', refreshPhotos);
+    };
+  }, [refreshPhotos]);
 
   // Time-based greeting
   const getGreeting = () => {

@@ -105,7 +105,7 @@ const bodyParts: { value: BodyPart; label: string }[] = [
 const FREE_DAILY_PHOTO_LIMIT = 2;
 
 const PhotoDiaryPage = () => {
-  const { addPhoto, deletePhoto, photos: contextPhotos, isLoading: contextLoading } = useUserData();
+  const { addPhoto, deletePhoto, photos: contextPhotos, isLoading: contextLoading, refreshPhotos } = useUserData();
   const { isPremium } = useSubscription();
   const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | 'all'>('all');
   const [isCapturing, setIsCapturing] = useState(false);
@@ -166,7 +166,10 @@ const PhotoDiaryPage = () => {
   const singleUpload = useSingleUpload({
     onSuccess: () => {
       setShowSparkles(true);
+      // Refresh virtualized list for PhotoDiaryPage
       refresh();
+      // Also refresh context photos so HomePage updates immediately
+      refreshPhotos();
       toast.success('Photo saved to cloud');
     },
     onError: (error) => {
@@ -180,7 +183,10 @@ const PhotoDiaryPage = () => {
     onComplete: (results) => {
       if (results.success > 0) {
         setShowSparkles(true);
+        // Refresh virtualized list for PhotoDiaryPage
         refresh();
+        // Also refresh context photos so HomePage updates immediately
+        refreshPhotos();
         toast.success(`${results.success} photo${results.success !== 1 ? 's' : ''} uploaded`);
       }
       if (results.failed > 0 && results.success === 0) {

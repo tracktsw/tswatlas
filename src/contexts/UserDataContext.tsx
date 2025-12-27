@@ -59,6 +59,10 @@ interface UserDataContextType {
   addCustomTreatment: (treatment: string) => Promise<void>;
   getPhotosByBodyPart: (bodyPart: BodyPart) => Photo[];
   setTswStartDate: (date: string | null) => Promise<void>;
+  /** Refresh photos from backend - call after external uploads */
+  refreshPhotos: () => Promise<void>;
+  /** Add a photo directly to state (optimistic update) */
+  addPhotoToState: (photo: Photo) => void;
 }
 
 const UserDataContext = createContext<UserDataContextType | undefined>(undefined);
@@ -331,6 +335,50 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  /**
+   * Refresh only photos from backend - lightweight refresh for after uploads.
+   * Used by useSingleUpload and other external upload flows.
+   */
+  const refreshPhotos = useCallback(async () => {
+    if (!userId) return;
+
+    try {
+      const { data: photosData } = await supabase
+        .from('user_photos')
+        .select('id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, notes')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (photosData && photosData.length > 0) {
+        const photosWithUrls = photosData.map(photo => ({
+          id: photo.id,
+          photoUrl: photo.medium_url || photo.photo_url || '',
+          thumbnailUrl: photo.thumb_url || photo.medium_url || photo.photo_url || '',
+          originalUrl: photo.original_url || undefined,
+          bodyPart: photo.body_part as BodyPart,
+          timestamp: photo.created_at,
+          notes: photo.notes || undefined,
+        }));
+        setPhotos(photosWithUrls);
+      } else {
+        setPhotos([]);
+      }
+    } catch (error) {
+      console.error('Error refreshing photos:', error);
+    }
+  }, [userId]);
+
+  /**
+   * Add a photo directly to state (optimistic update).
+   * Call this immediately after a successful upload for instant UI feedback.
+   */
+  const addPhotoToState = useCallback((photo: Photo) => {
+    setPhotos(prev => {
+      // Avoid duplicates
+      if (prev.some(p => p.id === photo.id)) return prev;
+      return [photo, ...prev];
+    });
+  }, []);
 
   const reloadCheckIns = useCallback(async () => {
     if (!userId) {
@@ -757,6 +805,8 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addCustomTreatment,
         getPhotosByBodyPart,
         setTswStartDate,
+        refreshPhotos,
+        addPhotoToState,
       }}
     >
       {children}
