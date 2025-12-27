@@ -16,8 +16,76 @@ import { LeafIllustration, SparkleIllustration } from '@/components/illustration
 import { SparkleEffect } from '@/components/SparkleEffect';
 import { PhotoSkeleton } from '@/components/PhotoSkeleton';
 
-// Progressive image component - shows thumbnail instantly, swaps to medium when loaded
-const ProgressiveImage = ({
+// Progressive image component for modal - shows thumb placeholder, then loads medium/original
+const ModalImage = ({
+  thumbnailSrc,
+  highResSrc,
+  alt,
+}: {
+  thumbnailSrc?: string;
+  highResSrc?: string;
+  alt: string;
+}) => {
+  const [highResLoaded, setHighResLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  const hasThumb = typeof thumbnailSrc === "string" && thumbnailSrc.length > 0;
+  const hasHighRes = typeof highResSrc === "string" && highResSrc.length > 0;
+
+  return (
+    <div className="relative flex items-center justify-center bg-black min-h-[200px]">
+      {/* Loading shimmer - shows while no image is ready */}
+      {!highResLoaded && !hasError && (
+        <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 animate-pulse">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-background/10 to-transparent animate-shimmer" />
+        </div>
+      )}
+
+      {/* Thumbnail placeholder - blurred, shows immediately while high-res loads */}
+      {hasThumb && !highResLoaded && !hasError && (
+        <img
+          src={thumbnailSrc}
+          alt={alt}
+          className="max-w-full max-h-[80vh] object-contain blur-sm scale-105 opacity-70"
+        />
+      )}
+
+      {/* High-res image - fades in over thumbnail */}
+      {hasHighRes && (
+        <img
+          src={highResSrc}
+          alt={alt}
+          loading="eager"
+          decoding="async"
+          onLoad={() => setHighResLoaded(true)}
+          onError={() => setHasError(true)}
+          className={cn(
+            "max-w-full max-h-[80vh] object-contain transition-opacity duration-300",
+            highResLoaded ? "opacity-100" : "opacity-0 absolute"
+          )}
+        />
+      )}
+
+      {/* Fallback if no high-res available - show thumb at full size */}
+      {!hasHighRes && hasThumb && (
+        <img
+          src={thumbnailSrc}
+          alt={alt}
+          className="max-w-full max-h-[80vh] object-contain"
+        />
+      )}
+
+      {hasError && (
+        <div className="flex items-center justify-center p-8">
+          <Image className="w-12 h-12 text-muted-foreground/50" />
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Compare view progressive image - shows thumbnail, swaps to medium
+const CompareImage = ({
   thumbnailSrc,
   mediumSrc,
   alt,
@@ -37,50 +105,43 @@ const ProgressiveImage = ({
 
   return (
     <div className={cn("relative bg-muted overflow-hidden", className)}>
-      {/* Shimmer placeholder - shows only if no thumbnail yet */}
       {!thumbLoaded && !hasError && (
-        <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 animate-pulse z-0">
+        <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 animate-pulse">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-background/10 to-transparent animate-shimmer" />
         </div>
       )}
 
-      {/* Thumbnail layer - loads instantly, stays visible until medium loads */}
       {hasThumb && (
         <img
           src={thumbnailSrc}
           alt={alt}
           loading="eager"
-          decoding="async"
-          fetchPriority="high"
           onLoad={() => setThumbLoaded(true)}
           onError={() => setHasError(true)}
           className={cn(
-            "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 z-10",
+            "absolute inset-0 w-full h-full object-cover transition-opacity duration-300",
             thumbLoaded ? "opacity-100" : "opacity-0",
             mediumLoaded ? "opacity-0" : "opacity-100"
           )}
         />
       )}
 
-      {/* Medium layer - loads in background, fades in over thumbnail */}
-      {hasMedium && (thumbLoaded || !hasThumb) && (
+      {hasMedium && thumbLoaded && (
         <img
           src={mediumSrc}
           alt={alt}
           loading="eager"
-          decoding="async"
-          fetchPriority="high"
           onLoad={() => setMediumLoaded(true)}
           onError={() => setHasError(true)}
           className={cn(
-            "absolute inset-0 w-full h-full object-cover transition-opacity duration-500 z-20",
+            "absolute inset-0 w-full h-full object-cover transition-opacity duration-500",
             mediumLoaded ? "opacity-100" : "opacity-0"
           )}
         />
       )}
 
       {hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted z-30">
+        <div className="absolute inset-0 flex items-center justify-center bg-muted">
           <Image className="w-8 h-8 text-muted-foreground/50" />
         </div>
       )}
@@ -342,7 +403,7 @@ const PhotoDiaryPage = () => {
           <div className="grid grid-cols-2 gap-3">
             {selectedPhotos.map((photo, idx) => (
               <div key={photo.id} className="space-y-2">
-                <ProgressiveImage 
+                <CompareImage 
                   thumbnailSrc={photo.thumbnailUrl}
                   mediumSrc={photo.mediumUrl}
                   alt={`Comparison ${idx + 1}`}
@@ -554,12 +615,11 @@ const PhotoDiaryPage = () => {
 
           {viewingPhoto && (
             <>
-              <div className="relative bg-black">
-                <ProgressiveImage
+              <div className="relative bg-black flex items-center justify-center">
+                <ModalImage
                   thumbnailSrc={viewingPhoto.thumbnailUrl}
-                  mediumSrc={viewingPhoto.mediumUrl}
+                  highResSrc={viewingPhoto.mediumUrl || viewingPhoto.originalUrl}
                   alt={`${viewingPhoto.bodyPart} photo`}
-                  className="w-full max-h-[70vh]"
                 />
               </div>
               <div className="p-4 space-y-2">
