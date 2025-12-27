@@ -18,11 +18,6 @@ type ResultItem = {
   mediumUrl: string;
 };
 
-const deriveBasePath = (path: string) => {
-  // Remove extension and any legacy suffixes
-  return path.replace(/(_thumb|_original)?\.[^.]+$/i, "");
-};
-
 const log = (step: string, details?: unknown) => {
   const d = details ? ` - ${JSON.stringify(details)}` : "";
   console.log(`[PHOTO-DERIVATIVES] ${step}${d}`);
@@ -67,7 +62,7 @@ serve(async (req) => {
 
     const { data: rows, error: rowsError } = await supabaseAdmin
       .from("user_photos")
-      .select("id, user_id, photo_url")
+      .select("id, user_id, photo_url, thumb_url, medium_url, original_url")
       .in("id", photoIds)
       .eq("user_id", user.id);
 
@@ -76,72 +71,111 @@ serve(async (req) => {
     const results: ResultItem[] = [];
 
     for (const row of rows ?? []) {
-      const originalPath = row.photo_url as string;
-      const base = deriveBasePath(originalPath);
+      try {
+        // If already has all URLs, just sign and return
+        if (row.thumb_url && row.medium_url) {
+          const [thumbSigned, mediumSigned] = await Promise.all([
+            supabaseAdmin.storage.from("user-photos").createSignedUrl(row.thumb_url, 60 * 60 * 24 * 30),
+            supabaseAdmin.storage.from("user-photos").createSignedUrl(row.medium_url, 60 * 60 * 24 * 30),
+          ]);
 
-      // NOTE: ImageScript v1.2.x supports JPEG/PNG encoding (not WebP).
-      // We generate *small* JPEG derivatives to guarantee the grid never loads multi-MB originals.
-      const mediumPath = `${base}.jpg`;
-      const thumbPath = `${base}_thumb.jpg`;
+          results.push({
+            id: row.id,
+            thumbnailUrl: thumbSigned.data?.signedUrl || "",
+            mediumUrl: mediumSigned.data?.signedUrl || "",
+          });
+          continue;
+        }
 
-      // Download source (could be legacy large jpg or already a smaller derivative)
-      const { data: downloaded, error: dlError } = await supabaseAdmin.storage
-        .from("user-photos")
-        .download(originalPath);
-      if (dlError) {
-        log("Download failed", { id: row.id, path: originalPath, err: dlError.message });
-        continue;
-      }
+        // Need to generate derivatives
+        const sourcePath = row.original_url || row.photo_url;
+        const baseFileName = sourcePath.replace(/(_thumb|_original)?\.[^.]+$/i, "");
 
-      const buf = new Uint8Array(await downloaded.arrayBuffer());
-      const img = await Image.decode(buf);
+        const thumbPath = `${baseFileName}_thumb.jpg`;
+        const mediumPath = `${baseFileName}_medium.jpg`;
+        const originalPath = row.original_url || `${baseFileName}_original.jpg`;
 
-      // Medium (~1200px wide, quality 80)
-      const medium = img.width > 1200 ? img.resize(1200, Image.RESIZE_AUTO) : img;
-      const mediumBytes = await medium.encodeJPEG(80);
+        // Download source
+        const { data: downloaded, error: dlError } = await supabaseAdmin.storage
+          .from("user-photos")
+          .download(sourcePath);
+        if (dlError) {
+          log("Download failed", { id: row.id, path: sourcePath, err: dlError.message });
+          continue;
+        }
 
-      // Thumb (400px wide, quality 65 for <150KB target)
-      const thumb = img.width > 400 ? img.resize(400, Image.RESIZE_AUTO) : img;
-      const thumbBytes = await thumb.encodeJPEG(65);
+        const buf = new Uint8Array(await downloaded.arrayBuffer());
+        const img = await Image.decode(buf);
 
-      log("Generated derivatives", {
-        id: row.id,
-        mediumSize: `${Math.round(mediumBytes.byteLength / 1024)}KB`,
-        thumbSize: `${Math.round(thumbBytes.byteLength / 1024)}KB`,
-      });
+        log("Processing image", { id: row.id, width: img.width, height: img.height });
 
-      // Upload (upsert) with long cache and CORRECT content type
-      await supabaseAdmin.storage.from("user-photos").upload(mediumPath, mediumBytes, {
-        upsert: true,
-        contentType: "image/jpeg",
-        cacheControl: "public, max-age=31536000, immutable",
-      });
+        // Generate medium (1200px, quality 80)
+        const medium = img.width > 1200 ? img.resize(1200, Image.RESIZE_AUTO) : img.clone();
+        const mediumBytes = await medium.encodeJPEG(80);
 
-      await supabaseAdmin.storage.from("user-photos").upload(thumbPath, thumbBytes, {
-        upsert: true,
-        contentType: "image/jpeg",
-        cacheControl: "public, max-age=31536000, immutable",
-      });
+        // Generate thumb (400px, quality 65 for <150KB target)
+        const thumb = img.width > 400 ? img.resize(400, Image.RESIZE_AUTO) : img.clone();
+        const thumbBytes = await thumb.encodeJPEG(65);
 
-      // Update DB to point to the medium webp (so fullscreen/compare never uses legacy originals)
-      if (originalPath !== mediumPath) {
+        log("Generated derivatives", {
+          id: row.id,
+          mediumSize: `${Math.round(mediumBytes.byteLength / 1024)}KB`,
+          thumbSize: `${Math.round(thumbBytes.byteLength / 1024)}KB`,
+        });
+
+        // Upload all derivatives
+        await Promise.all([
+          supabaseAdmin.storage.from("user-photos").upload(thumbPath, thumbBytes, {
+            upsert: true,
+            contentType: "image/jpeg",
+            cacheControl: "public, max-age=31536000, immutable",
+          }),
+          supabaseAdmin.storage.from("user-photos").upload(mediumPath, mediumBytes, {
+            upsert: true,
+            contentType: "image/jpeg",
+            cacheControl: "public, max-age=31536000, immutable",
+          }),
+        ]);
+
+        // If source was the original photo_url, keep it as original
+        if (!row.original_url && sourcePath === row.photo_url) {
+          // Move/copy original to _original path if needed
+          const { error: copyError } = await supabaseAdmin.storage
+            .from("user-photos")
+            .copy(sourcePath, originalPath);
+          
+          if (copyError && !copyError.message.includes("already exists")) {
+            log("Copy to original failed (may already exist)", { id: row.id, err: copyError.message });
+          }
+        }
+
+        // Update database with explicit paths
         await supabaseAdmin
           .from("user_photos")
-          .update({ photo_url: mediumPath })
+          .update({
+            thumb_url: thumbPath,
+            medium_url: mediumPath,
+            original_url: row.original_url || originalPath,
+            photo_url: mediumPath, // Keep legacy field pointing to medium
+          })
           .eq("id", row.id)
           .eq("user_id", user.id);
+
+        // Generate signed URLs
+        const [thumbSigned, mediumSigned] = await Promise.all([
+          supabaseAdmin.storage.from("user-photos").createSignedUrl(thumbPath, 60 * 60 * 24 * 30),
+          supabaseAdmin.storage.from("user-photos").createSignedUrl(mediumPath, 60 * 60 * 24 * 30),
+        ]);
+
+        results.push({
+          id: row.id,
+          thumbnailUrl: thumbSigned.data?.signedUrl || "",
+          mediumUrl: mediumSigned.data?.signedUrl || "",
+        });
+      } catch (photoError) {
+        log("Error processing photo", { id: row.id, error: String(photoError) });
+        continue;
       }
-
-      const [mediumSigned, thumbSigned] = await Promise.all([
-        supabaseAdmin.storage.from("user-photos").createSignedUrl(mediumPath, 60 * 60 * 24 * 30),
-        supabaseAdmin.storage.from("user-photos").createSignedUrl(thumbPath, 60 * 60 * 24 * 30),
-      ]);
-
-      results.push({
-        id: row.id,
-        mediumUrl: mediumSigned.data?.signedUrl || "",
-        thumbnailUrl: thumbSigned.data?.signedUrl || "",
-      });
     }
 
     log("Done", { results: results.length });

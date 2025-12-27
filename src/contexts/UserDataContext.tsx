@@ -1,14 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { processImageForUpload, getThumbnailPath } from '@/utils/imageCompression';
+import { processImageForUpload } from '@/utils/imageCompression';
 
 export type BodyPart = 'face' | 'neck' | 'arms' | 'hands' | 'legs' | 'feet' | 'torso' | 'back';
 
 export interface Photo {
   id: string;
-  photoUrl: string;
-  thumbnailUrl: string;
+  photoUrl: string; // medium URL for fullscreen
+  thumbnailUrl: string; // thumb URL for grid
+  originalUrl?: string; // original for export
   bodyPart: BodyPart;
   timestamp: string;
   notes?: string;
@@ -184,10 +185,6 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             .upload(fileName, blob);
 
           if (!uploadError) {
-            const { data: { publicUrl } } = supabase.storage
-              .from('user-photos')
-              .getPublicUrl(fileName);
-
             await supabase.from('user_photos').insert({
               user_id: userId,
               body_part: photo.bodyPart,
@@ -271,33 +268,59 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         });
       }
 
-      // Fetch photos
+      // Fetch photos with explicit URL columns
       const { data: photosData } = await supabase
         .from('user_photos')
-        .select('*')
+        .select('id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, notes')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
       if (photosData && photosData.length > 0) {
-        // Get all photo paths including thumbnails
-        const photoPaths = photosData.map(photo => photo.photo_url);
-        const thumbnailPaths = photoPaths.map(path => getThumbnailPath(path));
-        const allPaths = [...photoPaths, ...thumbnailPaths];
-        
-        // Batch generate signed URLs for all photos and thumbnails (30 day cache)
-        const { data: signedUrls } = await supabase.storage
-          .from('user-photos')
-          .createSignedUrls(allPaths, 60 * 60 * 24 * 30); // 30 day signed URLs for caching
+        // Sign URLs for photos that have explicit paths
+        const pathsToSign: string[] = [];
+        const pathIndexMap: { photoId: string; type: 'thumb' | 'medium' | 'original'; index: number }[] = [];
 
-        const photosWithUrls = photosData.map((photo, index) => ({
-          id: photo.id,
-          photoUrl: signedUrls?.[index]?.signedUrl || '',
-          // Thumbnail URL is in the second half of the array
-          thumbnailUrl: signedUrls?.[index + photosData.length]?.signedUrl || signedUrls?.[index]?.signedUrl || '',
-          bodyPart: photo.body_part as BodyPart,
-          timestamp: photo.created_at,
-          notes: photo.notes || undefined,
-        }));
+        photosData.forEach(photo => {
+          if (photo.thumb_url) {
+            pathIndexMap.push({ photoId: photo.id, type: 'thumb', index: pathsToSign.length });
+            pathsToSign.push(photo.thumb_url);
+          }
+          if (photo.medium_url) {
+            pathIndexMap.push({ photoId: photo.id, type: 'medium', index: pathsToSign.length });
+            pathsToSign.push(photo.medium_url);
+          } else if (photo.photo_url) {
+            // Fallback to legacy photo_url for medium
+            pathIndexMap.push({ photoId: photo.id, type: 'medium', index: pathsToSign.length });
+            pathsToSign.push(photo.photo_url);
+          }
+        });
+
+        let signedUrls: Record<number, string> = {};
+        if (pathsToSign.length > 0) {
+          const { data: signed } = await supabase.storage
+            .from('user-photos')
+            .createSignedUrls(pathsToSign, 60 * 60 * 24 * 30);
+          
+          if (signed) {
+            signed.forEach((s, i) => {
+              signedUrls[i] = s.signedUrl || '';
+            });
+          }
+        }
+
+        const photosWithUrls = photosData.map(photo => {
+          const thumbEntry = pathIndexMap.find(p => p.photoId === photo.id && p.type === 'thumb');
+          const mediumEntry = pathIndexMap.find(p => p.photoId === photo.id && p.type === 'medium');
+
+          return {
+            id: photo.id,
+            photoUrl: mediumEntry ? signedUrls[mediumEntry.index] || '' : '',
+            thumbnailUrl: thumbEntry ? signedUrls[thumbEntry.index] || '' : '',
+            bodyPart: photo.body_part as BodyPart,
+            timestamp: photo.created_at,
+            notes: photo.notes || undefined,
+          };
+        });
         setPhotos(photosWithUrls);
       } else {
         setPhotos([]);
@@ -351,18 +374,18 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const processed = await processImageForUpload(photo.dataUrl, userId);
       
       // Upload all three versions in parallel with aggressive caching
-      const [mediumResult, thumbResult, originalResult] = await Promise.all([
-        // Medium image (1200px) for fullscreen/compare
-        supabase.storage
-          .from('user-photos')
-          .upload(processed.medium.fileName, processed.medium.blob, {
-            contentType: processed.format.mimeType,
-            cacheControl: 'public, max-age=31536000, immutable',
-          }),
+      const [thumbResult, mediumResult, originalResult] = await Promise.all([
         // Thumbnail (400px) for grid view
         supabase.storage
           .from('user-photos')
           .upload(processed.thumbnail.fileName, processed.thumbnail.blob, {
+            contentType: processed.format.mimeType,
+            cacheControl: 'public, max-age=31536000, immutable',
+          }),
+        // Medium image (1200px) for fullscreen/compare
+        supabase.storage
+          .from('user-photos')
+          .upload(processed.medium.fileName, processed.medium.blob, {
             contentType: processed.format.mimeType,
             cacheControl: 'public, max-age=31536000, immutable',
           }),
@@ -375,22 +398,24 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }),
       ]);
 
-      if (mediumResult.error) throw mediumResult.error;
-
       if (thumbResult.error) {
-        console.warn('Thumbnail upload failed, continuing without thumbnail:', thumbResult.error);
+        console.warn('Thumbnail upload failed:', thumbResult.error);
       }
-      
+      if (mediumResult.error) throw mediumResult.error;
       if (originalResult.error) {
-        console.warn('Original upload failed, continuing without original:', originalResult.error);
+        console.warn('Original upload failed:', originalResult.error);
       }
 
+      // Insert with explicit URL columns
       const { data: insertedPhoto, error: insertError } = await supabase
         .from('user_photos')
         .insert({
           user_id: userId,
           body_part: photo.bodyPart,
-          photo_url: processed.medium.fileName,
+          photo_url: processed.medium.fileName, // Legacy field
+          thumb_url: processed.thumbnail.fileName,
+          medium_url: processed.medium.fileName,
+          original_url: processed.original.fileName,
           notes: photo.notes || null,
         })
         .select()
@@ -398,16 +423,16 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (insertError) throw insertError;
 
-      // Generate signed URLs for medium and thumbnail (30 day cache)
-      const [mediumUrlData, thumbUrlData] = await Promise.all([
-        supabase.storage.from('user-photos').createSignedUrl(processed.medium.fileName, 60 * 60 * 24 * 30),
+      // Generate signed URLs for immediate display
+      const [thumbUrlData, mediumUrlData] = await Promise.all([
         supabase.storage.from('user-photos').createSignedUrl(processed.thumbnail.fileName, 60 * 60 * 24 * 30),
+        supabase.storage.from('user-photos').createSignedUrl(processed.medium.fileName, 60 * 60 * 24 * 30),
       ]);
 
       const newPhoto: Photo = {
         id: insertedPhoto.id,
         photoUrl: mediumUrlData.data?.signedUrl || '',
-        thumbnailUrl: thumbUrlData.data?.signedUrl || mediumUrlData.data?.signedUrl || '',
+        thumbnailUrl: thumbUrlData.data?.signedUrl || '',
         bodyPart: photo.bodyPart,
         timestamp: insertedPhoto.created_at,
         notes: photo.notes,
@@ -427,15 +452,26 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const photo = photos.find(p => p.id === id);
       if (!photo) return;
 
-      // Get the file path from the database
+      // Get all file paths from the database
       const { data: photoData } = await supabase
         .from('user_photos')
-        .select('photo_url')
+        .select('photo_url, thumb_url, medium_url, original_url')
         .eq('id', id)
         .single();
 
       if (photoData) {
-        await supabase.storage.from('user-photos').remove([photoData.photo_url]);
+        const pathsToDelete = [
+          photoData.photo_url,
+          photoData.thumb_url,
+          photoData.medium_url,
+          photoData.original_url,
+        ].filter(Boolean) as string[];
+
+        // Remove duplicates
+        const uniquePaths = [...new Set(pathsToDelete)];
+        if (uniquePaths.length > 0) {
+          await supabase.storage.from('user-photos').remove(uniquePaths);
+        }
       }
 
       await supabase.from('user_photos').delete().eq('id', id);
@@ -501,17 +537,16 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (error) throw error;
 
-      const updatedCheckIn: CheckIn = {
-        id: data.id,
-        timestamp: data.created_at,
-        timeOfDay: data.time_of_day as 'morning' | 'evening',
-        treatments: data.treatments,
-        mood: data.mood,
-        skinFeeling: data.skin_feeling,
-        notes: data.notes || undefined,
-      };
-
-      setCheckIns(prev => prev.map(c => c.id === id ? updatedCheckIn : c));
+      setCheckIns(prev => prev.map(c => 
+        c.id === id ? {
+          ...c,
+          timeOfDay: data.time_of_day as 'morning' | 'evening',
+          treatments: data.treatments,
+          mood: data.mood,
+          skinFeeling: data.skin_feeling,
+          notes: data.notes || undefined,
+        } : c
+      ));
     } catch (error) {
       console.error('Error updating check-in:', error);
       throw error;
@@ -561,7 +596,9 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (error) throw error;
 
-      setJournalEntries(prev => prev.map(e => e.id === id ? { ...e, content } : e));
+      setJournalEntries(prev => prev.map(e => 
+        e.id === id ? { ...e, content } : e
+      ));
     } catch (error) {
       console.error('Error updating journal entry:', error);
       throw error;
@@ -610,7 +647,6 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const addCustomTreatment = useCallback(async (treatment: string) => {
     if (!userId) return;
-    if (customTreatments.includes(treatment)) return;
 
     try {
       const newTreatments = [...customTreatments, treatment];
@@ -630,9 +666,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [userId, customTreatments]);
 
   const getPhotosByBodyPart = useCallback((bodyPart: BodyPart) => {
-    return photos.filter(p => p.bodyPart === bodyPart).sort((a, b) => 
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
+    return photos.filter(p => p.bodyPart === bodyPart);
   }, [photos]);
 
   const setTswStartDate = useCallback(async (date: string | null) => {
