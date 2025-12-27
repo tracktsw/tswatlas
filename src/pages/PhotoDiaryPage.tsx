@@ -17,42 +17,47 @@ import { SparkleEffect } from '@/components/SparkleEffect';
 import { PhotoSkeleton } from '@/components/PhotoSkeleton';
 
 // Progressive image component for fullscreen/compare views
-const ProgressiveImage = ({ 
-  src, 
-  alt, 
+const ProgressiveImage = ({
+  src,
+  alt,
   className,
-  priority = false 
-}: { 
-  src: string; 
-  alt: string; 
+  priority = false,
+}: {
+  src?: string;
+  alt: string;
   className?: string;
   priority?: boolean;
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
+  // If we don't have a URL yet (on-demand), show the skeleton instantly.
+  const hasSrc = typeof src === "string" && src.length > 0;
+
   return (
     <div className={cn("relative bg-muted overflow-hidden", className)}>
-      {!isLoaded && !hasError && (
+      {(!isLoaded || !hasSrc) && !hasError && (
         <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 animate-pulse">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-background/10 to-transparent animate-shimmer" />
         </div>
       )}
-      
-      <img 
-        src={src}
-        alt={alt}
-        loading={priority ? "eager" : "lazy"}
-        decoding="async"
-        fetchPriority={priority ? "high" : "auto"}
-        onLoad={() => setIsLoaded(true)}
-        onError={() => setHasError(true)}
-        className={cn(
-          "w-full h-full object-cover transition-opacity duration-500",
-          isLoaded ? "opacity-100" : "opacity-0"
-        )}
-      />
-      
+
+      {hasSrc && (
+        <img
+          src={src}
+          alt={alt}
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
+          fetchPriority={priority ? "high" : "auto"}
+          onLoad={() => setIsLoaded(true)}
+          onError={() => setHasError(true)}
+          className={cn(
+            "w-full h-full object-cover transition-opacity duration-500",
+            isLoaded ? "opacity-100" : "opacity-0"
+          )}
+        />
+      )}
+
       {hasError && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted">
           <Image className="w-8 h-8 text-muted-foreground/50" />
@@ -113,7 +118,8 @@ const PhotoDiaryPage = () => {
     loadMore,
     addPhotoToList,
     removePhotoFromList,
-    getMediumUrl,
+    fetchMediumUrl,
+    prefetchMediumUrls,
     refresh,
   } = useVirtualizedPhotos({
     userId,
@@ -203,21 +209,67 @@ const PhotoDiaryPage = () => {
     }
   };
 
-  const togglePhotoSelection = useCallback((photo: VirtualPhoto) => {
-    if (selectedPhotos.find(p => p.id === photo.id)) {
-      setSelectedPhotos(prev => prev.filter(p => p.id !== photo.id));
-    } else if (selectedPhotos.length < 2) {
-      setSelectedPhotos(prev => [...prev, photo]);
-    }
-  }, [selectedPhotos]);
+  const togglePhotoSelection = useCallback(
+    (photo: VirtualPhoto) => {
+      if (selectedPhotos.find((p) => p.id === photo.id)) {
+        setSelectedPhotos((prev) => prev.filter((p) => p.id !== photo.id));
+      } else if (selectedPhotos.length < 2) {
+        setSelectedPhotos((prev) => [...prev, photo]);
+      }
+    },
+    [selectedPhotos]
+  );
 
-  const handlePhotoSelect = useCallback((photo: VirtualPhoto) => {
-    if (compareMode) {
-      togglePhotoSelection(photo);
-    } else {
-      setViewingPhoto(photo);
-    }
-  }, [compareMode, togglePhotoSelection]);
+  const handlePhotoSelect = useCallback(
+    (photo: VirtualPhoto) => {
+      if (compareMode) {
+        togglePhotoSelection(photo);
+      } else {
+        setViewingPhoto(photo);
+      }
+    },
+    [compareMode, togglePhotoSelection]
+  );
+
+  // Fullscreen: fetch medium on-demand (never during scroll)
+  useEffect(() => {
+    if (!viewingPhoto) return;
+    if (viewingPhoto.mediumUrl) return;
+
+    let cancelled = false;
+    fetchMediumUrl(viewingPhoto.id)
+      .then((url) => {
+        if (cancelled) return;
+        setViewingPhoto((prev) =>
+          prev && prev.id === viewingPhoto.id ? { ...prev, mediumUrl: url } : prev
+        );
+      })
+      .catch(() => {
+        // keep placeholder; error UI handled by ProgressiveImage once src exists
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [viewingPhoto, fetchMediumUrl]);
+
+  // Compare: fetch medium only for the selected images
+  useEffect(() => {
+    if (!compareMode) return;
+    if (selectedPhotos.length === 0) return;
+
+    const ids = selectedPhotos.map((p) => p.id);
+
+    prefetchMediumUrls(ids)
+      .then((map) => {
+        setSelectedPhotos((prev) =>
+          prev.map((p) => ({ ...p, mediumUrl: map.get(p.id) || p.mediumUrl }))
+        );
+      })
+      .catch(() => {
+        // keep placeholders
+      });
+  }, [compareMode, selectedPhotos, prefetchMediumUrls]);
 
   return (
     <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
