@@ -46,6 +46,13 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
     let uploadedPaths: string[] = [];
 
     try {
+      // Extract EXIF date from ORIGINAL file BEFORE any conversion
+      // (HEIC conversion strips metadata, so we must do this first)
+      const exifDate = await extractExifDate(item.file);
+      if (import.meta.env.DEV) {
+        console.log('[BatchUpload] EXIF date for', item.file.name + ':', exifDate || 'not found');
+      }
+
       // Convert HEIC if needed
       if (item.isHeic) {
         updateItem(item.id, { status: 'converting', progress: 5 });
@@ -56,12 +63,6 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
 
       // Prepare file (converts HEIC if needed, returns data URL)
       const dataUrl = await prepareFileForUpload(item.file);
-      
-      // Extract EXIF date before processing
-      const exifDate = await extractExifDate(dataUrl);
-      if (import.meta.env.DEV) {
-        console.log('[BatchUpload] EXIF date for', item.file.name + ':', exifDate || 'not found');
-      }
       
       updateItem(item.id, { status: 'uploading', progress: 20 });
 
