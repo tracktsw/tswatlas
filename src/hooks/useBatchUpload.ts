@@ -2,14 +2,16 @@ import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { processImageForUpload, getPublicUrl } from '@/utils/imageCompression';
 import { BodyPart } from '@/contexts/UserDataContext';
+import { isHeicFile, prepareFileForUpload } from '@/utils/heicConverter';
 
 export interface UploadItem {
   id: string;
   file: File;
-  status: 'pending' | 'uploading' | 'success' | 'error';
+  status: 'pending' | 'converting' | 'uploading' | 'success' | 'error';
   progress: number;
   error?: string;
   photoId?: string;
+  isHeic?: boolean;
 }
 
 interface UseBatchUploadOptions {
@@ -33,29 +35,27 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
     ));
   }, []);
 
-  const fileToDataUrl = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
   const uploadSinglePhoto = async (item: UploadItem, userId: string): Promise<boolean> => {
     if (cancelledRef.current) return false;
 
     if (import.meta.env.DEV) {
-      console.log('[BatchUpload] Starting upload for:', item.file.name);
+      console.log('[BatchUpload] Starting upload for:', item.file.name, 'isHeic:', item.isHeic);
     }
 
-    updateItem(item.id, { status: 'uploading', progress: 10 });
     let uploadedPaths: string[] = [];
 
     try {
-      // Convert file to data URL
-      const dataUrl = await fileToDataUrl(item.file);
-      updateItem(item.id, { progress: 20 });
+      // Convert HEIC if needed
+      if (item.isHeic) {
+        updateItem(item.id, { status: 'converting', progress: 5 });
+        if (import.meta.env.DEV) {
+          console.log('[BatchUpload] Converting HEIC:', item.file.name);
+        }
+      }
+
+      // Prepare file (converts HEIC if needed, returns data URL)
+      const dataUrl = await prepareFileForUpload(item.file);
+      updateItem(item.id, { status: 'uploading', progress: 20 });
 
       if (cancelledRef.current) return false;
 
@@ -223,16 +223,19 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
     cancelledRef.current = false;
     setIsUploading(true);
 
-    // Create upload items
+    // Create upload items with HEIC detection
     const newItems: UploadItem[] = files.map((file, index) => ({
       id: `upload-${Date.now()}-${index}`,
       file,
       status: 'pending' as const,
       progress: 0,
+      isHeic: isHeicFile(file),
     }));
 
+    const heicCount = newItems.filter(i => i.isHeic).length;
     if (import.meta.env.DEV) {
       console.log('[BatchUpload] Created upload items:', newItems.map(i => i.file.name));
+      console.log('[BatchUpload] HEIC files detected:', heicCount);
     }
 
     setItems(newItems);
@@ -285,6 +288,7 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
   const stats = {
     total: items.length,
     pending: items.filter(i => i.status === 'pending').length,
+    converting: items.filter(i => i.status === 'converting').length,
     uploading: items.filter(i => i.status === 'uploading').length,
     success: items.filter(i => i.status === 'success').length,
     failed: items.filter(i => i.status === 'error').length,
