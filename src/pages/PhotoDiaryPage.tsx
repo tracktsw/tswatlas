@@ -1,9 +1,10 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
-import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown, X, ImagePlus } from 'lucide-react';
+import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown, X, ImagePlus, Images } from 'lucide-react';
 import { useUserData, BodyPart, Photo } from '@/contexts/UserDataContext';
 import { useVirtualizedPhotos, VirtualPhoto } from '@/hooks/useVirtualizedPhotos';
 import { VirtualizedPhotoGrid } from '@/components/VirtualizedPhotoGrid';
 import { ComparisonViewer } from '@/components/ComparisonViewer';
+import { BatchUploadModal } from '@/components/BatchUploadModal';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogContentFullscreen, DialogDescription, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,6 +13,7 @@ import { toast } from 'sonner';
 import { format, isToday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useBatchUpload } from '@/hooks/useBatchUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { LeafIllustration, SparkleIllustration } from '@/components/illustrations';
 import { SparkleEffect } from '@/components/SparkleEffect';
@@ -112,8 +114,14 @@ const PhotoDiaryPage = () => {
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState<VirtualPhoto | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  
+  // Batch upload state
+  const [showBatchUpload, setShowBatchUpload] = useState(false);
+  const [batchFiles, setBatchFiles] = useState<File[]>([]);
+  
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const batchGalleryInputRef = useRef<HTMLInputElement>(null);
 
   // Get user ID for virtualized photos hook
   useEffect(() => {
@@ -144,6 +152,21 @@ const PhotoDiaryPage = () => {
   } = useVirtualizedPhotos({
     userId,
     bodyPartFilter: selectedBodyPart,
+  });
+
+  // Batch upload hook
+  const batchUpload = useBatchUpload({
+    concurrency: 2,
+    onComplete: (results) => {
+      if (results.success > 0) {
+        setShowSparkles(true);
+        refresh();
+        toast.success(`${results.success} photo${results.success !== 1 ? 's' : ''} uploaded`);
+      }
+      if (results.failed > 0 && results.success === 0) {
+        toast.error(`${results.failed} upload${results.failed !== 1 ? 's' : ''} failed`);
+      }
+    },
   });
 
   // Count photos uploaded today (use context photos for accurate count)
@@ -217,6 +240,53 @@ const PhotoDiaryPage = () => {
       }
     };
     reader.readAsDataURL(file);
+    // Reset input
+    e.target.value = '';
+  };
+
+  // Handle batch file selection from gallery
+  const handleBatchFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // Check upload limits for free users
+    if (!isPremium) {
+      const allowedCount = Math.max(0, remainingUploads);
+      if (allowedCount === 0) {
+        setShowUpgradePrompt(true);
+        e.target.value = '';
+        return;
+      }
+      if (files.length > allowedCount) {
+        toast.info(`Only ${allowedCount} photo${allowedCount !== 1 ? 's' : ''} can be uploaded today. Upgrade for unlimited.`);
+        // Still allow the limited amount
+        const limitedFiles = Array.from(files).slice(0, allowedCount);
+        setBatchFiles(limitedFiles);
+      } else {
+        setBatchFiles(Array.from(files));
+      }
+    } else {
+      setBatchFiles(Array.from(files));
+    }
+
+    // Set default body part from current filter if applicable
+    if (selectedBodyPart !== 'all') {
+      batchUpload.setBodyPart(selectedBodyPart);
+    }
+
+    setShowBatchUpload(true);
+    e.target.value = '';
+  };
+
+  const handleStartBatchUpload = async () => {
+    if (batchFiles.length === 0) return;
+    await batchUpload.startUpload(batchFiles);
+  };
+
+  const handleCloseBatchUpload = () => {
+    setShowBatchUpload(false);
+    setBatchFiles([]);
+    batchUpload.reset();
   };
 
   const handleDelete = async (id: string) => {
@@ -513,12 +583,21 @@ const PhotoDiaryPage = () => {
               onChange={handleFileSelect}
               className="hidden"
             />
-            {/* Gallery input - opens photo picker */}
+            {/* Gallery input - single photo picker */}
             <input 
               type="file" 
               accept="image/*"
               ref={galleryInputRef}
               onChange={handleFileSelect}
+              className="hidden"
+            />
+            {/* Multi-select gallery input */}
+            <input 
+              type="file" 
+              accept="image/*"
+              multiple
+              ref={batchGalleryInputRef}
+              onChange={handleBatchFileSelect}
               className="hidden"
             />
             <div className="grid grid-cols-2 gap-3">
@@ -536,12 +615,40 @@ const PhotoDiaryPage = () => {
                 onClick={() => galleryInputRef.current?.click()}
               >
                 <ImagePlus className="w-5 h-5" />
-                Gallery
+                Single Photo
               </Button>
             </div>
+            <Button 
+              variant="secondary"
+              className="w-full h-11 gap-2"
+              onClick={() => {
+                setIsCapturing(false);
+                batchGalleryInputRef.current?.click();
+              }}
+            >
+              <Images className="w-5 h-5" />
+              Select Multiple Photos
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Batch Upload Modal */}
+      <BatchUploadModal
+        open={showBatchUpload}
+        onOpenChange={setShowBatchUpload}
+        items={batchUpload.items}
+        isUploading={batchUpload.isUploading}
+        stats={batchUpload.stats}
+        currentIndex={batchUpload.currentIndex}
+        bodyPart={batchUpload.bodyPart}
+        onBodyPartChange={batchUpload.setBodyPart}
+        onStartUpload={handleStartBatchUpload}
+        onRetryFailed={batchUpload.retryFailed}
+        onCancel={batchUpload.cancel}
+        onClose={handleCloseBatchUpload}
+        selectedFiles={batchFiles}
+      />
 
       {/* Photos Grid - Virtualized with cursor-based pagination */}
       {isLoading && photos.length === 0 ? (
