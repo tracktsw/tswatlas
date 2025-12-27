@@ -91,22 +91,23 @@ export const generatePhotoId = (): string => {
 
 /**
  * Process an image for upload - generates three versions:
- * - Thumbnail: 400px width, WebP, ~70-80% quality for grid views
- * - Medium: 1400px width, WebP, ~75-85% quality for fullscreen/compare
+ * - Thumbnail: 400px width, WebP quality 75 for grid views
+ * - Medium: 1400px width, WebP quality 80 for fullscreen/compare
  * - Original: unchanged JPEG for backup/export
  * 
- * Storage paths: photos/{photoId}/thumb.webp, medium.webp, original.jpg
+ * Storage paths: {userId}/{photoId}/thumb.webp, medium.webp, original.jpg
  */
 export const processImageForUpload = async (
-  dataUrl: string
+  dataUrl: string,
+  userId: string
 ): Promise<ProcessedImages> => {
   const photoId = generatePhotoId();
   
-  // Generate thumbnail version (400px width) for grid view
+  // Generate thumbnail version (400px width, WebP quality 75) for grid view
   const thumbDataUrl = await compressImage(dataUrl, 400, 0.75, 'image/webp');
   const thumbBlob = dataUrlToBlob(thumbDataUrl, 'image/webp');
   
-  // Generate medium version (1400px width) for fullscreen/compare
+  // Generate medium version (1400px width, WebP quality 80) for fullscreen/compare
   const mediumDataUrl = await compressImage(dataUrl, 1400, 0.80, 'image/webp');
   const mediumBlob = dataUrlToBlob(mediumDataUrl, 'image/webp');
   
@@ -117,15 +118,15 @@ export const processImageForUpload = async (
     photoId,
     original: {
       blob: originalBlob,
-      path: `photos/${photoId}/original.jpg`,
+      path: `${userId}/${photoId}/original.jpg`,
     },
     medium: {
       blob: mediumBlob,
-      path: `photos/${photoId}/medium.webp`,
+      path: `${userId}/${photoId}/medium.webp`,
     },
     thumbnail: {
       blob: thumbBlob,
-      path: `photos/${photoId}/thumb.webp`,
+      path: `${userId}/${photoId}/thumb.webp`,
     },
   };
 };
