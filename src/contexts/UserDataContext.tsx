@@ -331,6 +331,33 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+
+  const reloadCheckIns = useCallback(async () => {
+    if (!userId) {
+      throw new Error('Please sign in to sync your check-ins.');
+    }
+
+    const { data: checkInsData, error } = await supabase
+      .from('user_check_ins')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    setCheckIns(
+      (checkInsData ?? []).map((c) => ({
+        id: c.id,
+        timestamp: c.created_at,
+        timeOfDay: c.time_of_day as 'morning' | 'evening',
+        treatments: c.treatments,
+        mood: c.mood,
+        skinFeeling: c.skin_feeling,
+        notes: c.notes || undefined,
+      }))
+    );
+  }, [userId]);
+
   const addPhoto = useCallback(async (photo: { dataUrl: string; bodyPart: BodyPart; notes?: string }) => {
     if (!userId) return;
 
@@ -481,76 +508,98 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [userId, photos]);
 
-  const addCheckIn = useCallback(async (checkIn: Omit<CheckIn, 'id' | 'timestamp'>) => {
-    if (!userId) return;
+  const addCheckIn = useCallback(
+    async (checkIn: Omit<CheckIn, 'id' | 'timestamp'>) => {
+      if (!userId) {
+        throw new Error('Please sign in to save check-ins.');
+      }
 
-    try {
-      const { data, error } = await supabase
-        .from('user_check_ins')
-        .insert({
-          user_id: userId,
-          time_of_day: checkIn.timeOfDay,
-          treatments: checkIn.treatments,
-          mood: checkIn.mood,
-          skin_feeling: checkIn.skinFeeling,
-          notes: checkIn.notes || null,
-        })
-        .select()
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('user_check_ins')
+          .insert({
+            user_id: userId,
+            time_of_day: checkIn.timeOfDay,
+            treatments: checkIn.treatments,
+            mood: checkIn.mood,
+            skin_feeling: checkIn.skinFeeling,
+            notes: checkIn.notes || null,
+          })
+          .select()
+          .single();
 
-      if (error) throw error;
+        if (error) throw error;
 
-      const newCheckIn: CheckIn = {
-        id: data.id,
-        timestamp: data.created_at,
-        timeOfDay: data.time_of_day as 'morning' | 'evening',
-        treatments: data.treatments,
-        mood: data.mood,
-        skinFeeling: data.skin_feeling,
-        notes: data.notes || undefined,
-      };
+        // Confirm persistence by re-loading latest check-ins from backend
+        await reloadCheckIns();
 
-      setCheckIns(prev => [newCheckIn, ...prev]);
-    } catch (error) {
-      console.error('Error adding check-in:', error);
-      throw error;
-    }
-  }, [userId]);
-
-  const updateCheckIn = useCallback(async (id: string, checkIn: Omit<CheckIn, 'id' | 'timestamp'>) => {
-    if (!userId) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('user_check_ins')
-        .update({
-          time_of_day: checkIn.timeOfDay,
-          treatments: checkIn.treatments,
-          mood: checkIn.mood,
-          skin_feeling: checkIn.skinFeeling,
-          notes: checkIn.notes || null,
-        })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setCheckIns(prev => prev.map(c => 
-        c.id === id ? {
-          ...c,
+        // Keep optimistic UI snappy for slow networks (prepend in case reload is delayed)
+        const newCheckIn: CheckIn = {
+          id: data.id,
+          timestamp: data.created_at,
           timeOfDay: data.time_of_day as 'morning' | 'evening',
           treatments: data.treatments,
           mood: data.mood,
           skinFeeling: data.skin_feeling,
           notes: data.notes || undefined,
-        } : c
-      ));
-    } catch (error) {
-      console.error('Error updating check-in:', error);
-      throw error;
-    }
-  }, [userId]);
+        };
+
+        setCheckIns((prev) => (prev.some((c) => c.id === newCheckIn.id) ? prev : [newCheckIn, ...prev]));
+      } catch (error) {
+        console.error('Error adding check-in:', error);
+        throw error;
+      }
+    },
+    [userId, reloadCheckIns]
+  );
+
+  const updateCheckIn = useCallback(
+    async (id: string, checkIn: Omit<CheckIn, 'id' | 'timestamp'>) => {
+      if (!userId) {
+        throw new Error('Please sign in to update check-ins.');
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('user_check_ins')
+          .update({
+            time_of_day: checkIn.timeOfDay,
+            treatments: checkIn.treatments,
+            mood: checkIn.mood,
+            skin_feeling: checkIn.skinFeeling,
+            notes: checkIn.notes || null,
+          })
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Confirm persistence by re-loading latest check-ins from backend
+        await reloadCheckIns();
+
+        // Immediate UI update
+        setCheckIns((prev) =>
+          prev.map((c) =>
+            c.id === id
+              ? {
+                  ...c,
+                  timeOfDay: data.time_of_day as 'morning' | 'evening',
+                  treatments: data.treatments,
+                  mood: data.mood,
+                  skinFeeling: data.skin_feeling,
+                  notes: data.notes || undefined,
+                }
+              : c
+          )
+        );
+      } catch (error) {
+        console.error('Error updating check-in:', error);
+        throw error;
+      }
+    },
+    [userId, reloadCheckIns]
+  );
 
   const addJournalEntry = useCallback(async (entry: Omit<JournalEntry, 'id' | 'timestamp'>) => {
     if (!userId) return;
