@@ -14,32 +14,37 @@ import { LeafIllustration, SparkleIllustration } from '@/components/illustration
 import { SparkleEffect } from '@/components/SparkleEffect';
 import { PhotoSkeleton } from '@/components/PhotoSkeleton';
 
-// Progressive image component with fade-in animation
+// Progressive image component with skeleton loading and fade-in animation
 const ProgressiveImage = ({ 
   src, 
   alt, 
-  className 
+  className,
+  priority = false 
 }: { 
   src: string; 
   alt: string; 
   className?: string;
+  priority?: boolean;
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
   return (
     <div className={cn("relative bg-muted overflow-hidden", className)}>
-      {/* Placeholder skeleton */}
+      {/* Skeleton placeholder - shows while loading */}
       {!isLoaded && !hasError && (
-        <div className="absolute inset-0 bg-muted animate-pulse" />
+        <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 animate-pulse">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-background/10 to-transparent animate-shimmer" />
+        </div>
       )}
       
       {/* Actual image with fade-in */}
       <img 
         src={src}
         alt={alt}
-        loading="lazy"
+        loading={priority ? "eager" : "lazy"}
         decoding="async"
+        fetchPriority={priority ? "high" : "auto"}
         onLoad={() => setIsLoaded(true)}
         onError={() => setHasError(true)}
         className={cn(
@@ -223,17 +228,18 @@ const PhotoDiaryPage = () => {
         )}
       </div>
 
-      {/* Compare View */}
+      {/* Compare View - uses full resolution images */}
       {compareMode && selectedPhotos.length === 2 && (
         <div className="glass-card-warm p-5 space-y-4 animate-scale-in">
           <h3 className="font-display font-bold text-center text-foreground">Side by Side Comparison</h3>
           <div className="grid grid-cols-2 gap-3">
             {selectedPhotos.map((photo, idx) => (
               <div key={photo.id} className="space-y-2">
-                <img 
-                  src={photo.photoUrl}
+                <ProgressiveImage 
+                  src={photo.photoUrl} // Full resolution for comparison
                   alt={`Comparison ${idx + 1}`}
-                  className="w-full aspect-square object-cover rounded-2xl shadow-warm"
+                  className="w-full aspect-square rounded-2xl shadow-warm"
+                  priority
                 />
                 <p className="text-xs text-muted-foreground text-center font-medium">
                   {format(new Date(photo.timestamp), 'MMM d, yyyy')}
@@ -441,10 +447,12 @@ const PhotoDiaryPage = () => {
                   }
                 }}
               >
+                {/* Use thumbnail for grid view - much faster loading */}
                 <ProgressiveImage 
-                  src={photo.photoUrl}
+                  src={photo.thumbnailUrl || photo.photoUrl}
                   alt={`${photo.bodyPart} photo`}
                   className="w-full aspect-square"
+                  priority={index < 4} // Prioritize first 4 images
                 />
                 <div className="p-3 space-y-1.5">
                   <div className="flex items-center justify-between">
@@ -470,16 +478,17 @@ const PhotoDiaryPage = () => {
         </div>
       )}
 
-      {/* Photo Viewer Dialog */}
+      {/* Photo Viewer Dialog - uses full resolution */}
       <Dialog open={!!viewingPhoto} onOpenChange={(open) => !open && setViewingPhoto(null)}>
         <DialogContent className="max-w-lg p-0 overflow-hidden">
           {viewingPhoto && (
             <>
-              <div className="relative">
-                <img 
-                  src={viewingPhoto.photoUrl}
+              <div className="relative bg-black">
+                <ProgressiveImage 
+                  src={viewingPhoto.photoUrl} // Full resolution for detail view
                   alt={`${viewingPhoto.bodyPart} photo`}
-                  className="w-full max-h-[70vh] object-contain bg-black"
+                  className="w-full max-h-[70vh]"
+                  priority
                 />
               </div>
               <div className="p-4 space-y-2">

@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { compressImage } from '@/utils/imageCompression';
+import { processImageForUpload, getThumbnailPath } from '@/utils/imageCompression';
 
 export type BodyPart = 'face' | 'neck' | 'arms' | 'hands' | 'legs' | 'feet' | 'torso' | 'back';
 
 export interface Photo {
   id: string;
   photoUrl: string;
+  thumbnailUrl: string;
   bodyPart: BodyPart;
   timestamp: string;
   notes?: string;
@@ -278,15 +279,21 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .order('created_at', { ascending: false });
 
       if (photosData && photosData.length > 0) {
-        // Batch generate signed URLs for all photos at once
+        // Get all photo paths including thumbnails
         const photoPaths = photosData.map(photo => photo.photo_url);
+        const thumbnailPaths = photoPaths.map(path => getThumbnailPath(path));
+        const allPaths = [...photoPaths, ...thumbnailPaths];
+        
+        // Batch generate signed URLs for all photos and thumbnails (30 day cache)
         const { data: signedUrls } = await supabase.storage
           .from('user-photos')
-          .createSignedUrls(photoPaths, 60 * 60 * 24 * 7); // 7 day signed URLs
+          .createSignedUrls(allPaths, 60 * 60 * 24 * 30); // 30 day signed URLs for caching
 
         const photosWithUrls = photosData.map((photo, index) => ({
           id: photo.id,
           photoUrl: signedUrls?.[index]?.signedUrl || '',
+          // Thumbnail URL is in the second half of the array
+          thumbnailUrl: signedUrls?.[index + photosData.length]?.signedUrl || signedUrls?.[index]?.signedUrl || '',
           bodyPart: photo.body_part as BodyPart,
           timestamp: photo.created_at,
           notes: photo.notes || undefined,
@@ -340,31 +347,37 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!userId) return;
 
     try {
-      // Compress image before upload (max 1200px, 80% quality)
-      const compressedDataUrl = await compressImage(photo.dataUrl, 1200, 0.8);
+      // Process image: generates both full-size and thumbnail versions in WebP
+      const processed = await processImageForUpload(photo.dataUrl, userId);
       
-      const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(2)}.jpg`;
-      const base64Data = compressedDataUrl.split(',')[1];
-      const byteCharacters = atob(base64Data);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: 'image/jpeg' });
-
-      const { error: uploadError } = await supabase.storage
+      // Upload full-size image
+      const { error: fullUploadError } = await supabase.storage
         .from('user-photos')
-        .upload(fileName, blob);
+        .upload(processed.full.fileName, processed.full.blob, {
+          contentType: processed.format.mimeType,
+          cacheControl: '31536000', // 1 year cache
+        });
 
-      if (uploadError) throw uploadError;
+      if (fullUploadError) throw fullUploadError;
+
+      // Upload thumbnail
+      const { error: thumbUploadError } = await supabase.storage
+        .from('user-photos')
+        .upload(processed.thumbnail.fileName, processed.thumbnail.blob, {
+          contentType: processed.format.mimeType,
+          cacheControl: '31536000', // 1 year cache
+        });
+
+      if (thumbUploadError) {
+        console.warn('Thumbnail upload failed, continuing without thumbnail:', thumbUploadError);
+      }
 
       const { data: insertedPhoto, error: insertError } = await supabase
         .from('user_photos')
         .insert({
           user_id: userId,
           body_part: photo.bodyPart,
-          photo_url: fileName,
+          photo_url: processed.full.fileName,
           notes: photo.notes || null,
         })
         .select()
@@ -372,13 +385,16 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (insertError) throw insertError;
 
-      const { data: signedUrlData } = await supabase.storage
-        .from('user-photos')
-        .createSignedUrl(fileName, 60 * 60 * 24 * 7);
+      // Generate signed URLs for both full and thumbnail (30 day cache)
+      const [fullUrlData, thumbUrlData] = await Promise.all([
+        supabase.storage.from('user-photos').createSignedUrl(processed.full.fileName, 60 * 60 * 24 * 30),
+        supabase.storage.from('user-photos').createSignedUrl(processed.thumbnail.fileName, 60 * 60 * 24 * 30),
+      ]);
 
       const newPhoto: Photo = {
         id: insertedPhoto.id,
-        photoUrl: signedUrlData?.signedUrl || '',
+        photoUrl: fullUrlData.data?.signedUrl || '',
+        thumbnailUrl: thumbUrlData.data?.signedUrl || fullUrlData.data?.signedUrl || '',
         bodyPart: photo.bodyPart,
         timestamp: insertedPhoto.created_at,
         notes: photo.notes,
