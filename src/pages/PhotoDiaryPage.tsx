@@ -326,9 +326,11 @@ const PhotoDiaryPage = () => {
     fetchMediumUrl(viewingPhoto.id)
       .then((url) => {
         if (cancelled) return;
-        setViewingPhoto((prev) =>
-          prev && prev.id === viewingPhoto.id ? { ...prev, mediumUrl: url } : prev
-        );
+        setViewingPhoto((prev) => {
+          if (!prev || prev.id !== viewingPhoto.id) return prev;
+          if (prev.mediumUrl === url) return prev;
+          return { ...prev, mediumUrl: url };
+        });
       })
       .catch(() => {
         // keep placeholder; error UI handled by ProgressiveImage once src exists
@@ -339,23 +341,37 @@ const PhotoDiaryPage = () => {
     };
   }, [viewingPhoto, fetchMediumUrl]);
 
-  // Compare: fetch medium only for the selected images
+  const selectedCompareIdsKey = useMemo(
+    () => selectedPhotos.map((p) => p.id).join('|'),
+    [selectedPhotos]
+  );
+
+  // Compare: fetch medium only for the selected images (idempotent)
   useEffect(() => {
     if (!compareMode) return;
-    if (selectedPhotos.length === 0) return;
+    if (!selectedCompareIdsKey) return;
 
-    const ids = selectedPhotos.map((p) => p.id);
+    const ids = selectedCompareIdsKey.split('|').filter(Boolean);
 
     prefetchMediumUrls(ids)
       .then((map) => {
-        setSelectedPhotos((prev) =>
-          prev.map((p) => ({ ...p, mediumUrl: map.get(p.id) || p.mediumUrl }))
-        );
+        setSelectedPhotos((prev) => {
+          let changed = false;
+          const next = prev.map((p) => {
+            const nextUrl = map.get(p.id);
+            if (nextUrl && nextUrl !== p.mediumUrl) {
+              changed = true;
+              return { ...p, mediumUrl: nextUrl };
+            }
+            return p;
+          });
+          return changed ? next : prev;
+        });
       })
       .catch(() => {
         // keep placeholders
       });
-  }, [compareMode, selectedPhotos, prefetchMediumUrls]);
+  }, [compareMode, selectedCompareIdsKey, prefetchMediumUrls]);
 
   return (
     <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
