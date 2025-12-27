@@ -4,7 +4,7 @@ import { useUserData, BodyPart, Photo } from '@/contexts/UserDataContext';
 import { useVirtualizedPhotos, VirtualPhoto } from '@/hooks/useVirtualizedPhotos';
 import { VirtualizedPhotoGrid } from '@/components/VirtualizedPhotoGrid';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
@@ -545,10 +545,17 @@ const PhotoDiaryPage = () => {
       {/* Photo Viewer Dialog - shows thumb instantly, upgrades to medium */}
       <Dialog open={!!viewingPhoto} onOpenChange={(open) => !open && setViewingPhoto(null)}>
         <DialogContent className="max-w-lg p-0 overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Photo</DialogTitle>
+            <DialogDescription>
+              View your photo with a fast preview (thumbnail) and a higher quality version (medium).
+            </DialogDescription>
+          </DialogHeader>
+
           {viewingPhoto && (
             <>
               <div className="relative bg-black">
-                <ProgressiveImage 
+                <ProgressiveImage
                   thumbnailSrc={viewingPhoto.thumbnailUrl}
                   mediumSrc={viewingPhoto.mediumUrl}
                   alt={`${viewingPhoto.bodyPart} photo`}
@@ -567,9 +574,9 @@ const PhotoDiaryPage = () => {
                 {viewingPhoto.notes && (
                   <p className="text-sm text-foreground">{viewingPhoto.notes}</p>
                 )}
-                <Button 
-                  variant="destructive" 
-                  size="sm" 
+                <Button
+                  variant="destructive"
+                  size="sm"
                   className="w-full mt-2"
                   onClick={() => {
                     handleDelete(viewingPhoto.id);
