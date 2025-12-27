@@ -320,10 +320,13 @@ export const useVirtualizedPhotos = ({
     const batch = missing.slice(0, 20);
     batch.forEach((id) => backfillRequestedRef.current.add(id));
 
-    supabase.functions
-      .invoke("photo-derivatives", {
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data.session?.access_token;
+      return supabase.functions.invoke("photo-derivatives", {
         body: { photoIds: batch },
-      })
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+    })
       .then(({ data, error: fnError }) => {
         if (fnError) throw fnError;
 

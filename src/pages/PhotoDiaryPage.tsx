@@ -63,7 +63,7 @@ const ProgressiveImage = ({
       )}
 
       {/* Medium layer - loads in background, fades in over thumbnail */}
-      {hasMedium && thumbLoaded && (
+      {hasMedium && (thumbLoaded || !hasThumb) && (
         <img
           src={mediumSrc}
           alt={alt}
@@ -71,6 +71,7 @@ const ProgressiveImage = ({
           decoding="async"
           fetchPriority="high"
           onLoad={() => setMediumLoaded(true)}
+          onError={() => setHasError(true)}
           className={cn(
             "absolute inset-0 w-full h-full object-cover transition-opacity duration-500 z-20",
             mediumLoaded ? "opacity-100" : "opacity-0"
