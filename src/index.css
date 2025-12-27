@@ -411,6 +411,15 @@
   }
 }
 
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 @layer utilities {
   .animate-sparkle-float {
     animation: sparkle-float var(--duration, 1s) ease-out forwards;
@@ -422,5 +431,9 @@
   
   .animate-sparkle-pop {
     animation: sparkle-pop var(--duration, 1s) ease-out forwards;
+  }
+  
+  .animate-shimmer {
+    animation: shimmer 1.5s ease-in-out infinite;
   }
 }
