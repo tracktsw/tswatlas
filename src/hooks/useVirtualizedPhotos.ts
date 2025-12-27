@@ -20,6 +20,11 @@ export interface VirtualPhoto {
   /** Original for export - public URL stored in DB */
   originalUrl?: string;
   bodyPart: BodyPart;
+  /** When photo was taken (EXIF date) - preferred for display */
+  takenAt: string | null;
+  /** When photo was uploaded to the app */
+  uploadedAt: string;
+  /** Computed: takenAt if available, otherwise uploadedAt */
   timestamp: string;
   notes?: string;
 }
@@ -32,6 +37,7 @@ interface PhotoRow {
   original_url: string | null;
   body_part: string;
   created_at: string;
+  taken_at: string | null;
   notes: string | null;
 }
 
@@ -69,7 +75,12 @@ export const useVirtualizedPhotos = ({
       // Original for export
       originalUrl: row.original_url || undefined,
       bodyPart: row.body_part as BodyPart,
-      timestamp: row.created_at,
+      // EXIF date (when photo was actually taken)
+      takenAt: row.taken_at,
+      // Upload date
+      uploadedAt: row.created_at,
+      // Display date: prefer takenAt, fall back to uploadedAt
+      timestamp: row.taken_at || row.created_at,
       notes: row.notes || undefined,
     }));
   }, []);
@@ -87,7 +98,7 @@ export const useVirtualizedPhotos = ({
     try {
       let query = supabase
         .from("user_photos")
-        .select("id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, notes")
+        .select("id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, taken_at, notes")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(PAGE_SIZE);
@@ -124,7 +135,7 @@ export const useVirtualizedPhotos = ({
     try {
       let query = supabase
         .from("user_photos")
-        .select("id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, notes")
+        .select("id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, taken_at, notes")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .lt("created_at", cursorRef.current)

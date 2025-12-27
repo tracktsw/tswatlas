@@ -175,6 +175,7 @@ export type Database = {
           notes: string | null
           original_url: string | null
           photo_url: string
+          taken_at: string | null
           thumb_url: string | null
           user_id: string
         }
@@ -186,6 +187,7 @@ export type Database = {
           notes?: string | null
           original_url?: string | null
           photo_url: string
+          taken_at?: string | null
           thumb_url?: string | null
           user_id: string
         }
@@ -197,6 +199,7 @@ export type Database = {
           notes?: string | null
           original_url?: string | null
           photo_url?: string
+          taken_at?: string | null
           thumb_url?: string | null
           user_id?: string
         }

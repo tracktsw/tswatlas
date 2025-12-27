@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
-import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown, X, ImagePlus, Images } from 'lucide-react';
+import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown, X, ImagePlus, Images, CalendarIcon } from 'lucide-react';
 import { useUserData, BodyPart, Photo } from '@/contexts/UserDataContext';
 import { useVirtualizedPhotos, VirtualPhoto } from '@/hooks/useVirtualizedPhotos';
 import { VirtualizedPhotoGrid } from '@/components/VirtualizedPhotoGrid';
@@ -9,12 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogContentFullscreen, DialogDescription, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
 import { format, isToday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useBatchUpload } from '@/hooks/useBatchUpload';
-import { useSingleUpload } from '@/hooks/useSingleUpload';
+import { useSingleUpload, extractExifDate } from '@/hooks/useSingleUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { LeafIllustration, SparkleIllustration } from '@/components/illustrations';
 import { SparkleEffect } from '@/components/SparkleEffect';
@@ -115,6 +117,12 @@ const PhotoDiaryPage = () => {
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState<VirtualPhoto | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  
+  // Single photo preview state (for date confirmation)
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [detectedDate, setDetectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [isExifDate, setIsExifDate] = useState(false);
   
   // Batch upload state
   const [showBatchUpload, setShowBatchUpload] = useState(false);
@@ -232,33 +240,53 @@ const PhotoDiaryPage = () => {
   // Handle single file selection (camera or gallery single photo)
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    
-    // Reset input immediately to allow re-selecting same file
     e.target.value = '';
     
-    if (!file) {
-      if (import.meta.env.DEV) {
-        console.log('[PhotoDiary] No file selected');
-      }
-      return;
-    }
+    if (!file) return;
 
     if (import.meta.env.DEV) {
-      console.log('[PhotoDiary] Single file selected:', file.name, 'type:', file.type, 'size:', file.size);
+      console.log('[PhotoDiary] Single file selected:', file.name);
     }
 
-    // Close the modal immediately and start upload
+    // Extract EXIF date for preview
+    const exifDate = await extractExifDate(file);
+    
+    if (exifDate) {
+      setDetectedDate(new Date(exifDate));
+      setSelectedDate(new Date(exifDate));
+      setIsExifDate(true);
+    } else {
+      setDetectedDate(null);
+      setSelectedDate(new Date());
+      setIsExifDate(false);
+    }
+    
+    setPendingFile(file);
+    // Keep modal open to show date confirmation
+  };
+
+  // Confirm and upload the pending file
+  const handleConfirmUpload = async () => {
+    if (!pendingFile) return;
+    
     setIsCapturing(false);
     
-    // Use shared upload pipeline
-    const photoId = await singleUpload.processAndUploadFile(file, {
+    const photoId = await singleUpload.processAndUploadFile(pendingFile, {
       bodyPart: newPhotoBodyPart,
       notes: newPhotoNotes || undefined,
+      takenAtOverride: selectedDate.toISOString(),
     });
 
     if (photoId) {
       setNewPhotoNotes('');
+      setPendingFile(null);
+      setDetectedDate(null);
     }
+  };
+
+  const handleCancelPending = () => {
+    setPendingFile(null);
+    setDetectedDate(null);
   };
 
   // Handle batch file selection from gallery
@@ -605,93 +633,99 @@ const PhotoDiaryPage = () => {
       </Button>
 
       {/* Add Photo Dialog */}
-      <Dialog open={isCapturing} onOpenChange={setIsCapturing}>
+      <Dialog open={isCapturing} onOpenChange={(open) => { if (!open) { setIsCapturing(false); setPendingFile(null); } else setIsCapturing(true); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-display text-xl">Add New Photo</DialogTitle>
+            <DialogTitle className="font-display text-xl">
+              {pendingFile ? 'Confirm Photo Date' : 'Add New Photo'}
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-semibold mb-2 block">Body Part</label>
-              <Select value={newPhotoBodyPart} onValueChange={(v) => setNewPhotoBodyPart(v as BodyPart)}>
-                <SelectTrigger className="h-11 rounded-xl border-2">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {bodyParts.map(({ value, label }) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          
+          {pendingFile ? (
+            /* Date confirmation step */
+            <div className="space-y-4">
+              <div className="p-3 bg-muted/50 rounded-xl text-center">
+                <p className="text-sm font-medium mb-1">
+                  {isExifDate ? 'Date detected from photo:' : 'No date found in photo'}
+                </p>
+                <p className={cn("text-lg font-semibold", !isExifDate && "text-muted-foreground")}>
+                  {isExifDate ? format(selectedDate, 'MMMM d, yyyy') : 'Using today\'s date'}
+                </p>
+              </div>
+              
+              <div>
+                <label className="text-sm font-semibold mb-2 block">Date Taken</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left h-11 rounded-xl">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {format(selectedDate, 'PPP')}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => date && setSelectedDate(date)}
+                      disabled={(date) => date > new Date()}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1 h-11" onClick={handleCancelPending}>
+                  Back
+                </Button>
+                <Button variant="warm" className="flex-1 h-11" onClick={handleConfirmUpload} disabled={singleUpload.isUploading}>
+                  {singleUpload.isUploading ? 'Uploading...' : 'Upload Photo'}
+                </Button>
+              </div>
             </div>
-            <div>
-              <label className="text-sm font-semibold mb-2 block">Notes (optional)</label>
-              <Textarea 
-                placeholder="Any notes about this photo..."
-                value={newPhotoNotes}
-                onChange={(e) => setNewPhotoNotes(e.target.value)}
-                rows={2}
-                className="rounded-xl border-2 resize-none"
-              />
-            </div>
-            {/* Camera input - forces camera on mobile */}
-            <input 
-              type="file" 
-              accept="image/*" 
-              capture="environment"
-              ref={cameraInputRef}
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            {/* Gallery input - single photo picker (NO capture, NO multiple) */}
-            <input 
-              type="file" 
-              accept="image/*,image/heic,image/heif,.heic,.heif"
-              ref={galleryInputRef}
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            {/* Multi-select gallery input */}
-            <input 
-              type="file" 
-              accept="image/*,image/heic,image/heif,.heic,.heif"
-              multiple
-              ref={batchGalleryInputRef}
-              onChange={handleBatchFileSelect}
-              className="hidden"
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <Button 
-                variant="warm"
-                className="h-11 gap-2"
-                onClick={() => cameraInputRef.current?.click()}
-                disabled={singleUpload.isUploading}
-              >
-                <Camera className="w-5 h-5" />
-                Take Photo
+          ) : (
+            /* Initial selection step */
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-semibold mb-2 block">Body Part</label>
+                <Select value={newPhotoBodyPart} onValueChange={(v) => setNewPhotoBodyPart(v as BodyPart)}>
+                  <SelectTrigger className="h-11 rounded-xl border-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bodyParts.map(({ value, label }) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-semibold mb-2 block">Notes (optional)</label>
+                <Textarea 
+                  placeholder="Any notes about this photo..."
+                  value={newPhotoNotes}
+                  onChange={(e) => setNewPhotoNotes(e.target.value)}
+                  rows={2}
+                  className="rounded-xl border-2 resize-none"
+                />
+              </div>
+              <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleFileSelect} className="hidden" />
+              <input type="file" accept="image/*,image/heic,image/heif,.heic,.heif" ref={galleryInputRef} onChange={handleFileSelect} className="hidden" />
+              <input type="file" accept="image/*,image/heic,image/heif,.heic,.heif" multiple ref={batchGalleryInputRef} onChange={handleBatchFileSelect} className="hidden" />
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="warm" className="h-11 gap-2" onClick={() => cameraInputRef.current?.click()} disabled={singleUpload.isUploading}>
+                  <Camera className="w-5 h-5" />Take Photo
+                </Button>
+                <Button variant="outline" className="h-11 gap-2" onClick={() => galleryInputRef.current?.click()} disabled={singleUpload.isUploading}>
+                  <ImagePlus className="w-5 h-5" />Single Photo
+                </Button>
+              </div>
+              <Button variant="secondary" className="w-full h-11 gap-2" onClick={() => batchGalleryInputRef.current?.click()} disabled={singleUpload.isUploading}>
+                <Images className="w-5 h-5" />Select Multiple Photos
               </Button>
-              <Button 
-                variant="outline"
-                className="h-11 gap-2"
-                onClick={() => galleryInputRef.current?.click()}
-                disabled={singleUpload.isUploading}
-              >
-                <ImagePlus className="w-5 h-5" />
-                Single Photo
-              </Button>
             </div>
-            <Button 
-              variant="secondary"
-              className="w-full h-11 gap-2"
-              onClick={() => batchGalleryInputRef.current?.click()}
-              disabled={singleUpload.isUploading}
-            >
-              <Images className="w-5 h-5" />
-              Select Multiple Photos
-            </Button>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -749,9 +783,12 @@ const PhotoDiaryPage = () => {
                   <span className="text-sm font-semibold bg-coral/10 text-coral px-3 py-1 rounded-full">
                     {bodyParts.find(b => b.value === viewingPhoto.bodyPart)?.label}
                   </span>
-                  <p className="text-sm text-muted-foreground">
-                    {format(new Date(viewingPhoto.timestamp), 'MMM d, yyyy')}
-                  </p>
+                  <div className="text-sm text-muted-foreground">
+                    <span>{format(new Date(viewingPhoto.timestamp), 'MMM d, yyyy')}</span>
+                    {!viewingPhoto.takenAt && (
+                      <span className="text-xs ml-1 opacity-70">(uploaded)</span>
+                    )}
+                  </div>
                 </div>
                 <DialogClose className="rounded-full p-2 hover:bg-muted transition-colors">
                   <X className="h-5 w-5" />
