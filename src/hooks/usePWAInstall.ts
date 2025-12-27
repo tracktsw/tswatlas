@@ -14,8 +14,8 @@ export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
-    // Check if already dismissed
-    const dismissed = localStorage.getItem('pwa-install-dismissed');
+    // Check if dismissed for this session only
+    const dismissed = sessionStorage.getItem('pwa-install-dismissed-session');
     if (dismissed === 'true') {
       setIsDismissed(true);
     }
@@ -55,7 +55,8 @@ export function usePWAInstall() {
   }, []);
 
   const dismiss = () => {
-    localStorage.setItem('pwa-install-dismissed', 'true');
+    // Only dismiss for current session - will show again on next browser open
+    sessionStorage.setItem('pwa-install-dismissed-session', 'true');
     setIsDismissed(true);
   };
 
