@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useAppUpdate } from "@/hooks/useAppUpdate";
 
 export function AppUpdateBanner() {
-  const { updateAvailable, isUpdating, performUpdate } = useAppUpdate();
+  const { updateAvailable, isUpdating, performUpdate, dismissUpdate, remoteVersion } = useAppUpdate();
 
   if (!updateAvailable) return null;
 
@@ -22,23 +22,40 @@ export function AppUpdateBanner() {
         
         <p className="mb-6 text-center text-sm text-muted-foreground">
           A new version of TrackTSW is available with improvements and fixes.
+          {remoteVersion && (
+            <span className="block mt-1 text-xs">
+              Version {remoteVersion}
+            </span>
+          )}
         </p>
 
-        <Button
-          onClick={performUpdate}
-          disabled={isUpdating}
-          className="w-full"
-          size="lg"
-        >
-          {isUpdating ? (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              Updating...
-            </>
-          ) : (
-            "Update Now"
-          )}
-        </Button>
+        <div className="flex flex-col gap-3">
+          <Button
+            onClick={performUpdate}
+            disabled={isUpdating}
+            className="w-full"
+            size="lg"
+          >
+            {isUpdating ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              "Update Now"
+            )}
+          </Button>
+          
+          <Button
+            variant="ghost"
+            onClick={dismissUpdate}
+            disabled={isUpdating}
+            className="w-full text-muted-foreground"
+            size="sm"
+          >
+            Later
+          </Button>
+        </div>
       </div>
     </div>
   );
