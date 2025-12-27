@@ -270,12 +270,40 @@ const FullscreenViewer = ({
 export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
   const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
 
+  // Lock body scroll when compare mode is active
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    const originalPosition = document.body.style.position;
+    const originalTop = document.body.style.top;
+    const originalWidth = document.body.style.width;
+    const scrollY = window.scrollY;
+
+    // Lock scroll - works on iOS and Android
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+
+    return () => {
+      // Restore scroll position and styles
+      document.body.style.overflow = originalOverflow;
+      document.body.style.position = originalPosition;
+      document.body.style.top = originalTop;
+      document.body.style.width = originalWidth;
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
   if (photos.length !== 2) return null;
 
   return (
     <>
-      {/* Immersive comparison view - takes ~85% of viewport */}
-      <div className="fixed inset-0 z-40 bg-background flex flex-col">
+      {/* Immersive comparison view - fixed position with scroll isolation */}
+      <div 
+        className="fixed inset-0 z-40 bg-background flex flex-col overscroll-none"
+        style={{ touchAction: 'none' }}
+        onTouchMove={(e) => e.stopPropagation()}
+      >
         {/* Minimal header */}
         <div className="flex items-center justify-between px-4 py-2 bg-background/95 backdrop-blur-sm border-b border-border/30">
           <span className="text-sm font-medium text-muted-foreground">Comparing</span>
