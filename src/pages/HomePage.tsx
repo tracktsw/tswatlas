@@ -141,7 +141,7 @@ const HomePage = () => {
       <div className="flex items-center justify-between animate-fade-in">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <img src={compassLogo} alt="TSW Atlas" className="w-12 h-12 rounded-2xl shadow-warm" />
+            <img src={compassLogo} alt="TrackTSW" className="w-12 h-12 rounded-2xl shadow-warm" />
             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-coral rounded-full border-2 border-background animate-pulse-soft" />
           </div>
           <div>
@@ -150,7 +150,7 @@ const HomePage = () => {
               <span className="text-xs font-medium text-coral">{greeting.text}</span>
             </div>
             <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">
-              TSW Atlas
+              TrackTSW
             </h1>
           </div>
         </div>
