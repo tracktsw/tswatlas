@@ -188,12 +188,14 @@
   }
   
   h1, h2, h3, h4, h5, h6 {
-    @apply font-display tracking-tight;
+    font-family: "Quicksand", system-ui, sans-serif;
+    @apply tracking-tight;
   }
   
   /* Anchor headings for key content */
   .heading-anchor {
-    @apply text-anchor font-display font-bold;
+    font-family: "Quicksand", system-ui, sans-serif;
+    @apply text-anchor font-bold;
   }
 }
 
