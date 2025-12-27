@@ -635,7 +635,7 @@ const PhotoDiaryPage = () => {
             {/* Multi-select gallery input */}
             <input 
               type="file" 
-              accept="image/*"
+              accept="image/*,image/heic,image/heif,.heic,.heif"
               multiple
               ref={batchGalleryInputRef}
               onChange={handleBatchFileSelect}

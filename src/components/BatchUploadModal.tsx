@@ -16,6 +16,7 @@ interface BatchUploadModalProps {
   stats: {
     total: number;
     pending: number;
+    converting: number;
     uploading: number;
     success: number;
     failed: number;
@@ -56,7 +57,7 @@ export const BatchUploadModal = ({
   onClose,
   selectedFiles,
 }: BatchUploadModalProps) => {
-  const isComplete = !isUploading && items.length > 0 && stats.pending === 0 && stats.uploading === 0;
+  const isComplete = !isUploading && items.length > 0 && stats.pending === 0 && stats.converting === 0 && stats.uploading === 0;
   const hasStarted = items.length > 0 || isUploading;
   const hasFailures = stats.failed > 0;
   const allSuccess = isComplete && stats.failed === 0;
@@ -119,11 +120,13 @@ export const BatchUploadModal = ({
                   <span className="font-medium">
                     {isUploading && items.length === 0
                       ? 'Preparing upload...'
-                      : isUploading 
-                        ? `Uploading ${currentIndex} of ${stats.total}...`
-                        : allSuccess
-                          ? `All ${stats.total} photos uploaded!`
-                          : `${stats.success} uploaded, ${stats.failed} failed`
+                      : isUploading && stats.converting > 0
+                        ? `Converting ${currentIndex} of ${stats.total}...`
+                        : isUploading 
+                          ? `Uploading ${currentIndex} of ${stats.total}...`
+                          : allSuccess
+                            ? `All ${stats.total} photos uploaded!`
+                            : `${stats.success} uploaded, ${stats.failed} failed`
                     }
                   </span>
                   <span className="text-muted-foreground">{overallProgress}%</span>
@@ -140,7 +143,7 @@ export const BatchUploadModal = ({
                       "flex items-center gap-3 p-3 rounded-xl border transition-colors",
                       item.status === 'success' && "bg-primary/5 border-primary/20",
                       item.status === 'error' && "bg-destructive/5 border-destructive/20",
-                      item.status === 'uploading' && "bg-muted/50 border-primary/30",
+                      (item.status === 'uploading' || item.status === 'converting') && "bg-muted/50 border-primary/30",
                       item.status === 'pending' && "bg-muted/30 border-border"
                     )}
                   >
@@ -156,7 +159,7 @@ export const BatchUploadModal = ({
                           <AlertCircle className="w-4 h-4 text-destructive" />
                         </div>
                       )}
-                      {item.status === 'uploading' && (
+                      {(item.status === 'uploading' || item.status === 'converting') && (
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                           <Loader2 className="w-4 h-4 text-primary animate-spin" />
                         </div>
@@ -170,7 +173,13 @@ export const BatchUploadModal = ({
 
                     {/* File info */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{item.file.name}</p>
+                      <p className="text-sm font-medium truncate">
+                        {item.file.name}
+                        {item.isHeic && <span className="text-xs text-muted-foreground ml-1">(HEIC)</span>}
+                      </p>
+                      {item.status === 'converting' && (
+                        <p className="text-xs text-primary mt-0.5">Converting to JPEG...</p>
+                      )}
                       {item.status === 'uploading' && (
                         <div className="mt-1">
                           <Progress value={item.progress} className="h-1" />
