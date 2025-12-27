@@ -18,6 +18,7 @@ import SettingsPage from "@/pages/SettingsPage";
 import AuthPage from "@/pages/AuthPage";
 import AdminPage from "@/pages/AdminPage";
 import NotFound from "@/pages/NotFound";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <PWAInstallPrompt />
           <BrowserRouter>
             <Routes>
               {/* Public route - Auth page */}
