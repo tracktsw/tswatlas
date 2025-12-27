@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { compressImage } from '@/utils/imageCompression';
 
 export type BodyPart = 'face' | 'neck' | 'arms' | 'hands' | 'legs' | 'feet' | 'torso' | 'back';
 
@@ -339,8 +340,11 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!userId) return;
 
     try {
+      // Compress image before upload (max 1200px, 80% quality)
+      const compressedDataUrl = await compressImage(photo.dataUrl, 1200, 0.8);
+      
       const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(2)}.jpg`;
-      const base64Data = photo.dataUrl.split(',')[1];
+      const base64Data = compressedDataUrl.split(',')[1];
       const byteCharacters = atob(base64Data);
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
