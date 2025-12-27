@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback, memo } from 'react';
 import { Image, Check } from 'lucide-react';
+import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { VirtualPhoto } from '@/hooks/useVirtualizedPhotos';
 
@@ -119,6 +120,9 @@ const PhotoItem = memo(({
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold bg-coral/10 text-coral px-2.5 py-1 rounded-full">
             {bodyPartLabel}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {format(new Date(photo.timestamp), 'MMM d, yyyy')}
           </span>
         </div>
         {photo.notes && (
