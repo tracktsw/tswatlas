@@ -71,13 +71,8 @@ const bodyParts: { value: BodyPart; label: string }[] = [
 
 const FREE_DAILY_PHOTO_LIMIT = 2;
 
-// Helper to add thumbnail transform params to signed URL
-const getThumbnailUrl = (url: string, size: number = 300) => {
-  if (!url) return '';
-  // Add Supabase image transformation parameters
-  const separator = url.includes('?') ? '&' : '?';
-  return `${url}${separator}width=${size}&height=${size}&resize=cover&quality=80`;
-};
+// Note: Signed URLs don't support image transformations
+// Images are already compressed on upload (max 1200px, 80% quality)
 
 const PhotoDiaryPage = () => {
   const { photos, addPhoto, deletePhoto, getPhotosByBodyPart, isLoading } = useUserData();
@@ -90,6 +85,7 @@ const PhotoDiaryPage = () => {
   const [selectedPhotos, setSelectedPhotos] = useState<Photo[]>([]);
   const [showSparkles, setShowSparkles] = useState(false);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [viewingPhoto, setViewingPhoto] = useState<Photo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Count photos uploaded today
@@ -437,10 +433,16 @@ const PhotoDiaryPage = () => {
                   compareMode && 'hover:opacity-90'
                 )}
                 style={{ animationDelay: `${index * 0.05}s` }}
-                onClick={() => compareMode && togglePhotoSelection(photo)}
+                onClick={() => {
+                  if (compareMode) {
+                    togglePhotoSelection(photo);
+                  } else {
+                    setViewingPhoto(photo);
+                  }
+                }}
               >
                 <ProgressiveImage 
-                  src={getThumbnailUrl(photo.photoUrl)}
+                  src={photo.photoUrl}
                   alt={`${photo.bodyPart} photo`}
                   className="w-full aspect-square"
                 />
@@ -467,6 +469,48 @@ const PhotoDiaryPage = () => {
           })}
         </div>
       )}
+
+      {/* Photo Viewer Dialog */}
+      <Dialog open={!!viewingPhoto} onOpenChange={(open) => !open && setViewingPhoto(null)}>
+        <DialogContent className="max-w-lg p-0 overflow-hidden">
+          {viewingPhoto && (
+            <>
+              <div className="relative">
+                <img 
+                  src={viewingPhoto.photoUrl}
+                  alt={`${viewingPhoto.bodyPart} photo`}
+                  className="w-full max-h-[70vh] object-contain bg-black"
+                />
+              </div>
+              <div className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold bg-coral/10 text-coral px-3 py-1 rounded-full">
+                    {bodyParts.find(b => b.value === viewingPhoto.bodyPart)?.label}
+                  </span>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(viewingPhoto.timestamp), 'MMM d, yyyy')}
+                  </p>
+                </div>
+                {viewingPhoto.notes && (
+                  <p className="text-sm text-foreground">{viewingPhoto.notes}</p>
+                )}
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  className="w-full mt-2"
+                  onClick={() => {
+                    handleDelete(viewingPhoto.id);
+                    setViewingPhoto(null);
+                  }}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Photo
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
