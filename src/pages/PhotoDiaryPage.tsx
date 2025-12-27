@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
-import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown, X } from 'lucide-react';
+import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown, X, ImagePlus } from 'lucide-react';
 import { useUserData, BodyPart, Photo } from '@/contexts/UserDataContext';
 import { useVirtualizedPhotos, VirtualPhoto } from '@/hooks/useVirtualizedPhotos';
 import { VirtualizedPhotoGrid } from '@/components/VirtualizedPhotoGrid';
@@ -112,7 +112,8 @@ const PhotoDiaryPage = () => {
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState<VirtualPhoto | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   // Get user ID for virtualized photos hook
   useEffect(() => {
@@ -503,22 +504,41 @@ const PhotoDiaryPage = () => {
                 className="rounded-xl border-2 resize-none"
               />
             </div>
+            {/* Camera input - forces camera on mobile */}
             <input 
               type="file" 
               accept="image/*" 
               capture="environment"
-              ref={fileInputRef}
+              ref={cameraInputRef}
               onChange={handleFileSelect}
               className="hidden"
             />
-            <Button 
-              variant="warm"
-              className="w-full h-11 gap-2"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Camera className="w-5 h-5" />
-              Take or Choose Photo
-            </Button>
+            {/* Gallery input - opens photo picker */}
+            <input 
+              type="file" 
+              accept="image/*"
+              ref={galleryInputRef}
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Button 
+                variant="warm"
+                className="h-11 gap-2"
+                onClick={() => cameraInputRef.current?.click()}
+              >
+                <Camera className="w-5 h-5" />
+                Take Photo
+              </Button>
+              <Button 
+                variant="outline"
+                className="h-11 gap-2"
+                onClick={() => galleryInputRef.current?.click()}
+              >
+                <ImagePlus className="w-5 h-5" />
+                Gallery
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
