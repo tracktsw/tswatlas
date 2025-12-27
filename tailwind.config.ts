@@ -51,22 +51,40 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+          elevated: "hsl(var(--card-elevated))",
         },
+        // Anchor color - key metrics, streaks, headings
+        anchor: {
+          DEFAULT: "hsl(var(--anchor))",
+          foreground: "hsl(var(--anchor-foreground))",
+        },
+        // Action color - CTAs only
+        action: {
+          DEFAULT: "hsl(var(--action))",
+          foreground: "hsl(var(--action-foreground))",
+        },
+        // Semantic colors
         sage: {
           DEFAULT: "hsl(var(--sage))",
           light: "hsl(var(--sage-light))",
+          deep: "hsl(var(--sage-deep))",
         },
         cream: {
           DEFAULT: "hsl(var(--cream))",
           dark: "hsl(var(--cream-dark))",
         },
-        coral: {
-          DEFAULT: "hsl(var(--coral))",
-          light: "hsl(var(--coral-light))",
-          deep: "hsl(var(--coral-deep))",
+        // Adaptive emotional states
+        flare: {
+          DEFAULT: "hsl(var(--flare))",
+          light: "hsl(var(--flare-light))",
         },
-        honey: "hsl(var(--honey))",
-        terracotta: "hsl(var(--terracotta))",
+        healing: {
+          DEFAULT: "hsl(var(--healing))",
+          light: "hsl(var(--healing-light))",
+        },
+        // Progress & streaks
+        progress: "hsl(var(--progress))",
+        streak: "hsl(var(--streak))",
         "warm-gray": "hsl(var(--warm-gray))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
@@ -78,25 +96,6 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-      },
-      borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
-        "2xl": "1.25rem",
-        "3xl": "1.5rem",
-      },
-      fontFamily: {
-        sans: ["Nunito", "system-ui", "sans-serif"],
-        display: ["Quicksand", "system-ui", "sans-serif"],
-      },
-      boxShadow: {
-        "warm-sm": "0 2px 8px -2px hsl(var(--shadow-warm) / 0.08)",
-        "warm": "0 4px 20px -4px hsl(var(--shadow-warm) / 0.12)",
-        "warm-lg": "0 8px 30px -6px hsl(var(--shadow-warm) / 0.15)",
-        "warm-xl": "0 12px 40px -8px hsl(var(--shadow-warm) / 0.2)",
-        "glow-coral": "0 0 20px hsl(var(--coral) / 0.3)",
-        "glow-sage": "0 0 20px hsl(var(--sage) / 0.3)",
       },
       keyframes: {
         "accordion-down": {

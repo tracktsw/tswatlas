@@ -4,112 +4,166 @@
 
 @layer base {
   :root {
-    /* Warm, handcrafted TrackTSW palette */
-    --background: 38 45% 96%;
-    --foreground: 25 20% 18%;
+    /* 
+     * TrackTSW Refined Palette
+     * Emotionally supportive, accessible, and mature
+     * 
+     * COLOR USAGE RULES:
+     * --anchor: Key metrics (days healing), streaks, milestones, primary headings
+     * --action: User actions ONLY (check-ins, uploads, primary CTAs) - never decorative
+     * --sage: Healing/stable states, secondary elements
+     * --cream/muted: Backgrounds, neutral states
+     * --flare: High-symptom/flare indicators (used sparingly)
+     */
     
-    --card: 40 40% 94%;
-    --card-foreground: 25 20% 18%;
+    /* Foundation - warm cream base */
+    --background: 40 35% 96%;
+    --foreground: 24 18% 16%;
     
-    --popover: 40 40% 94%;
-    --popover-foreground: 25 20% 18%;
+    /* Cards with subtle hierarchy */
+    --card: 42 30% 94%;
+    --card-foreground: 24 18% 16%;
+    --card-elevated: 44 28% 91%;
     
-    --primary: 145 28% 42%;
+    --popover: 42 30% 94%;
+    --popover-foreground: 24 18% 16%;
+    
+    /* Anchor color - Deep Forest Green for key metrics & headings */
+    --anchor: 158 32% 28%;
+    --anchor-foreground: 40 50% 98%;
+    
+    /* Primary - Sage for healing states */
+    --primary: 152 24% 44%;
     --primary-foreground: 40 50% 98%;
     
-    --secondary: 145 18% 82%;
-    --secondary-foreground: 145 30% 28%;
+    /* Secondary - Muted sage */
+    --secondary: 150 16% 85%;
+    --secondary-foreground: 152 28% 30%;
     
-    --muted: 35 25% 88%;
-    --muted-foreground: 25 12% 42%;
+    /* Muted elements */
+    --muted: 38 22% 88%;
+    --muted-foreground: 24 12% 44%;
     
-    --accent: 12 65% 65%;
-    --accent-foreground: 12 45% 22%;
+    /* Action color - Warm terracotta for CTAs ONLY */
+    --action: 16 58% 52%;
+    --action-foreground: 40 50% 98%;
     
-    --destructive: 0 72% 55%;
+    /* Accent - reserved for subtle highlights */
+    --accent: 32 45% 75%;
+    --accent-foreground: 24 20% 20%;
+    
+    /* Destructive */
+    --destructive: 4 68% 52%;
     --destructive-foreground: 0 0% 98%;
     
-    --border: 35 20% 82%;
-    --input: 35 20% 82%;
-    --ring: 145 28% 42%;
+    /* Borders and inputs */
+    --border: 36 18% 82%;
+    --input: 36 18% 82%;
+    --ring: 152 24% 44%;
     
     --radius: 1rem;
     
-    /* Warm custom tokens */
-    --sage: 145 28% 42%;
-    --sage-light: 145 22% 88%;
-    --cream: 38 50% 95%;
-    --cream-dark: 35 35% 88%;
-    --coral: 12 70% 62%;
-    --coral-light: 12 75% 92%;
-    --coral-deep: 8 65% 55%;
-    --warm-gray: 25 12% 48%;
-    --honey: 42 80% 70%;
-    --terracotta: 18 55% 55%;
+    /* Semantic tokens */
+    --sage: 152 24% 44%;
+    --sage-light: 150 18% 90%;
+    --sage-deep: 158 32% 28%;
     
-    /* Warm shadows */
-    --shadow-warm: 25 30% 30%;
+    --cream: 40 35% 96%;
+    --cream-dark: 38 28% 88%;
     
-    --sidebar-background: 40 40% 94%;
-    --sidebar-foreground: 25 20% 18%;
-    --sidebar-primary: 145 28% 42%;
+    /* Flare state - cooler, muted */
+    --flare: 220 18% 48%;
+    --flare-light: 220 14% 90%;
+    
+    /* Stable/healing state - warmer */
+    --healing: 32 38% 55%;
+    --healing-light: 38 35% 92%;
+    
+    /* Warm gray for body text */
+    --warm-gray: 24 10% 46%;
+    
+    /* Progress & streaks - uses anchor */
+    --progress: 158 32% 28%;
+    --streak: 24 55% 42%;
+    
+    /* Shadows */
+    --shadow-warm: 24 25% 25%;
+    
+    /* Sidebar */
+    --sidebar-background: 42 30% 94%;
+    --sidebar-foreground: 24 18% 16%;
+    --sidebar-primary: 152 24% 44%;
     --sidebar-primary-foreground: 40 50% 98%;
-    --sidebar-accent: 145 22% 88%;
-    --sidebar-accent-foreground: 145 30% 28%;
-    --sidebar-border: 35 20% 82%;
-    --sidebar-ring: 145 28% 42%;
+    --sidebar-accent: 150 16% 85%;
+    --sidebar-accent-foreground: 152 28% 30%;
+    --sidebar-border: 36 18% 82%;
+    --sidebar-ring: 152 24% 44%;
   }
 
   .dark {
-    --background: 25 18% 10%;
-    --foreground: 38 25% 92%;
+    --background: 24 16% 9%;
+    --foreground: 40 22% 90%;
     
-    --card: 25 18% 14%;
-    --card-foreground: 38 25% 92%;
+    --card: 24 14% 12%;
+    --card-foreground: 40 22% 90%;
+    --card-elevated: 24 12% 15%;
     
-    --popover: 25 18% 14%;
-    --popover-foreground: 38 25% 92%;
+    --popover: 24 14% 12%;
+    --popover-foreground: 40 22% 90%;
     
-    --primary: 145 35% 52%;
-    --primary-foreground: 25 18% 10%;
+    --anchor: 155 28% 52%;
+    --anchor-foreground: 24 16% 9%;
     
-    --secondary: 25 15% 22%;
-    --secondary-foreground: 38 25% 88%;
+    --primary: 152 26% 48%;
+    --primary-foreground: 24 16% 9%;
     
-    --muted: 25 14% 18%;
-    --muted-foreground: 38 18% 62%;
+    --secondary: 24 12% 18%;
+    --secondary-foreground: 40 20% 85%;
     
-    --accent: 12 55% 58%;
-    --accent-foreground: 12 45% 95%;
+    --muted: 24 10% 16%;
+    --muted-foreground: 38 14% 58%;
     
-    --destructive: 0 62% 50%;
+    --action: 18 52% 55%;
+    --action-foreground: 40 50% 98%;
+    
+    --accent: 32 35% 45%;
+    --accent-foreground: 40 22% 92%;
+    
+    --destructive: 4 58% 48%;
     --destructive-foreground: 0 0% 98%;
     
-    --border: 25 14% 24%;
-    --input: 25 14% 24%;
-    --ring: 145 35% 52%;
+    --border: 24 12% 20%;
+    --input: 24 12% 20%;
+    --ring: 152 26% 48%;
     
-    --sage: 145 35% 52%;
-    --sage-light: 25 15% 22%;
-    --cream: 25 15% 14%;
-    --cream-dark: 25 12% 18%;
-    --coral: 12 55% 58%;
-    --coral-light: 12 35% 25%;
-    --coral-deep: 8 50% 50%;
-    --warm-gray: 25 10% 55%;
-    --honey: 42 60% 55%;
-    --terracotta: 18 45% 48%;
+    --sage: 152 26% 48%;
+    --sage-light: 24 12% 18%;
+    --sage-deep: 155 28% 52%;
     
-    --shadow-warm: 25 20% 8%;
+    --cream: 24 12% 12%;
+    --cream-dark: 24 10% 16%;
     
-    --sidebar-background: 25 18% 14%;
-    --sidebar-foreground: 38 25% 92%;
-    --sidebar-primary: 145 35% 52%;
-    --sidebar-primary-foreground: 25 18% 10%;
-    --sidebar-accent: 25 15% 22%;
-    --sidebar-accent-foreground: 38 25% 88%;
-    --sidebar-border: 25 14% 24%;
-    --sidebar-ring: 145 35% 52%;
+    --flare: 218 16% 55%;
+    --flare-light: 220 12% 22%;
+    
+    --healing: 32 32% 50%;
+    --healing-light: 30 20% 20%;
+    
+    --warm-gray: 24 8% 52%;
+    
+    --progress: 155 28% 52%;
+    --streak: 24 48% 50%;
+    
+    --shadow-warm: 24 18% 6%;
+    
+    --sidebar-background: 24 14% 12%;
+    --sidebar-foreground: 40 22% 90%;
+    --sidebar-primary: 152 26% 48%;
+    --sidebar-primary-foreground: 24 16% 9%;
+    --sidebar-accent: 24 12% 18%;
+    --sidebar-accent-foreground: 40 20% 85%;
+    --sidebar-border: 24 12% 20%;
+    --sidebar-ring: 152 26% 48%;
   }
 }
 
@@ -121,13 +175,12 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* Simplified, calmer background - subtle dot pattern instead of noise */
     background-image: 
-      radial-gradient(ellipse at 20% 0%, hsl(var(--coral-light) / 0.4) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 100%, hsl(var(--sage-light) / 0.5) 0%, transparent 50%),
-      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-    background-size: 100% 100%, 100% 100%, 200px 200px;
+      radial-gradient(ellipse at 20% 0%, hsl(var(--sage-light) / 0.3) 0%, transparent 45%),
+      radial-gradient(ellipse at 80% 100%, hsl(var(--cream-dark) / 0.4) 0%, transparent 45%);
+    background-size: 100% 100%;
     background-attachment: fixed;
-    background-blend-mode: normal, normal, soft-light;
   }
   
   html {
@@ -137,59 +190,110 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-display tracking-tight;
   }
+  
+  /* Anchor headings for key content */
+  .heading-anchor {
+    @apply text-anchor font-display font-bold;
+  }
 }
 
 @layer components {
+  /* Standard card */
   .glass-card {
-    @apply bg-card/90 backdrop-blur-sm border border-border/60 rounded-2xl;
+    @apply bg-card/95 backdrop-blur-sm border border-border/50 rounded-2xl;
     box-shadow: 
-      0 4px 20px -4px hsl(var(--shadow-warm) / 0.08),
-      0 1px 3px hsl(var(--shadow-warm) / 0.04),
-      inset 0 1px 0 hsl(40 50% 98% / 0.5);
+      0 2px 12px -3px hsl(var(--shadow-warm) / 0.06),
+      0 1px 2px hsl(var(--shadow-warm) / 0.03);
   }
   
+  /* Elevated card for progress/metrics */
+  .glass-card-elevated {
+    @apply bg-card backdrop-blur-sm border border-border/60 rounded-2xl;
+    box-shadow: 
+      0 4px 16px -4px hsl(var(--shadow-warm) / 0.1),
+      0 2px 4px hsl(var(--shadow-warm) / 0.04),
+      inset 0 1px 0 hsl(40 50% 98% / 0.4);
+  }
+  
+  /* Legacy alias */
   .glass-card-warm {
-    @apply bg-gradient-to-br from-card via-card to-cream-dark/50 backdrop-blur-sm border border-border/50 rounded-2xl;
+    @apply glass-card-elevated;
+  }
+  
+  /* Progress/milestone card */
+  .progress-card {
+    @apply bg-gradient-to-br from-card via-card to-sage-light/30 backdrop-blur-sm border border-sage/20 rounded-2xl;
     box-shadow: 
-      0 6px 24px -6px hsl(var(--shadow-warm) / 0.1),
-      0 2px 6px hsl(var(--shadow-warm) / 0.05),
-      inset 0 1px 0 hsl(40 50% 98% / 0.6);
+      0 4px 20px -6px hsl(var(--sage) / 0.12),
+      0 2px 4px hsl(var(--shadow-warm) / 0.04);
   }
   
-  .warm-gradient {
-    background: linear-gradient(135deg, hsl(var(--cream)) 0%, hsl(var(--coral-light) / 0.6) 50%, hsl(var(--sage-light) / 0.8) 100%);
+  /* Flare state card - cooler tones */
+  .flare-card {
+    @apply bg-gradient-to-br from-flare-light to-card border border-flare/15 rounded-2xl;
+    box-shadow: 0 2px 12px -3px hsl(var(--flare) / 0.08);
   }
   
-  .sage-gradient {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(145 35% 50%) 100%);
+  /* Healing state card - warmer tones */
+  .healing-card {
+    @apply bg-gradient-to-br from-healing-light to-card border border-healing/15 rounded-2xl;
+    box-shadow: 0 2px 12px -3px hsl(var(--healing) / 0.1);
   }
   
-  .coral-gradient {
-    background: linear-gradient(135deg, hsl(var(--coral)) 0%, hsl(var(--coral-deep)) 100%);
+  /* Subtle decorative patterns */
+  .decorative-dots {
+    background-image: radial-gradient(hsl(var(--sage) / 0.08) 1px, transparent 1px);
+    background-size: 16px 16px;
   }
   
-  .btn-warm {
-    @apply bg-gradient-to-r from-coral to-coral-deep text-white font-semibold;
-    box-shadow: 0 4px 14px -4px hsl(var(--coral) / 0.4);
+  .decorative-lines {
+    background-image: repeating-linear-gradient(
+      90deg,
+      hsl(var(--border) / 0.3) 0px,
+      hsl(var(--border) / 0.3) 1px,
+      transparent 1px,
+      transparent 24px
+    );
   }
   
-  .btn-warm:hover {
-    box-shadow: 0 6px 20px -4px hsl(var(--coral) / 0.5);
+  /* Action button - for CTAs only */
+  .btn-action {
+    @apply bg-action text-action-foreground font-semibold;
+    box-shadow: 0 2px 8px -2px hsl(var(--action) / 0.35);
+    transition: all 0.2s ease;
+  }
+  
+  .btn-action:hover {
+    box-shadow: 0 4px 12px -2px hsl(var(--action) / 0.4);
     transform: translateY(-1px);
   }
   
-  /* Decorative elements */
+  /* Legacy warm button */
+  .btn-warm {
+    @apply btn-action;
+  }
+  
+  /* Metric/stat display */
+  .metric-value {
+    @apply text-anchor font-bold;
+  }
+  
+  .metric-label {
+    @apply text-muted-foreground text-xs font-medium;
+  }
+  
+  /* Streak indicator */
+  .streak-badge {
+    @apply bg-gradient-to-r from-streak/15 to-streak/5 text-streak font-semibold rounded-full px-3 py-1 text-sm;
+  }
+  
+  /* Decorative blob - reduced opacity */
   .decorative-blob {
     position: absolute;
     border-radius: 50%;
-    filter: blur(60px);
-    opacity: 0.4;
+    filter: blur(80px);
+    opacity: 0.2;
     pointer-events: none;
-  }
-  
-  .decorative-dots {
-    background-image: radial-gradient(hsl(var(--primary) / 0.15) 1px, transparent 1px);
-    background-size: 20px 20px;
   }
 }
 

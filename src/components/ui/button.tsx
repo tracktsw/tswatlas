@@ -9,14 +9,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-warm hover:shadow-warm-lg hover:-translate-y-0.5 active:translate-y-0",
-        destructive: "bg-gradient-to-r from-destructive to-destructive/90 text-destructive-foreground shadow-warm hover:shadow-warm-lg hover:-translate-y-0.5",
+        default: "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:-translate-y-0.5 active:translate-y-0",
+        destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 hover:-translate-y-0.5",
         outline: "border-2 border-border bg-background hover:bg-muted hover:border-primary/30",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-warm-sm",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm",
         ghost: "hover:bg-muted hover:text-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        warm: "bg-gradient-to-r from-coral to-coral-deep text-white shadow-glow-coral hover:shadow-warm-lg hover:-translate-y-0.5 active:translate-y-0",
-        soft: "bg-cream-dark text-foreground hover:bg-muted shadow-warm-sm",
+        // Action variant - for primary CTAs only
+        action: "bg-action text-action-foreground shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
+        warm: "bg-action text-action-foreground shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
+        soft: "bg-cream-dark text-foreground hover:bg-muted shadow-sm",
       },
       size: {
         default: "h-11 px-5 py-2.5",
