@@ -334,27 +334,30 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const addPhoto = useCallback(async (photo: { dataUrl: string; bodyPart: BodyPart; notes?: string }) => {
     if (!userId) return;
 
+    let uploadedPaths: string[] = [];
+
     try {
       // Process image: generates UUID + original, medium, and thumbnail versions
-      const processed = await processImageForUpload(photo.dataUrl);
+      // Paths: {userId}/{photoId}/thumb.webp, medium.webp, original.jpg
+      const processed = await processImageForUpload(photo.dataUrl, userId);
       
       // Upload all three versions to public "photos" bucket in parallel
       const [thumbResult, mediumResult, originalResult] = await Promise.all([
-        // Thumbnail (400px WebP) for grid view
+        // Thumbnail (400px WebP, quality 75) for grid view
         supabase.storage
           .from('photos')
           .upload(processed.thumbnail.path, processed.thumbnail.blob, {
             contentType: 'image/webp',
             cacheControl: '31536000',
           }),
-        // Medium (1400px WebP) for fullscreen/compare
+        // Medium (1400px WebP, quality 80) for fullscreen/compare
         supabase.storage
           .from('photos')
           .upload(processed.medium.path, processed.medium.blob, {
             contentType: 'image/webp',
             cacheControl: '31536000',
           }),
-        // Original JPEG for backup/export
+        // Original JPEG for backup/export (no long cache)
         supabase.storage
           .from('photos')
           .upload(processed.original.path, processed.original.blob, {
@@ -362,10 +365,19 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }),
       ]);
 
+      // Track successful uploads for cleanup on failure
+      if (!thumbResult.error) uploadedPaths.push(processed.thumbnail.path);
+      if (!mediumResult.error) uploadedPaths.push(processed.medium.path);
+      if (!originalResult.error) uploadedPaths.push(processed.original.path);
+
+      // Require at least thumb and medium to succeed
       if (thumbResult.error) {
-        console.warn('Thumbnail upload failed:', thumbResult.error);
+        throw new Error(`Thumbnail upload failed: ${thumbResult.error.message}`);
       }
-      if (mediumResult.error) throw mediumResult.error;
+      if (mediumResult.error) {
+        throw new Error(`Medium upload failed: ${mediumResult.error.message}`);
+      }
+      // Original is optional - warn but don't fail
       if (originalResult.error) {
         console.warn('Original upload failed:', originalResult.error);
       }
@@ -373,7 +385,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Generate public URLs (not signed - bucket is public)
       const thumbUrl = getPublicUrl(processed.thumbnail.path);
       const mediumUrl = getPublicUrl(processed.medium.path);
-      const originalUrl = getPublicUrl(processed.original.path);
+      const originalUrl = !originalResult.error ? getPublicUrl(processed.original.path) : null;
 
       // Insert with explicit URL columns storing public URLs
       const { data: insertedPhoto, error: insertError } = await supabase
@@ -390,13 +402,15 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .select()
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        throw new Error(`Database insert failed: ${insertError.message}`);
+      }
 
       const newPhoto: Photo = {
         id: insertedPhoto.id,
         photoUrl: mediumUrl,
         thumbnailUrl: thumbUrl,
-        originalUrl: originalUrl,
+        originalUrl: originalUrl || undefined,
         bodyPart: photo.bodyPart,
         timestamp: insertedPhoto.created_at,
         notes: photo.notes,
@@ -404,6 +418,14 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       setPhotos(prev => [newPhoto, ...prev]);
     } catch (error) {
+      // Cleanup uploaded files on failure to avoid orphaned storage
+      if (uploadedPaths.length > 0) {
+        try {
+          await supabase.storage.from('photos').remove(uploadedPaths);
+        } catch (cleanupError) {
+          console.warn('Failed to cleanup uploaded files:', cleanupError);
+        }
+      }
       console.error('Error adding photo:', error);
       throw error;
     }
@@ -424,17 +446,30 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .single();
 
       if (photoData) {
+        // Extract storage paths from public URLs
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const bucketPrefix = `${supabaseUrl}/storage/v1/object/public/photos/`;
+        
+        const extractPath = (url: string | null): string | null => {
+          if (!url) return null;
+          if (url.startsWith(bucketPrefix)) {
+            return url.slice(bucketPrefix.length);
+          }
+          // Legacy: if it's already a path (not a URL), use as-is
+          if (!url.startsWith('http')) return url;
+          return null;
+        };
+
         const pathsToDelete = [
-          photoData.photo_url,
-          photoData.thumb_url,
-          photoData.medium_url,
-          photoData.original_url,
+          extractPath(photoData.thumb_url),
+          extractPath(photoData.medium_url),
+          extractPath(photoData.original_url),
         ].filter(Boolean) as string[];
 
         // Remove duplicates
         const uniquePaths = [...new Set(pathsToDelete)];
         if (uniquePaths.length > 0) {
-          await supabase.storage.from('user-photos').remove(uniquePaths);
+          await supabase.storage.from('photos').remove(uniquePaths);
         }
       }
 
