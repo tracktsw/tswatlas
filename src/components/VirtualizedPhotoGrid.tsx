@@ -121,9 +121,17 @@ const PhotoItem = memo(({
           <span className="text-xs font-semibold bg-coral/10 text-coral px-2.5 py-1 rounded-full">
             {bodyPartLabel}
           </span>
-          <span className="text-xs text-muted-foreground">
-            {format(new Date(photo.timestamp), 'MMM d, yyyy')}
-          </span>
+          <div className="text-right">
+            <span className="text-xs text-muted-foreground">
+              {format(new Date(photo.timestamp), 'MMM d, yyyy')}
+            </span>
+            {/* Show indicator if using upload date (no EXIF) */}
+            {!photo.takenAt && (
+              <span className="block text-[10px] text-muted-foreground/60 italic">
+                uploaded
+              </span>
+            )}
+          </div>
         </div>
         {photo.notes && (
           <p className="text-xs text-muted-foreground line-clamp-1">{photo.notes}</p>

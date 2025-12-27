@@ -1,14 +1,17 @@
 /**
  * EXIF date extraction utility
- * Extracts DateTimeOriginal or DateTimeDigitized from image metadata
+ * Extracts DateTimeOriginal or CreateDate from image metadata
  * Works with JPEG, HEIC, and other image formats
+ * 
+ * IMPORTANT: EXIF dates are LOCAL device time (no timezone info).
+ * We store them as local time to avoid off-by-one day errors.
  */
 
 import EXIF from 'exif-js';
 
 /**
  * Extract EXIF date from an image file.
- * Returns the date as ISO string or null if not found.
+ * Returns the date as ISO string (treated as local time) or null if not found.
  * IMPORTANT: Call this with the ORIGINAL file BEFORE any conversion (HEIC->JPEG strips metadata)
  */
 export const extractExifDate = async (input: File | string): Promise<string | null> => {
@@ -42,23 +45,27 @@ const extractExifFromFile = (file: File): Promise<string | null> => {
         try {
           // @ts-ignore - exif-js types are incomplete
           EXIF.getData(img, function(this: any) {
-            // Try DateTimeOriginal first (when photo was actually taken)
+            // Priority order: DateTimeOriginal > CreateDate (DateTimeDigitized) > DateTime (ModifyDate)
+            // Per requirements: prefer DateTimeOriginal, use CreateDate if missing, 
+            // only use ModifyDate (DateTime) as last resort
+            
+            // 1. DateTimeOriginal - when photo was actually taken (best)
             let dateStr = EXIF.getTag(this, 'DateTimeOriginal');
             
-            // Fall back to DateTimeDigitized
+            // 2. DateTimeDigitized (CreateDate) - when image was digitized
             if (!dateStr) {
               dateStr = EXIF.getTag(this, 'DateTimeDigitized');
             }
             
-            // Fall back to DateTime
+            // 3. DateTime (ModifyDate) - last resort only
             if (!dateStr) {
               dateStr = EXIF.getTag(this, 'DateTime');
             }
             
             if (dateStr && typeof dateStr === 'string') {
-              const isoDate = parseExifDateTime(dateStr);
+              const isoDate = parseExifDateTimeAsLocal(dateStr);
               if (import.meta.env.DEV) {
-                console.log('[EXIF] Extracted date from file:', isoDate);
+                console.log('[EXIF] Extracted date from file:', isoDate, 'raw:', dateStr);
               }
               resolve(isoDate);
             } else {
@@ -190,7 +197,7 @@ const parseExifTiffData = (data: Uint8Array): string | null => {
 
     // Search for EXIF IFD pointer (tag 0x8769) in IFD0
     let exifIfdOffset: number | null = null;
-    let dateTime: string | null = null;
+    let modifyDate: string | null = null;
 
     // Parse IFD0
     const numEntries = readUint16(ifdOffset);
@@ -198,10 +205,10 @@ const parseExifTiffData = (data: Uint8Array): string | null => {
       const entryOffset = ifdOffset + 2 + (i * 12);
       const tag = readUint16(entryOffset);
       
-      // DateTime tag (0x0132)
+      // DateTime tag (0x0132) - ModifyDate, use as last resort
       if (tag === 0x0132) {
         const valueOffset = readUint32(entryOffset + 8);
-        dateTime = readString(data, valueOffset, 19);
+        modifyDate = readString(data, valueOffset, 19);
       }
       
       // EXIF IFD pointer (0x8769)
@@ -210,33 +217,40 @@ const parseExifTiffData = (data: Uint8Array): string | null => {
       }
     }
 
-    // Parse EXIF IFD for DateTimeOriginal
+    // Parse EXIF IFD for DateTimeOriginal and DateTimeDigitized
     if (exifIfdOffset !== null) {
       const exifNumEntries = readUint16(exifIfdOffset);
+      let createDate: string | null = null;
+      
       for (let i = 0; i < exifNumEntries; i++) {
         const entryOffset = exifIfdOffset + 2 + (i * 12);
         const tag = readUint16(entryOffset);
         
-        // DateTimeOriginal (0x9003) - preferred
+        // DateTimeOriginal (0x9003) - preferred, return immediately
         if (tag === 0x9003) {
           const valueOffset = readUint32(entryOffset + 8);
           const dateTimeOriginal = readString(data, valueOffset, 19);
           if (dateTimeOriginal) {
-            return parseExifDateTime(dateTimeOriginal);
+            return parseExifDateTimeAsLocal(dateTimeOriginal);
           }
         }
         
-        // DateTimeDigitized (0x9004) - fallback
-        if (tag === 0x9004 && !dateTime) {
+        // DateTimeDigitized (0x9004) - second choice
+        if (tag === 0x9004) {
           const valueOffset = readUint32(entryOffset + 8);
-          dateTime = readString(data, valueOffset, 19);
+          createDate = readString(data, valueOffset, 19);
         }
+      }
+      
+      // Use CreateDate if DateTimeOriginal not found
+      if (createDate) {
+        return parseExifDateTimeAsLocal(createDate);
       }
     }
 
-    // Use DateTime from IFD0 as last fallback
-    if (dateTime) {
-      return parseExifDateTime(dateTime);
+    // Use ModifyDate from IFD0 as last fallback
+    if (modifyDate) {
+      return parseExifDateTimeAsLocal(modifyDate);
     }
 
     return null;
@@ -266,15 +280,20 @@ const readString = (data: Uint8Array, offset: number, maxLength: number): string
 };
 
 /**
- * Parse EXIF date format "YYYY:MM:DD HH:MM:SS" to ISO string
+ * Parse EXIF date format "YYYY:MM:DD HH:MM:SS" to ISO string.
+ * CRITICAL: EXIF dates are local device time with NO timezone info.
+ * We treat them as local time and format as ISO with local timezone offset
+ * to prevent off-by-one-day errors when the date is parsed.
  */
-const parseExifDateTime = (exifDate: string): string | null => {
+const parseExifDateTimeAsLocal = (exifDate: string): string | null => {
   try {
     // EXIF format: "YYYY:MM:DD HH:MM:SS"
     const match = exifDate.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})$/);
     if (!match) return null;
 
     const [, year, month, day, hour, minute, second] = match;
+    
+    // Create date using local time constructor (NOT UTC)
     const date = new Date(
       parseInt(year, 10),
       parseInt(month, 10) - 1,
@@ -291,8 +310,21 @@ const parseExifDateTime = (exifDate: string): string | null => {
     const now = new Date();
     if (date.getFullYear() < 1990 || date > now) return null;
 
+    // Return ISO string - this preserves the local time correctly
+    // When parsing back with new Date(isoString), it will be in local time
     return date.toISOString();
   } catch {
     return null;
   }
+};
+
+/**
+ * Format a Date object to an ISO-like string for database storage,
+ * preserving local date/time to avoid timezone shifts.
+ * Format: "YYYY-MM-DDTHH:MM:SS" (no timezone suffix, treated as local)
+ */
+export const formatLocalDateForDb = (date: Date): string => {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };

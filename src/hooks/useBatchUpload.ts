@@ -126,7 +126,9 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
       const mediumUrl = getPublicUrl(processed.medium.path);
       const originalUrl = !originalResult.error ? getPublicUrl(processed.original.path) : null;
 
-      // Insert database record (use EXIF date if available)
+      // Insert database record
+      // - taken_at = EXIF date (when photo was actually taken)
+      // - created_at = auto-set by database (when uploaded)
       const { data: insertedPhoto, error: insertError } = await supabase
         .from('user_photos')
         .insert({
@@ -137,7 +139,7 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
           medium_url: mediumUrl,
           original_url: originalUrl,
           notes: null,
-          ...(exifDate && { created_at: exifDate }),
+          taken_at: exifDate || null,
         })
         .select()
         .single();

@@ -5,9 +5,14 @@ import { BodyPart } from '@/contexts/UserDataContext';
 import { prepareFileForUpload } from '@/utils/heicConverter';
 import { extractExifDate } from '@/utils/exifExtractor';
 
+// Re-export for use in components
+export { extractExifDate };
+
 interface UploadOptions {
   bodyPart: BodyPart;
   notes?: string;
+  /** Override EXIF date with user-provided date */
+  takenAtOverride?: string | null;
 }
 
 interface UseSingleUploadOptions {
@@ -28,7 +33,7 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
     file: File,
     uploadOptions: UploadOptions
   ): Promise<string | null> => {
-    const { bodyPart, notes } = uploadOptions;
+    const { bodyPart, notes, takenAtOverride } = uploadOptions;
 
     if (import.meta.env.DEV) {
       console.log('[SingleUpload] Starting upload:', file.name, 'type:', file.type, 'size:', file.size);
@@ -48,12 +53,24 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
 
       // Extract EXIF date from ORIGINAL file BEFORE any conversion
       // (HEIC conversion strips metadata, so we must do this first)
-      if (import.meta.env.DEV) {
-        console.log('[SingleUpload] Extracting EXIF date from original file...');
-      }
-      const exifDate = await extractExifDate(file);
-      if (import.meta.env.DEV) {
-        console.log('[SingleUpload] EXIF date:', exifDate || 'not found');
+      // User can override this with takenAtOverride
+      let takenAt: string | null = null;
+      
+      if (takenAtOverride !== undefined) {
+        // User explicitly set a date (null means "use upload date")
+        takenAt = takenAtOverride;
+        if (import.meta.env.DEV) {
+          console.log('[SingleUpload] Using override date:', takenAt || 'none (will use upload date)');
+        }
+      } else {
+        // Auto-extract from EXIF
+        if (import.meta.env.DEV) {
+          console.log('[SingleUpload] Extracting EXIF date from original file...');
+        }
+        takenAt = await extractExifDate(file);
+        if (import.meta.env.DEV) {
+          console.log('[SingleUpload] EXIF date:', takenAt || 'not found');
+        }
       }
 
       // Convert HEIC to JPEG if needed, returns data URL
@@ -117,7 +134,9 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
         console.log('[SingleUpload] Saving to database...');
       }
 
-      // Insert database record (use EXIF date if available)
+      // Insert database record
+      // - taken_at = EXIF date or user override (when photo was actually taken)
+      // - created_at = auto-set by database (when uploaded)
       const { data: insertedPhoto, error: insertError } = await supabase
         .from('user_photos')
         .insert({
@@ -128,7 +147,7 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
           medium_url: mediumUrl,
           original_url: originalUrl,
           notes: notes || null,
-          ...(exifDate && { created_at: exifDate }),
+          taken_at: takenAt,
         })
         .select()
         .single();
