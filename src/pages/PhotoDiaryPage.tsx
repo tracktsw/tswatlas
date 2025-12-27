@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
-import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown, X, ImagePlus, Images, CalendarIcon } from 'lucide-react';
+import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown, X, ImagePlus, CalendarIcon } from 'lucide-react';
 import { useUserData, BodyPart, Photo } from '@/contexts/UserDataContext';
 import { useVirtualizedPhotos, VirtualPhoto } from '@/hooks/useVirtualizedPhotos';
 import { VirtualizedPhotoGrid } from '@/components/VirtualizedPhotoGrid';
@@ -130,7 +130,6 @@ const PhotoDiaryPage = () => {
   
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
-  const batchGalleryInputRef = useRef<HTMLInputElement>(null);
 
   // Get user ID for virtualized photos hook
   useEffect(() => {
@@ -712,18 +711,14 @@ const PhotoDiaryPage = () => {
               </div>
               <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleFileSelect} className="hidden" />
               <input type="file" accept="image/*,image/heic,image/heif,.heic,.heif" ref={galleryInputRef} onChange={handleFileSelect} className="hidden" />
-              <input type="file" accept="image/*,image/heic,image/heif,.heic,.heif" multiple ref={batchGalleryInputRef} onChange={handleBatchFileSelect} className="hidden" />
               <div className="grid grid-cols-2 gap-3">
                 <Button variant="warm" className="h-11 gap-2" onClick={() => cameraInputRef.current?.click()} disabled={singleUpload.isUploading}>
                   <Camera className="w-5 h-5" />Take Photo
                 </Button>
                 <Button variant="outline" className="h-11 gap-2" onClick={() => galleryInputRef.current?.click()} disabled={singleUpload.isUploading}>
-                  <ImagePlus className="w-5 h-5" />Single Photo
+                  <ImagePlus className="w-5 h-5" />Gallery
                 </Button>
               </div>
-              <Button variant="secondary" className="w-full h-11 gap-2" onClick={() => batchGalleryInputRef.current?.click()} disabled={singleUpload.isUploading}>
-                <Images className="w-5 h-5" />Select Multiple Photos
-              </Button>
             </div>
           )}
         </DialogContent>
