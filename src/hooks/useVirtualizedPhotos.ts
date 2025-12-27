@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getThumbnailPath } from "@/utils/imageCompression";
 
 export type BodyPart =
   | "face"
@@ -14,10 +13,12 @@ export type BodyPart =
 
 export interface VirtualPhoto {
   id: string;
-  /** Grid/timeline ONLY */
+  /** Grid/timeline ONLY - stored in DB */
   thumbnailUrl: string;
-  /** Fullscreen/compare ONLY (loaded on-demand) */
+  /** Fullscreen/compare ONLY - loaded on-demand from stored path */
   mediumUrl?: string;
+  /** Original for export - never loaded by default */
+  originalUrl?: string;
   bodyPart: BodyPart;
   timestamp: string;
   notes?: string;
@@ -25,7 +26,10 @@ export interface VirtualPhoto {
 
 interface PhotoRow {
   id: string;
-  photo_url: string; // medium path stored in DB (legacy rows may be original jpg)
+  photo_url: string; // legacy field (medium path)
+  thumb_url: string | null;
+  medium_url: string | null;
+  original_url: string | null;
   body_part: string;
   created_at: string;
   notes: string | null;
@@ -39,9 +43,8 @@ interface UseVirtualizedPhotosOptions {
   bodyPartFilter?: BodyPart | "all";
 }
 
-type ThumbCacheEntry = { url: string; expires: number };
-
-type MediumCacheEntry = { path: string; url?: string; expires?: number };
+type CacheEntry = { url: string; expires: number };
+type PathCacheEntry = { path: string; url?: string; expires?: number };
 
 export const useVirtualizedPhotos = ({
   userId,
@@ -57,29 +60,36 @@ export const useVirtualizedPhotos = ({
   const isLoadingMoreRef = useRef(false);
 
   // Caches to avoid refetching / re-signing
-  const thumbCacheRef = useRef<Map<string, ThumbCacheEntry>>(new Map());
-  const mediumCacheRef = useRef<Map<string, MediumCacheEntry>>(new Map());
+  const thumbCacheRef = useRef<Map<string, CacheEntry>>(new Map());
+  const mediumCacheRef = useRef<Map<string, PathCacheEntry>>(new Map());
+  const originalCacheRef = useRef<Map<string, PathCacheEntry>>(new Map());
 
-  // Prevent duplicate derivative requests
-  const derivativeRequestedRef = useRef<Set<string>>(new Set());
+  // Track which photos need backfill
+  const backfillRequestedRef = useRef<Set<string>>(new Set());
 
   const cacheIsValid = (expires?: number) =>
     typeof expires === "number" && expires > Date.now();
 
   /**
-   * IMPORTANT: For grid views, NEVER fall back to medium/original.
-   * If a thumbnail is missing, we return an empty URL (grid shows placeholder).
+   * Generate signed URLs for thumbnails from explicit thumb_url column.
+   * NEVER fall back to medium/original - grid must only show thumbnails.
    */
-  const generateThumbnailUrls = useCallback(async (rows: PhotoRow[]) => {
+  const generateSignedUrls = useCallback(async (rows: PhotoRow[]) => {
     const now = Date.now();
     const results: VirtualPhoto[] = [];
-
     const toSign: { id: string; thumbPath: string; row: PhotoRow }[] = [];
 
     for (const row of rows) {
-      // Remember medium path so fullscreen can be loaded on-demand later.
-      mediumCacheRef.current.set(row.id, { path: row.photo_url });
+      // Store paths for on-demand medium/original fetching
+      const mediumPath = row.medium_url || row.photo_url;
+      const originalPath = row.original_url;
+      
+      mediumCacheRef.current.set(row.id, { path: mediumPath });
+      if (originalPath) {
+        originalCacheRef.current.set(row.id, { path: originalPath });
+      }
 
+      // Check thumb cache first
       const cached = thumbCacheRef.current.get(row.id);
       if (cached && cached.expires > now) {
         results.push({
@@ -89,11 +99,21 @@ export const useVirtualizedPhotos = ({
           timestamp: row.created_at,
           notes: row.notes || undefined,
         });
-      } else {
+      } else if (row.thumb_url) {
+        // Has explicit thumb_url - sign it
         toSign.push({
           id: row.id,
-          thumbPath: getThumbnailPath(row.photo_url),
+          thumbPath: row.thumb_url,
           row,
+        });
+      } else {
+        // No thumbnail available - will trigger backfill
+        results.push({
+          id: row.id,
+          thumbnailUrl: "", // Empty = placeholder shown
+          bodyPart: row.body_part as BodyPart,
+          timestamp: row.created_at,
+          notes: row.notes || undefined,
         });
       }
     }
@@ -110,14 +130,9 @@ export const useVirtualizedPhotos = ({
         const { id, row } = toSign[i];
         const url = signed?.[i]?.signedUrl || "";
 
-        // Cache even empty results for a short period to avoid hammering.
         thumbCacheRef.current.set(id, {
           url,
-          // if empty, retry sooner; otherwise 1h before expiry
-          expires:
-            url.length > 0
-              ? now + (SIGNED_URL_DURATION - 3600) * 1000
-              : now + 5 * 60 * 1000,
+          expires: url ? now + (SIGNED_URL_DURATION - 3600) * 1000 : now + 5 * 60 * 1000,
         });
 
         results.push({
@@ -148,7 +163,7 @@ export const useVirtualizedPhotos = ({
     try {
       let query = supabase
         .from("user_photos")
-        .select("id, photo_url, body_part, created_at, notes")
+        .select("id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, notes")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(PAGE_SIZE);
@@ -161,7 +176,7 @@ export const useVirtualizedPhotos = ({
       if (fetchError) throw fetchError;
 
       if (data && data.length > 0) {
-        const photosWithThumbs = await generateThumbnailUrls(data);
+        const photosWithThumbs = await generateSignedUrls(data as PhotoRow[]);
         setPhotos(photosWithThumbs);
         cursorRef.current = data[data.length - 1].created_at;
         setHasMore(data.length === PAGE_SIZE);
@@ -175,7 +190,7 @@ export const useVirtualizedPhotos = ({
     } finally {
       setIsLoading(false);
     }
-  }, [userId, bodyPartFilter, generateThumbnailUrls]);
+  }, [userId, bodyPartFilter, generateSignedUrls]);
 
   const loadMore = useCallback(async () => {
     if (!userId || !hasMore || isLoadingMoreRef.current || !cursorRef.current) return;
@@ -185,7 +200,7 @@ export const useVirtualizedPhotos = ({
     try {
       let query = supabase
         .from("user_photos")
-        .select("id, photo_url, body_part, created_at, notes")
+        .select("id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, notes")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .lt("created_at", cursorRef.current)
@@ -199,7 +214,7 @@ export const useVirtualizedPhotos = ({
       if (fetchError) throw fetchError;
 
       if (data && data.length > 0) {
-        const photosWithThumbs = await generateThumbnailUrls(data);
+        const photosWithThumbs = await generateSignedUrls(data as PhotoRow[]);
         setPhotos((prev) => [...prev, ...photosWithThumbs]);
         cursorRef.current = data[data.length - 1].created_at;
         setHasMore(data.length === PAGE_SIZE);
@@ -211,12 +226,13 @@ export const useVirtualizedPhotos = ({
     } finally {
       isLoadingMoreRef.current = false;
     }
-  }, [userId, hasMore, bodyPartFilter, generateThumbnailUrls]);
+  }, [userId, hasMore, bodyPartFilter, generateSignedUrls]);
 
   /**
    * On-demand medium URL signing (fullscreen/compare ONLY).
+   * Falls back to original if medium fails.
    */
-  const fetchMediumUrl = useCallback(async (photoId: string) => {
+  const fetchMediumUrl = useCallback(async (photoId: string): Promise<string> => {
     const cached = mediumCacheRef.current.get(photoId);
     if (!cached?.path) return "";
 
@@ -228,7 +244,17 @@ export const useVirtualizedPhotos = ({
       .from("user-photos")
       .createSignedUrl(cached.path, SIGNED_URL_DURATION);
 
-    if (signError) throw signError;
+    if (signError) {
+      // Try original as fallback
+      const originalCached = originalCacheRef.current.get(photoId);
+      if (originalCached?.path) {
+        const { data: origData } = await supabase.storage
+          .from("user-photos")
+          .createSignedUrl(originalCached.path, SIGNED_URL_DURATION);
+        if (origData?.signedUrl) return origData.signedUrl;
+      }
+      throw signError;
+    }
 
     const url = data?.signedUrl || "";
     mediumCacheRef.current.set(photoId, {
@@ -248,8 +274,12 @@ export const useVirtualizedPhotos = ({
 
       await Promise.all(
         unique.map(async (id) => {
-          const url = await fetchMediumUrl(id);
-          result.set(id, url);
+          try {
+            const url = await fetchMediumUrl(id);
+            result.set(id, url);
+          } catch {
+            // Keep empty, will show thumbnail
+          }
         })
       );
 
@@ -261,18 +291,21 @@ export const useVirtualizedPhotos = ({
   const addPhotoToList = useCallback((photo: VirtualPhoto) => {
     setPhotos((prev) => [photo, ...prev]);
 
-    // Cache thumbnail URL to avoid refetch when scrolling back
-    thumbCacheRef.current.set(photo.id, {
-      url: photo.thumbnailUrl,
-      expires: Date.now() + (SIGNED_URL_DURATION - 3600) * 1000,
-    });
+    // Cache thumbnail URL
+    if (photo.thumbnailUrl) {
+      thumbCacheRef.current.set(photo.id, {
+        url: photo.thumbnailUrl,
+        expires: Date.now() + (SIGNED_URL_DURATION - 3600) * 1000,
+      });
+    }
   }, []);
 
   const removePhotoFromList = useCallback((id: string) => {
     setPhotos((prev) => prev.filter((p) => p.id !== id));
     thumbCacheRef.current.delete(id);
     mediumCacheRef.current.delete(id);
-    derivativeRequestedRef.current.delete(id);
+    originalCacheRef.current.delete(id);
+    backfillRequestedRef.current.delete(id);
   }, []);
 
   // Background backfill: if we detect missing thumbnails, generate them server-side.
@@ -280,12 +313,12 @@ export const useVirtualizedPhotos = ({
     const missing = photos
       .filter((p) => !p.thumbnailUrl)
       .map((p) => p.id)
-      .filter((id) => !derivativeRequestedRef.current.has(id));
+      .filter((id) => !backfillRequestedRef.current.has(id));
 
     if (missing.length === 0) return;
 
     const batch = missing.slice(0, 20);
-    batch.forEach((id) => derivativeRequestedRef.current.add(id));
+    batch.forEach((id) => backfillRequestedRef.current.add(id));
 
     supabase.functions
       .invoke("photo-derivatives", {
@@ -299,7 +332,7 @@ export const useVirtualizedPhotos = ({
 
         const now = Date.now();
 
-        // Update caches + in-memory list (no refetch)
+        // Update caches + in-memory list
         for (const r of results) {
           if (r.thumbnailUrl) {
             thumbCacheRef.current.set(r.id, {
@@ -327,6 +360,7 @@ export const useVirtualizedPhotos = ({
             return {
               ...p,
               thumbnailUrl: found.thumbnailUrl || p.thumbnailUrl,
+              mediumUrl: found.mediumUrl || p.mediumUrl,
             };
           })
         );

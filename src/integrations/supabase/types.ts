@@ -171,24 +171,33 @@ export type Database = {
           body_part: string
           created_at: string
           id: string
+          medium_url: string | null
           notes: string | null
+          original_url: string | null
           photo_url: string
+          thumb_url: string | null
           user_id: string
         }
         Insert: {
           body_part: string
           created_at?: string
           id?: string
+          medium_url?: string | null
           notes?: string | null
+          original_url?: string | null
           photo_url: string
+          thumb_url?: string | null
           user_id: string
         }
         Update: {
           body_part?: string
           created_at?: string
           id?: string
+          medium_url?: string | null
           notes?: string | null
+          original_url?: string | null
           photo_url?: string
+          thumb_url?: string | null
           user_id?: string
         }
         Relationships: []
