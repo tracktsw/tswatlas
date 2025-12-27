@@ -162,36 +162,28 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
     }
   };
 
+  // Sequential processing for iOS safety - no Promise.all race conditions
   const processQueue = async (queue: UploadItem[], userId: string) => {
     let successCount = 0;
     let failedCount = 0;
-    let currentIndex = 0;
 
-    const runNext = async (): Promise<void> => {
-      if (cancelledRef.current || currentIndex >= queue.length) return;
+    for (const item of queue) {
+      if (cancelledRef.current) break;
 
-      const item = queue[currentIndex++];
       if (item.status === 'success') {
         successCount++;
-        return runNext();
+        continue;
       }
 
-      activeUploadsRef.current++;
+      // Process one at a time - iOS is more reliable this way
       const success = await uploadSinglePhoto(item, userId);
-      activeUploadsRef.current--;
 
-      if (success) successCount++;
-      else failedCount++;
-
-      return runNext();
-    };
-
-    // Start concurrent uploads
-    const workers = Array(Math.min(concurrency, queue.length))
-      .fill(null)
-      .map(() => runNext());
-
-    await Promise.all(workers);
+      if (success) {
+        successCount++;
+      } else {
+        failedCount++;
+      }
+    }
 
     return { success: successCount, failed: failedCount };
   };

@@ -14,6 +14,7 @@ import { format, isToday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useBatchUpload } from '@/hooks/useBatchUpload';
+import { useSingleUpload } from '@/hooks/useSingleUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { LeafIllustration, SparkleIllustration } from '@/components/illustrations';
 import { SparkleEffect } from '@/components/SparkleEffect';
@@ -154,9 +155,21 @@ const PhotoDiaryPage = () => {
     bodyPartFilter: selectedBodyPart,
   });
 
+  // Single upload hook (shared pipeline for Take Photo / Single Photo)
+  const singleUpload = useSingleUpload({
+    onSuccess: () => {
+      setShowSparkles(true);
+      refresh();
+      toast.success('Photo saved to cloud');
+    },
+    onError: (error) => {
+      toast.error(error || 'Failed to save photo');
+    },
+  });
+
   // Batch upload hook
   const batchUpload = useBatchUpload({
-    concurrency: 2,
+    concurrency: 1, // Sequential for iOS safety
     onComplete: (results) => {
       if (results.success > 0) {
         setShowSparkles(true);
@@ -216,47 +229,57 @@ const PhotoDiaryPage = () => {
     }
   };
 
+  // Handle single file selection (camera or gallery single photo)
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const dataUrl = event.target?.result as string;
-      try {
-        await addPhoto({
-          dataUrl,
-          bodyPart: newPhotoBodyPart,
-          notes: newPhotoNotes || undefined,
-        });
-        setNewPhotoNotes('');
-        setIsCapturing(false);
-        setShowSparkles(true);
-        toast.success('Photo saved to cloud');
-        // Refresh the virtualized list
-        refresh();
-      } catch (error) {
-        toast.error('Failed to save photo');
-      }
-    };
-    reader.readAsDataURL(file);
-    // Reset input
+    
+    // Reset input immediately to allow re-selecting same file
     e.target.value = '';
+    
+    if (!file) {
+      if (import.meta.env.DEV) {
+        console.log('[PhotoDiary] No file selected');
+      }
+      return;
+    }
+
+    if (import.meta.env.DEV) {
+      console.log('[PhotoDiary] Single file selected:', file.name, 'type:', file.type, 'size:', file.size);
+    }
+
+    // Close the modal immediately and start upload
+    setIsCapturing(false);
+    
+    // Use shared upload pipeline
+    const photoId = await singleUpload.processAndUploadFile(file, {
+      bodyPart: newPhotoBodyPart,
+      notes: newPhotoNotes || undefined,
+    });
+
+    if (photoId) {
+      setNewPhotoNotes('');
+    }
   };
 
-  // Handle batch file selection from gallery - starts upload immediately
+  // Handle batch file selection from gallery
   const handleBatchFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
+    
+    // Reset input immediately to allow re-selecting same files
+    e.target.value = '';
     
     // Debug: log file selection
     if (import.meta.env.DEV) {
       console.log('[BatchUpload] File input change event fired');
       console.log('[BatchUpload] FileList:', fileList);
       console.log('[BatchUpload] Number of files:', fileList?.length ?? 0);
+      
+      if (fileList && fileList.length > 0) {
+        Array.from(fileList).forEach((f, i) => {
+          console.log(`[BatchUpload] File ${i + 1}:`, f.name, 'type:', f.type, 'size:', f.size);
+        });
+      }
     }
-    
-    // Reset input immediately to allow re-selecting same files
-    e.target.value = '';
     
     if (!fileList || fileList.length === 0) {
       if (import.meta.env.DEV) {
@@ -268,10 +291,6 @@ const PhotoDiaryPage = () => {
     
     // Convert FileList to array
     const filesArray = Array.from(fileList);
-    
-    if (import.meta.env.DEV) {
-      console.log('[BatchUpload] Files array:', filesArray.map(f => ({ name: f.name, size: f.size, type: f.type })));
-    }
 
     let filesToUpload: File[];
 
@@ -292,30 +311,32 @@ const PhotoDiaryPage = () => {
       filesToUpload = filesArray;
     }
 
+    // Close add photo modal if open
+    setIsCapturing(false);
+    
     // Set default body part from current filter if applicable
     if (selectedBodyPart !== 'all') {
       batchUpload.setBodyPart(selectedBodyPart);
+    } else {
+      batchUpload.setBodyPart(newPhotoBodyPart);
     }
 
-    // Store files and show modal
+    // Store files and show modal - DON'T start upload yet, let user confirm body part
     setBatchFiles(filesToUpload);
     setShowBatchUpload(true);
     
-    // Start upload immediately
     if (import.meta.env.DEV) {
-      console.log('[BatchUpload] Starting immediate upload of', filesToUpload.length, 'files');
-    }
-    
-    try {
-      await batchUpload.startUpload(filesToUpload);
-    } catch (error) {
-      console.error('[BatchUpload] Upload error:', error);
-      toast.error(error instanceof Error ? error.message : 'Upload failed. Please try again.');
+      console.log('[BatchUpload] Modal opened with', filesToUpload.length, 'files. Waiting for user to start upload.');
     }
   };
 
   const handleStartBatchUpload = async () => {
     if (batchFiles.length === 0) return;
+    
+    if (import.meta.env.DEV) {
+      console.log('[BatchUpload] User started upload of', batchFiles.length, 'files');
+    }
+    
     try {
       await batchUpload.startUpload(batchFiles);
     } catch (error) {
@@ -624,10 +645,10 @@ const PhotoDiaryPage = () => {
               onChange={handleFileSelect}
               className="hidden"
             />
-            {/* Gallery input - single photo picker */}
+            {/* Gallery input - single photo picker (NO capture, NO multiple) */}
             <input 
               type="file" 
-              accept="image/*"
+              accept="image/*,image/heic,image/heif,.heic,.heif"
               ref={galleryInputRef}
               onChange={handleFileSelect}
               className="hidden"
@@ -646,6 +667,7 @@ const PhotoDiaryPage = () => {
                 variant="warm"
                 className="h-11 gap-2"
                 onClick={() => cameraInputRef.current?.click()}
+                disabled={singleUpload.isUploading}
               >
                 <Camera className="w-5 h-5" />
                 Take Photo
@@ -654,6 +676,7 @@ const PhotoDiaryPage = () => {
                 variant="outline"
                 className="h-11 gap-2"
                 onClick={() => galleryInputRef.current?.click()}
+                disabled={singleUpload.isUploading}
               >
                 <ImagePlus className="w-5 h-5" />
                 Single Photo
@@ -662,10 +685,8 @@ const PhotoDiaryPage = () => {
             <Button 
               variant="secondary"
               className="w-full h-11 gap-2"
-              onClick={() => {
-                setIsCapturing(false);
-                batchGalleryInputRef.current?.click();
-              }}
+              onClick={() => batchGalleryInputRef.current?.click()}
+              disabled={singleUpload.isUploading}
             >
               <Images className="w-5 h-5" />
               Select Multiple Photos
