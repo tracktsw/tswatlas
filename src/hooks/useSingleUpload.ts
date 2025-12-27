@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { processImageForUpload, getPublicUrl } from '@/utils/imageCompression';
 import { BodyPart } from '@/contexts/UserDataContext';
 import { prepareFileForUpload } from '@/utils/heicConverter';
+import { extractExifDate } from '@/utils/exifExtractor';
 
 interface UploadOptions {
   bodyPart: BodyPart;
@@ -53,8 +54,15 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
       const dataUrl = await prepareFileForUpload(file);
       
       if (import.meta.env.DEV) {
-        console.log('[SingleUpload] File converted, processing image...');
+        console.log('[SingleUpload] File converted, extracting EXIF date...');
       }
+      
+      // Extract EXIF date before processing (must use original data)
+      const exifDate = await extractExifDate(dataUrl);
+      if (import.meta.env.DEV) {
+        console.log('[SingleUpload] EXIF date:', exifDate || 'not found');
+      }
+      
       setProgress(25);
 
       // Process image (generate thumb, medium, original)
@@ -109,7 +117,7 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
         console.log('[SingleUpload] Saving to database...');
       }
 
-      // Insert database record
+      // Insert database record (use EXIF date if available)
       const { data: insertedPhoto, error: insertError } = await supabase
         .from('user_photos')
         .insert({
@@ -120,6 +128,7 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
           medium_url: mediumUrl,
           original_url: originalUrl,
           notes: notes || null,
+          ...(exifDate && { created_at: exifDate }),
         })
         .select()
         .single();
