@@ -276,21 +276,23 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (photosData) {
-        const photosWithUrls = await Promise.all(photosData.map(async (photo) => {
-          const { data } = await supabase.storage
-            .from('user-photos')
-            .createSignedUrl(photo.photo_url, 60 * 60 * 24 * 7); // 7 day signed URL
-          
-          return {
-            id: photo.id,
-            photoUrl: data?.signedUrl || '',
-            bodyPart: photo.body_part as BodyPart,
-            timestamp: photo.created_at,
-            notes: photo.notes || undefined,
-          };
+      if (photosData && photosData.length > 0) {
+        // Batch generate signed URLs for all photos at once
+        const photoPaths = photosData.map(photo => photo.photo_url);
+        const { data: signedUrls } = await supabase.storage
+          .from('user-photos')
+          .createSignedUrls(photoPaths, 60 * 60 * 24 * 7); // 7 day signed URLs
+
+        const photosWithUrls = photosData.map((photo, index) => ({
+          id: photo.id,
+          photoUrl: signedUrls?.[index]?.signedUrl || '',
+          bodyPart: photo.body_part as BodyPart,
+          timestamp: photo.created_at,
+          notes: photo.notes || undefined,
         }));
         setPhotos(photosWithUrls);
+      } else {
+        setPhotos([]);
       }
 
       // Fetch check-ins
