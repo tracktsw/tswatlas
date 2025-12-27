@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { processImageForUpload, getPublicUrl } from '@/utils/imageCompression';
 import { BodyPart } from '@/contexts/UserDataContext';
 import { isHeicFile, prepareFileForUpload } from '@/utils/heicConverter';
+import { extractExifDate } from '@/utils/exifExtractor';
 
 export interface UploadItem {
   id: string;
@@ -55,6 +56,13 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
 
       // Prepare file (converts HEIC if needed, returns data URL)
       const dataUrl = await prepareFileForUpload(item.file);
+      
+      // Extract EXIF date before processing
+      const exifDate = await extractExifDate(dataUrl);
+      if (import.meta.env.DEV) {
+        console.log('[BatchUpload] EXIF date for', item.file.name + ':', exifDate || 'not found');
+      }
+      
       updateItem(item.id, { status: 'uploading', progress: 20 });
 
       if (cancelledRef.current) return false;
@@ -117,7 +125,7 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
       const mediumUrl = getPublicUrl(processed.medium.path);
       const originalUrl = !originalResult.error ? getPublicUrl(processed.original.path) : null;
 
-      // Insert database record
+      // Insert database record (use EXIF date if available)
       const { data: insertedPhoto, error: insertError } = await supabase
         .from('user_photos')
         .insert({
@@ -128,6 +136,7 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
           medium_url: mediumUrl,
           original_url: originalUrl,
           notes: null,
+          ...(exifDate && { created_at: exifDate }),
         })
         .select()
         .single();
