@@ -79,7 +79,7 @@ const AuthPage = () => {
   const getTitle = () => {
     switch (mode) {
       case 'forgot': return 'Reset Password';
-      case 'signup': return 'Join TSW Atlas';
+      case 'signup': return 'Join TrackTSW';
       default: return 'Welcome Back';
     }
   };
@@ -126,14 +126,14 @@ const AuthPage = () => {
               <div className="relative">
                 <img 
                   src={compassLogo} 
-                  alt="TSW Atlas" 
+                  alt="TrackTSW" 
                   className="w-20 h-20 rounded-3xl shadow-warm-lg animate-float" 
                 />
                 <div className="absolute -bottom-1 -right-1 p-1.5 bg-coral rounded-xl shadow-warm-sm">
                   <Sparkles className="w-4 h-4 text-white" />
                 </div>
               </div>
-              <h2 className="font-display text-lg font-semibold text-coral">TSW Atlas</h2>
+              <h2 className="font-display text-lg font-semibold text-coral">TrackTSW</h2>
             </div>
           )}
           <div className="space-y-2">
