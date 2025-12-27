@@ -96,25 +96,31 @@ serve(async (req) => {
       const buf = new Uint8Array(await downloaded.arrayBuffer());
       const img = await Image.decode(buf);
 
-      // Medium (~1200px wide)
+      // Medium (~1200px wide, quality 80)
       const medium = img.width > 1200 ? img.resize(1200, Image.RESIZE_AUTO) : img;
       const mediumBytes = await medium.encodeJPEG(80);
 
-      // Thumb (400px wide)
+      // Thumb (400px wide, quality 65 for <150KB target)
       const thumb = img.width > 400 ? img.resize(400, Image.RESIZE_AUTO) : img;
-      const thumbBytes = await thumb.encodeJPEG(70);
+      const thumbBytes = await thumb.encodeJPEG(65);
 
-      // Upload (upsert) with long cache
+      log("Generated derivatives", {
+        id: row.id,
+        mediumSize: `${Math.round(mediumBytes.byteLength / 1024)}KB`,
+        thumbSize: `${Math.round(thumbBytes.byteLength / 1024)}KB`,
+      });
+
+      // Upload (upsert) with long cache and CORRECT content type
       await supabaseAdmin.storage.from("user-photos").upload(mediumPath, mediumBytes, {
         upsert: true,
-        contentType: "image/webp",
-        cacheControl: "31536000",
+        contentType: "image/jpeg",
+        cacheControl: "public, max-age=31536000, immutable",
       });
 
       await supabaseAdmin.storage.from("user-photos").upload(thumbPath, thumbBytes, {
         upsert: true,
-        contentType: "image/webp",
-        cacheControl: "31536000",
+        contentType: "image/jpeg",
+        cacheControl: "public, max-age=31536000, immutable",
       });
 
       // Update DB to point to the medium webp (so fullscreen/compare never uses legacy originals)

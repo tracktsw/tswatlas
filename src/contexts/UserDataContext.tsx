@@ -350,28 +350,28 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Process image: generates original, medium, and thumbnail versions
       const processed = await processImageForUpload(photo.dataUrl, userId);
       
-      // Upload all three versions in parallel
+      // Upload all three versions in parallel with aggressive caching
       const [mediumResult, thumbResult, originalResult] = await Promise.all([
         // Medium image (1200px) for fullscreen/compare
         supabase.storage
           .from('user-photos')
           .upload(processed.medium.fileName, processed.medium.blob, {
             contentType: processed.format.mimeType,
-            cacheControl: '31536000', // 1 year cache
+            cacheControl: 'public, max-age=31536000, immutable',
           }),
         // Thumbnail (400px) for grid view
         supabase.storage
           .from('user-photos')
           .upload(processed.thumbnail.fileName, processed.thumbnail.blob, {
             contentType: processed.format.mimeType,
-            cacheControl: '31536000', // 1 year cache
+            cacheControl: 'public, max-age=31536000, immutable',
           }),
         // Original for backup/export
         supabase.storage
           .from('user-photos')
           .upload(processed.original.fileName, processed.original.blob, {
             contentType: 'image/jpeg',
-            cacheControl: '31536000', // 1 year cache
+            cacheControl: 'public, max-age=31536000, immutable',
           }),
       ]);
 

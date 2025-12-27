@@ -82,8 +82,8 @@ const PhotoItem = memo(({
           </div>
         )}
 
-        {/* Actual thumbnail image */}
-        {isVisible && (
+        {/* Actual thumbnail image - only render if we have a URL */}
+        {isVisible && photo.thumbnailUrl && (
           <img
             src={photo.thumbnailUrl}
             alt={`${photo.bodyPart} photo`}

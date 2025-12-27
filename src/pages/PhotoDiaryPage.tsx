@@ -16,50 +16,70 @@ import { LeafIllustration, SparkleIllustration } from '@/components/illustration
 import { SparkleEffect } from '@/components/SparkleEffect';
 import { PhotoSkeleton } from '@/components/PhotoSkeleton';
 
-// Progressive image component for fullscreen/compare views
+// Progressive image component - shows thumbnail instantly, swaps to medium when loaded
 const ProgressiveImage = ({
-  src,
+  thumbnailSrc,
+  mediumSrc,
   alt,
   className,
-  priority = false,
 }: {
-  src?: string;
+  thumbnailSrc?: string;
+  mediumSrc?: string;
   alt: string;
   className?: string;
-  priority?: boolean;
 }) => {
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [thumbLoaded, setThumbLoaded] = useState(false);
+  const [mediumLoaded, setMediumLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  // If we don't have a URL yet (on-demand), show the skeleton instantly.
-  const hasSrc = typeof src === "string" && src.length > 0;
+  const hasThumb = typeof thumbnailSrc === "string" && thumbnailSrc.length > 0;
+  const hasMedium = typeof mediumSrc === "string" && mediumSrc.length > 0;
 
   return (
     <div className={cn("relative bg-muted overflow-hidden", className)}>
-      {(!isLoaded || !hasSrc) && !hasError && (
-        <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 animate-pulse">
+      {/* Shimmer placeholder - shows only if no thumbnail yet */}
+      {!thumbLoaded && !hasError && (
+        <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 animate-pulse z-0">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-background/10 to-transparent animate-shimmer" />
         </div>
       )}
 
-      {hasSrc && (
+      {/* Thumbnail layer - loads instantly, stays visible until medium loads */}
+      {hasThumb && (
         <img
-          src={src}
+          src={thumbnailSrc}
           alt={alt}
-          loading={priority ? "eager" : "lazy"}
+          loading="eager"
           decoding="async"
-          fetchPriority={priority ? "high" : "auto"}
-          onLoad={() => setIsLoaded(true)}
+          fetchPriority="high"
+          onLoad={() => setThumbLoaded(true)}
           onError={() => setHasError(true)}
           className={cn(
-            "w-full h-full object-cover transition-opacity duration-500",
-            isLoaded ? "opacity-100" : "opacity-0"
+            "absolute inset-0 w-full h-full object-cover transition-opacity duration-300 z-10",
+            thumbLoaded ? "opacity-100" : "opacity-0",
+            mediumLoaded ? "opacity-0" : "opacity-100"
+          )}
+        />
+      )}
+
+      {/* Medium layer - loads in background, fades in over thumbnail */}
+      {hasMedium && thumbLoaded && (
+        <img
+          src={mediumSrc}
+          alt={alt}
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
+          onLoad={() => setMediumLoaded(true)}
+          className={cn(
+            "absolute inset-0 w-full h-full object-cover transition-opacity duration-500 z-20",
+            mediumLoaded ? "opacity-100" : "opacity-0"
           )}
         />
       )}
 
       {hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted">
+        <div className="absolute inset-0 flex items-center justify-center bg-muted z-30">
           <Image className="w-8 h-8 text-muted-foreground/50" />
         </div>
       )}
@@ -322,10 +342,10 @@ const PhotoDiaryPage = () => {
             {selectedPhotos.map((photo, idx) => (
               <div key={photo.id} className="space-y-2">
                 <ProgressiveImage 
-                  src={photo.mediumUrl}
+                  thumbnailSrc={photo.thumbnailUrl}
+                  mediumSrc={photo.mediumUrl}
                   alt={`Comparison ${idx + 1}`}
                   className="w-full aspect-square rounded-2xl shadow-warm"
-                  priority
                 />
                 <p className="text-xs text-muted-foreground text-center font-medium">
                   {format(new Date(photo.timestamp), 'MMM d, yyyy')}
@@ -521,17 +541,17 @@ const PhotoDiaryPage = () => {
         />
       )}
 
-      {/* Photo Viewer Dialog - uses medium resolution */}
+      {/* Photo Viewer Dialog - shows thumb instantly, upgrades to medium */}
       <Dialog open={!!viewingPhoto} onOpenChange={(open) => !open && setViewingPhoto(null)}>
         <DialogContent className="max-w-lg p-0 overflow-hidden">
           {viewingPhoto && (
             <>
               <div className="relative bg-black">
                 <ProgressiveImage 
-                  src={viewingPhoto.mediumUrl}
+                  thumbnailSrc={viewingPhoto.thumbnailUrl}
+                  mediumSrc={viewingPhoto.mediumUrl}
                   alt={`${viewingPhoto.bodyPart} photo`}
                   className="w-full max-h-[70vh]"
-                  priority
                 />
               </div>
               <div className="p-4 space-y-2">
