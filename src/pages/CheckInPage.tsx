@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle, Sun, Moon, Check, Plus, Heart, Pencil, X } from 'lucide-react';
+import { CheckCircle, Sun, Moon, Check, Plus, Heart, Pencil, X, Loader2 } from 'lucide-react';
 import { useUserData, CheckIn } from '@/contexts/UserDataContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -33,34 +33,36 @@ const CheckInPage = () => {
   const [notes, setNotes] = useState('');
   const [showSparkles, setShowSparkles] = useState(false);
   const [editingCheckIn, setEditingCheckIn] = useState<CheckIn | null>(null);
-  
+  const [isSaving, setIsSaving] = useState(false);
+
   const today = format(new Date(), 'yyyy-MM-dd');
   const currentHour = new Date().getHours();
   const suggestedTimeOfDay = currentHour < 14 ? 'morning' : 'evening';
   const [timeOfDay, setTimeOfDay] = useState<'morning' | 'evening'>(suggestedTimeOfDay);
-  
-  const todayCheckIns = checkIns.filter(c => c.timestamp.startsWith(today));
-  const hasMorningCheckIn = todayCheckIns.some(c => c.timeOfDay === 'morning');
-  const hasEveningCheckIn = todayCheckIns.some(c => c.timeOfDay === 'evening');
+
+  const todayCheckIns = checkIns.filter((c) => c.timestamp.startsWith(today));
+  const hasMorningCheckIn = todayCheckIns.some((c) => c.timeOfDay === 'morning');
+  const hasEveningCheckIn = todayCheckIns.some((c) => c.timeOfDay === 'evening');
 
   const toggleTreatment = (id: string) => {
-    setSelectedTreatments(prev => 
-      prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
-    );
+    if (isSaving) return;
+    setSelectedTreatments((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
   };
 
   const handleAddCustomTreatment = () => {
+    if (isSaving) return;
     const trimmed = customTreatment.trim();
     if (trimmed) {
       addCustomTreatment(trimmed);
       if (!selectedTreatments.includes(trimmed)) {
-        setSelectedTreatments(prev => [...prev, trimmed]);
+        setSelectedTreatments((prev) => [...prev, trimmed]);
       }
       setCustomTreatment('');
     }
   };
 
   const handleStartEdit = (checkIn: CheckIn) => {
+    if (isSaving) return;
     setEditingCheckIn(checkIn);
     setSelectedTreatments(checkIn.treatments);
     setMood(checkIn.mood);
@@ -70,6 +72,7 @@ const CheckInPage = () => {
   };
 
   const handleCancelEdit = () => {
+    if (isSaving) return;
     setEditingCheckIn(null);
     setSelectedTreatments([]);
     setMood(3);
@@ -78,18 +81,34 @@ const CheckInPage = () => {
     setTimeOfDay(suggestedTimeOfDay);
   };
 
+  const canSubmit =
+    Boolean(editingCheckIn) ||
+    (timeOfDay === 'morning' && !hasMorningCheckIn) ||
+    (timeOfDay === 'evening' && !hasEveningCheckIn);
+
   const handleSubmit = async () => {
+    if (!canSubmit || isSaving) return;
+
+    // Defensive validation
+    if (mood < 1 || mood > 5 || skinFeeling < 1 || skinFeeling > 5) {
+      toast.error('Please choose a mood and skin rating before saving.');
+      return;
+    }
+
+    setIsSaving(true);
+
     try {
       if (editingCheckIn) {
         await updateCheckIn(editingCheckIn.id, {
-          timeOfDay: editingCheckIn.timeOfDay,
+          timeOfDay,
           treatments: selectedTreatments,
           mood,
           skinFeeling,
           notes: notes || undefined,
         });
+
         setEditingCheckIn(null);
-        toast.success('Check-in updated!');
+        toast.success('Check-in updated successfully');
       } else {
         await addCheckIn({
           timeOfDay,
@@ -98,26 +117,29 @@ const CheckInPage = () => {
           skinFeeling,
           notes: notes || undefined,
         });
+
         setShowSparkles(true);
-        toast.success('Check-in saved!', {
-          description: 'Your progress has been synced to the cloud.',
-        });
+        toast.success('Check-in saved successfully');
       }
-      
+
       // Reset form
       setSelectedTreatments([]);
       setCustomTreatment('');
       setMood(3);
       setSkinFeeling(3);
       setNotes('');
-    } catch (error) {
-      toast.error(editingCheckIn ? 'Failed to update check-in' : 'Failed to save check-in');
+    } catch (error: any) {
+      const message =
+        typeof error?.message === 'string' && error.message.trim().length > 0
+          ? error.message
+          : editingCheckIn
+            ? 'Failed to update check-in'
+            : 'Failed to save check-in';
+      toast.error(message);
+    } finally {
+      setIsSaving(false);
     }
   };
-
-  const canSubmit = editingCheckIn || (timeOfDay === 'morning' && !hasMorningCheckIn) || 
-                    (timeOfDay === 'evening' && !hasEveningCheckIn);
-
   return (
     <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
       {/* Sparkle celebration effect */}
@@ -373,23 +395,34 @@ const CheckInPage = () => {
           {/* Submit */}
           <div className="flex gap-3">
             {editingCheckIn && (
-              <Button 
-                onClick={handleCancelEdit} 
+              <Button
+                onClick={handleCancelEdit}
                 variant="outline"
                 className="flex-1 h-12 text-base rounded-2xl"
                 size="lg"
+                disabled={isSaving}
               >
                 Cancel
               </Button>
             )}
-            <Button 
-              onClick={handleSubmit} 
+            <Button
+              onClick={handleSubmit}
               variant="warm"
               className={cn("h-12 text-base", editingCheckIn ? "flex-1" : "w-full")}
               size="lg"
+              disabled={!canSubmit || isSaving}
             >
-              <CheckCircle className="w-5 h-5 mr-2" />
-              {editingCheckIn ? 'Update Check-in' : 'Save Check-in'}
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-5 h-5 mr-2" />
+                  {editingCheckIn ? 'Update Check-in' : 'Save Check-in'}
+                </>
+              )}
             </Button>
           </div>
         </>
