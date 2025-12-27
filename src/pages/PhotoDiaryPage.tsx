@@ -14,6 +14,50 @@ import { LeafIllustration, SparkleIllustration } from '@/components/illustration
 import { SparkleEffect } from '@/components/SparkleEffect';
 import { PhotoSkeleton } from '@/components/PhotoSkeleton';
 
+// Progressive image component with fade-in animation
+const ProgressiveImage = ({ 
+  src, 
+  alt, 
+  className 
+}: { 
+  src: string; 
+  alt: string; 
+  className?: string;
+}) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  return (
+    <div className={cn("relative bg-muted overflow-hidden", className)}>
+      {/* Placeholder skeleton */}
+      {!isLoaded && !hasError && (
+        <div className="absolute inset-0 bg-muted animate-pulse" />
+      )}
+      
+      {/* Actual image with fade-in */}
+      <img 
+        src={src}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setIsLoaded(true)}
+        onError={() => setHasError(true)}
+        className={cn(
+          "w-full h-full object-cover transition-opacity duration-500",
+          isLoaded ? "opacity-100" : "opacity-0"
+        )}
+      />
+      
+      {/* Error state */}
+      {hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted">
+          <Image className="w-8 h-8 text-muted-foreground/50" />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const bodyParts: { value: BodyPart; label: string }[] = [
   { value: 'face', label: 'Face' },
   { value: 'neck', label: 'Neck' },
@@ -395,12 +439,10 @@ const PhotoDiaryPage = () => {
                 style={{ animationDelay: `${index * 0.05}s` }}
                 onClick={() => compareMode && togglePhotoSelection(photo)}
               >
-                <img 
+                <ProgressiveImage 
                   src={getThumbnailUrl(photo.photoUrl)}
                   alt={`${photo.bodyPart} photo`}
-                  className="w-full aspect-square object-cover bg-muted"
-                  loading="lazy"
-                  decoding="async"
+                  className="w-full aspect-square"
                 />
                 <div className="p-3 space-y-1.5">
                   <div className="flex items-center justify-between">
