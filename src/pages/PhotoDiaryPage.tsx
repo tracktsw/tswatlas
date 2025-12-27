@@ -33,7 +33,7 @@ const ModalImage = ({
   const hasHighRes = typeof highResSrc === "string" && highResSrc.length > 0;
 
   return (
-    <div className="relative flex items-center justify-center bg-black min-h-[200px]">
+    <div className="flex items-center justify-center bg-muted/30">
       {/* Loading shimmer - shows while no image is ready */}
       {!highResLoaded && !hasError && (
         <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 animate-pulse">
@@ -46,7 +46,7 @@ const ModalImage = ({
         <img
           src={thumbnailSrc}
           alt={alt}
-          className="max-w-full max-h-[80vh] object-contain blur-sm scale-105 opacity-70"
+          className="max-w-full max-h-[85vh] object-contain blur-sm scale-105 opacity-70"
         />
       )}
 
@@ -60,7 +60,7 @@ const ModalImage = ({
           onLoad={() => setHighResLoaded(true)}
           onError={() => setHasError(true)}
           className={cn(
-            "max-w-full max-h-[80vh] object-contain transition-opacity duration-300",
+            "max-w-full max-h-[85vh] object-contain transition-opacity duration-300",
             highResLoaded ? "opacity-100" : "opacity-0 absolute"
           )}
         />
@@ -71,7 +71,7 @@ const ModalImage = ({
         <img
           src={thumbnailSrc}
           alt={alt}
-          className="max-w-full max-h-[80vh] object-contain"
+          className="max-w-full max-h-[85vh] object-contain"
         />
       )}
 
@@ -605,7 +605,7 @@ const PhotoDiaryPage = () => {
 
       {/* Photo Viewer Dialog - shows thumb instantly, upgrades to medium */}
       <Dialog open={!!viewingPhoto} onOpenChange={(open) => !open && setViewingPhoto(null)}>
-        <DialogContent className="max-w-lg p-0 overflow-hidden">
+        <DialogContent className="max-w-lg p-0 overflow-hidden bg-muted/95">
           <DialogHeader className="sr-only">
             <DialogTitle>Photo</DialogTitle>
             <DialogDescription>
@@ -615,7 +615,7 @@ const PhotoDiaryPage = () => {
 
           {viewingPhoto && (
             <>
-              <div className="relative bg-black flex items-center justify-center">
+              <div className="flex items-center justify-center">
                 <ModalImage
                   thumbnailSrc={viewingPhoto.thumbnailUrl}
                   highResSrc={viewingPhoto.mediumUrl || viewingPhoto.originalUrl}
