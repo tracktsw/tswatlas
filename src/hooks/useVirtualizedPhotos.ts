@@ -13,11 +13,11 @@ export type BodyPart =
 
 export interface VirtualPhoto {
   id: string;
-  /** Grid/timeline ONLY - stored in DB */
+  /** Grid/timeline ONLY - public URL stored in DB */
   thumbnailUrl: string;
-  /** Fullscreen/compare ONLY - loaded on-demand from stored path */
+  /** Fullscreen/compare ONLY - public URL stored in DB */
   mediumUrl?: string;
-  /** Original for export - never loaded by default */
+  /** Original for export - public URL stored in DB */
   originalUrl?: string;
   bodyPart: BodyPart;
   timestamp: string;
@@ -26,7 +26,7 @@ export interface VirtualPhoto {
 
 interface PhotoRow {
   id: string;
-  photo_url: string; // legacy field (medium path)
+  photo_url: string; // legacy field
   thumb_url: string | null;
   medium_url: string | null;
   original_url: string | null;
@@ -36,15 +36,11 @@ interface PhotoRow {
 }
 
 const PAGE_SIZE = 40;
-const SIGNED_URL_DURATION = 60 * 60 * 24 * 30; // 30 days
 
 interface UseVirtualizedPhotosOptions {
   userId: string | null;
   bodyPartFilter?: BodyPart | "all";
 }
-
-type CacheEntry = { url: string; expires: number };
-type PathCacheEntry = { path: string; url?: string; expires?: number };
 
 export const useVirtualizedPhotos = ({
   userId,
@@ -59,95 +55,23 @@ export const useVirtualizedPhotos = ({
   const cursorRef = useRef<string | null>(null);
   const isLoadingMoreRef = useRef(false);
 
-  // Caches to avoid refetching / re-signing
-  const thumbCacheRef = useRef<Map<string, CacheEntry>>(new Map());
-  const mediumCacheRef = useRef<Map<string, PathCacheEntry>>(new Map());
-  const originalCacheRef = useRef<Map<string, PathCacheEntry>>(new Map());
-
-  // Track which photos need backfill
-  const backfillRequestedRef = useRef<Set<string>>(new Set());
-
-  const cacheIsValid = (expires?: number) =>
-    typeof expires === "number" && expires > Date.now();
-
   /**
-   * Generate signed URLs for thumbnails from explicit thumb_url column.
-   * NEVER fall back to medium/original - grid must only show thumbnails.
+   * Transform DB rows to VirtualPhoto objects.
+   * Uses stored public URLs directly - no signing needed for public bucket.
    */
-  const generateSignedUrls = useCallback(async (rows: PhotoRow[]) => {
-    const now = Date.now();
-    const results: VirtualPhoto[] = [];
-    const toSign: { id: string; thumbPath: string; row: PhotoRow }[] = [];
-
-    for (const row of rows) {
-      // Store paths for on-demand medium/original fetching
-      const mediumPath = row.medium_url || row.photo_url;
-      const originalPath = row.original_url;
-      
-      mediumCacheRef.current.set(row.id, { path: mediumPath });
-      if (originalPath) {
-        originalCacheRef.current.set(row.id, { path: originalPath });
-      }
-
-      // Check thumb cache first
-      const cached = thumbCacheRef.current.get(row.id);
-      if (cached && cached.expires > now) {
-        results.push({
-          id: row.id,
-          thumbnailUrl: cached.url,
-          bodyPart: row.body_part as BodyPart,
-          timestamp: row.created_at,
-          notes: row.notes || undefined,
-        });
-      } else if (row.thumb_url) {
-        // Has explicit thumb_url - sign it
-        toSign.push({
-          id: row.id,
-          thumbPath: row.thumb_url,
-          row,
-        });
-      } else {
-        // No thumbnail available - will trigger backfill
-        results.push({
-          id: row.id,
-          thumbnailUrl: "", // Empty = placeholder shown
-          bodyPart: row.body_part as BodyPart,
-          timestamp: row.created_at,
-          notes: row.notes || undefined,
-        });
-      }
-    }
-
-    if (toSign.length) {
-      const paths = toSign.map((x) => x.thumbPath);
-      const { data: signed, error: signError } = await supabase.storage
-        .from("user-photos")
-        .createSignedUrls(paths, SIGNED_URL_DURATION);
-
-      if (signError) throw signError;
-
-      for (let i = 0; i < toSign.length; i++) {
-        const { id, row } = toSign[i];
-        const url = signed?.[i]?.signedUrl || "";
-
-        thumbCacheRef.current.set(id, {
-          url,
-          expires: url ? now + (SIGNED_URL_DURATION - 3600) * 1000 : now + 5 * 60 * 1000,
-        });
-
-        results.push({
-          id,
-          thumbnailUrl: url,
-          bodyPart: row.body_part as BodyPart,
-          timestamp: row.created_at,
-          notes: row.notes || undefined,
-        });
-      }
-    }
-
-    // Preserve original ordering
-    const order = rows.map((r) => r.id);
-    return results.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  const transformRows = useCallback((rows: PhotoRow[]): VirtualPhoto[] => {
+    return rows.map((row) => ({
+      id: row.id,
+      // Use stored public URLs directly - grid only shows thumbnails
+      thumbnailUrl: row.thumb_url || row.medium_url || row.photo_url || "",
+      // Medium for fullscreen/compare - fallback chain
+      mediumUrl: row.medium_url || row.photo_url || undefined,
+      // Original for export
+      originalUrl: row.original_url || undefined,
+      bodyPart: row.body_part as BodyPart,
+      timestamp: row.created_at,
+      notes: row.notes || undefined,
+    }));
   }, []);
 
   const loadPhotos = useCallback(async () => {
@@ -176,8 +100,8 @@ export const useVirtualizedPhotos = ({
       if (fetchError) throw fetchError;
 
       if (data && data.length > 0) {
-        const photosWithThumbs = await generateSignedUrls(data as PhotoRow[]);
-        setPhotos(photosWithThumbs);
+        const photosWithUrls = transformRows(data as PhotoRow[]);
+        setPhotos(photosWithUrls);
         cursorRef.current = data[data.length - 1].created_at;
         setHasMore(data.length === PAGE_SIZE);
       } else {
@@ -190,7 +114,7 @@ export const useVirtualizedPhotos = ({
     } finally {
       setIsLoading(false);
     }
-  }, [userId, bodyPartFilter, generateSignedUrls]);
+  }, [userId, bodyPartFilter, transformRows]);
 
   const loadMore = useCallback(async () => {
     if (!userId || !hasMore || isLoadingMoreRef.current || !cursorRef.current) return;
@@ -214,8 +138,8 @@ export const useVirtualizedPhotos = ({
       if (fetchError) throw fetchError;
 
       if (data && data.length > 0) {
-        const photosWithThumbs = await generateSignedUrls(data as PhotoRow[]);
-        setPhotos((prev) => [...prev, ...photosWithThumbs]);
+        const photosWithUrls = transformRows(data as PhotoRow[]);
+        setPhotos((prev) => [...prev, ...photosWithUrls]);
         cursorRef.current = data[data.length - 1].created_at;
         setHasMore(data.length === PAGE_SIZE);
       } else {
@@ -226,152 +150,40 @@ export const useVirtualizedPhotos = ({
     } finally {
       isLoadingMoreRef.current = false;
     }
-  }, [userId, hasMore, bodyPartFilter, generateSignedUrls]);
+  }, [userId, hasMore, bodyPartFilter, transformRows]);
 
   /**
-   * On-demand medium URL signing (fullscreen/compare ONLY).
-   * Falls back to original if medium fails.
+   * Get medium URL for fullscreen/compare.
+   * Since URLs are now stored directly, this just returns the cached mediumUrl.
+   * Falls back to originalUrl if medium is missing.
    */
   const fetchMediumUrl = useCallback(async (photoId: string): Promise<string> => {
-    const cached = mediumCacheRef.current.get(photoId);
-    if (!cached?.path) return "";
-
-    if (cached.url && cacheIsValid(cached.expires)) {
-      return cached.url;
-    }
-
-    const { data, error: signError } = await supabase.storage
-      .from("user-photos")
-      .createSignedUrl(cached.path, SIGNED_URL_DURATION);
-
-    if (signError) {
-      // Try original as fallback
-      const originalCached = originalCacheRef.current.get(photoId);
-      if (originalCached?.path) {
-        const { data: origData } = await supabase.storage
-          .from("user-photos")
-          .createSignedUrl(originalCached.path, SIGNED_URL_DURATION);
-        if (origData?.signedUrl) return origData.signedUrl;
-      }
-      throw signError;
-    }
-
-    const url = data?.signedUrl || "";
-    mediumCacheRef.current.set(photoId, {
-      path: cached.path,
-      url,
-      expires: Date.now() + (SIGNED_URL_DURATION - 3600) * 1000,
-    });
-
-    return url;
-  }, []);
+    const photo = photos.find((p) => p.id === photoId);
+    if (!photo) return "";
+    return photo.mediumUrl || photo.originalUrl || photo.thumbnailUrl || "";
+  }, [photos]);
 
   const prefetchMediumUrls = useCallback(
     async (photoIds: string[]) => {
-      const unique = Array.from(new Set(photoIds)).filter(Boolean);
       const result = new Map<string, string>();
-      if (!unique.length) return result;
-
-      await Promise.all(
-        unique.map(async (id) => {
-          try {
-            const url = await fetchMediumUrl(id);
-            result.set(id, url);
-          } catch {
-            // Keep empty, will show thumbnail
-          }
-        })
-      );
-
+      for (const id of photoIds) {
+        const photo = photos.find((p) => p.id === id);
+        if (photo) {
+          result.set(id, photo.mediumUrl || photo.originalUrl || photo.thumbnailUrl || "");
+        }
+      }
       return result;
     },
-    [fetchMediumUrl]
+    [photos]
   );
 
   const addPhotoToList = useCallback((photo: VirtualPhoto) => {
     setPhotos((prev) => [photo, ...prev]);
-
-    // Cache thumbnail URL
-    if (photo.thumbnailUrl) {
-      thumbCacheRef.current.set(photo.id, {
-        url: photo.thumbnailUrl,
-        expires: Date.now() + (SIGNED_URL_DURATION - 3600) * 1000,
-      });
-    }
   }, []);
 
   const removePhotoFromList = useCallback((id: string) => {
     setPhotos((prev) => prev.filter((p) => p.id !== id));
-    thumbCacheRef.current.delete(id);
-    mediumCacheRef.current.delete(id);
-    originalCacheRef.current.delete(id);
-    backfillRequestedRef.current.delete(id);
   }, []);
-
-  // Background backfill: if we detect missing thumbnails, generate them server-side.
-  useEffect(() => {
-    const missing = photos
-      .filter((p) => !p.thumbnailUrl)
-      .map((p) => p.id)
-      .filter((id) => !backfillRequestedRef.current.has(id));
-
-    if (missing.length === 0) return;
-
-    const batch = missing.slice(0, 20);
-    batch.forEach((id) => backfillRequestedRef.current.add(id));
-
-    supabase.auth.getSession().then(({ data }) => {
-      const token = data.session?.access_token;
-      return supabase.functions.invoke("photo-derivatives", {
-        body: { photoIds: batch },
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
-    })
-      .then(({ data, error: fnError }) => {
-        if (fnError) throw fnError;
-
-        const results: Array<{ id: string; thumbnailUrl: string; mediumUrl: string }> =
-          data?.results ?? [];
-
-        const now = Date.now();
-
-        // Update caches + in-memory list
-        for (const r of results) {
-          if (r.thumbnailUrl) {
-            thumbCacheRef.current.set(r.id, {
-              url: r.thumbnailUrl,
-              expires: now + (SIGNED_URL_DURATION - 3600) * 1000,
-            });
-          }
-
-          if (r.mediumUrl) {
-            const cached = mediumCacheRef.current.get(r.id);
-            if (cached?.path) {
-              mediumCacheRef.current.set(r.id, {
-                ...cached,
-                url: r.mediumUrl,
-                expires: now + (SIGNED_URL_DURATION - 3600) * 1000,
-              });
-            }
-          }
-        }
-
-        setPhotos((prev) =>
-          prev.map((p) => {
-            const found = results.find((x) => x.id === p.id);
-            if (!found) return p;
-            return {
-              ...p,
-              thumbnailUrl: found.thumbnailUrl || p.thumbnailUrl,
-              mediumUrl: found.mediumUrl || p.mediumUrl,
-            };
-          })
-        );
-      })
-      .catch((e) => {
-        console.warn("Derivative generation failed", e);
-      });
-  }, [photos]);
 
   useEffect(() => {
     loadPhotos();

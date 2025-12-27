@@ -19,11 +19,11 @@ export const getBestFormat = (): { mimeType: string; extension: string } => {
 };
 
 /**
- * Compress and resize an image to specified dimensions
+ * Compress and resize an image to specified width (maintaining aspect ratio)
  */
 export const compressImage = (
   dataUrl: string,
-  maxDimension: number = 1200,
+  maxWidth: number = 1400,
   quality: number = 0.8,
   format?: string
 ): Promise<string> => {
@@ -38,17 +38,12 @@ export const compressImage = (
         return;
       }
 
-      // Calculate new dimensions maintaining aspect ratio
+      // Calculate new dimensions maintaining aspect ratio based on width
       let { width, height } = img;
       
-      if (width > maxDimension || height > maxDimension) {
-        if (width > height) {
-          height = Math.round((height * maxDimension) / width);
-          width = maxDimension;
-        } else {
-          width = Math.round((width * maxDimension) / height);
-          height = maxDimension;
-        }
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
       }
 
       canvas.width = width;
@@ -72,62 +67,66 @@ export const compressImage = (
 };
 
 export interface ProcessedImages {
+  photoId: string;
   original: {
     blob: Blob;
-    fileName: string;
+    path: string;
   };
   medium: {
     blob: Blob;
-    fileName: string;
+    path: string;
   };
   thumbnail: {
     blob: Blob;
-    fileName: string;
-  };
-  format: {
-    mimeType: string;
-    extension: string;
+    path: string;
   };
 }
 
 /**
+ * Generate a UUID for photo identification
+ */
+export const generatePhotoId = (): string => {
+  return crypto.randomUUID();
+};
+
+/**
  * Process an image for upload - generates three versions:
- * - Original: full quality for export/backup
- * - Medium: max 1200px, 85% quality for fullscreen/compare
- * - Thumbnail: max 400px, 75% quality for grid views
+ * - Thumbnail: 400px width, WebP, ~70-80% quality for grid views
+ * - Medium: 1400px width, WebP, ~75-85% quality for fullscreen/compare
+ * - Original: unchanged JPEG for backup/export
+ * 
+ * Storage paths: photos/{photoId}/thumb.webp, medium.webp, original.jpg
  */
 export const processImageForUpload = async (
-  dataUrl: string,
-  userId: string
+  dataUrl: string
 ): Promise<ProcessedImages> => {
-  const format = getBestFormat();
-  const baseFileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(2)}`;
+  const photoId = generatePhotoId();
   
-  // Generate medium version (max 1200px) for fullscreen/compare
-  const mediumDataUrl = await compressImage(dataUrl, 1200, 0.85, format.mimeType);
-  const mediumBlob = dataUrlToBlob(mediumDataUrl, format.mimeType);
+  // Generate thumbnail version (400px width) for grid view
+  const thumbDataUrl = await compressImage(dataUrl, 400, 0.75, 'image/webp');
+  const thumbBlob = dataUrlToBlob(thumbDataUrl, 'image/webp');
   
-  // Generate thumbnail version (max 400px for grid view)
-  const thumbDataUrl = await compressImage(dataUrl, 400, 0.75, format.mimeType);
-  const thumbBlob = dataUrlToBlob(thumbDataUrl, format.mimeType);
+  // Generate medium version (1400px width) for fullscreen/compare
+  const mediumDataUrl = await compressImage(dataUrl, 1400, 0.80, 'image/webp');
+  const mediumBlob = dataUrlToBlob(mediumDataUrl, 'image/webp');
   
   // Store original in JPEG for maximum compatibility (backup/export)
   const originalBlob = dataUrlToBlob(dataUrl, 'image/jpeg');
   
   return {
+    photoId,
     original: {
       blob: originalBlob,
-      fileName: `${baseFileName}_original.jpg`,
+      path: `photos/${photoId}/original.jpg`,
     },
     medium: {
       blob: mediumBlob,
-      fileName: `${baseFileName}.${format.extension}`,
+      path: `photos/${photoId}/medium.webp`,
     },
     thumbnail: {
       blob: thumbBlob,
-      fileName: `${baseFileName}_thumb.${format.extension}`,
+      path: `photos/${photoId}/thumb.webp`,
     },
-    format,
   };
 };
 
@@ -146,21 +145,9 @@ export const dataUrlToBlob = (dataUrl: string, mimeType: string): Blob => {
 };
 
 /**
- * Derive thumbnail path from medium photo path
- * Uses naming convention: filename.ext -> filename_thumb.ext
+ * Get public URL for a file in the photos bucket
  */
-export const getThumbnailPath = (mediumPath: string): string => {
-  const lastDot = mediumPath.lastIndexOf('.');
-  if (lastDot === -1) return mediumPath;
-  return `${mediumPath.substring(0, lastDot)}_thumb${mediumPath.substring(lastDot)}`;
-};
-
-/**
- * Derive original path from medium photo path
- * Uses naming convention: filename.ext -> filename_original.jpg
- */
-export const getOriginalPath = (mediumPath: string): string => {
-  const lastDot = mediumPath.lastIndexOf('.');
-  if (lastDot === -1) return mediumPath;
-  return `${mediumPath.substring(0, lastDot)}_original.jpg`;
+export const getPublicUrl = (path: string): string => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  return `${supabaseUrl}/storage/v1/object/public/photos/${path}`;
 };
