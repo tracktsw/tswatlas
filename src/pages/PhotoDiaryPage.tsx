@@ -1,10 +1,10 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
-import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown } from 'lucide-react';
+import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown, X } from 'lucide-react';
 import { useUserData, BodyPart, Photo } from '@/contexts/UserDataContext';
 import { useVirtualizedPhotos, VirtualPhoto } from '@/hooks/useVirtualizedPhotos';
 import { VirtualizedPhotoGrid } from '@/components/VirtualizedPhotoGrid';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogContentFullscreen, DialogDescription, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
@@ -33,7 +33,7 @@ const ModalImage = ({
   const hasHighRes = typeof highResSrc === "string" && highResSrc.length > 0;
 
   return (
-    <div className="flex items-center justify-center bg-muted/30">
+    <div className="flex items-center justify-center bg-muted/30 w-full">
       {/* Loading shimmer - shows while no image is ready */}
       {!highResLoaded && !hasError && (
         <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 animate-pulse">
@@ -46,7 +46,7 @@ const ModalImage = ({
         <img
           src={thumbnailSrc}
           alt={alt}
-          className="max-w-full max-h-[85vh] object-contain blur-sm scale-105 opacity-70"
+          className="max-w-full max-h-[70dvh] object-contain blur-sm scale-105 opacity-70"
         />
       )}
 
@@ -60,7 +60,7 @@ const ModalImage = ({
           onLoad={() => setHighResLoaded(true)}
           onError={() => setHasError(true)}
           className={cn(
-            "max-w-full max-h-[85vh] object-contain transition-opacity duration-300",
+            "max-w-full max-h-[70dvh] object-contain transition-opacity duration-300",
             highResLoaded ? "opacity-100" : "opacity-0 absolute"
           )}
         />
@@ -71,7 +71,7 @@ const ModalImage = ({
         <img
           src={thumbnailSrc}
           alt={alt}
-          className="max-w-full max-h-[85vh] object-contain"
+          className="max-w-full max-h-[70dvh] object-contain"
         />
       )}
 
@@ -623,27 +623,14 @@ const PhotoDiaryPage = () => {
         />
       )}
 
-      {/* Photo Viewer Dialog - shows thumb instantly, upgrades to medium */}
+      {/* Photo Viewer Dialog - fullscreen mobile layout with sticky header/footer */}
       <Dialog open={!!viewingPhoto} onOpenChange={(open) => !open && setViewingPhoto(null)}>
-        <DialogContent className="max-w-lg p-0 overflow-hidden bg-muted/95">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Photo</DialogTitle>
-            <DialogDescription>
-              View your photo with a fast preview (thumbnail) and a higher quality version (medium).
-            </DialogDescription>
-          </DialogHeader>
-
+        <DialogContentFullscreen className="bg-muted/95">
           {viewingPhoto && (
             <>
-              <div className="flex items-center justify-center">
-                <ModalImage
-                  thumbnailSrc={viewingPhoto.thumbnailUrl}
-                  highResSrc={viewingPhoto.mediumUrl || viewingPhoto.originalUrl}
-                  alt={`${viewingPhoto.bodyPart} photo`}
-                />
-              </div>
-              <div className="p-4 space-y-2">
-                <div className="flex items-center justify-between">
+              {/* Sticky Header */}
+              <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-muted/95 backdrop-blur-sm border-b border-border/50">
+                <div className="flex items-center gap-3">
                   <span className="text-sm font-semibold bg-coral/10 text-coral px-3 py-1 rounded-full">
                     {bodyParts.find(b => b.value === viewingPhoto.bodyPart)?.label}
                   </span>
@@ -651,13 +638,32 @@ const PhotoDiaryPage = () => {
                     {format(new Date(viewingPhoto.timestamp), 'MMM d, yyyy')}
                   </p>
                 </div>
-                {viewingPhoto.notes && (
-                  <p className="text-sm text-foreground">{viewingPhoto.notes}</p>
-                )}
+                <DialogClose className="rounded-full p-2 hover:bg-muted transition-colors">
+                  <X className="h-5 w-5" />
+                  <span className="sr-only">Close</span>
+                </DialogClose>
+              </div>
+
+              {/* Scrollable Content Area */}
+              <div className="flex-1 overflow-auto flex flex-col items-center justify-center px-4 py-4">
+                <div className="w-full max-w-lg">
+                  <ModalImage
+                    thumbnailSrc={viewingPhoto.thumbnailUrl}
+                    highResSrc={viewingPhoto.mediumUrl || viewingPhoto.originalUrl}
+                    alt={`${viewingPhoto.bodyPart} photo`}
+                  />
+                  {viewingPhoto.notes && (
+                    <p className="text-sm text-foreground mt-4 text-center">{viewingPhoto.notes}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Sticky Footer */}
+              <div className="sticky bottom-0 z-10 px-4 py-3 bg-muted/95 backdrop-blur-sm border-t border-border/50 safe-area-inset-bottom">
                 <Button
                   variant="destructive"
                   size="sm"
-                  className="w-full mt-2"
+                  className="w-full"
                   onClick={() => {
                     handleDelete(viewingPhoto.id);
                     setViewingPhoto(null);
@@ -669,7 +675,15 @@ const PhotoDiaryPage = () => {
               </div>
             </>
           )}
-        </DialogContent>
+
+          {/* Hidden accessible header for screen readers */}
+          <DialogHeader className="sr-only">
+            <DialogTitle>Photo</DialogTitle>
+            <DialogDescription>
+              View your photo with a fast preview (thumbnail) and a higher quality version (medium).
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContentFullscreen>
       </Dialog>
     </div>
   );
