@@ -347,29 +347,42 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!userId) return;
 
     try {
-      // Process image: generates both full-size and thumbnail versions in WebP
+      // Process image: generates original, medium, and thumbnail versions
       const processed = await processImageForUpload(photo.dataUrl, userId);
       
-      // Upload full-size image
-      const { error: fullUploadError } = await supabase.storage
-        .from('user-photos')
-        .upload(processed.full.fileName, processed.full.blob, {
-          contentType: processed.format.mimeType,
-          cacheControl: '31536000', // 1 year cache
-        });
+      // Upload all three versions in parallel
+      const [mediumResult, thumbResult, originalResult] = await Promise.all([
+        // Medium image (1200px) for fullscreen/compare
+        supabase.storage
+          .from('user-photos')
+          .upload(processed.medium.fileName, processed.medium.blob, {
+            contentType: processed.format.mimeType,
+            cacheControl: '31536000', // 1 year cache
+          }),
+        // Thumbnail (400px) for grid view
+        supabase.storage
+          .from('user-photos')
+          .upload(processed.thumbnail.fileName, processed.thumbnail.blob, {
+            contentType: processed.format.mimeType,
+            cacheControl: '31536000', // 1 year cache
+          }),
+        // Original for backup/export
+        supabase.storage
+          .from('user-photos')
+          .upload(processed.original.fileName, processed.original.blob, {
+            contentType: 'image/jpeg',
+            cacheControl: '31536000', // 1 year cache
+          }),
+      ]);
 
-      if (fullUploadError) throw fullUploadError;
+      if (mediumResult.error) throw mediumResult.error;
 
-      // Upload thumbnail
-      const { error: thumbUploadError } = await supabase.storage
-        .from('user-photos')
-        .upload(processed.thumbnail.fileName, processed.thumbnail.blob, {
-          contentType: processed.format.mimeType,
-          cacheControl: '31536000', // 1 year cache
-        });
-
-      if (thumbUploadError) {
-        console.warn('Thumbnail upload failed, continuing without thumbnail:', thumbUploadError);
+      if (thumbResult.error) {
+        console.warn('Thumbnail upload failed, continuing without thumbnail:', thumbResult.error);
+      }
+      
+      if (originalResult.error) {
+        console.warn('Original upload failed, continuing without original:', originalResult.error);
       }
 
       const { data: insertedPhoto, error: insertError } = await supabase
@@ -377,7 +390,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .insert({
           user_id: userId,
           body_part: photo.bodyPart,
-          photo_url: processed.full.fileName,
+          photo_url: processed.medium.fileName,
           notes: photo.notes || null,
         })
         .select()
@@ -385,16 +398,16 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (insertError) throw insertError;
 
-      // Generate signed URLs for both full and thumbnail (30 day cache)
-      const [fullUrlData, thumbUrlData] = await Promise.all([
-        supabase.storage.from('user-photos').createSignedUrl(processed.full.fileName, 60 * 60 * 24 * 30),
+      // Generate signed URLs for medium and thumbnail (30 day cache)
+      const [mediumUrlData, thumbUrlData] = await Promise.all([
+        supabase.storage.from('user-photos').createSignedUrl(processed.medium.fileName, 60 * 60 * 24 * 30),
         supabase.storage.from('user-photos').createSignedUrl(processed.thumbnail.fileName, 60 * 60 * 24 * 30),
       ]);
 
       const newPhoto: Photo = {
         id: insertedPhoto.id,
-        photoUrl: fullUrlData.data?.signedUrl || '',
-        thumbnailUrl: thumbUrlData.data?.signedUrl || fullUrlData.data?.signedUrl || '',
+        photoUrl: mediumUrlData.data?.signedUrl || '',
+        thumbnailUrl: thumbUrlData.data?.signedUrl || mediumUrlData.data?.signedUrl || '',
         bodyPart: photo.bodyPart,
         timestamp: insertedPhoto.created_at,
         notes: photo.notes,
