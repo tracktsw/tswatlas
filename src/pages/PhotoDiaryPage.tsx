@@ -244,29 +244,52 @@ const PhotoDiaryPage = () => {
     e.target.value = '';
   };
 
-  // Handle batch file selection from gallery
-  const handleBatchFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  // Handle batch file selection from gallery - starts upload immediately
+  const handleBatchFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = e.target.files;
+    
+    // Debug: log file selection
+    if (import.meta.env.DEV) {
+      console.log('[BatchUpload] File input change event fired');
+      console.log('[BatchUpload] FileList:', fileList);
+      console.log('[BatchUpload] Number of files:', fileList?.length ?? 0);
+    }
+    
+    // Reset input immediately to allow re-selecting same files
+    e.target.value = '';
+    
+    if (!fileList || fileList.length === 0) {
+      if (import.meta.env.DEV) {
+        console.error('[BatchUpload] No files detected in selection');
+      }
+      toast.error('No photos selected. Please try again.');
+      return;
+    }
+    
+    // Convert FileList to array
+    const filesArray = Array.from(fileList);
+    
+    if (import.meta.env.DEV) {
+      console.log('[BatchUpload] Files array:', filesArray.map(f => ({ name: f.name, size: f.size, type: f.type })));
+    }
+
+    let filesToUpload: File[];
 
     // Check upload limits for free users
     if (!isPremium) {
       const allowedCount = Math.max(0, remainingUploads);
       if (allowedCount === 0) {
         setShowUpgradePrompt(true);
-        e.target.value = '';
         return;
       }
-      if (files.length > allowedCount) {
+      if (filesArray.length > allowedCount) {
         toast.info(`Only ${allowedCount} photo${allowedCount !== 1 ? 's' : ''} can be uploaded today. Upgrade for unlimited.`);
-        // Still allow the limited amount
-        const limitedFiles = Array.from(files).slice(0, allowedCount);
-        setBatchFiles(limitedFiles);
+        filesToUpload = filesArray.slice(0, allowedCount);
       } else {
-        setBatchFiles(Array.from(files));
+        filesToUpload = filesArray;
       }
     } else {
-      setBatchFiles(Array.from(files));
+      filesToUpload = filesArray;
     }
 
     // Set default body part from current filter if applicable
@@ -274,13 +297,31 @@ const PhotoDiaryPage = () => {
       batchUpload.setBodyPart(selectedBodyPart);
     }
 
+    // Store files and show modal
+    setBatchFiles(filesToUpload);
     setShowBatchUpload(true);
-    e.target.value = '';
+    
+    // Start upload immediately
+    if (import.meta.env.DEV) {
+      console.log('[BatchUpload] Starting immediate upload of', filesToUpload.length, 'files');
+    }
+    
+    try {
+      await batchUpload.startUpload(filesToUpload);
+    } catch (error) {
+      console.error('[BatchUpload] Upload error:', error);
+      toast.error(error instanceof Error ? error.message : 'Upload failed. Please try again.');
+    }
   };
 
   const handleStartBatchUpload = async () => {
     if (batchFiles.length === 0) return;
-    await batchUpload.startUpload(batchFiles);
+    try {
+      await batchUpload.startUpload(batchFiles);
+    } catch (error) {
+      console.error('[BatchUpload] Upload error:', error);
+      toast.error(error instanceof Error ? error.message : 'Upload failed. Please try again.');
+    }
   };
 
   const handleCloseBatchUpload = () => {
