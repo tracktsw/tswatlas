@@ -246,6 +246,7 @@ export type Database = {
           tsw_start_date: string | null
           updated_at: string
           user_id: string
+          welcome_email_sent_at: string | null
         }
         Insert: {
           created_at?: string
@@ -260,6 +261,7 @@ export type Database = {
           tsw_start_date?: string | null
           updated_at?: string
           user_id: string
+          welcome_email_sent_at?: string | null
         }
         Update: {
           created_at?: string
@@ -274,6 +276,7 @@ export type Database = {
           tsw_start_date?: string | null
           updated_at?: string
           user_id?: string
+          welcome_email_sent_at?: string | null
         }
         Relationships: []
       }
