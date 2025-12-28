@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { VirtualPhoto } from '@/hooks/useVirtualizedPhotos';
 import { parseLocalDateTime } from '@/utils/localDateTime';
+import { useLayout } from '@/contexts/LayoutContext';
 
 interface ComparisonViewerProps {
   photos: VirtualPhoto[];
@@ -277,10 +278,17 @@ const FullscreenViewer = ({
 export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
   const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
   const isMobile = useIsMobile();
+  const { setHideBottomNav } = useLayout();
   // Track if user has manually toggled the layout
   const hasUserToggled = useRef(false);
   // Layout state: stacked (true) or side-by-side (false)
   const [isStacked, setIsStacked] = useState(isMobile);
+
+  // Hide bottom nav when compare view is active
+  useEffect(() => {
+    setHideBottomNav(true);
+    return () => setHideBottomNav(false);
+  }, [setHideBottomNav]);
 
   // Sync layout with screen size changes, unless user has manually toggled
   useEffect(() => {
@@ -322,9 +330,16 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
 
   return (
     <>
-      {/* Immersive comparison view - fixed position with scroll isolation */}
+      {/* Immersive comparison view - fixed position with full height and safe areas */}
       <div 
         className="fixed inset-0 z-40 bg-background flex flex-col overscroll-none"
+        style={{ 
+          height: '100dvh',
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+          paddingLeft: 'env(safe-area-inset-left)',
+          paddingRight: 'env(safe-area-inset-right)',
+        }}
       >
         {/* Minimal header */}
         <div className="flex items-center justify-between px-4 py-2 bg-background/95 backdrop-blur-sm border-b border-border/30">
