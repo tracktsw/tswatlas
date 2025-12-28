@@ -1,331 +1,218 @@
 /**
  * EXIF date extraction utility
  * Extracts DateTimeOriginal or CreateDate from image metadata
- * Works with JPEG, HEIC, and other image formats
- * 
+ * Works with JPEG, HEIC/HEIF, PNG, TIFF, and other image formats
+ *
+ * Uses `exifr` - a modern, fast EXIF parser that reads directly from File objects.
+ *
  * IMPORTANT: EXIF dates are LOCAL device time (no timezone info).
- * We store them as local time to avoid off-by-one day errors.
+ * We return timezone-less strings to avoid off-by-one-day errors.
  */
 
-import EXIF from 'exif-js';
+import exifr from 'exifr';
+
+export type ExifSource = 'exif' | 'user' | 'missing';
+
+export interface ExifResult {
+  /** Timezone-less ISO string "YYYY-MM-DDTHH:MM:SS" or null */
+  date: string | null;
+  /** Where the date came from */
+  source: ExifSource;
+  /** Raw EXIF value for debugging */
+  rawValue?: string | Date;
+}
 
 /**
  * Extract EXIF date from an image file.
- * Returns the date as ISO string (treated as local time) or null if not found.
- * IMPORTANT: Call this with the ORIGINAL file BEFORE any conversion (HEIC->JPEG strips metadata)
+ * Returns { date, source } so callers know provenance.
+ *
+ * IMPORTANT: Call with the ORIGINAL file BEFORE any conversion (HEIC→JPEG strips metadata).
  */
-export const extractExifDate = async (input: File | string): Promise<string | null> => {
+export const extractExifDate = async (file: File): Promise<string | null> => {
+  const result = await extractExifDateWithSource(file);
+  return result.date;
+};
+
+/**
+ * Extended version that also returns the source of the date.
+ */
+export const extractExifDateWithSource = async (file: File): Promise<ExifResult> => {
   try {
-    // If input is a File, use exif-js directly (works with HEIC)
-    if (input instanceof File) {
-      return await extractExifFromFile(input);
+    if (import.meta.env.DEV) {
+      console.log('[EXIF] Extracting from file:', file.name, 'type:', file.type, 'size:', file.size);
     }
-    
-    // If input is a data URL, fall back to manual parsing (for JPEG only)
-    return await extractExifFromDataUrl(input);
+
+    // exifr.parse reads directly from File/Blob - no Image element needed
+    // This works for JPEG, HEIC, TIFF, PNG, WebP, AVIF
+    const exif = await exifr.parse(file, {
+      // Only extract date-related tags for speed
+      pick: ['DateTimeOriginal', 'CreateDate', 'DateTimeDigitized', 'ModifyDate', 'DateTime'],
+      // Skip thumbnail parsing for speed
+      translateValues: true,
+      reviveValues: true,
+    });
+
+    if (import.meta.env.DEV) {
+      console.log('[EXIF] Raw exifr result:', exif);
+    }
+
+    if (!exif) {
+      if (import.meta.env.DEV) {
+        console.log('[EXIF] No EXIF data found in file');
+      }
+      return { date: null, source: 'missing' };
+    }
+
+    // Priority order per requirements:
+    // 1. DateTimeOriginal - when photo was actually taken (best)
+    // 2. CreateDate / DateTimeDigitized - when image was digitized
+    // 3. ModifyDate / DateTime - last resort
+    const candidates = [
+      exif.DateTimeOriginal,
+      exif.CreateDate,
+      exif.DateTimeDigitized,
+      exif.ModifyDate,
+      exif.DateTime,
+    ];
+
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+
+      const parsed = parseExifValue(candidate);
+      if (parsed) {
+        if (import.meta.env.DEV) {
+          console.log('[EXIF] Extracted date:', parsed, 'from raw:', candidate);
+        }
+        return { date: parsed, source: 'exif', rawValue: candidate };
+      }
+    }
+
+    if (import.meta.env.DEV) {
+      console.log('[EXIF] EXIF data present but no valid date tags found');
+    }
+    return { date: null, source: 'missing' };
   } catch (error) {
     if (import.meta.env.DEV) {
       console.warn('[EXIF] Error extracting date:', error);
     }
-    return null;
+    return { date: null, source: 'missing' };
   }
 };
 
 /**
- * Extract EXIF date using exif-js library (works with HEIC files)
+ * Parse an EXIF date value (can be Date object or string) to timezone-less ISO string.
  */
-const extractExifFromFile = (file: File): Promise<string | null> => {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    
-    reader.onload = function(e) {
-      const img = new Image();
-      
-      img.onload = function() {
-        try {
-          // @ts-ignore - exif-js types are incomplete
-          EXIF.getData(img, function(this: any) {
-            // Priority order: DateTimeOriginal > CreateDate (DateTimeDigitized) > DateTime (ModifyDate)
-            // Per requirements: prefer DateTimeOriginal, use CreateDate if missing, 
-            // only use ModifyDate (DateTime) as last resort
-            
-            // 1. DateTimeOriginal - when photo was actually taken (best)
-            let dateStr = EXIF.getTag(this, 'DateTimeOriginal');
-            
-            // 2. DateTimeDigitized (CreateDate) - when image was digitized
-            if (!dateStr) {
-              dateStr = EXIF.getTag(this, 'DateTimeDigitized');
-            }
-            
-            // 3. DateTime (ModifyDate) - last resort only
-            if (!dateStr) {
-              dateStr = EXIF.getTag(this, 'DateTime');
-            }
-            
-            if (dateStr && typeof dateStr === 'string') {
-              const isoDate = parseExifDateTimeAsLocal(dateStr);
-              if (import.meta.env.DEV) {
-                console.log('[EXIF] Extracted date from file:', isoDate, 'raw:', dateStr);
-              }
-              resolve(isoDate);
-            } else {
-              if (import.meta.env.DEV) {
-                console.log('[EXIF] No date found in file metadata');
-              }
-              resolve(null);
-            }
-          });
-        } catch (err) {
-          if (import.meta.env.DEV) {
-            console.warn('[EXIF] exif-js error:', err);
-          }
-          resolve(null);
-        }
-      };
-      
-      img.onerror = () => {
-        if (import.meta.env.DEV) {
-          console.warn('[EXIF] Failed to load image for EXIF extraction');
-        }
-        resolve(null);
-      };
-      
-      img.src = e.target?.result as string;
-    };
-    
-    reader.onerror = () => {
-      resolve(null);
-    };
-    
-    reader.readAsDataURL(file);
-  });
-};
+function parseExifValue(value: unknown): string | null {
+  if (!value) return null;
 
-/**
- * Extract EXIF date from a JPEG data URL by parsing the binary data
- * (Fallback for when we only have a data URL)
- */
-const extractExifFromDataUrl = async (dataUrl: string): Promise<string | null> => {
-  try {
-    // Convert data URL to array buffer
-    const base64 = dataUrl.split(',')[1];
-    if (!base64) return null;
-
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-
-    // Check for JPEG magic bytes
-    if (bytes[0] !== 0xFF || bytes[1] !== 0xD8) {
-      // Not a JPEG, can't extract EXIF this way
-      return null;
-    }
-
-    // Find EXIF marker (APP1)
-    let offset = 2;
-    while (offset < bytes.length - 4) {
-      if (bytes[offset] !== 0xFF) {
-        offset++;
-        continue;
-      }
-
-      const marker = bytes[offset + 1];
-      
-      // APP1 marker (EXIF)
-      if (marker === 0xE1) {
-        const length = (bytes[offset + 2] << 8) | bytes[offset + 3];
-        const exifData = bytes.slice(offset + 4, offset + 2 + length);
-        
-        // Check for "Exif\0\0" header
-        const exifHeader = String.fromCharCode(...exifData.slice(0, 4));
-        if (exifHeader === 'Exif') {
-          return parseExifTiffData(exifData.slice(6));
-        }
-      }
-
-      // Skip to next marker
-      if (marker >= 0xE0 && marker <= 0xEF) {
-        const length = (bytes[offset + 2] << 8) | bytes[offset + 3];
-        offset += 2 + length;
-      } else if (marker === 0xD8 || marker === 0xD9) {
-        offset += 2;
-      } else {
-        offset++;
-      }
-    }
-
-    return null;
-  } catch (error) {
-    if (import.meta.env.DEV) {
-      console.warn('[EXIF] Parse error:', error);
-    }
-    return null;
+  // exifr can return Date objects when reviveValues is true
+  if (value instanceof Date) {
+    if (isNaN(value.getTime())) return null;
+    // Validate date range
+    if (!isValidPhotoDate(value)) return null;
+    return formatLocalDate(value);
   }
-};
 
-/**
- * Parse EXIF TIFF data to find DateTimeOriginal or DateTime
- */
-const parseExifTiffData = (data: Uint8Array): string | null => {
-  try {
-    // Check byte order (II = little-endian, MM = big-endian)
-    const byteOrder = String.fromCharCode(data[0], data[1]);
-    const isLittleEndian = byteOrder === 'II';
-
-    const readUint16 = (offset: number): number => {
-      if (isLittleEndian) {
-        return data[offset] | (data[offset + 1] << 8);
-      }
-      return (data[offset] << 8) | data[offset + 1];
-    };
-
-    const readUint32 = (offset: number): number => {
-      if (isLittleEndian) {
-        return data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24);
-      }
-      return (data[offset] << 24) | (data[offset + 1] << 16) | (data[offset + 2] << 8) | data[offset + 3];
-    };
-
-    // Verify TIFF header
-    const tiffCheck = readUint16(2);
-    if (tiffCheck !== 0x002A) return null;
-
-    // Get IFD0 offset
-    let ifdOffset = readUint32(4);
-
-    // Search for EXIF IFD pointer (tag 0x8769) in IFD0
-    let exifIfdOffset: number | null = null;
-    let modifyDate: string | null = null;
-
-    // Parse IFD0
-    const numEntries = readUint16(ifdOffset);
-    for (let i = 0; i < numEntries; i++) {
-      const entryOffset = ifdOffset + 2 + (i * 12);
-      const tag = readUint16(entryOffset);
-      
-      // DateTime tag (0x0132) - ModifyDate, use as last resort
-      if (tag === 0x0132) {
-        const valueOffset = readUint32(entryOffset + 8);
-        modifyDate = readString(data, valueOffset, 19);
-      }
-      
-      // EXIF IFD pointer (0x8769)
-      if (tag === 0x8769) {
-        exifIfdOffset = readUint32(entryOffset + 8);
-      }
-    }
-
-    // Parse EXIF IFD for DateTimeOriginal and DateTimeDigitized
-    if (exifIfdOffset !== null) {
-      const exifNumEntries = readUint16(exifIfdOffset);
-      let createDate: string | null = null;
-      
-      for (let i = 0; i < exifNumEntries; i++) {
-        const entryOffset = exifIfdOffset + 2 + (i * 12);
-        const tag = readUint16(entryOffset);
-        
-        // DateTimeOriginal (0x9003) - preferred, return immediately
-        if (tag === 0x9003) {
-          const valueOffset = readUint32(entryOffset + 8);
-          const dateTimeOriginal = readString(data, valueOffset, 19);
-          if (dateTimeOriginal) {
-            return parseExifDateTimeAsLocal(dateTimeOriginal);
-          }
-        }
-        
-        // DateTimeDigitized (0x9004) - second choice
-        if (tag === 0x9004) {
-          const valueOffset = readUint32(entryOffset + 8);
-          createDate = readString(data, valueOffset, 19);
-        }
-      }
-      
-      // Use CreateDate if DateTimeOriginal not found
-      if (createDate) {
-        return parseExifDateTimeAsLocal(createDate);
-      }
-    }
-
-    // Use ModifyDate from IFD0 as last fallback
-    if (modifyDate) {
-      return parseExifDateTimeAsLocal(modifyDate);
-    }
-
-    return null;
-  } catch (error) {
-    if (import.meta.env.DEV) {
-      console.warn('[EXIF] TIFF parse error:', error);
-    }
-    return null;
+  // String format: "YYYY:MM:DD HH:MM:SS" or "YYYY-MM-DD HH:MM:SS"
+  if (typeof value === 'string') {
+    return parseExifDateString(value);
   }
-};
+
+  return null;
+}
 
 /**
- * Read a string from EXIF data
+ * Parse EXIF date string format to timezone-less ISO string.
+ * Handles both "YYYY:MM:DD HH:MM:SS" and "YYYY-MM-DD HH:MM:SS" formats.
  */
-const readString = (data: Uint8Array, offset: number, maxLength: number): string | null => {
+function parseExifDateString(exifDate: string): string | null {
   try {
-    let str = '';
-    for (let i = 0; i < maxLength && offset + i < data.length; i++) {
-      const char = data[offset + i];
-      if (char === 0) break;
-      str += String.fromCharCode(char);
+    // Normalize separators
+    const normalized = exifDate.replace(/:/g, '-').replace(' ', 'T');
+
+    // Match "YYYY-MM-DDTHH-MM-SS" pattern
+    const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})/);
+    if (!match) {
+      // Try alternate format
+      const altMatch = exifDate.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+      if (!altMatch) return null;
+
+      const [, year, month, day, hour, minute, second] = altMatch;
+      return validateAndFormat(
+        parseInt(year, 10),
+        parseInt(month, 10),
+        parseInt(day, 10),
+        parseInt(hour, 10),
+        parseInt(minute, 10),
+        parseInt(second, 10)
+      );
     }
-    return str.length > 0 ? str : null;
-  } catch {
-    return null;
-  }
-};
-
-/**
- * Parse EXIF date format "YYYY:MM:DD HH:MM:SS" to a timezone-less string.
- * CRITICAL: EXIF dates are local device time with NO timezone info.
- * We return "YYYY-MM-DDTHH:MM:SS" (no Z suffix, no offset) to store as-is.
- * This prevents off-by-one-day errors when the date crosses timezones.
- */
-const parseExifDateTimeAsLocal = (exifDate: string): string | null => {
-  try {
-    // EXIF format: "YYYY:MM:DD HH:MM:SS"
-    const match = exifDate.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})$/);
-    if (!match) return null;
 
     const [, year, month, day, hour, minute, second] = match;
-    
-    // Validate components
-    const y = parseInt(year, 10);
-    const m = parseInt(month, 10);
-    const d = parseInt(day, 10);
-    const h = parseInt(hour, 10);
-    const min = parseInt(minute, 10);
-    const s = parseInt(second, 10);
-
-    // Basic sanity checks
-    if (y < 1990 || y > new Date().getFullYear() + 1) return null;
-    if (m < 1 || m > 12) return null;
-    if (d < 1 || d > 31) return null;
-    if (h < 0 || h > 23 || min < 0 || min > 59 || s < 0 || s > 59) return null;
-
-    // Construct local Date to validate (e.g. Feb 30 → invalid)
-    const testDate = new Date(y, m - 1, d, h, min, s);
-    if (isNaN(testDate.getTime())) return null;
-    // Check day didn't roll over (e.g. Feb 30 → Mar 2)
-    if (testDate.getDate() !== d) return null;
-
-    // Don't accept future dates (within 1 day tolerance for timezone edge cases)
-    const nowPlus1Day = new Date();
-    nowPlus1Day.setDate(nowPlus1Day.getDate() + 1);
-    if (testDate > nowPlus1Day) return null;
-
-    // Return timezone-less ISO format: "YYYY-MM-DDTHH:MM:SS"
-    // This is stored directly in a `timestamp without time zone` column
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    return `${y}-${pad(m)}-${pad(d)}T${pad(h)}:${pad(min)}:${pad(s)}`;
+    return validateAndFormat(
+      parseInt(year, 10),
+      parseInt(month, 10),
+      parseInt(day, 10),
+      parseInt(hour, 10),
+      parseInt(minute, 10),
+      parseInt(second, 10)
+    );
   } catch {
     return null;
   }
-};
+}
+
+/**
+ * Validate date components and format as timezone-less ISO string.
+ */
+function validateAndFormat(
+  y: number,
+  m: number,
+  d: number,
+  h: number,
+  min: number,
+  s: number
+): string | null {
+  // Basic sanity checks
+  if (y < 1990 || y > new Date().getFullYear() + 1) return null;
+  if (m < 1 || m > 12) return null;
+  if (d < 1 || d > 31) return null;
+  if (h < 0 || h > 23 || min < 0 || min > 59 || s < 0 || s > 59) return null;
+
+  // Construct local Date to validate (e.g. Feb 30 → invalid)
+  const testDate = new Date(y, m - 1, d, h, min, s);
+  if (isNaN(testDate.getTime())) return null;
+
+  // Check day didn't roll over (e.g. Feb 30 → Mar 2)
+  if (testDate.getDate() !== d) return null;
+
+  // Validate date range
+  if (!isValidPhotoDate(testDate)) return null;
+
+  return formatLocalDate(testDate);
+}
+
+/**
+ * Check if a date is valid for a photo (not in future, not too old).
+ */
+function isValidPhotoDate(date: Date): boolean {
+  const now = new Date();
+  // Allow 1 day in future for timezone edge cases
+  const maxDate = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  // Don't accept dates before 1990
+  const minDate = new Date(1990, 0, 1);
+
+  return date >= minDate && date <= maxDate;
+}
+
+/**
+ * Format a Date as timezone-less ISO string "YYYY-MM-DDTHH:MM:SS".
+ * Uses local time components to avoid timezone shifts.
+ */
+function formatLocalDate(date: Date): string {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
 
 /**
  * Format a Date object to an ISO-like string for database storage,
@@ -333,7 +220,5 @@ const parseExifDateTimeAsLocal = (exifDate: string): string | null => {
  * Format: "YYYY-MM-DDTHH:MM:SS" (no timezone suffix, treated as local)
  */
 export const formatLocalDateForDb = (date: Date): string => {
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  return formatLocalDate(date);
 };
