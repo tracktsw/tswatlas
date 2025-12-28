@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
-import { useUserData, BodyPart } from '@/contexts/UserDataContext';
+import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles, Eye, Pencil } from 'lucide-react';
+import { useUserData, BodyPart, CheckIn } from '@/contexts/UserDataContext';
+import { useDemoMode } from '@/contexts/DemoModeContext';
 import { format, subDays, startOfDay, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isSameMonth, addMonths, subMonths, getDay, setMonth, setYear } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import PaywallGuard from '@/components/PaywallGuard';
 import { useSubscription } from '@/hooks/useSubscription';
 import { PlantIllustration, SparkleIllustration, SunIllustration } from '@/components/illustrations';
+import DemoEditModal from '@/components/DemoEditModal';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
@@ -37,11 +39,16 @@ const bodyParts: { value: BodyPart; label: string; emoji: string }[] = [
 ];
 
 const InsightsPage = () => {
-  const { checkIns, photos } = useUserData();
+  const { checkIns: realCheckIns, photos } = useUserData();
+  const { isDemoMode, isAdmin, getEffectiveCheckIns } = useDemoMode();
   const { isPremium } = useSubscription();
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [demoEditDate, setDemoEditDate] = useState<Date | null>(null);
+  
+  // Use effective check-ins (real + demo overrides when in demo mode)
+  const checkIns = useMemo(() => getEffectiveCheckIns(realCheckIns), [realCheckIns, getEffectiveCheckIns]);
   
   const last7Days = useMemo(() => {
     const end = startOfDay(new Date());
@@ -189,7 +196,15 @@ const InsightsPage = () => {
       
       {/* Header */}
       <div className="animate-fade-in">
-        <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">Insights</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">Insights</h1>
+          {isDemoMode && isAdmin && (
+            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
+              <Eye className="w-3 h-3 mr-1" />
+              Demo Preview
+            </Badge>
+          )}
+        </div>
         <p className="text-muted-foreground">Your healing patterns</p>
       </div>
 
@@ -239,28 +254,44 @@ const InsightsPage = () => {
         </h3>
         <div className="glass-card p-5">
           <div className="flex justify-between gap-2">
-            {weeklyData.map(({ date, avgMood, avgSkin, checkIns: count }, index) => (
-              <div 
-                key={date.toISOString()} 
-                className="flex-1 text-center animate-scale-in"
-                style={{ animationDelay: `${0.15 + index * 0.03}s` }}
-              >
-                <p className="text-xs text-muted-foreground mb-2 font-medium">
-                  {format(date, 'EEE')}
-                </p>
-                <div className={cn(
-                  'aspect-square rounded-2xl flex items-center justify-center text-lg mb-1.5 transition-all duration-300',
-                  count > 0 
-                    ? 'bg-gradient-to-br from-primary/15 to-sage-light/50 shadow-warm-sm' 
-                    : 'bg-muted/50'
-                )}>
-                  {count > 0 ? skinEmojis[Math.round(avgSkin) - 1] || '—' : '—'}
+            {weeklyData.map(({ date, avgMood, avgSkin, checkIns: count }, index) => {
+              const dateStr = format(date, 'yyyy-MM-dd');
+              return (
+                <div 
+                  key={date.toISOString()} 
+                  className={cn(
+                    "flex-1 text-center animate-scale-in relative",
+                    isDemoMode && isAdmin && "cursor-pointer hover:opacity-80"
+                  )}
+                  style={{ animationDelay: `${0.15 + index * 0.03}s` }}
+                  onClick={() => {
+                    if (isDemoMode && isAdmin) {
+                      setDemoEditDate(date);
+                    }
+                  }}
+                >
+                  {isDemoMode && isAdmin && (
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center">
+                      <Pencil className="w-2.5 h-2.5 text-white" />
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">
+                    {format(date, 'EEE')}
+                  </p>
+                  <div className={cn(
+                    'aspect-square rounded-2xl flex items-center justify-center text-lg mb-1.5 transition-all duration-300',
+                    count > 0 
+                      ? 'bg-gradient-to-br from-primary/15 to-sage-light/50 shadow-warm-sm' 
+                      : 'bg-muted/50'
+                  )}>
+                    {count > 0 ? skinEmojis[Math.round(avgSkin) - 1] || '—' : '—'}
+                  </div>
+                  <p className="text-sm">
+                    {count > 0 ? moodEmojis[Math.round(avgMood) - 1] : ''}
+                  </p>
                 </div>
-                <p className="text-sm">
-                  {count > 0 ? moodEmojis[Math.round(avgMood) - 1] : ''}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -504,6 +535,17 @@ const InsightsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Demo Edit Modal - Only for admin in demo mode */}
+      {isDemoMode && isAdmin && demoEditDate && (
+        <DemoEditModal
+          open={!!demoEditDate}
+          onOpenChange={(open) => !open && setDemoEditDate(null)}
+          date={demoEditDate}
+          existingMood={weeklyData.find(d => format(d.date, 'yyyy-MM-dd') === format(demoEditDate, 'yyyy-MM-dd'))?.avgMood}
+          existingSkin={weeklyData.find(d => format(d.date, 'yyyy-MM-dd') === format(demoEditDate, 'yyyy-MM-dd'))?.avgSkin}
+        />
+      )}
     </div>
   );
 };

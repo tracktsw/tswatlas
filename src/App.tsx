@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { UserDataProvider } from "@/contexts/UserDataContext";
 import { LayoutProvider } from "@/contexts/LayoutContext";
+import { DemoModeProvider } from "@/contexts/DemoModeContext";
 import AuthGuard from "@/components/AuthGuard";
 import Layout from "@/components/Layout";
 import HomePage from "@/pages/HomePage";
@@ -29,40 +30,42 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <LayoutProvider>
       <UserDataProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <AppUpdateBanner />
-          <PWAInstallPrompt />
-          <BrowserRouter>
-            <Routes>
-              {/* Public route - Auth page */}
-              <Route path="/auth" element={<AuthPage />} />
-              
-              {/* Protected routes - require authentication */}
-              <Route
-                path="/"
-                element={
-                  <AuthGuard>
-                    <Layout />
-                  </AuthGuard>
-                }
-              >
-                <Route index element={<HomePage />} />
-                <Route path="photos" element={<PhotoDiaryPage />} />
-                <Route path="check-in" element={<CheckInPage />} />
-                <Route path="insights" element={<InsightsPage />} />
-                <Route path="community" element={<CommunityPage />} />
-                <Route path="journal" element={<JournalPage />} />
-                <Route path="coach" element={<CoachPage />} />
-                <Route path="settings" element={<SettingsPage />} />
-                <Route path="admin" element={<AdminPage />} />
-              </Route>
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+        <DemoModeProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <AppUpdateBanner />
+            <PWAInstallPrompt />
+            <BrowserRouter>
+              <Routes>
+                {/* Public route - Auth page */}
+                <Route path="/auth" element={<AuthPage />} />
+                
+                {/* Protected routes - require authentication */}
+                <Route
+                  path="/"
+                  element={
+                    <AuthGuard>
+                      <Layout />
+                    </AuthGuard>
+                  }
+                >
+                  <Route index element={<HomePage />} />
+                  <Route path="photos" element={<PhotoDiaryPage />} />
+                  <Route path="check-in" element={<CheckInPage />} />
+                  <Route path="insights" element={<InsightsPage />} />
+                  <Route path="community" element={<CommunityPage />} />
+                  <Route path="journal" element={<JournalPage />} />
+                  <Route path="coach" element={<CoachPage />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                  <Route path="admin" element={<AdminPage />} />
+                </Route>
+                
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </DemoModeProvider>
       </UserDataProvider>
       </LayoutProvider>
     </QueryClientProvider>
