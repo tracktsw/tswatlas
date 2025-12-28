@@ -51,6 +51,7 @@ interface UserDataContextType {
   tswStartDate: string | null;
   isLoading: boolean;
   isSyncing: boolean;
+  userId: string | null;
   addPhoto: (photo: { dataUrl: string; bodyPart: BodyPart; notes?: string }) => Promise<void>;
   deletePhoto: (id: string) => Promise<void>;
   addCheckIn: (checkIn: Omit<CheckIn, 'id' | 'timestamp'>) => Promise<void>;
@@ -805,6 +806,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         tswStartDate,
         isLoading,
         isSyncing,
+        userId,
         addPhoto,
         deletePhoto,
         addCheckIn,
