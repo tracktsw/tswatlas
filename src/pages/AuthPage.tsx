@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Mail, Lock, Heart, ArrowLeft, Sparkles } from 'lucide-react';
+import { Mail, Lock, Heart, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import compassLogo from '@/assets/compass-logo.png';
+import trackTswLogo from '@/assets/tracktsw-logo.png';
 
 type AuthMode = 'login' | 'signup' | 'forgot';
 
@@ -152,16 +152,11 @@ const AuthPage = () => {
             </button>
           ) : (
             <div className="inline-flex flex-col items-center gap-3">
-              <div className="relative">
-                <img 
-                  src={compassLogo} 
-                  alt="TrackTSW" 
-                  className="w-20 h-20 rounded-3xl shadow-warm-lg animate-float" 
-                />
-                <div className="absolute -bottom-1 -right-1 p-1.5 bg-coral rounded-xl shadow-warm-sm">
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
-              </div>
+              <img 
+                src={trackTswLogo} 
+                alt="TrackTSW" 
+                className="w-24 h-24 object-contain" 
+              />
               <h2 className="font-display text-lg font-semibold text-coral">TrackTSW</h2>
             </div>
           )}
