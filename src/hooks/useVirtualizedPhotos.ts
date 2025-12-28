@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type BodyPart =
@@ -10,6 +10,8 @@ export type BodyPart =
   | "feet"
   | "torso"
   | "back";
+
+export type SortOrder = "newest" | "oldest";
 
 export interface VirtualPhoto {
   id: string;
@@ -46,11 +48,13 @@ const PAGE_SIZE = 40;
 interface UseVirtualizedPhotosOptions {
   userId: string | null;
   bodyPartFilter?: BodyPart | "all";
+  sortOrder?: SortOrder;
 }
 
 export const useVirtualizedPhotos = ({
   userId,
   bodyPartFilter = "all",
+  sortOrder = "newest",
 }: UseVirtualizedPhotosOptions) => {
   const [photos, setPhotos] = useState<VirtualPhoto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,11 +100,16 @@ export const useVirtualizedPhotos = ({
     cursorRef.current = null;
 
     try {
+      // Sort by taken_at (EXIF date) first, fall back to created_at for photos without EXIF
+      // We use COALESCE in the order to handle nulls properly
+      const isAscending = sortOrder === "oldest";
+      
       let query = supabase
         .from("user_photos")
         .select("id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, taken_at, notes")
         .eq("user_id", userId)
-        .order("created_at", { ascending: false })
+        .order("taken_at", { ascending: isAscending, nullsFirst: isAscending })
+        .order("created_at", { ascending: isAscending })
         .limit(PAGE_SIZE);
 
       if (bodyPartFilter !== "all") {
@@ -113,7 +122,9 @@ export const useVirtualizedPhotos = ({
       if (data && data.length > 0) {
         const photosWithUrls = transformRows(data as PhotoRow[]);
         setPhotos(photosWithUrls);
-        cursorRef.current = data[data.length - 1].created_at;
+        // Use the last photo's timestamp for cursor
+        const lastPhoto = data[data.length - 1];
+        cursorRef.current = lastPhoto.taken_at || lastPhoto.created_at;
         setHasMore(data.length === PAGE_SIZE);
       } else {
         setPhotos([]);
@@ -125,7 +136,7 @@ export const useVirtualizedPhotos = ({
     } finally {
       setIsLoading(false);
     }
-  }, [userId, bodyPartFilter, transformRows]);
+  }, [userId, bodyPartFilter, sortOrder, transformRows]);
 
   const loadMore = useCallback(async () => {
     if (!userId || !hasMore || isLoadingMoreRef.current || !cursorRef.current) return;
@@ -133,17 +144,30 @@ export const useVirtualizedPhotos = ({
     isLoadingMoreRef.current = true;
 
     try {
+      const isAscending = sortOrder === "oldest";
+      const cursorOp = isAscending ? "gt" : "lt";
+      
       let query = supabase
         .from("user_photos")
         .select("id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, taken_at, notes")
         .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .lt("created_at", cursorRef.current)
-        .limit(PAGE_SIZE);
+        .order("taken_at", { ascending: isAscending, nullsFirst: isAscending })
+        .order("created_at", { ascending: isAscending });
+
+      // For pagination, we need to get photos after/before the cursor
+      // This is tricky with COALESCE ordering - we'll use a simpler approach
+      // Filter by created_at as the secondary sort is stable
+      if (isAscending) {
+        query = query.or(`taken_at.gt.${cursorRef.current},and(taken_at.is.null,created_at.gt.${cursorRef.current})`);
+      } else {
+        query = query.or(`taken_at.lt.${cursorRef.current},and(taken_at.is.null,created_at.lt.${cursorRef.current})`);
+      }
 
       if (bodyPartFilter !== "all") {
         query = query.eq("body_part", bodyPartFilter);
       }
+
+      query = query.limit(PAGE_SIZE);
 
       const { data, error: fetchError } = await query;
       if (fetchError) throw fetchError;
@@ -151,7 +175,8 @@ export const useVirtualizedPhotos = ({
       if (data && data.length > 0) {
         const photosWithUrls = transformRows(data as PhotoRow[]);
         setPhotos((prev) => [...prev, ...photosWithUrls]);
-        cursorRef.current = data[data.length - 1].created_at;
+        const lastPhoto = data[data.length - 1];
+        cursorRef.current = lastPhoto.taken_at || lastPhoto.created_at;
         setHasMore(data.length === PAGE_SIZE);
       } else {
         setHasMore(false);
@@ -161,7 +186,7 @@ export const useVirtualizedPhotos = ({
     } finally {
       isLoadingMoreRef.current = false;
     }
-  }, [userId, hasMore, bodyPartFilter, transformRows]);
+  }, [userId, hasMore, bodyPartFilter, sortOrder, transformRows]);
 
   /**
    * Get medium URL for fullscreen/compare.
@@ -189,8 +214,26 @@ export const useVirtualizedPhotos = ({
   );
 
   const addPhotoToList = useCallback((photo: VirtualPhoto) => {
-    setPhotos((prev) => [photo, ...prev]);
-  }, []);
+    // Insert at correct position based on sort order
+    setPhotos((prev) => {
+      const newTimestamp = new Date(photo.timestamp).getTime();
+      if (sortOrder === "newest") {
+        // For newest first, new photos go at the start if they're the most recent
+        const insertIndex = prev.findIndex(p => new Date(p.timestamp).getTime() < newTimestamp);
+        if (insertIndex === -1) {
+          return [...prev, photo];
+        }
+        return [...prev.slice(0, insertIndex), photo, ...prev.slice(insertIndex)];
+      } else {
+        // For oldest first, new photos go at the end if they're the most recent
+        const insertIndex = prev.findIndex(p => new Date(p.timestamp).getTime() > newTimestamp);
+        if (insertIndex === -1) {
+          return [...prev, photo];
+        }
+        return [...prev.slice(0, insertIndex), photo, ...prev.slice(insertIndex)];
+      }
+    });
+  }, [sortOrder]);
 
   const removePhotoFromList = useCallback((id: string) => {
     setPhotos((prev) => prev.filter((p) => p.id !== id));
