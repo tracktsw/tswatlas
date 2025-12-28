@@ -82,8 +82,8 @@ serve(async (req) => {
       logStep("No existing customer found - will create new during checkout");
     }
 
-    // TSW Atlas Premium - £5.99/month (active product: prod_Tb4N9ELb7DATG9)
-    const PRICE_ID = "price_1SdsESP0aIdhyRtPA0atJ80k";
+    // TrackTSW Premium - £5.99/month (live product: prod_TgjpaoVMDwhfcT)
+    const PRICE_ID = "price_1SjMLp0dpczMMQ6LmEd3CMMg";
     logStep("Using price", { priceId: PRICE_ID });
 
     const origin = req.headers.get("origin") || "https://tracktsw.app";
