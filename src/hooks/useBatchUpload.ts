@@ -48,9 +48,10 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
     try {
       // Extract EXIF date from ORIGINAL file BEFORE any conversion
       // (HEIC conversion strips metadata, so we must do this first)
+      // Returns timezone-less "YYYY-MM-DDTHH:MM:SS" or null
       const exifDate = await extractExifDate(item.file);
       if (import.meta.env.DEV) {
-        console.log('[BatchUpload] EXIF date for', item.file.name + ':', exifDate || 'not found');
+        console.log('[BatchUpload] EXIF date for', item.file.name + ':', exifDate || 'not found (will use upload date)');
       }
 
       // Convert HEIC if needed

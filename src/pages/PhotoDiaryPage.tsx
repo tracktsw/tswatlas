@@ -276,10 +276,14 @@ const PhotoDiaryPage = () => {
     
     setIsCapturing(false);
     
+    // Format selectedDate as timezone-less ISO for storage in `timestamp without time zone`
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const takenAtLocal = `${selectedDate.getFullYear()}-${pad(selectedDate.getMonth() + 1)}-${pad(selectedDate.getDate())}T${pad(selectedDate.getHours())}:${pad(selectedDate.getMinutes())}:${pad(selectedDate.getSeconds())}`;
+    
     const photoId = await singleUpload.processAndUploadFile(pendingFile, {
       bodyPart: newPhotoBodyPart,
       notes: newPhotoNotes || undefined,
-      takenAtOverride: selectedDate.toISOString(),
+      takenAtOverride: takenAtLocal,
     });
 
     if (photoId) {

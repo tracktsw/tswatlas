@@ -177,6 +177,7 @@ export type Database = {
           photo_url: string
           taken_at: string | null
           thumb_url: string | null
+          uploaded_at: string
           user_id: string
         }
         Insert: {
@@ -189,6 +190,7 @@ export type Database = {
           photo_url: string
           taken_at?: string | null
           thumb_url?: string | null
+          uploaded_at?: string
           user_id: string
         }
         Update: {
@@ -201,6 +203,7 @@ export type Database = {
           photo_url?: string
           taken_at?: string | null
           thumb_url?: string | null
+          uploaded_at?: string
           user_id?: string
         }
         Relationships: []

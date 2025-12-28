@@ -280,10 +280,10 @@ const readString = (data: Uint8Array, offset: number, maxLength: number): string
 };
 
 /**
- * Parse EXIF date format "YYYY:MM:DD HH:MM:SS" to ISO string.
+ * Parse EXIF date format "YYYY:MM:DD HH:MM:SS" to a timezone-less string.
  * CRITICAL: EXIF dates are local device time with NO timezone info.
- * We treat them as local time and format as ISO with local timezone offset
- * to prevent off-by-one-day errors when the date is parsed.
+ * We return "YYYY-MM-DDTHH:MM:SS" (no Z suffix, no offset) to store as-is.
+ * This prevents off-by-one-day errors when the date crosses timezones.
  */
 const parseExifDateTimeAsLocal = (exifDate: string): string | null => {
   try {
@@ -293,26 +293,35 @@ const parseExifDateTimeAsLocal = (exifDate: string): string | null => {
 
     const [, year, month, day, hour, minute, second] = match;
     
-    // Create date using local time constructor (NOT UTC)
-    const date = new Date(
-      parseInt(year, 10),
-      parseInt(month, 10) - 1,
-      parseInt(day, 10),
-      parseInt(hour, 10),
-      parseInt(minute, 10),
-      parseInt(second, 10)
-    );
+    // Validate components
+    const y = parseInt(year, 10);
+    const m = parseInt(month, 10);
+    const d = parseInt(day, 10);
+    const h = parseInt(hour, 10);
+    const min = parseInt(minute, 10);
+    const s = parseInt(second, 10);
 
-    // Validate date
-    if (isNaN(date.getTime())) return null;
-    
-    // Don't accept dates before 1990 or in the future
-    const now = new Date();
-    if (date.getFullYear() < 1990 || date > now) return null;
+    // Basic sanity checks
+    if (y < 1990 || y > new Date().getFullYear() + 1) return null;
+    if (m < 1 || m > 12) return null;
+    if (d < 1 || d > 31) return null;
+    if (h < 0 || h > 23 || min < 0 || min > 59 || s < 0 || s > 59) return null;
 
-    // Return ISO string - this preserves the local time correctly
-    // When parsing back with new Date(isoString), it will be in local time
-    return date.toISOString();
+    // Construct local Date to validate (e.g. Feb 30 → invalid)
+    const testDate = new Date(y, m - 1, d, h, min, s);
+    if (isNaN(testDate.getTime())) return null;
+    // Check day didn't roll over (e.g. Feb 30 → Mar 2)
+    if (testDate.getDate() !== d) return null;
+
+    // Don't accept future dates (within 1 day tolerance for timezone edge cases)
+    const nowPlus1Day = new Date();
+    nowPlus1Day.setDate(nowPlus1Day.getDate() + 1);
+    if (testDate > nowPlus1Day) return null;
+
+    // Return timezone-less ISO format: "YYYY-MM-DDTHH:MM:SS"
+    // This is stored directly in a `timestamp without time zone` column
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${y}-${pad(m)}-${pad(d)}T${pad(h)}:${pad(min)}:${pad(s)}`;
   } catch {
     return null;
   }

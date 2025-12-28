@@ -63,13 +63,16 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
           console.log('[SingleUpload] Using override date:', takenAt || 'none (will use upload date)');
         }
       } else {
-        // Auto-extract from EXIF
+        // Auto-extract from EXIF - returns timezone-less "YYYY-MM-DDTHH:MM:SS"
         if (import.meta.env.DEV) {
           console.log('[SingleUpload] Extracting EXIF date from original file...');
         }
         takenAt = await extractExifDate(file);
         if (import.meta.env.DEV) {
-          console.log('[SingleUpload] EXIF date:', takenAt || 'not found');
+          console.log('[SingleUpload] EXIF date extracted:', takenAt || 'not found');
+          if (!takenAt) {
+            console.log('[SingleUpload] Will fall back to upload date (created_at) for display');
+          }
         }
       }
 
