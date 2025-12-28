@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, Image } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Image, Columns, Rows } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -275,6 +276,16 @@ const FullscreenViewer = ({
 
 export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
   const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
+  const isMobile = useIsMobile();
+  // Default to stacked on mobile, side-by-side on desktop
+  const [isStacked, setIsStacked] = useState<boolean | null>(null);
+
+  // Set initial layout based on screen size (only once)
+  useEffect(() => {
+    if (isStacked === null) {
+      setIsStacked(isMobile);
+    }
+  }, [isMobile, isStacked]);
 
   // Lock body scroll when compare mode is active
   useEffect(() => {
@@ -302,6 +313,9 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
 
   if (photos.length !== 2) return null;
 
+  // Use stacked layout state (default to mobile behavior if not yet set)
+  const useStackedLayout = isStacked ?? isMobile;
+
   return (
     <>
       {/* Immersive comparison view - fixed position with scroll isolation */}
@@ -313,21 +327,53 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
         {/* Minimal header */}
         <div className="flex items-center justify-between px-4 py-2 bg-background/95 backdrop-blur-sm border-b border-border/30">
           <span className="text-sm font-medium text-muted-foreground">Comparing</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onExit}
-            className="gap-1.5 text-muted-foreground hover:text-foreground"
-          >
-            <X className="w-4 h-4" />
-            Exit
-          </Button>
+          <div className="flex items-center gap-1">
+            {/* Layout toggle button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsStacked(!useStackedLayout)}
+              className="gap-1.5 text-muted-foreground hover:text-foreground"
+              title={useStackedLayout ? "Side by side" : "Stacked"}
+            >
+              {useStackedLayout ? (
+                <Columns className="w-4 h-4" />
+              ) : (
+                <Rows className="w-4 h-4" />
+              )}
+              <span className="hidden sm:inline text-xs">
+                {useStackedLayout ? "Side by side" : "Stacked"}
+              </span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onExit}
+              className="gap-1.5 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+              Exit
+            </Button>
+          </div>
         </div>
 
         {/* Comparison grid - fills remaining space */}
-        <div className="flex-1 grid grid-cols-2 gap-1 p-1 min-h-0">
+        <div className={cn(
+          "flex-1 gap-1 p-1 min-h-0",
+          useStackedLayout 
+            ? "flex flex-col overflow-y-auto" 
+            : "grid grid-cols-2"
+        )}>
           {photos.map((photo, idx) => (
-            <div key={photo.id} className="relative flex flex-col min-h-0">
+            <div 
+              key={photo.id} 
+              className={cn(
+                "relative flex flex-col",
+                useStackedLayout 
+                  ? "min-h-[45vh] flex-shrink-0" 
+                  : "min-h-0 flex-1"
+              )}
+            >
               {/* Image container - fills available space */}
               <div className="flex-1 relative min-h-0 bg-muted/30 rounded-lg overflow-hidden">
                 <ZoomableImage
