@@ -66,6 +66,14 @@ const AuthPage = () => {
           },
         });
         if (error) throw error;
+        
+        // Send welcome email silently (fire-and-forget)
+        supabase.functions.invoke('send-welcome-email', {
+          body: { email },
+        }).catch(() => {
+          // Silently ignore errors - don't block signup
+        });
+        
         toast.success('Account created! You can now sign in.');
         setMode('login');
       }
