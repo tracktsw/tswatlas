@@ -108,6 +108,7 @@ export type Database = {
       }
       user_check_ins: {
         Row: {
+          client_request_id: string | null
           created_at: string
           id: string
           mood: number
@@ -118,6 +119,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          client_request_id?: string | null
           created_at?: string
           id?: string
           mood: number
@@ -128,6 +130,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          client_request_id?: string | null
           created_at?: string
           id?: string
           mood?: number

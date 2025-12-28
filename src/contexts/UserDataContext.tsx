@@ -54,8 +54,9 @@ interface UserDataContextType {
   userId: string | null;
   addPhoto: (photo: { dataUrl: string; bodyPart: BodyPart; notes?: string }) => Promise<void>;
   deletePhoto: (id: string) => Promise<void>;
-  addCheckIn: (checkIn: Omit<CheckIn, 'id' | 'timestamp'>) => Promise<void>;
+  addCheckIn: (checkIn: Omit<CheckIn, 'id' | 'timestamp'>, clientRequestId: string) => Promise<void>;
   updateCheckIn: (id: string, checkIn: Omit<CheckIn, 'id' | 'timestamp'>) => Promise<void>;
+  getTodayCheckInCount: () => number;
   addJournalEntry: (entry: Omit<JournalEntry, 'id' | 'timestamp'>) => Promise<void>;
   updateJournalEntry: (id: string, content: string) => Promise<void>;
   deleteJournalEntry: (id: string) => Promise<void>;
@@ -568,10 +569,47 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [userId, photos]);
 
+  // Debug flag for check-in logging
+  const DEBUG_CHECKINS = true;
+
+  // Get count of check-ins for today (user's local date)
+  const getTodayCheckInCount = useCallback(() => {
+    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD format
+    const todayCount = checkIns.filter(c => {
+      const checkInDate = new Date(c.timestamp).toLocaleDateString('en-CA');
+      return checkInDate === today;
+    }).length;
+    
+    if (DEBUG_CHECKINS) {
+      console.log('[CHECK-IN] Today check-in count:', todayCount, 'for date:', today);
+    }
+    
+    return todayCount;
+  }, [checkIns]);
+
   const addCheckIn = useCallback(
-    async (checkIn: Omit<CheckIn, 'id' | 'timestamp'>) => {
+    async (checkIn: Omit<CheckIn, 'id' | 'timestamp'>, clientRequestId: string) => {
       if (!userId) {
         throw new Error('Please sign in to save check-ins.');
+      }
+
+      if (DEBUG_CHECKINS) {
+        console.log('[CHECK-IN] Starting save with client_request_id:', clientRequestId);
+      }
+
+      // Check daily limit (max 2 per day)
+      const today = new Date().toLocaleDateString('en-CA');
+      const todayCheckIns = checkIns.filter(c => {
+        const checkInDate = new Date(c.timestamp).toLocaleDateString('en-CA');
+        return checkInDate === today;
+      });
+
+      if (DEBUG_CHECKINS) {
+        console.log('[CHECK-IN] Daily count before save:', todayCheckIns.length);
+      }
+
+      if (todayCheckIns.length >= 2) {
+        throw new Error("You've reached today's 2 check-ins.");
       }
 
       try {
@@ -584,11 +622,27 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             mood: checkIn.mood,
             skin_feeling: checkIn.skinFeeling,
             notes: checkIn.notes || null,
+            client_request_id: clientRequestId,
           })
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          // Check if this is a duplicate constraint violation (idempotent retry)
+          if (error.code === '23505' && error.message.includes('client_request')) {
+            if (DEBUG_CHECKINS) {
+              console.log('[CHECK-IN] Duplicate request detected (idempotent), treating as success');
+            }
+            // This is a retry of an already-successful request - reload and return success
+            await reloadCheckIns();
+            return;
+          }
+          throw error;
+        }
+
+        if (DEBUG_CHECKINS) {
+          console.log('[CHECK-IN] Save successful, id:', data.id);
+        }
 
         // Confirm persistence by re-loading latest check-ins from backend
         await reloadCheckIns();
@@ -605,12 +659,15 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         };
 
         setCheckIns((prev) => (prev.some((c) => c.id === newCheckIn.id) ? prev : [newCheckIn, ...prev]));
-      } catch (error) {
+      } catch (error: any) {
+        if (DEBUG_CHECKINS) {
+          console.log('[CHECK-IN] Save failed:', error?.message || error);
+        }
         console.error('Error adding check-in:', error);
         throw error;
       }
     },
-    [userId, reloadCheckIns]
+    [userId, reloadCheckIns, checkIns]
   );
 
   const updateCheckIn = useCallback(
@@ -820,6 +877,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setTswStartDate,
         refreshPhotos,
         addPhotoToState,
+        getTodayCheckInCount,
       }}
     >
       {children}
