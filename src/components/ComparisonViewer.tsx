@@ -212,9 +212,14 @@ const FullscreenViewer = ({
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-black/50 backdrop-blur-sm">
-        <span className="text-sm text-white/80">
-          {format(new Date(photo.timestamp), 'MMM d, yyyy')}
-        </span>
+        <div className="flex items-center gap-1">
+          <span className="text-sm text-white/80">
+            {format(new Date(photo.timestamp), 'MMM d, yyyy')}
+          </span>
+          {!photo.takenAt && (
+            <span className="text-xs text-white/50">(uploaded)</span>
+          )}
+        </div>
         <button
           onClick={onClose}
           className="p-2 rounded-full hover:bg-white/10 transition-colors"
@@ -332,8 +337,11 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
                 />
               </div>
               {/* Date label - minimal */}
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-foreground/90 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-full">
-                {format(new Date(photo.timestamp), 'MMM d, yyyy')}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-foreground/90 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1">
+                <span>{format(new Date(photo.timestamp), 'MMM d, yyyy')}</span>
+                {!photo.takenAt && (
+                  <span className="text-[10px] opacity-70">(uploaded)</span>
+                )}
               </div>
             </div>
           ))}

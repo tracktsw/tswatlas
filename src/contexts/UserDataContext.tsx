@@ -11,7 +11,10 @@ export interface Photo {
   thumbnailUrl: string; // thumb URL for grid
   originalUrl?: string; // original for export
   bodyPart: BodyPart;
+  /** Display date: taken_at if available, otherwise created_at (upload date) */
   timestamp: string;
+  /** True if timestamp came from EXIF (taken_at), false if fallback to upload date */
+  hasTakenAt: boolean;
   notes?: string;
 }
 
@@ -273,21 +276,25 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       // Fetch photos with explicit URL columns (now storing public URLs directly)
+      // Include taken_at for display; created_at is the upload timestamp.
       const { data: photosData } = await supabase
         .from('user_photos')
-        .select('id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, notes')
+        .select('id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, taken_at, notes')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
       if (photosData && photosData.length > 0) {
         // Use stored URLs directly - no signing needed for public bucket
+        // timestamp = taken_at (EXIF date) if available, else created_at (upload date)
         const photosWithUrls = photosData.map(photo => ({
           id: photo.id,
           photoUrl: photo.medium_url || photo.photo_url || '',
           thumbnailUrl: photo.thumb_url || photo.medium_url || photo.photo_url || '',
           originalUrl: photo.original_url || undefined,
           bodyPart: photo.body_part as BodyPart,
-          timestamp: photo.created_at,
+          // Display date: prefer taken_at (EXIF), fall back to created_at (upload)
+          timestamp: photo.taken_at || photo.created_at,
+          hasTakenAt: !!photo.taken_at,
           notes: photo.notes || undefined,
         }));
         setPhotos(photosWithUrls);
@@ -345,18 +352,21 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const { data: photosData } = await supabase
         .from('user_photos')
-        .select('id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, notes')
+        .select('id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, taken_at, notes')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
       if (photosData && photosData.length > 0) {
+        // timestamp = taken_at (EXIF date) if available, else created_at (upload date)
         const photosWithUrls = photosData.map(photo => ({
           id: photo.id,
           photoUrl: photo.medium_url || photo.photo_url || '',
           thumbnailUrl: photo.thumb_url || photo.medium_url || photo.photo_url || '',
           originalUrl: photo.original_url || undefined,
           bodyPart: photo.body_part as BodyPart,
-          timestamp: photo.created_at,
+          // Display date: prefer taken_at (EXIF), fall back to created_at (upload)
+          timestamp: photo.taken_at || photo.created_at,
+          hasTakenAt: !!photo.taken_at,
           notes: photo.notes || undefined,
         }));
         setPhotos(photosWithUrls);
@@ -488,6 +498,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         originalUrl: originalUrl || undefined,
         bodyPart: photo.bodyPart,
         timestamp: insertedPhoto.created_at,
+        hasTakenAt: false, // addPhoto uses legacy flow, no EXIF extraction here
         notes: photo.notes,
       };
 
