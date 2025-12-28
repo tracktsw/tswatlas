@@ -10,9 +10,12 @@ export function PWAInstallPrompt() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm">
-      <div className="w-full max-w-md animate-in slide-in-from-bottom duration-300">
-        <div className="mx-4 mb-4 rounded-2xl bg-card border border-border shadow-xl">
+    <div 
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}
+    >
+      <div className="w-full max-w-md max-h-full overflow-auto animate-in fade-in zoom-in-95 duration-300">
+        <div className="rounded-2xl bg-card border border-border shadow-xl">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border">
             <h2 className="text-lg font-semibold text-foreground">
