@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { toast } from 'sonner';
 import { format, isToday } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { parseLocalDateTime } from '@/utils/localDateTime';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useBatchUpload } from '@/hooks/useBatchUpload';
 import { useSingleUpload, extractExifDate } from '@/hooks/useSingleUpload';
@@ -198,8 +199,8 @@ const PhotoDiaryPage = () => {
   // Count photos uploaded today (use context photos for accurate count)
   const photosUploadedToday = useMemo(() => {
     return contextPhotos.filter(photo => {
-      const photoDate = new Date(photo.timestamp);
-      return isToday(photoDate);
+      const parsed = parseLocalDateTime(photo.timestamp) || new Date(photo.timestamp);
+      return isToday(parsed);
     }).length;
   }, [contextPhotos]);
 
@@ -253,14 +254,24 @@ const PhotoDiaryPage = () => {
       console.log('[PhotoDiary] Single file selected:', file.name);
     }
 
-    // Extract EXIF date for preview
+    // Extract EXIF date for preview (timezone-less local date string)
     const exifDate = await extractExifDate(file);
-    
+
     if (exifDate) {
-      setDetectedDate(new Date(exifDate));
-      setSelectedDate(new Date(exifDate));
-      setIsExifDate(true);
+      const parsed = parseLocalDateTime(exifDate);
+      if (parsed) {
+        setDetectedDate(parsed);
+        setSelectedDate(parsed);
+        setIsExifDate(true);
+      } else {
+        // EXIF present but unparsable (log + predictable fallback)
+        console.warn('[PhotoDiary] EXIF date string present but could not be parsed:', exifDate);
+        setDetectedDate(null);
+        setSelectedDate(new Date());
+        setIsExifDate(false);
+      }
     } else {
+      console.warn('[PhotoDiary] No EXIF date found; falling back to upload date');
       setDetectedDate(null);
       setSelectedDate(new Date());
       setIsExifDate(false);
@@ -789,7 +800,7 @@ const PhotoDiaryPage = () => {
                     {bodyParts.find(b => b.value === viewingPhoto.bodyPart)?.label}
                   </span>
                   <div className="text-sm text-muted-foreground">
-                    <span>{format(new Date(viewingPhoto.timestamp), 'MMM d, yyyy')}</span>
+                    <span>{format(parseLocalDateTime(viewingPhoto.timestamp) || new Date(viewingPhoto.timestamp), 'MMM d, yyyy')}</span>
                     {!viewingPhoto.takenAt && (
                       <span className="text-xs ml-1 opacity-70">(uploaded)</span>
                     )}

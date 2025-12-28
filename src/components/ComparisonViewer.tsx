@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { VirtualPhoto } from '@/hooks/useVirtualizedPhotos';
+import { parseLocalDateTime } from '@/utils/localDateTime';
 
 interface ComparisonViewerProps {
   photos: VirtualPhoto[];
@@ -214,7 +215,7 @@ const FullscreenViewer = ({
       <div className="flex items-center justify-between px-4 py-3 bg-black/50 backdrop-blur-sm">
         <div className="flex items-center gap-1">
           <span className="text-sm text-white/80">
-            {format(new Date(photo.timestamp), 'MMM d, yyyy')}
+            {format(parseLocalDateTime(photo.timestamp) || new Date(photo.timestamp), 'MMM d, yyyy')}
           </span>
           {!photo.takenAt && (
             <span className="text-xs text-white/50">(uploaded)</span>
@@ -338,7 +339,7 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
               </div>
               {/* Date label - minimal */}
               <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-foreground/90 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1">
-                <span>{format(new Date(photo.timestamp), 'MMM d, yyyy')}</span>
+                <span>{format(parseLocalDateTime(photo.timestamp) || new Date(photo.timestamp), 'MMM d, yyyy')}</span>
                 {!photo.takenAt && (
                   <span className="text-[10px] opacity-70">(uploaded)</span>
                 )}

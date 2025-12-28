@@ -3,6 +3,7 @@ import { Image, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { VirtualPhoto } from '@/hooks/useVirtualizedPhotos';
+import { parseLocalDateTime } from '@/utils/localDateTime';
 
 // Limit concurrent image loads on mobile
 const MAX_CONCURRENT_LOADS = typeof navigator !== 'undefined' && /Mobi|Android/i.test(navigator.userAgent) ? 4 : 8;
@@ -123,7 +124,7 @@ const PhotoItem = memo(({
           </span>
           <div className="text-right">
             <span className="text-xs text-muted-foreground">
-              {format(new Date(photo.timestamp), 'MMM d, yyyy')}
+              {format(parseLocalDateTime(photo.timestamp) || new Date(photo.timestamp), 'MMM d, yyyy')}
             </span>
             {/* Show indicator if using upload date (no EXIF) */}
             {!photo.takenAt && (
