@@ -180,21 +180,10 @@ const HomePage = () => {
         </div>
         <div className="flex items-center gap-2">
           {/* Premium Badge */}
-          {!isSubscriptionLoading && (
-            isPremium ? (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-coral/15 to-honey/15 border border-coral/20">
-                <Crown className="w-4 h-4 text-coral" />
-                <span className="text-xs font-semibold text-coral">Premium</span>
-              </div>
-            ) : (
-              <Link 
-                to="/settings"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/60 hover:bg-muted transition-colors"
-              >
-                <Sparkles className="w-4 h-4 text-muted-foreground" />
-                <span className="text-xs font-medium text-muted-foreground">Free</span>
-              </Link>
-            )
+          {!isSubscriptionLoading && isPremium && (
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-coral/10">
+              <Crown className="w-3.5 h-3.5 text-coral" />
+            </div>
           )}
           <Link 
             to="/settings" 
