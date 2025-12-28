@@ -18,5 +18,5 @@ verify_jwt = false
 [functions.send-welcome-email]
 verify_jwt = false
 
-[functions.send-auth-email]
+[functions.email-hook]
 verify_jwt = false
