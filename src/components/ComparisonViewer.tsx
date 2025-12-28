@@ -383,7 +383,7 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
               <div className={cn(
                 "relative bg-muted/30 rounded-lg overflow-hidden",
                 isStacked 
-                  ? "w-full aspect-[4/5]"  // Natural aspect ratio for stacked
+                  ? "w-full max-h-[42vh]"  // Constrain height so both fit on mobile
                   : "flex-1 min-h-0"        // Fill space in grid
               )}>
                 <ZoomableImage
