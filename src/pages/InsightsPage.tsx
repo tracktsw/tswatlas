@@ -255,7 +255,6 @@ const InsightsPage = () => {
         <div className="glass-card p-5">
           <div className="flex justify-between gap-2">
             {weeklyData.map(({ date, avgMood, avgSkin, checkIns: count }, index) => {
-              const dateStr = format(date, 'yyyy-MM-dd');
               return (
                 <div 
                   key={date.toISOString()} 
@@ -270,11 +269,6 @@ const InsightsPage = () => {
                     }
                   }}
                 >
-                  {isDemoMode && isAdmin && (
-                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center">
-                      <Pencil className="w-2.5 h-2.5 text-white" />
-                    </div>
-                  )}
                   <p className="text-xs text-muted-foreground mb-2 font-medium">
                     {format(date, 'EEE')}
                   </p>
