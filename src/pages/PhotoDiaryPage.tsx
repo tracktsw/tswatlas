@@ -17,7 +17,8 @@ import { cn } from '@/lib/utils';
 import { parseLocalDateTime } from '@/utils/localDateTime';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useBatchUpload } from '@/hooks/useBatchUpload';
-import { useSingleUpload, extractExifDate } from '@/hooks/useSingleUpload';
+import { useSingleUpload } from '@/hooks/useSingleUpload';
+import { extractExifDateWithSource } from '@/utils/exifExtractor';
 import { supabase } from '@/integrations/supabase/client';
 import { LeafIllustration, SparkleIllustration } from '@/components/illustrations';
 import { SparkleEffect } from '@/components/SparkleEffect';
@@ -252,34 +253,42 @@ const PhotoDiaryPage = () => {
     if (!file) return;
 
     if (import.meta.env.DEV) {
-      console.log('[PhotoDiary] Single file selected:', file.name);
+      console.log('[PhotoDiary] Single file selected:', file.name, 'type:', file.type, 'size:', file.size);
     }
 
     // Extract EXIF date for preview (timezone-less local date string)
-    const exifDate = await extractExifDate(file);
+    // Use extractExifDateWithSource for detailed logging
+    const exifResult = await extractExifDateWithSource(file);
     setDidUserAdjustDate(false);
 
-    if (exifDate) {
-      const parsed = parseLocalDateTime(exifDate);
+    if (import.meta.env.DEV) {
+      console.log('[PhotoDiary] EXIF extraction result:', exifResult);
+    }
+
+    if (exifResult.date && exifResult.source === 'exif') {
+      const parsed = parseLocalDateTime(exifResult.date);
       if (parsed) {
         setDetectedDate(parsed);
         setSelectedDate(parsed);
         setIsExifDate(true);
+        if (import.meta.env.DEV) {
+          console.log('[PhotoDiary] Using EXIF date:', parsed);
+        }
       } else {
         // EXIF present but unparsable (log + predictable fallback)
-        console.warn('[PhotoDiary] EXIF date string present but could not be parsed:', exifDate);
+        console.warn('[PhotoDiary] EXIF date string present but could not be parsed:', exifResult.date);
         setDetectedDate(null);
         setSelectedDate(new Date());
         setIsExifDate(false);
       }
     } else {
       // Common for images exported/sent via apps (e.g. WhatsApp) where EXIF is stripped.
-      console.warn('[PhotoDiary] No EXIF date found; will fall back to upload date unless user selects one');
+      console.warn('[PhotoDiary] No EXIF date found; source:', exifResult.source, '- will fall back to upload date unless user selects one');
       setDetectedDate(null);
       setSelectedDate(new Date());
       setIsExifDate(false);
     }
-    
+
     setPendingFile(file);
     // Keep modal open to show date confirmation
   };

@@ -5,9 +5,6 @@ import { BodyPart } from '@/contexts/UserDataContext';
 import { prepareFileForUpload } from '@/utils/heicConverter';
 import { extractExifDate } from '@/utils/exifExtractor';
 
-// Re-export for use in components
-export { extractExifDate };
-
 interface UploadOptions {
   bodyPart: BodyPart;
   notes?: string;
