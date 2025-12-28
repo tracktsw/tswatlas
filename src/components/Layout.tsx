@@ -3,8 +3,10 @@ import BottomNav from './BottomNav';
 import { ReminderBanner } from './ReminderBanner';
 import { useCheckInReminder } from '@/hooks/useCheckInReminder';
 import { useUserData } from '@/contexts/UserDataContext';
+import { useLayout } from '@/contexts/LayoutContext';
 
 const Layout = () => {
+  const { hideBottomNav } = useLayout();
   const { reminderSettings, checkIns, userId, isLoading } = useUserData();
 
   const {
@@ -29,10 +31,10 @@ const Layout = () => {
         />
       )}
       
-      <main className="flex-1 pb-20 overflow-y-auto">
+      <main className={hideBottomNav ? "flex-1 overflow-y-auto" : "flex-1 pb-20 overflow-y-auto"}>
         <Outlet />
       </main>
-      <BottomNav />
+      {!hideBottomNav && <BottomNav />}
     </div>
   );
 };

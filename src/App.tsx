@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { UserDataProvider } from "@/contexts/UserDataContext";
+import { LayoutProvider } from "@/contexts/LayoutContext";
 import AuthGuard from "@/components/AuthGuard";
 import Layout from "@/components/Layout";
 import HomePage from "@/pages/HomePage";
@@ -26,6 +27,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
     <QueryClientProvider client={queryClient}>
+      <LayoutProvider>
       <UserDataProvider>
         <TooltipProvider>
           <Toaster />
@@ -62,6 +64,7 @@ const App = () => (
           </BrowserRouter>
         </TooltipProvider>
       </UserDataProvider>
+      </LayoutProvider>
     </QueryClientProvider>
   </ThemeProvider>
 );
