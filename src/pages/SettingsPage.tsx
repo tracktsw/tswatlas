@@ -333,7 +333,7 @@ const SettingsPage = () => {
           </div>
           <div className="flex-1">
             <h3 className="font-semibold text-foreground">Contact Us</h3>
-            <p className="text-sm text-muted-foreground">Get in touch with our team</p>
+            <p className="text-sm text-muted-foreground">Get in touch with our team (contact@tracktsw.app)</p>
           </div>
         </div>
       </a>
