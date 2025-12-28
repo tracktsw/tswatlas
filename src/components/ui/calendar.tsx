@@ -28,7 +28,7 @@ function CustomDropdown({ value, onChange, children, caption, ...props }: Dropdo
       <SelectTrigger className="h-7 w-auto min-w-[80px] text-sm font-medium focus:ring-0 focus:ring-offset-0 gap-1">
         <SelectValue>{caption}</SelectValue>
       </SelectTrigger>
-      <SelectContent className="max-h-60">
+      <SelectContent className="max-h-60 z-[100]">
         {options.map((option, index) => (
           <SelectItem key={index} value={option.props.value?.toString() ?? ""}>
             {option.props.children}
@@ -48,11 +48,12 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
       captionLayout="dropdown-buttons"
       fromYear={2000}
       toYear={new Date().getFullYear() + 1}
-      className={cn("p-3", className)}
+      className={cn("p-3 pointer-events-auto", className)}
       classNames={{
+        // Fixed width container to prevent layout shifts
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-        month: "space-y-4",
-        caption: "flex justify-center pt-1 relative items-center",
+        month: "space-y-4 w-[280px]",
+        caption: "flex justify-center pt-1 relative items-center h-10",
         caption_label: "hidden",
         caption_dropdowns: "flex gap-1",
         nav: "space-x-1 flex items-center",
@@ -62,12 +63,12 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         ),
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
-        table: "w-full border-collapse space-y-1",
+        table: "w-full border-collapse",
         head_row: "flex",
-        head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
+        head_cell: "text-muted-foreground rounded-md w-10 font-normal text-[0.8rem]",
         row: "flex w-full mt-2",
-        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-        day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100"),
+        cell: "h-10 w-10 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+        day: cn(buttonVariants({ variant: "ghost" }), "h-10 w-10 p-0 font-normal aria-selected:opacity-100"),
         day_range_end: "day-range-end",
         day_selected:
           "bg-accent text-white hover:bg-accent hover:text-white focus:bg-accent focus:text-white",

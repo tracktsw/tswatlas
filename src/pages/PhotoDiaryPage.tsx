@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
-import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown, X, ImagePlus, CalendarIcon } from 'lucide-react';
+import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown, X, ImagePlus, CalendarIcon, ArrowUpDown, ArrowDown, ArrowUp } from 'lucide-react';
 import { useUserData, BodyPart, Photo } from '@/contexts/UserDataContext';
-import { useVirtualizedPhotos, VirtualPhoto } from '@/hooks/useVirtualizedPhotos';
+import { useVirtualizedPhotos, VirtualPhoto, SortOrder } from '@/hooks/useVirtualizedPhotos';
 import { VirtualizedPhotoGrid } from '@/components/VirtualizedPhotoGrid';
 import { ComparisonViewer } from '@/components/ComparisonViewer';
 import { BatchUploadModal } from '@/components/BatchUploadModal';
@@ -110,6 +110,7 @@ const PhotoDiaryPage = () => {
   const { addPhoto, deletePhoto, photos: contextPhotos, isLoading: contextLoading, refreshPhotos } = useUserData();
   const { isPremium } = useSubscription();
   const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | 'all'>('all');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
   const [isCapturing, setIsCapturing] = useState(false);
   const [newPhotoBodyPart, setNewPhotoBodyPart] = useState<BodyPart>('face');
   const [newPhotoNotes, setNewPhotoNotes] = useState('');
@@ -165,6 +166,7 @@ const PhotoDiaryPage = () => {
   } = useVirtualizedPhotos({
     userId,
     bodyPartFilter: selectedBodyPart,
+    sortOrder,
   });
 
   // Single upload hook (shared pipeline for Take Photo / Single Photo)
@@ -592,27 +594,55 @@ const PhotoDiaryPage = () => {
         </div>
       )}
 
-      {/* Body Part Filter */}
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide animate-slide-up" style={{ animationDelay: '0.05s' }}>
-        <Button
-          variant={selectedBodyPart === 'all' ? 'warm' : 'outline'}
-          size="sm"
-          onClick={() => setSelectedBodyPart('all')}
-          className="shrink-0 rounded-xl"
-        >
-          All
-        </Button>
-        {bodyParts.map(({ value, label }) => (
+      {/* Body Part Filter + Sort Control */}
+      <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.05s' }}>
+        {/* Body Part Pills */}
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
           <Button
-            key={value}
-            variant={selectedBodyPart === value ? 'warm' : 'outline'}
+            variant={selectedBodyPart === 'all' ? 'warm' : 'outline'}
             size="sm"
-            onClick={() => setSelectedBodyPart(value)}
+            onClick={() => setSelectedBodyPart('all')}
             className="shrink-0 rounded-xl"
           >
-            {label}
+            All
           </Button>
-        ))}
+          {bodyParts.map(({ value, label }) => (
+            <Button
+              key={value}
+              variant={selectedBodyPart === value ? 'warm' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedBodyPart(value)}
+              className="shrink-0 rounded-xl"
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+
+        {/* Sort Control */}
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">
+            {photos.length} photo{photos.length !== 1 ? 's' : ''}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
+            className="gap-1.5 text-sm h-8 px-2.5"
+          >
+            {sortOrder === 'newest' ? (
+              <>
+                <ArrowDown className="w-3.5 h-3.5" />
+                Newest first
+              </>
+            ) : (
+              <>
+                <ArrowUp className="w-3.5 h-3.5" />
+                Oldest first
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Upload status indicator */}
@@ -804,19 +834,26 @@ const PhotoDiaryPage = () => {
                       {format(selectedDate, 'PPP')}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={(date) => {
-                        if (!date) return;
-                        setSelectedDate(date);
-                        setDidUserAdjustDate(true);
-                      }}
-                      disabled={(date) => date > new Date()}
-                      initialFocus
-                      className="p-3 pointer-events-auto"
-                    />
+                  <PopoverContent 
+                    className="w-auto p-0 z-[100]" 
+                    align="center"
+                    side="bottom"
+                    sideOffset={4}
+                    avoidCollisions={false}
+                  >
+                    <div className="w-[310px] min-h-[340px]">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => {
+                          if (!date) return;
+                          setSelectedDate(date);
+                          setDidUserAdjustDate(true);
+                        }}
+                        disabled={(date) => date > new Date()}
+                        initialFocus
+                      />
+                    </div>
                   </PopoverContent>
                 </Popover>
               </div>
