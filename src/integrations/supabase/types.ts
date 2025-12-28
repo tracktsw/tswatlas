@@ -235,8 +235,11 @@ export type Database = {
           custom_treatments: string[]
           evening_time: string
           id: string
+          last_reminded_at: string | null
           morning_time: string
           reminders_enabled: boolean
+          snoozed_until: string | null
+          timezone: string | null
           tsw_start_date: string | null
           updated_at: string
           user_id: string
@@ -246,8 +249,11 @@ export type Database = {
           custom_treatments?: string[]
           evening_time?: string
           id?: string
+          last_reminded_at?: string | null
           morning_time?: string
           reminders_enabled?: boolean
+          snoozed_until?: string | null
+          timezone?: string | null
           tsw_start_date?: string | null
           updated_at?: string
           user_id: string
@@ -257,8 +263,11 @@ export type Database = {
           custom_treatments?: string[]
           evening_time?: string
           id?: string
+          last_reminded_at?: string | null
           morning_time?: string
           reminders_enabled?: boolean
+          snoozed_until?: string | null
+          timezone?: string | null
           tsw_start_date?: string | null
           updated_at?: string
           user_id?: string

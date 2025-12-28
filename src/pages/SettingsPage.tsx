@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { useUserData } from '@/contexts/UserDataContext';
@@ -11,13 +11,22 @@ import { supabase } from '@/integrations/supabase/client';
 import SubscriptionCard from '@/components/SubscriptionCard';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAppUpdate } from '@/hooks/useAppUpdate';
+import { useCheckInReminder } from '@/hooks/useCheckInReminder';
+import { format } from 'date-fns';
 const SettingsPage = () => {
-  const { reminderSettings, updateReminderSettings, photos, checkIns, journalEntries, isLoading, isSyncing } = useUserData();
+  const { reminderSettings, updateReminderSettings, photos, checkIns, journalEntries, isLoading, isSyncing, userId } = useUserData();
   const { isAdmin, refreshSubscription } = useSubscription();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentVersion, isChecking, checkForUpdate, performUpdate, updateAvailable } = useAppUpdate();
+  
+  // Get next reminder time for display
+  const { nextReminderTime } = useCheckInReminder({
+    reminderSettings,
+    checkIns,
+    userId,
+  });
 
   const handleCheckForUpdates = async () => {
     const hasUpdate = await checkForUpdate(true);
@@ -159,8 +168,19 @@ const SettingsPage = () => {
                 className="w-28"
               />
             </div>
+            
+            {/* Next reminder status */}
+            {nextReminderTime && (
+              <div className="flex items-center gap-2 p-2 bg-primary/5 rounded-lg">
+                <CalendarClock className="w-4 h-4 text-primary" />
+                <span className="text-sm text-foreground">
+                  Next reminder: <span className="font-medium">{format(nextReminderTime, 'EEE, MMM d \'at\' h:mm a')}</span>
+                </span>
+              </div>
+            )}
+            
             <p className="text-xs text-muted-foreground">
-              Note: Browser notifications need to be enabled for reminders to work.
+              Reminders appear when you open the app after the scheduled time. Works reliably on installed PWA.
             </p>
           </div>
         )}
