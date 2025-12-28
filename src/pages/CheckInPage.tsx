@@ -25,7 +25,7 @@ const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
 
 const CheckInPage = () => {
-  const { checkIns, addCheckIn, updateCheckIn, customTreatments, addCustomTreatment } = useUserData();
+  const { checkIns, addCheckIn, updateCheckIn, customTreatments, addCustomTreatment, getTodayCheckInCount } = useUserData();
   const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
   const [customTreatment, setCustomTreatment] = useState('');
   const [mood, setMood] = useState(3);
@@ -34,6 +34,8 @@ const CheckInPage = () => {
   const [showSparkles, setShowSparkles] = useState(false);
   const [editingCheckIn, setEditingCheckIn] = useState<CheckIn | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  // Client request ID for idempotent submissions - persists across retries
+  const [clientRequestId, setClientRequestId] = useState<string>(() => crypto.randomUUID());
 
   const today = format(new Date(), 'yyyy-MM-dd');
   const currentHour = new Date().getHours();
@@ -89,6 +91,12 @@ const CheckInPage = () => {
   const handleSubmit = async () => {
     if (!canSubmit || isSaving) return;
 
+    // Check daily limit before attempting
+    if (!editingCheckIn && getTodayCheckInCount() >= 2) {
+      toast.error("You've reached today's 2 check-ins.");
+      return;
+    }
+
     // Defensive validation
     if (mood < 1 || mood > 5 || skinFeeling < 1 || skinFeeling > 5) {
       toast.error('Please choose a mood and skin rating before saving.');
@@ -110,16 +118,20 @@ const CheckInPage = () => {
         setEditingCheckIn(null);
         toast.success('Check-in updated successfully');
       } else {
+        // Use the same clientRequestId for retries (idempotent submission)
         await addCheckIn({
           timeOfDay,
           treatments: selectedTreatments,
           mood,
           skinFeeling,
           notes: notes || undefined,
-        });
+        }, clientRequestId);
 
         setShowSparkles(true);
         toast.success('Check-in saved successfully');
+        
+        // Generate new clientRequestId for next check-in (only on success)
+        setClientRequestId(crypto.randomUUID());
       }
 
       // Reset form
@@ -136,6 +148,7 @@ const CheckInPage = () => {
             ? 'Failed to update check-in'
             : 'Failed to save check-in';
       toast.error(message);
+      // Note: clientRequestId is NOT regenerated on error, so retry uses the same ID
     } finally {
       setIsSaving(false);
     }
