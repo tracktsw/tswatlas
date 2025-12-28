@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Image, Columns, Rows } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -277,15 +277,22 @@ const FullscreenViewer = ({
 export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
   const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
   const isMobile = useIsMobile();
-  // Default to stacked on mobile, side-by-side on desktop
-  const [isStacked, setIsStacked] = useState<boolean | null>(null);
+  // Track if user has manually toggled the layout
+  const hasUserToggled = useRef(false);
+  // Layout state: stacked (true) or side-by-side (false)
+  const [isStacked, setIsStacked] = useState(isMobile);
 
-  // Set initial layout based on screen size (only once)
+  // Sync layout with screen size changes, unless user has manually toggled
   useEffect(() => {
-    if (isStacked === null) {
+    if (!hasUserToggled.current) {
       setIsStacked(isMobile);
     }
-  }, [isMobile, isStacked]);
+  }, [isMobile]);
+
+  const handleLayoutToggle = () => {
+    hasUserToggled.current = true;
+    setIsStacked(prev => !prev);
+  };
 
   // Lock body scroll when compare mode is active
   useEffect(() => {
@@ -313,9 +320,6 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
 
   if (photos.length !== 2) return null;
 
-  // Use stacked layout state (default to mobile behavior if not yet set)
-  const useStackedLayout = isStacked ?? isMobile;
-
   return (
     <>
       {/* Immersive comparison view - fixed position with scroll isolation */}
@@ -330,17 +334,17 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setIsStacked(!useStackedLayout)}
+              onClick={handleLayoutToggle}
               className="gap-1.5 text-muted-foreground hover:text-foreground"
-              title={useStackedLayout ? "Side by side" : "Stacked"}
+              title={isStacked ? "Side by side" : "Stacked"}
             >
-              {useStackedLayout ? (
+              {isStacked ? (
                 <Columns className="w-4 h-4" />
               ) : (
                 <Rows className="w-4 h-4" />
               )}
               <span className="hidden sm:inline text-xs">
-                {useStackedLayout ? "Side by side" : "Stacked"}
+                {isStacked ? "Side by side" : "Stacked"}
               </span>
             </Button>
             <Button
@@ -356,24 +360,32 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
         </div>
 
         {/* Comparison grid - fills remaining space */}
-        <div className={cn(
-          "flex-1 gap-1 p-1 min-h-0",
-          useStackedLayout 
-            ? "flex flex-col overflow-y-auto" 
-            : "grid grid-cols-2"
-        )}>
+        <div 
+          className={cn(
+            "flex-1 gap-1 p-1 min-h-0",
+            isStacked 
+              ? "flex flex-col overflow-y-auto overscroll-contain" 
+              : "grid grid-cols-2"
+          )}
+          style={isStacked ? { WebkitOverflowScrolling: 'touch' } : undefined}
+        >
           {photos.map((photo, idx) => (
             <div 
               key={photo.id} 
               className={cn(
                 "relative flex flex-col",
-                useStackedLayout 
-                  ? "min-h-[45vh] flex-shrink-0" 
+                isStacked 
+                  ? "w-full flex-shrink-0" 
                   : "min-h-0 flex-1"
               )}
             >
-              {/* Image container - fills available space */}
-              <div className="flex-1 relative min-h-0 bg-muted/30 rounded-lg overflow-hidden">
+              {/* Image container */}
+              <div className={cn(
+                "relative bg-muted/30 rounded-lg overflow-hidden",
+                isStacked 
+                  ? "w-full aspect-[4/5]"  // Natural aspect ratio for stacked
+                  : "flex-1 min-h-0"        // Fill space in grid
+              )}>
                 <ZoomableImage
                   thumbnailSrc={photo.thumbnailUrl}
                   mediumSrc={photo.mediumUrl}
