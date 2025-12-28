@@ -117,6 +117,8 @@ const PhotoDiaryPage = () => {
   const [selectedPhotos, setSelectedPhotos] = useState<VirtualPhoto[]>([]);
   const [showSparkles, setShowSparkles] = useState(false);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [showComparePaywall, setShowComparePaywall] = useState(false);
+  const [isUpgrading, setIsUpgrading] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState<VirtualPhoto | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   
@@ -210,10 +212,15 @@ const PhotoDiaryPage = () => {
   const remainingUploads = FREE_DAILY_PHOTO_LIMIT - photosUploadedToday;
 
   const handleUpgrade = async () => {
+    if (isUpgrading) return;
+    setIsUpgrading(true);
+    
     try {
+      console.log('[Upgrade] Starting checkout...');
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error('Please sign in to subscribe');
+        setIsUpgrading(false);
         return;
       }
 
@@ -224,16 +231,23 @@ const PhotoDiaryPage = () => {
       });
 
       if (error) {
+        console.error('[Upgrade] Checkout error:', error);
         toast.error('Failed to start checkout');
+        setIsUpgrading(false);
         return;
       }
 
       if (data?.url) {
-        window.open(data.url, '_blank');
+        console.log('[Upgrade] Redirecting to checkout...');
+        // Use location.assign for iOS/PWA compatibility (same-tab navigation)
+        window.location.assign(data.url);
+      } else {
+        setIsUpgrading(false);
       }
     } catch (err) {
-      console.error('Checkout error:', err);
+      console.error('[Upgrade] Checkout error:', err);
       toast.error('Failed to start checkout');
+      setIsUpgrading(false);
     }
   };
 
@@ -545,11 +559,17 @@ const PhotoDiaryPage = () => {
           <Button 
             variant="outline" 
             size="sm"
-            className="rounded-xl"
-            onClick={() => setCompareMode(true)}
+            className="rounded-xl gap-1.5"
+            onClick={() => isPremium ? setCompareMode(true) : setShowComparePaywall(true)}
             disabled={photos.length < 2}
           >
+            {!isPremium && <Lock className="w-3.5 h-3.5" />}
             Compare
+            {!isPremium && (
+              <span className="text-[10px] font-semibold bg-coral/15 text-coral px-1.5 py-0.5 rounded-full">
+                Premium
+              </span>
+            )}
           </Button>
         )}
       </div>
@@ -608,9 +628,9 @@ const PhotoDiaryPage = () => {
               </p>
             </div>
             {!canUploadMore && (
-              <Button size="sm" onClick={handleUpgrade} className="gap-1.5 rounded-xl">
+              <Button size="sm" variant="warm" onClick={handleUpgrade} disabled={isUpgrading} className="gap-1.5 rounded-xl">
                 <Crown className="w-4 h-4" />
-                Upgrade
+                {isUpgrading ? 'Loading...' : 'Upgrade'}
               </Button>
             )}
           </div>
@@ -650,11 +670,68 @@ const PhotoDiaryPage = () => {
             <div className="p-4 bg-muted/50 rounded-xl">
               <p className="text-sm text-muted-foreground">Your limit resets tomorrow</p>
             </div>
-            <Button onClick={handleUpgrade} className="w-full gap-2">
-              <Crown className="w-4 h-4" />
-              Upgrade to Premium - £5.99/month
-            </Button>
+            <div className="space-y-2">
+              <Button onClick={handleUpgrade} disabled={isUpgrading} variant="warm" className="w-full gap-2">
+                <Crown className="w-4 h-4" />
+                {isUpgrading ? 'Loading...' : 'Upgrade to Premium'}
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                Just £5.99/month • Cancel anytime
+              </p>
+            </div>
             <Button variant="ghost" onClick={() => setShowUpgradePrompt(false)} className="w-full">
+              Maybe Later
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Compare Paywall Modal */}
+      <Dialog open={showComparePaywall} onOpenChange={setShowComparePaywall}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl flex items-center gap-2">
+              <Lock className="w-5 h-5 text-coral" />
+              Compare is Premium
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-muted-foreground text-center">
+              Unlock side-by-side photo comparison to visually track your skin's progress over time.
+            </p>
+            <div className="p-4 bg-gradient-to-br from-coral/10 to-honey/10 rounded-xl space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <Sparkles className="w-4 h-4 text-coral" />
+                <span>Compare photos side by side</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Sparkles className="w-4 h-4 text-coral" />
+                <span>Track visual progress over time</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Sparkles className="w-4 h-4 text-coral" />
+                <span>Unlimited photo uploads</span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Button 
+                onClick={handleUpgrade} 
+                disabled={isUpgrading}
+                className="w-full gap-2"
+                variant="warm"
+              >
+                <Crown className="w-4 h-4" />
+                {isUpgrading ? 'Loading...' : 'Upgrade to Premium'}
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                Just £5.99/month • Cancel anytime
+              </p>
+            </div>
+            <Button 
+              variant="ghost" 
+              onClick={() => setShowComparePaywall(false)} 
+              className="w-full"
+            >
               Maybe Later
             </Button>
           </div>
