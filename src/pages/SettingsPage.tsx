@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock } from 'lucide-react';
+import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock, Mail } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { useUserData } from '@/contexts/UserDataContext';
@@ -321,6 +321,22 @@ const SettingsPage = () => {
           Version {currentVersion} • Made with care
         </p>
       </div>
+
+      {/* Contact Us */}
+      <a 
+        href="mailto:contact@tracktsw.app" 
+        className="glass-card p-4 block hover:bg-muted/50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-full bg-primary/10">
+            <Mail className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-foreground">Contact Us</h3>
+            <p className="text-sm text-muted-foreground">Get in touch with our team</p>
+          </div>
+        </div>
+      </a>
 
       {/* Sign Out */}
       <div className="glass-card p-4">
