@@ -17,14 +17,14 @@ export function AppUpdateBanner() {
         </div>
         
         <h2 className="mb-2 text-center text-lg font-semibold text-foreground">
-          New Version Available
+          Update available
         </h2>
         
         <p className="mb-6 text-center text-sm text-muted-foreground">
-          A new version of TrackTSW is available with improvements and fixes.
+          A new version is ready. Refresh to update.
           {remoteVersion && (
             <span className="block mt-1 text-xs">
-              Version {remoteVersion}
+              v{remoteVersion}
             </span>
           )}
         </p>
@@ -39,10 +39,10 @@ export function AppUpdateBanner() {
             {isUpdating ? (
               <>
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Updating...
+                Refreshing...
               </>
             ) : (
-              "Update Now"
+              "Refresh now"
             )}
           </Button>
           
