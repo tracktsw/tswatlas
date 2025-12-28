@@ -11,27 +11,36 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log("[EMAIL-HOOK] ========== Auth Email Hook Triggered ==========");
+  console.log("[EMAIL-HOOK] Method:", req.method);
+  console.log("[EMAIL-HOOK] RESEND_API_KEY configured:", !!Deno.env.get("RESEND_API_KEY"));
+  console.log("[EMAIL-HOOK] SEND_EMAIL_HOOK_SECRET configured:", !!hookSecret);
+
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   if (req.method !== "POST") {
+    console.log("[EMAIL-HOOK] Rejected - not POST");
     return new Response("Method not allowed", { status: 405, headers: corsHeaders });
   }
 
   const payload = await req.text();
   const headers = Object.fromEntries(req.headers);
+  console.log("[EMAIL-HOOK] Payload length:", payload.length);
 
   let eventData: any;
 
   // Verify webhook signature if secret is configured
   if (hookSecret) {
     try {
+      console.log("[EMAIL-HOOK] Verifying webhook signature...");
       const wh = new Webhook(hookSecret);
       eventData = wh.verify(payload, headers);
+      console.log("[EMAIL-HOOK] Webhook signature verified successfully");
     } catch (error) {
-      console.error("[SEND-AUTH-EMAIL] Webhook verification failed:", error);
+      console.error("[EMAIL-HOOK] Webhook verification failed:", error);
       return new Response(
         JSON.stringify({ error: { http_code: 401, message: "Invalid signature" } }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -39,10 +48,11 @@ serve(async (req) => {
     }
   } else {
     // If no secret configured, parse payload directly (development mode)
+    console.log("[EMAIL-HOOK] No secret configured, parsing payload directly");
     try {
       eventData = JSON.parse(payload);
     } catch (error) {
-      console.error("[SEND-AUTH-EMAIL] Failed to parse payload:", error);
+      console.error("[EMAIL-HOOK] Failed to parse payload:", error);
       return new Response(
         JSON.stringify({ error: { http_code: 400, message: "Invalid payload" } }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -53,10 +63,12 @@ serve(async (req) => {
   const { user, email_data } = eventData;
   const { token, token_hash, redirect_to, email_action_type } = email_data || {};
 
-  console.log("[SEND-AUTH-EMAIL] Processing:", email_action_type, "for:", user?.email);
+  console.log("[EMAIL-HOOK] Email action type:", email_action_type);
+  console.log("[EMAIL-HOOK] Recipient:", user?.email);
+  console.log("[EMAIL-HOOK] Redirect to:", redirect_to);
 
   if (!user?.email) {
-    console.error("[SEND-AUTH-EMAIL] No user email provided");
+    console.error("[EMAIL-HOOK] No user email provided in payload");
     return new Response(
       JSON.stringify({ error: { http_code: 400, message: "No user email" } }),
       { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -65,6 +77,7 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    console.log("[EMAIL-HOOK] Supabase URL:", supabaseUrl);
     let subject = "";
     let htmlContent = "";
 
@@ -210,6 +223,11 @@ serve(async (req) => {
       `;
     }
 
+    console.log("[EMAIL-HOOK] Sending email via Resend...");
+    console.log("[EMAIL-HOOK] From: TrackTSW <no-reply@tracktsw.app>");
+    console.log("[EMAIL-HOOK] To:", user.email);
+    console.log("[EMAIL-HOOK] Subject:", subject);
+
     const emailResponse = await resend.emails.send({
       from: "TrackTSW <no-reply@tracktsw.app>",
       reply_to: "contact@tracktsw.app",
@@ -218,14 +236,15 @@ serve(async (req) => {
       html: htmlContent,
     });
 
-    console.log("[SEND-AUTH-EMAIL] Email sent successfully:", emailResponse);
+    console.log("[EMAIL-HOOK] ✅ Email sent successfully via Resend:", JSON.stringify(emailResponse));
 
     return new Response(JSON.stringify({}), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error: any) {
-    console.error("[SEND-AUTH-EMAIL] Error sending email:", error);
+    console.error("[EMAIL-HOOK] ❌ Error sending email:", error.message);
+    console.error("[EMAIL-HOOK] Full error:", JSON.stringify(error));
     return new Response(
       JSON.stringify({ error: { http_code: 500, message: error.message } }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
