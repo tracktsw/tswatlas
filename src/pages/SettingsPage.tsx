@@ -180,7 +180,7 @@ const SettingsPage = () => {
             )}
             
             <p className="text-xs text-muted-foreground">
-              Reminders appear when you open the app after the scheduled time. Works reliably on installed PWA.
+              Reminders appear when you open the app after the scheduled time.
             </p>
           </div>
         )}
