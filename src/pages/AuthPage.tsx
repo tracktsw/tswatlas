@@ -152,12 +152,14 @@ const AuthPage = () => {
             </button>
           ) : (
             <div className="inline-flex flex-col items-center gap-3">
-              <img 
-                src={trackTswLogo} 
-                alt="TrackTSW" 
-                className="w-24 h-24 object-contain" 
-              />
-              <h2 className="font-display text-lg font-semibold text-coral">TrackTSW</h2>
+              <div className="w-24 h-24 rounded-full bg-background flex items-center justify-center">
+                <img 
+                  src={trackTswLogo} 
+                  alt="TrackTSW" 
+                  className="w-20 h-20 object-contain" 
+                />
+              </div>
+              <h2 className="font-display text-lg font-semibold text-anchor">TrackTSW</h2>
             </div>
           )}
           <div className="space-y-2">
