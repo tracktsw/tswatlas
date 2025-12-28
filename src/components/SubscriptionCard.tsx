@@ -1,20 +1,57 @@
-import { Crown, Loader2, ExternalLink, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
+import { Crown, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 
+// Platform detection for logging
+const getPlatform = (): string => {
+  const ua = navigator.userAgent;
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
+    || (navigator as any).standalone === true;
+  
+  if (/iPad|iPhone|iPod/.test(ua)) {
+    return isStandalone ? 'iOS-PWA' : 'iOS-Safari';
+  }
+  if (/Android/.test(ua)) {
+    return isStandalone ? 'Android-PWA' : 'Android-Browser';
+  }
+  return isStandalone ? 'Desktop-PWA' : 'Desktop-Browser';
+};
+
 const SubscriptionCard = () => {
   const { isPremium, isAdmin, isLoading, subscriptionEnd, refreshSubscription } = useSubscription();
+  
+  // Double-click protection: track in-flight requests
+  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+  const [isPortalLoading, setIsPortalLoading] = useState(false);
 
   const handleUpgrade = async () => {
+    // Guard against double-clicks
+    if (isCheckoutLoading) {
+      console.log('[UPGRADE] Blocked - request already in flight');
+      return;
+    }
+
+    const platform = getPlatform();
+    console.log('[UPGRADE] UpgradeClick', { platform, timestamp: new Date().toISOString() });
+
+    setIsCheckoutLoading(true);
+
     try {
+      console.log('[UPGRADE] CheckoutStart - Getting session...');
       const { data: { session } } = await supabase.auth.getSession();
+      
       if (!session) {
+        console.error('[UPGRADE] CheckoutError - No auth session');
         toast.error('Please sign in to subscribe');
+        setIsCheckoutLoading(false);
         return;
       }
+
+      console.log('[UPGRADE] CheckoutStart - Invoking create-checkout function...', { userId: session.user.id });
 
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         headers: {
@@ -22,27 +59,68 @@ const SubscriptionCard = () => {
         },
       });
 
+      console.log('[UPGRADE] CheckoutResponse', { 
+        status: error ? 'error' : 'success',
+        hasUrl: !!data?.url,
+        error: error?.message || data?.error || null
+      });
+
       if (error) {
-        toast.error('Failed to start checkout');
+        console.error('[UPGRADE] CheckoutError - Function error:', error);
+        toast.error('Checkout couldn\'t start. Please try again.');
+        setIsCheckoutLoading(false);
+        return;
+      }
+
+      if (data?.error) {
+        console.error('[UPGRADE] CheckoutError - API error:', data.error);
+        toast.error('Checkout couldn\'t start. Please try again.');
+        setIsCheckoutLoading(false);
         return;
       }
 
       if (data?.url) {
-        window.open(data.url, '_blank');
+        console.log('[UPGRADE] CheckoutRedirect', { url: data.url.substring(0, 50) + '...' });
+        // Use window.location.assign for same-tab navigation (iOS/PWA compatible)
+        window.location.assign(data.url);
+        // Note: isCheckoutLoading stays true as we're navigating away
+      } else {
+        console.error('[UPGRADE] CheckoutError - No URL in response');
+        toast.error('Checkout couldn\'t start. Please try again.');
+        setIsCheckoutLoading(false);
       }
     } catch (err) {
-      console.error('Checkout error:', err);
-      toast.error('Failed to start checkout');
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.error('[UPGRADE] CheckoutError - Exception:', errorMessage);
+      toast.error('Checkout couldn\'t start. Please try again.');
+      setIsCheckoutLoading(false);
     }
   };
 
   const handleManageSubscription = async () => {
+    // Guard against double-clicks
+    if (isPortalLoading) {
+      console.log('[PORTAL] Blocked - request already in flight');
+      return;
+    }
+
+    const platform = getPlatform();
+    console.log('[PORTAL] PortalClick', { platform, timestamp: new Date().toISOString() });
+
+    setIsPortalLoading(true);
+
     try {
+      console.log('[PORTAL] PortalStart - Getting session...');
       const { data: { session } } = await supabase.auth.getSession();
+      
       if (!session) {
+        console.error('[PORTAL] PortalError - No auth session');
         toast.error('Please sign in');
+        setIsPortalLoading(false);
         return;
       }
+
+      console.log('[PORTAL] PortalStart - Invoking customer-portal function...', { userId: session.user.id });
 
       const { data, error } = await supabase.functions.invoke('customer-portal', {
         headers: {
@@ -50,17 +128,47 @@ const SubscriptionCard = () => {
         },
       });
 
+      console.log('[PORTAL] PortalResponse', { 
+        status: error ? 'error' : 'success',
+        hasUrl: !!data?.url,
+        error: error?.message || data?.error || null
+      });
+
       if (error) {
-        toast.error('Failed to open subscription portal');
+        console.error('[PORTAL] PortalError - Function error:', error);
+        toast.error('Failed to open subscription portal. Please try again.');
+        setIsPortalLoading(false);
+        return;
+      }
+
+      if (data?.error) {
+        // Check for specific "no customer" error
+        if (data.error.includes('No Stripe customer') || data.error === 'no_customer') {
+          console.log('[PORTAL] PortalError - No Stripe customer found');
+          toast.error('No active subscription found. Please upgrade first.');
+        } else {
+          console.error('[PORTAL] PortalError - API error:', data.error);
+          toast.error('Failed to open subscription portal. Please try again.');
+        }
+        setIsPortalLoading(false);
         return;
       }
 
       if (data?.url) {
-        window.open(data.url, '_blank');
+        console.log('[PORTAL] PortalRedirect', { url: data.url.substring(0, 50) + '...' });
+        // Use window.location.assign for same-tab navigation (iOS/PWA compatible)
+        window.location.assign(data.url);
+        // Note: isPortalLoading stays true as we're navigating away
+      } else {
+        console.error('[PORTAL] PortalError - No URL in response');
+        toast.error('Failed to open subscription portal. Please try again.');
+        setIsPortalLoading(false);
       }
     } catch (err) {
-      console.error('Portal error:', err);
-      toast.error('Failed to open subscription portal');
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.error('[PORTAL] PortalError - Exception:', errorMessage);
+      toast.error('Failed to open subscription portal. Please try again.');
+      setIsPortalLoading(false);
     }
   };
 
@@ -104,9 +212,18 @@ const SubscriptionCard = () => {
                 size="sm" 
                 className="mt-3 gap-2"
                 onClick={handleManageSubscription}
+                disabled={isPortalLoading}
               >
-                <ExternalLink className="w-4 h-4" />
-                Manage Subscription
+                {isPortalLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Opening...
+                  </>
+                ) : (
+                  <>
+                    Manage Subscription
+                  </>
+                )}
               </Button>
             )}
           </div>
@@ -137,9 +254,19 @@ const SubscriptionCard = () => {
             size="sm" 
             className="mt-3 gap-2"
             onClick={handleUpgrade}
+            disabled={isCheckoutLoading}
           >
-            <Crown className="w-4 h-4" />
-            Get Premium - £5.99/month
+            {isCheckoutLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Starting checkout...
+              </>
+            ) : (
+              <>
+                <Crown className="w-4 h-4" />
+                Get Premium - £5.99/month
+              </>
+            )}
           </Button>
         </div>
       </div>

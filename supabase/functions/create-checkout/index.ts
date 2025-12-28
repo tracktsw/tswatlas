@@ -13,7 +13,12 @@ const logStep = (step: string, details?: any) => {
 };
 
 serve(async (req) => {
+  logStep("========== CREATE-CHECKOUT FUNCTION TRIGGERED ==========");
+  logStep("Method", { method: req.method });
+  logStep("Origin", { origin: req.headers.get("origin") });
+
   if (req.method === "OPTIONS") {
+    logStep("Handling CORS preflight");
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -21,39 +26,76 @@ serve(async (req) => {
     logStep("Function started");
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
-    logStep("Stripe key verified");
+    if (!stripeKey) {
+      logStep("ERROR - STRIPE_SECRET_KEY is not set");
+      throw new Error("STRIPE_SECRET_KEY is not set");
+    }
+    logStep("Stripe key verified", { keyLength: stripeKey.length });
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    logStep("Supabase config", { 
+      hasUrl: !!supabaseUrl, 
+      hasAnonKey: !!supabaseAnonKey 
+    });
 
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+      supabaseUrl ?? "",
+      supabaseAnonKey ?? ""
     );
 
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
-    logStep("Authorization header found");
+    if (!authHeader) {
+      logStep("ERROR - No authorization header provided");
+      throw new Error("No authorization header provided");
+    }
+    logStep("Authorization header found", { headerLength: authHeader.length });
 
     const token = authHeader.replace("Bearer ", "");
+    logStep("Authenticating user with token...");
+    
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
+    if (userError) {
+      logStep("ERROR - Authentication failed", { error: userError.message });
+      throw new Error(`Authentication error: ${userError.message}`);
+    }
+    
     const user = userData.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
-    logStep("User authenticated", { userId: user.id, email: user.email });
+    if (!user?.email) {
+      logStep("ERROR - User not authenticated or email not available");
+      throw new Error("User not authenticated or email not available");
+    }
+    logStep("User authenticated successfully", { userId: user.id, email: user.email });
 
+    logStep("Initializing Stripe client...");
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     
     // Check for existing Stripe customer
+    logStep("Searching for existing Stripe customer by email...");
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    let customerId;
+    
+    let customerId: string | undefined;
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
-      logStep("Found existing customer", { customerId });
+      logStep("Found existing Stripe customer", { customerId });
     } else {
-      logStep("No existing customer found, will create new");
+      logStep("No existing customer found - will create new during checkout");
     }
 
     // TSW Atlas Premium - £5.99/month (active product: prod_Tb4N9ELb7DATG9)
     const PRICE_ID = "price_1SdsESP0aIdhyRtPA0atJ80k";
+    logStep("Using price", { priceId: PRICE_ID });
+
+    const origin = req.headers.get("origin") || "https://tracktsw.app";
+    const successUrl = `${origin}/settings?subscription=success`;
+    const cancelUrl = `${origin}/settings?subscription=cancelled`;
+    
+    logStep("Creating Stripe checkout session...", {
+      mode: "subscription",
+      hasExistingCustomer: !!customerId,
+      successUrl,
+      cancelUrl
+    });
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -65,22 +107,26 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/settings?subscription=success`,
-      cancel_url: `${req.headers.get("origin")}/settings?subscription=cancelled`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       metadata: {
         user_id: user.id,
       },
+      client_reference_id: user.id,
     });
 
-    logStep("Checkout session created", { sessionId: session.id });
+    logStep("✅ Checkout session created successfully", { 
+      sessionId: session.id,
+      hasUrl: !!session.url
+    });
 
-    return new Response(JSON.stringify({ url: session.url }), {
+    return new Response(JSON.stringify({ url: session.url, sessionId: session.id }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR", { message: errorMessage });
+    logStep("❌ ERROR in create-checkout", { message: errorMessage });
     return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
