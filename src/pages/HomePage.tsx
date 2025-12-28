@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, CheckCircle, BarChart3, Users, BookOpen, Settings, Calendar as CalendarIcon, Flame, Pencil, Leaf, Sun, Loader2 } from 'lucide-react';
+import { Camera, CheckCircle, BarChart3, Users, BookOpen, Settings, Calendar as CalendarIcon, Flame, Pencil, Leaf, Sun, Loader2, Crown, Sparkles } from 'lucide-react';
 import { LeafIllustration, PlantIllustration } from '@/components/illustrations';
 import compassLogo from '@/assets/compass-logo.png';
 import { useUserData } from '@/contexts/UserDataContext';
+import { useSubscription } from '@/hooks/useSubscription';
 import { format, differenceInDays, parseISO, subDays, startOfDay } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
@@ -12,6 +13,7 @@ import { cn } from '@/lib/utils';
 
 const HomePage = () => {
   const { photos, checkIns, journalEntries, tswStartDate, setTswStartDate, isLoading, isSyncing, refreshPhotos } = useUserData();
+  const { isPremium, isLoading: isSubscriptionLoading } = useSubscription();
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     tswStartDate ? parseISO(tswStartDate) : undefined
@@ -176,12 +178,31 @@ const HomePage = () => {
             </h1>
           </div>
         </div>
-        <Link 
-          to="/settings" 
-          className="p-2.5 rounded-2xl bg-muted/60 hover:bg-muted transition-colors"
-        >
-          <Settings className="w-5 h-5 text-muted-foreground" />
-        </Link>
+        <div className="flex items-center gap-2">
+          {/* Premium Badge */}
+          {!isSubscriptionLoading && (
+            isPremium ? (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-coral/15 to-honey/15 border border-coral/20">
+                <Crown className="w-4 h-4 text-coral" />
+                <span className="text-xs font-semibold text-coral">Premium</span>
+              </div>
+            ) : (
+              <Link 
+                to="/settings"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/60 hover:bg-muted transition-colors"
+              >
+                <Sparkles className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">Free</span>
+              </Link>
+            )
+          )}
+          <Link 
+            to="/settings" 
+            className="p-2.5 rounded-2xl bg-muted/60 hover:bg-muted transition-colors"
+          >
+            <Settings className="w-5 h-5 text-muted-foreground" />
+          </Link>
+        </div>
       </div>
 
       {/* TSW Journey Tracker - Progress Card */}
