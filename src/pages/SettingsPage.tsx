@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock, Mail } from 'lucide-react';
+import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock, Mail, Eye } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { useUserData } from '@/contexts/UserDataContext';
+import { useDemoMode } from '@/contexts/DemoModeContext';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import { format } from 'date-fns';
 const SettingsPage = () => {
   const { reminderSettings, updateReminderSettings, photos, checkIns, journalEntries, isLoading, isSyncing, userId } = useUserData();
   const { isAdmin, refreshSubscription } = useSubscription();
+  const { isDemoMode, isAdmin: isDemoAdmin, toggleDemoMode } = useDemoMode();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -266,6 +268,33 @@ const SettingsPage = () => {
               </Link>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Demo Mode - Only shown to specific admin email */}
+      {isDemoAdmin && (
+        <div className="glass-card p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-full bg-amber-500/10">
+              <Eye className="w-5 h-5 text-amber-500" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-foreground">Demo Mode</h3>
+              <p className="text-sm text-muted-foreground">Insights preview only - edit past data for demos</p>
+            </div>
+            <Switch 
+              checked={isDemoMode}
+              onCheckedChange={() => {
+                toggleDemoMode();
+                toast.success(isDemoMode ? 'Demo Mode disabled' : 'Demo Mode enabled');
+              }}
+            />
+          </div>
+          {isDemoMode && (
+            <p className="text-xs text-amber-500 mt-2 pl-12">
+              Demo data is in-memory only and will reset on refresh.
+            </p>
+          )}
         </div>
       )}
 
