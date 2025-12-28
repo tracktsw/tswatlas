@@ -124,6 +124,7 @@ const PhotoDiaryPage = () => {
   const [detectedDate, setDetectedDate] = useState<Date | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isExifDate, setIsExifDate] = useState(false);
+  const [didUserAdjustDate, setDidUserAdjustDate] = useState(false);
   
   // Batch upload state
   const [showBatchUpload, setShowBatchUpload] = useState(false);
@@ -256,6 +257,7 @@ const PhotoDiaryPage = () => {
 
     // Extract EXIF date for preview (timezone-less local date string)
     const exifDate = await extractExifDate(file);
+    setDidUserAdjustDate(false);
 
     if (exifDate) {
       const parsed = parseLocalDateTime(exifDate);
@@ -271,7 +273,8 @@ const PhotoDiaryPage = () => {
         setIsExifDate(false);
       }
     } else {
-      console.warn('[PhotoDiary] No EXIF date found; falling back to upload date');
+      // Common for images exported/sent via apps (e.g. WhatsApp) where EXIF is stripped.
+      console.warn('[PhotoDiary] No EXIF date found; will fall back to upload date unless user selects one');
       setDetectedDate(null);
       setSelectedDate(new Date());
       setIsExifDate(false);
@@ -284,29 +287,37 @@ const PhotoDiaryPage = () => {
   // Confirm and upload the pending file
   const handleConfirmUpload = async () => {
     if (!pendingFile) return;
-    
+
     setIsCapturing(false);
-    
+
+    // Decide what to store in taken_at:
+    // - If EXIF was found and user didn't adjust → let the upload hook store extracted EXIF
+    // - If EXIF missing and user didn't adjust → store NULL (UI will fall back to upload date)
+    // - If user adjusted → store their chosen local date
+    const shouldStoreNullTakenAt = !isExifDate && !didUserAdjustDate;
+
     // Format selectedDate as timezone-less ISO for storage in `timestamp without time zone`
     const pad = (n: number) => n.toString().padStart(2, '0');
     const takenAtLocal = `${selectedDate.getFullYear()}-${pad(selectedDate.getMonth() + 1)}-${pad(selectedDate.getDate())}T${pad(selectedDate.getHours())}:${pad(selectedDate.getMinutes())}:${pad(selectedDate.getSeconds())}`;
-    
+
     const photoId = await singleUpload.processAndUploadFile(pendingFile, {
       bodyPart: newPhotoBodyPart,
       notes: newPhotoNotes || undefined,
-      takenAtOverride: takenAtLocal,
+      takenAtOverride: shouldStoreNullTakenAt ? null : takenAtLocal,
     });
 
     if (photoId) {
       setNewPhotoNotes('');
       setPendingFile(null);
       setDetectedDate(null);
+      setDidUserAdjustDate(false);
     }
   };
 
   const handleCancelPending = () => {
     setPendingFile(null);
     setDetectedDate(null);
+    setDidUserAdjustDate(false);
   };
 
   // Handle batch file selection from gallery
@@ -666,10 +677,12 @@ const PhotoDiaryPage = () => {
             <div className="space-y-4">
               <div className="p-3 bg-muted/50 rounded-xl text-center">
                 <p className="text-sm font-medium mb-1">
-                  {isExifDate ? 'Date detected from photo:' : 'No date found in photo'}
+                  {isExifDate ? 'Date detected from photo:' : 'No metadata date found'}
                 </p>
-                <p className={cn("text-lg font-semibold", !isExifDate && "text-muted-foreground")}>
-                  {isExifDate ? format(selectedDate, 'MMMM d, yyyy') : 'Using today\'s date'}
+                <p className={cn("text-sm", !isExifDate && "text-muted-foreground")}>
+                  {isExifDate
+                    ? format(selectedDate, 'MMMM d, yyyy')
+                    : 'We’ll use the upload date unless you pick a date below.'}
                 </p>
               </div>
               
@@ -686,7 +699,11 @@ const PhotoDiaryPage = () => {
                     <Calendar
                       mode="single"
                       selected={selectedDate}
-                      onSelect={(date) => date && setSelectedDate(date)}
+                      onSelect={(date) => {
+                        if (!date) return;
+                        setSelectedDate(date);
+                        setDidUserAdjustDate(true);
+                      }}
                       disabled={(date) => date > new Date()}
                       initialFocus
                       className="p-3 pointer-events-auto"
