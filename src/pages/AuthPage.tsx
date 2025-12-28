@@ -58,7 +58,7 @@ const AuthPage = () => {
         toast.success('Welcome back!');
         navigate('/');
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -67,12 +67,33 @@ const AuthPage = () => {
         });
         if (error) throw error;
         
-        // Send welcome email silently (fire-and-forget)
-        supabase.functions.invoke('send-welcome-email', {
-          body: { email },
-        }).catch(() => {
-          // Silently ignore errors - don't block signup
-        });
+        // Send welcome email for new users only (check if user was just created)
+        if (data?.user?.id) {
+          // Create user settings and send welcome email
+          const { data: existingSettings } = await supabase
+            .from('user_settings')
+            .select('welcome_email_sent_at')
+            .eq('user_id', data.user.id)
+            .maybeSingle();
+          
+          // Only send if no settings exist or welcome email not sent
+          if (!existingSettings?.welcome_email_sent_at) {
+            supabase.functions.invoke('send-welcome-email', {
+              body: { email },
+            }).then(() => {
+              // Mark welcome email as sent (fire-and-forget)
+              supabase
+                .from('user_settings')
+                .upsert({
+                  user_id: data.user!.id,
+                  welcome_email_sent_at: new Date().toISOString(),
+                }, { onConflict: 'user_id' })
+                .then(() => {});
+            }).catch(() => {
+              // Silently ignore errors - don't block signup
+            });
+          }
+        }
         
         toast.success('Account created! You can now sign in.');
         setMode('login');
