@@ -615,24 +615,23 @@ const PhotoDiaryPage = () => {
         ))}
       </div>
 
-      {/* Free user limit indicator */}
-      {!isPremium && (
+      {/* Upload status indicator */}
+      {isPremium ? (
+        <div className="glass-card p-4 animate-fade-in">
+          <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-coral" />
+            Unlimited photo uploads
+          </p>
+        </div>
+      ) : (
         <div className="glass-card p-4 space-y-3 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-foreground">
-                {canUploadMore 
-                  ? `${remainingUploads} photo${remainingUploads !== 1 ? 's' : ''} left today`
-                  : 'Daily limit reached'
-                }
-              </p>
-            </div>
-            {!canUploadMore && (
-              <Button size="sm" variant="warm" onClick={handleUpgrade} disabled={isUpgrading} className="gap-1.5 rounded-xl">
-                <Crown className="w-4 h-4" />
-                {isUpgrading ? 'Loading...' : 'Upgrade'}
-              </Button>
-            )}
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              Free plan: {FREE_DAILY_PHOTO_LIMIT} photos per day
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Upgrade to Premium for unlimited photo uploads.
+            </p>
           </div>
           <div className="space-y-1.5">
             <div className="flex justify-between text-xs text-muted-foreground">
@@ -739,15 +738,39 @@ const PhotoDiaryPage = () => {
       </Dialog>
 
       {/* Add Photo Button */}
-      <Button 
-        variant="warm" 
-        className="w-full gap-2 h-12"
-        onClick={handleAddPhotoClick}
-      >
-        <Plus className="w-5 h-5" />
-        Add Photo
-        {!isPremium && !canUploadMore && <Lock className="w-4 h-4 ml-1" />}
-      </Button>
+      <div className="space-y-3">
+        <Button 
+          variant={!isPremium && !canUploadMore ? "outline" : "warm"}
+          className="w-full gap-2 h-12"
+          onClick={handleAddPhotoClick}
+          disabled={!isPremium && !canUploadMore}
+        >
+          {!isPremium && !canUploadMore ? (
+            <>
+              <Lock className="w-5 h-5" />
+              Daily limit reached
+            </>
+          ) : (
+            <>
+              <Plus className="w-5 h-5" />
+              Add Photo
+            </>
+          )}
+        </Button>
+        
+        {/* Upgrade CTA when limit reached */}
+        {!isPremium && !canUploadMore && (
+          <Button 
+            variant="warm" 
+            className="w-full gap-2 h-12"
+            onClick={handleUpgrade}
+            disabled={isUpgrading}
+          >
+            <Crown className="w-5 h-5" />
+            {isUpgrading ? 'Loading...' : 'Upgrade to Premium for unlimited uploads'}
+          </Button>
+        )}
+      </div>
 
       {/* Add Photo Dialog */}
       <Dialog open={isCapturing} onOpenChange={(open) => { if (!open) { setIsCapturing(false); setPendingFile(null); } else setIsCapturing(true); }}>
