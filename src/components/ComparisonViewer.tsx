@@ -321,8 +321,6 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
       {/* Immersive comparison view - fixed position with scroll isolation */}
       <div 
         className="fixed inset-0 z-40 bg-background flex flex-col overscroll-none"
-        style={{ touchAction: 'none' }}
-        onTouchMove={(e) => e.stopPropagation()}
       >
         {/* Minimal header */}
         <div className="flex items-center justify-between px-4 py-2 bg-background/95 backdrop-blur-sm border-b border-border/30">
