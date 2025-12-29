@@ -275,7 +275,7 @@ const CheckInPage = () => {
                   className={cn(
                     'glass-card p-4 text-left transition-all duration-300 hover:-translate-y-0.5',
                     selectedTreatments.includes(id) 
-                      ? 'ring-2 ring-coral bg-coral/5 shadow-warm' 
+                      ? 'ring-2 ring-primary bg-primary/5 shadow-warm' 
                       : 'hover:bg-muted/50 hover:shadow-warm-sm'
                   )}
                 >
@@ -283,11 +283,11 @@ const CheckInPage = () => {
                     <div className={cn(
                       'w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300',
                       selectedTreatments.includes(id) 
-                        ? 'border-coral bg-coral' 
+                        ? 'border-primary bg-white' 
                         : 'border-muted-foreground'
                     )}>
                       {selectedTreatments.includes(id) && (
-                        <Check className="w-3.5 h-3.5 text-white" />
+                        <Check className="w-3.5 h-3.5 text-coral" />
                       )}
                     </div>
                     <span className="font-semibold text-foreground">{label}</span>
@@ -309,7 +309,7 @@ const CheckInPage = () => {
                     className={cn(
                       'glass-card p-4 text-left transition-all duration-300 hover:-translate-y-0.5',
                       selectedTreatments.includes(treatment) 
-                        ? 'ring-2 ring-coral bg-coral/5 shadow-warm' 
+                        ? 'ring-2 ring-primary bg-primary/5 shadow-warm' 
                         : 'hover:bg-muted/50 hover:shadow-warm-sm'
                     )}
                   >
@@ -317,11 +317,11 @@ const CheckInPage = () => {
                       <div className={cn(
                         'w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300',
                         selectedTreatments.includes(treatment) 
-                          ? 'border-coral bg-coral' 
+                          ? 'border-primary bg-white' 
                           : 'border-muted-foreground'
                       )}>
                         {selectedTreatments.includes(treatment) && (
-                          <Check className="w-3.5 h-3.5 text-white" />
+                          <Check className="w-3.5 h-3.5 text-coral" />
                         )}
                       </div>
                       <span className="font-semibold text-foreground">{treatment}</span>
