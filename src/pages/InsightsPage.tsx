@@ -327,6 +327,9 @@ const InsightsPage = () => {
           </div>
         )}
 
+        {/* Symptoms Insights */}
+        <SymptomsInsights checkIns={checkIns} />
+
         {/* Calendar Button */}
         <Dialog open={!!selectedDate || calendarOpen} onOpenChange={(open) => {
           if (!open) {
@@ -531,8 +534,6 @@ const InsightsPage = () => {
         </div>
       </div>
 
-      {/* Symptoms Insights */}
-      <SymptomsInsights checkIns={checkIns} />
 
       {/* Demo Edit Modal - Only for admin in demo mode */}
       {isDemoMode && isAdmin && demoEditDate && (
