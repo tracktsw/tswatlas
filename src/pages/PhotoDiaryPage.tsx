@@ -129,6 +129,8 @@ const PhotoDiaryPage = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isExifDate, setIsExifDate] = useState(false);
   const [didUserAdjustDate, setDidUserAdjustDate] = useState(false);
+  // Track whether photo came from camera vs gallery for date handling
+  const [dateSource, setDateSource] = useState<'camera_capture' | 'exif' | 'upload_fallback'>('upload_fallback');
   
   // Batch upload state
   const [showBatchUpload, setShowBatchUpload] = useState(false);
@@ -261,15 +263,41 @@ const PhotoDiaryPage = () => {
     }
   };
 
-  // Handle single file selection (camera or gallery single photo)
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle camera capture - use device time immediately (no EXIF dependency)
+  const handleCameraCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    
+    if (!file) return;
+
+    // Capture the device time IMMEDIATELY at the moment user takes the photo
+    const captureTime = new Date();
+
+    if (import.meta.env.DEV) {
+      console.log('[PhotoDiary] Camera capture:', file.name, 'type:', file.type, 'size:', file.size);
+      console.log('[PhotoDiary] Setting taken_at to device capture time:', captureTime.toISOString());
+    }
+
+    // For camera photos: use device time, don't rely on EXIF
+    setDetectedDate(captureTime);
+    setSelectedDate(captureTime);
+    setIsExifDate(true); // Treat as "reliable date" so it gets stored
+    setDidUserAdjustDate(false);
+    setDateSource('camera_capture');
+
+    setPendingFile(file);
+    // Keep modal open to show date confirmation
+  };
+
+  // Handle gallery file selection - extract EXIF date
+  const handleGallerySelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     
     if (!file) return;
 
     if (import.meta.env.DEV) {
-      console.log('[PhotoDiary] Single file selected:', file.name, 'type:', file.type, 'size:', file.size);
+      console.log('[PhotoDiary] Gallery file selected:', file.name, 'type:', file.type, 'size:', file.size);
     }
 
     // Extract EXIF date for preview (timezone-less local date string)
@@ -287,6 +315,7 @@ const PhotoDiaryPage = () => {
         setDetectedDate(parsed);
         setSelectedDate(parsed);
         setIsExifDate(true);
+        setDateSource('exif');
         if (import.meta.env.DEV) {
           console.log('[PhotoDiary] Using EXIF date:', parsed);
         }
@@ -296,6 +325,7 @@ const PhotoDiaryPage = () => {
         setDetectedDate(null);
         setSelectedDate(new Date());
         setIsExifDate(false);
+        setDateSource('upload_fallback');
       }
     } else {
       // Common for images exported/sent via apps (e.g. WhatsApp) where EXIF is stripped.
@@ -303,6 +333,7 @@ const PhotoDiaryPage = () => {
       setDetectedDate(null);
       setSelectedDate(new Date());
       setIsExifDate(false);
+      setDateSource('upload_fallback');
     }
 
     setPendingFile(file);
@@ -332,10 +363,22 @@ const PhotoDiaryPage = () => {
     });
 
     if (photoId) {
+      // Debug logging for verification
+      if (import.meta.env.DEV) {
+        const finalDateSource = didUserAdjustDate ? 'user' : dateSource;
+        console.log('[PhotoDiary] Upload complete:', {
+          photo_id: photoId,
+          taken_at: shouldStoreNullTakenAt ? null : takenAtLocal,
+          date_source: finalDateSource,
+          exif_present: dateSource === 'exif',
+          was_camera: dateSource === 'camera_capture',
+        });
+      }
       setNewPhotoNotes('');
       setPendingFile(null);
       setDetectedDate(null);
       setDidUserAdjustDate(false);
+      setDateSource('upload_fallback');
     }
   };
 
@@ -343,6 +386,7 @@ const PhotoDiaryPage = () => {
     setPendingFile(null);
     setDetectedDate(null);
     setDidUserAdjustDate(false);
+    setDateSource('upload_fallback');
   };
 
   // Handle batch file selection from gallery
@@ -893,8 +937,8 @@ const PhotoDiaryPage = () => {
                   className="rounded-xl border-2 resize-none"
                 />
               </div>
-              <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleFileSelect} className="hidden" />
-              <input type="file" accept="image/*,image/heic,image/heif,.heic,.heif" ref={galleryInputRef} onChange={handleFileSelect} className="hidden" />
+              <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleCameraCapture} className="hidden" />
+              <input type="file" accept="image/*,image/heic,image/heif,.heic,.heif" ref={galleryInputRef} onChange={handleGallerySelect} className="hidden" />
               <div className="grid grid-cols-2 gap-3">
                 <Button variant="warm" className="h-11 gap-2" onClick={() => cameraInputRef.current?.click()} disabled={singleUpload.isUploading}>
                   <Camera className="w-5 h-5" />Take Photo
