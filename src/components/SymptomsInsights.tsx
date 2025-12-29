@@ -78,11 +78,12 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
       const dateStr = format(new Date(checkIn.timestamp), 'yyyy-MM-dd');
       const symptoms = checkIn.symptomsExperienced || [];
       
-      symptoms.forEach(symptom => {
-        if (!symptomDays[symptom]) {
-          symptomDays[symptom] = new Set();
+      symptoms.forEach(entry => {
+        const symptomName = entry.symptom;
+        if (!symptomDays[symptomName]) {
+          symptomDays[symptomName] = new Set();
         }
-        symptomDays[symptom].add(dateStr);
+        symptomDays[symptomName].add(dateStr);
       });
     });
     
@@ -146,9 +147,10 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
           const dateStr = format(new Date(c.timestamp), 'yyyy-MM-dd');
           const symptoms = c.symptomsExperienced || [];
 
-          symptoms.forEach((s) => {
-            if (!daySymptoms[s]) daySymptoms[s] = new Set();
-            daySymptoms[s].add(dateStr);
+          symptoms.forEach((entry) => {
+            const symptomName = entry.symptom;
+            if (!daySymptoms[symptomName]) daySymptoms[symptomName] = new Set();
+            daySymptoms[symptomName].add(dateStr);
           });
         });
 

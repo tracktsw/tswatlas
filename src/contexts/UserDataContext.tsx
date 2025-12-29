@@ -18,6 +18,11 @@ export interface Photo {
   notes?: string;
 }
 
+export interface SymptomEntry {
+  symptom: string;
+  severity: 1 | 2 | 3; // 1 = Mild, 2 = Moderate, 3 = Severe
+}
+
 export interface CheckIn {
   id: string;
   timestamp: string;
@@ -26,7 +31,7 @@ export interface CheckIn {
   mood: number;
   skinFeeling: number;
   notes?: string;
-  symptomsExperienced?: string[];
+  symptomsExperienced?: SymptomEntry[];
 }
 
 export interface JournalEntry {
@@ -73,6 +78,27 @@ interface UserDataContextType {
 }
 
 const UserDataContext = createContext<UserDataContextType | undefined>(undefined);
+
+// Helper to safely parse symptoms from JSONB (handles both old string[] and new SymptomEntry[] formats)
+const parseSymptoms = (data: unknown): SymptomEntry[] | undefined => {
+  if (!data || !Array.isArray(data) || data.length === 0) return undefined;
+  
+  return data.map(item => {
+    // New format: { symptom: string, severity: number }
+    if (typeof item === 'object' && item !== null && 'symptom' in item) {
+      return {
+        symptom: String((item as { symptom: string }).symptom),
+        severity: ((item as { severity?: number }).severity || 2) as 1 | 2 | 3,
+      };
+    }
+    // Legacy format: just a string
+    if (typeof item === 'string') {
+      return { symptom: item, severity: 2 as const };
+    }
+    // Unknown format, skip
+    return null;
+  }).filter((s): s is SymptomEntry => s !== null);
+};
 
 export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -322,7 +348,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           mood: c.mood,
           skinFeeling: c.skin_feeling,
           notes: c.notes || undefined,
-          symptomsExperienced: c.symptoms_experienced || undefined,
+          symptomsExperienced: parseSymptoms(c.symptoms_experienced),
         })));
       }
 
@@ -417,7 +443,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         mood: c.mood,
         skinFeeling: c.skin_feeling,
         notes: c.notes || undefined,
-        symptomsExperienced: c.symptoms_experienced || undefined,
+        symptomsExperienced: parseSymptoms(c.symptoms_experienced),
       }))
     );
   }, [userId]);
@@ -626,7 +652,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             mood: checkIn.mood,
             skin_feeling: checkIn.skinFeeling,
             notes: checkIn.notes || null,
-            symptoms_experienced: checkIn.symptomsExperienced || [],
+            symptoms_experienced: JSON.parse(JSON.stringify(checkIn.symptomsExperienced || [])),
             client_request_id: clientRequestId,
           })
           .select()
@@ -661,7 +687,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           mood: data.mood,
           skinFeeling: data.skin_feeling,
           notes: data.notes || undefined,
-          symptomsExperienced: data.symptoms_experienced || undefined,
+          symptomsExperienced: parseSymptoms(data.symptoms_experienced),
         };
 
         setCheckIns((prev) => (prev.some((c) => c.id === newCheckIn.id) ? prev : [newCheckIn, ...prev]));
@@ -691,7 +717,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             mood: checkIn.mood,
             skin_feeling: checkIn.skinFeeling,
             notes: checkIn.notes || null,
-            symptoms_experienced: checkIn.symptomsExperienced || [],
+            symptoms_experienced: JSON.parse(JSON.stringify(checkIn.symptomsExperienced || [])),
           })
           .eq('id', id)
           .select()
@@ -713,7 +739,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   mood: data.mood,
                   skinFeeling: data.skin_feeling,
                   notes: data.notes || undefined,
-                  symptomsExperienced: data.symptoms_experienced || undefined,
+                  symptomsExperienced: parseSymptoms(data.symptoms_experienced),
                 }
               : c
           )
