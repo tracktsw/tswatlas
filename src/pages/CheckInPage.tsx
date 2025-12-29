@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CheckCircle, Sun, Moon, Check, Plus, Heart, Pencil, X, Loader2 } from 'lucide-react';
-import { useUserData, CheckIn } from '@/contexts/UserDataContext';
+import { useUserData, CheckIn, SymptomEntry } from '@/contexts/UserDataContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -23,10 +23,16 @@ const treatments = [
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
-const symptoms = [
+const symptomsList = [
   'Burning', 'Itching', 'Thermodysregulation', 'Flaking',
   'Oozing', 'Swelling', 'Redness', 'Insomnia'
 ];
+
+const severityLabels: Record<1 | 2 | 3, string> = {
+  1: 'Mild',
+  2: 'Mod',
+  3: 'Severe',
+};
 
 const CheckInPage = () => {
   const { checkIns, addCheckIn, updateCheckIn, customTreatments, addCustomTreatment, removeCustomTreatment, getTodayCheckInCount } = useUserData();
@@ -34,7 +40,7 @@ const CheckInPage = () => {
   const [customTreatment, setCustomTreatment] = useState('');
   const [mood, setMood] = useState(3);
   const [skinFeeling, setSkinFeeling] = useState(3);
-  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
+  const [selectedSymptoms, setSelectedSymptoms] = useState<SymptomEntry[]>([]);
   const [notes, setNotes] = useState('');
   const [showSparkles, setShowSparkles] = useState(false);
   const [editingCheckIn, setEditingCheckIn] = useState<CheckIn | null>(null);
@@ -58,7 +64,29 @@ const CheckInPage = () => {
 
   const toggleSymptom = (symptom: string) => {
     if (isSaving) return;
-    setSelectedSymptoms((prev) => (prev.includes(symptom) ? prev.filter((s) => s !== symptom) : [...prev, symptom]));
+    setSelectedSymptoms((prev) => {
+      const existing = prev.find(s => s.symptom === symptom);
+      if (existing) {
+        // Remove if already selected
+        return prev.filter((s) => s.symptom !== symptom);
+      } else {
+        // Add with default severity of 2 (Moderate)
+        return [...prev, { symptom, severity: 2 as const }];
+      }
+    });
+  };
+
+  const updateSymptomSeverity = (symptom: string, severity: 1 | 2 | 3) => {
+    if (isSaving) return;
+    setSelectedSymptoms((prev) =>
+      prev.map((s) => (s.symptom === symptom ? { ...s, severity } : s))
+    );
+  };
+
+  const isSymptomSelected = (symptom: string) => selectedSymptoms.some(s => s.symptom === symptom);
+  const getSymptomSeverity = (symptom: string): 1 | 2 | 3 => {
+    const entry = selectedSymptoms.find(s => s.symptom === symptom);
+    return entry?.severity || 2;
   };
 
   const handleAddCustomTreatment = () => {
@@ -427,20 +455,43 @@ const CheckInPage = () => {
               Symptoms experienced today
             </h3>
             <div className="flex flex-wrap gap-2">
-              {symptoms.map((symptom) => (
-                <button
-                  key={symptom}
-                  onClick={() => toggleSymptom(symptom)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200',
-                    selectedSymptoms.includes(symptom)
-                      ? 'bg-primary/10 text-foreground ring-2 ring-primary ring-offset-1 ring-offset-background'
-                      : 'bg-muted/60 text-muted-foreground hover:bg-muted'
-                  )}
-                >
-                  {symptom}
-                </button>
-              ))}
+              {symptomsList.map((symptom) => {
+                const selected = isSymptomSelected(symptom);
+                const severity = getSymptomSeverity(symptom);
+                return (
+                  <div key={symptom} className="flex items-center gap-0.5">
+                    <button
+                      onClick={() => toggleSymptom(symptom)}
+                      className={cn(
+                        'px-3 py-1.5 text-sm font-medium transition-all duration-200',
+                        selected
+                          ? 'bg-primary/10 text-foreground ring-2 ring-primary ring-offset-1 ring-offset-background rounded-l-full'
+                          : 'bg-muted/60 text-muted-foreground hover:bg-muted rounded-full'
+                      )}
+                    >
+                      {symptom}
+                    </button>
+                    {selected && (
+                      <div className="flex bg-primary/10 rounded-r-full ring-2 ring-primary ring-offset-1 ring-offset-background overflow-hidden">
+                        {([1, 2, 3] as const).map((level) => (
+                          <button
+                            key={level}
+                            onClick={() => updateSymptomSeverity(symptom, level)}
+                            className={cn(
+                              'px-2 py-1.5 text-xs font-medium transition-all duration-150',
+                              severity === level
+                                ? 'bg-primary text-primary-foreground'
+                                : 'text-muted-foreground hover:bg-primary/20'
+                            )}
+                          >
+                            {severityLabels[level]}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -545,9 +596,9 @@ const CheckInPage = () => {
               )}
               {checkIn.symptomsExperienced && checkIn.symptomsExperienced.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
-                  {checkIn.symptomsExperienced.map(s => (
-                    <span key={s} className="text-xs bg-muted text-muted-foreground font-medium px-2.5 py-1 rounded-full">
-                      {s}
+                  {checkIn.symptomsExperienced.map(entry => (
+                    <span key={entry.symptom} className="text-xs bg-muted text-muted-foreground font-medium px-2.5 py-1 rounded-full">
+                      {entry.symptom} ({severityLabels[entry.severity]})
                     </span>
                   ))}
                 </div>

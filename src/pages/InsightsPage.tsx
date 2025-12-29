@@ -382,9 +382,9 @@ const InsightsPage = () => {
                         <div>
                           <p className="text-xs text-muted-foreground font-medium mb-1.5">Symptoms</p>
                           <div className="flex flex-wrap gap-1.5">
-                            {checkIn.symptomsExperienced.map(symptom => (
-                              <Badge key={symptom} variant="outline" className="text-xs rounded-full border-coral/30 text-coral bg-coral/5">
-                                {symptom}
+                            {checkIn.symptomsExperienced.map(entry => (
+                              <Badge key={entry.symptom} variant="outline" className="text-xs rounded-full border-coral/30 text-coral bg-coral/5">
+                                {entry.symptom}
                               </Badge>
                             ))}
                           </div>
