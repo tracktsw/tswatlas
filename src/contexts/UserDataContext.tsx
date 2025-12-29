@@ -63,6 +63,7 @@ interface UserDataContextType {
   deleteJournalEntry: (id: string) => Promise<void>;
   updateReminderSettings: (settings: ReminderSettings) => Promise<void>;
   addCustomTreatment: (treatment: string) => Promise<void>;
+  removeCustomTreatment: (treatment: string) => Promise<void>;
   getPhotosByBodyPart: (bodyPart: BodyPart) => Photo[];
   setTswStartDate: (date: string | null) => Promise<void>;
   /** Refresh photos from backend - call after external uploads */
@@ -837,6 +838,26 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [userId, customTreatments]);
 
+  const removeCustomTreatment = useCallback(async (treatment: string) => {
+    if (!userId) return;
+
+    try {
+      const newTreatments = customTreatments.filter(t => t !== treatment);
+      
+      const { error } = await supabase
+        .from('user_settings')
+        .update({ custom_treatments: newTreatments })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      setCustomTreatments(newTreatments);
+    } catch (error) {
+      console.error('Error removing custom treatment:', error);
+      throw error;
+    }
+  }, [userId, customTreatments]);
+
   const getPhotosByBodyPart = useCallback((bodyPart: BodyPart) => {
     return photos.filter(p => p.bodyPart === bodyPart);
   }, [photos]);
@@ -880,6 +901,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         deleteJournalEntry,
         updateReminderSettings,
         addCustomTreatment,
+        removeCustomTreatment,
         getPhotosByBodyPart,
         setTswStartDate,
         refreshPhotos,
