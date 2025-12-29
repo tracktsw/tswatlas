@@ -18,6 +18,7 @@ import JournalPage from "@/pages/JournalPage";
 import CoachPage from "@/pages/CoachPage";
 import SettingsPage from "@/pages/SettingsPage";
 import AuthPage from "@/pages/AuthPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import AdminPage from "@/pages/AdminPage";
 import NotFound from "@/pages/NotFound";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
@@ -38,8 +39,9 @@ const App = () => (
             <PWAInstallPrompt />
             <BrowserRouter>
               <Routes>
-                {/* Public route - Auth page */}
+              {/* Public routes */}
                 <Route path="/auth" element={<AuthPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
                 
                 {/* Protected routes - require authentication */}
                 <Route
