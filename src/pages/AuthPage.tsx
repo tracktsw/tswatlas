@@ -42,13 +42,18 @@ const AuthPage = () => {
 
     try {
       if (mode === 'forgot') {
-        const { error } = await supabase.functions.invoke('send-password-reset', {
+        console.log('[RESET] Calling send-password-reset edge function...');
+        const { data, error } = await supabase.functions.invoke('send-password-reset', {
           body: { 
             email, 
             redirectTo: `${window.location.origin}/reset-password` 
           },
         });
-        if (error) throw error;
+        console.log('[RESET] Response:', { data, error });
+        if (error) {
+          console.error('[RESET] Edge function error:', error);
+          throw error;
+        }
         toast.success('If that email exists, we sent a reset link. Check your inbox!');
         setMode('login');
         setEmail('');
