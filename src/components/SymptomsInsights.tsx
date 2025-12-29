@@ -150,9 +150,9 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
       .filter((w): w is NonNullable<typeof w> => Boolean(w));
   }, [filteredCheckIns, checkIns, timeRange]);
 
-  // Get top symptoms for trend chart (max 4 for readability)
-  const topSymptoms = useMemo(() => {
-    return symptomStats.slice(0, 4).map(s => s.symptom);
+  // Get all symptoms with data for trend chart (show all, not limited)
+  const chartSymptoms = useMemo(() => {
+    return symptomStats.map(s => s.symptom);
   }, [symptomStats]);
 
   // Check if we have any symptom data
@@ -161,7 +161,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
   // Weekly trend chart rules:
   // - Only show if we have at least 2 different weeks with data (weeks containing check-in days)
   // - Each bar represents number of days symptom appeared that week
-  const hasEnoughDataForTrend = weeklyTrend.length >= 2 && topSymptoms.length > 0;
+  const hasEnoughDataForTrend = weeklyTrend.length >= 2 && chartSymptoms.length > 0;
 
   // Max value for chart scaling
   const maxCount = useMemo(() => {
@@ -286,7 +286,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                 
                 {/* Legend - tap to toggle */}
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {topSymptoms.map(symptom => {
+                  {chartSymptoms.map(symptom => {
                     const isHidden = hiddenSymptoms.has(symptom);
                     return (
                       <button
@@ -341,7 +341,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                         <div key={week.weekLabel} className="flex-1 flex flex-col items-center gap-0.5">
                           {/* Stacked bars for each symptom */}
                           <div className="w-full flex flex-col-reverse gap-0.5 h-16">
-                            {topSymptoms.map(symptom => {
+                            {chartSymptoms.map(symptom => {
                               const count = week.counts[symptom] || 0;
                               const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
                               const isHidden = hiddenSymptoms.has(symptom);
