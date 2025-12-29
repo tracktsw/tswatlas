@@ -450,40 +450,60 @@ const CheckInPage = () => {
           </div>
 
           {/* Symptoms experienced today */}
-          <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.22s' }}>
+          <div className="space-y-2 animate-slide-up" style={{ animationDelay: '0.22s' }}>
             <h3 className="font-display font-bold text-lg text-foreground">
               Symptoms experienced today
             </h3>
-            <div className="flex flex-wrap gap-2">
+            <p className="text-xs text-muted-foreground">Tap to select, tap again to adjust severity</p>
+            <div className="flex flex-wrap gap-1.5">
               {symptomsList.map((symptom) => {
                 const selected = isSymptomSelected(symptom);
                 const severity = getSymptomSeverity(symptom);
                 return (
-                  <div key={symptom} className="flex items-center gap-0.5">
+                  <div
+                    key={symptom}
+                    className={cn(
+                      'flex flex-col rounded-xl transition-all duration-200 overflow-hidden',
+                      selected
+                        ? 'bg-primary/10 ring-1 ring-primary/40'
+                        : 'bg-muted/50'
+                    )}
+                  >
                     <button
                       onClick={() => toggleSymptom(symptom)}
                       className={cn(
-                        'px-3 py-1.5 text-sm font-medium transition-all duration-200',
+                        'px-3 py-1.5 text-sm font-medium transition-colors',
                         selected
-                          ? 'bg-primary/10 text-foreground ring-2 ring-primary ring-offset-1 ring-offset-background rounded-l-full'
-                          : 'bg-muted/60 text-muted-foreground hover:bg-muted rounded-full'
+                          ? 'text-foreground'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
                       )}
                     >
                       {symptom}
                     </button>
                     {selected && (
-                      <div className="flex bg-primary/10 rounded-r-full ring-2 ring-primary ring-offset-1 ring-offset-background overflow-hidden">
+                      <div className="flex justify-center gap-1 px-2 pb-1.5 pt-0.5">
                         {([1, 2, 3] as const).map((level) => (
                           <button
                             key={level}
-                            onClick={() => updateSymptomSeverity(symptom, level)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateSymptomSeverity(symptom, level);
+                            }}
                             className={cn(
-                              'px-2 py-1.5 text-xs font-medium transition-all duration-150',
+                              'flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-all',
                               severity === level
                                 ? 'bg-primary text-primary-foreground'
                                 : 'text-muted-foreground hover:bg-primary/20'
                             )}
                           >
+                            <span
+                              className={cn(
+                                'w-1.5 h-1.5 rounded-full border',
+                                severity === level
+                                  ? 'bg-primary-foreground border-primary-foreground'
+                                  : 'border-muted-foreground'
+                              )}
+                            />
                             {severityLabels[level]}
                           </button>
                         ))}
