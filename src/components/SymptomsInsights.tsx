@@ -5,11 +5,6 @@ import { format, subDays, startOfDay, eachWeekOfInterval, startOfWeek, endOfWeek
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
-const ALL_SYMPTOMS = [
-  'Burning', 'Itching', 'Thermodysregulation', 'Flaking',
-  'Oozing', 'Swelling', 'Redness', 'Insomnia'
-];
-
 type TimeRange = '7' | '30' | 'all';
 
 interface SymptomsInsightsProps {
@@ -46,7 +41,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
     });
   }, [checkIns, timeRange]);
 
-  // Get unique days with check-ins in the range
+  // Get unique days with at least one check-in in the range
   const daysWithCheckIns = useMemo(() => {
     const uniqueDays = new Set<string>();
     filteredCheckIns.forEach(c => {
@@ -55,14 +50,12 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
     return uniqueDays.size;
   }, [filteredCheckIns]);
 
-  // Calculate symptom frequency
+  // Total check-ins count for context display
+  const totalCheckInsInRange = filteredCheckIns.length;
+
+  // Calculate symptom frequency - percentage is days symptom logged / days with any check-in
   const symptomStats = useMemo(() => {
     const symptomDays: Record<string, Set<string>> = {};
-    
-    // Initialize all symptoms
-    ALL_SYMPTOMS.forEach(s => {
-      symptomDays[s] = new Set();
-    });
     
     // Count days each symptom was logged
     filteredCheckIns.forEach(checkIn => {
@@ -77,7 +70,8 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
       });
     });
     
-    // Convert to array and calculate percentages
+    // Convert to array and calculate percentages correctly
+    // Percentage = (days symptom logged) / (days with at least one check-in) * 100
     return Object.entries(symptomDays)
       .map(([symptom, days]) => ({
         symptom,
@@ -85,12 +79,16 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
         percentage: daysWithCheckIns > 0 ? Math.round((days.size / daysWithCheckIns) * 100) : 0,
       }))
       .filter(s => s.count > 0)
-      .sort((a, b) => b.count - a.count);
+      // Sort by count descending, then alphabetically for ties
+      .sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return a.symptom.localeCompare(b.symptom);
+      });
   }, [filteredCheckIns, daysWithCheckIns]);
 
   // Weekly trend data for chart
   const weeklyTrend = useMemo(() => {
-    if (filteredCheckIns.length === 0) return [];
+    if (filteredCheckIns.length < 2) return []; // Need at least 2 check-ins for trend
     
     // Determine date range
     const now = new Date();
@@ -152,6 +150,9 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
 
   // Check if we have any symptom data
   const hasSymptomData = symptomStats.length > 0;
+
+  // Check if we have enough data for weekly trend (at least 2 check-ins)
+  const hasEnoughDataForTrend = filteredCheckIns.length >= 2 && weeklyTrend.length > 1 && topSymptoms.length > 0;
 
   // Max value for chart scaling
   const maxCount = useMemo(() => {
@@ -217,12 +218,26 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
           </Button>
         </div>
         
+        {/* Check-in context */}
         <p className="text-xs text-muted-foreground">
-          Based on your daily check-ins
+          Based on {totalCheckInsInRange} check-in{totalCheckInsInRange !== 1 ? 's' : ''} across {daysWithCheckIns} day{daysWithCheckIns !== 1 ? 's' : ''} in this period
         </p>
 
-        {!hasSymptomData ? (
-          /* Empty state */
+        {/* Helper text explaining percentages */}
+        <p className="text-[11px] text-muted-foreground/70 italic">
+          Percentages reflect how often a symptom appeared on days you logged a check-in.
+        </p>
+
+        {totalCheckInsInRange === 0 ? (
+          /* Empty state - no check-ins in range */
+          <div className="text-center py-6">
+            <p className="text-muted-foreground font-medium">No check-ins in this period.</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Try selecting a different time range or log more check-ins.
+            </p>
+          </div>
+        ) : !hasSymptomData ? (
+          /* Empty state - check-ins exist but no symptoms logged */
           <div className="text-center py-6">
             <p className="text-muted-foreground font-medium">No symptom data yet.</p>
             <p className="text-sm text-muted-foreground mt-1">
@@ -251,9 +266,9 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
             </div>
 
             {/* Weekly trend chart */}
-            {weeklyTrend.length > 1 && topSymptoms.length > 0 && (
+            {hasEnoughDataForTrend ? (
               <div className="pt-4 border-t border-border/50">
-                <p className="text-xs text-muted-foreground mb-3 font-medium">Weekly trend</p>
+                <p className="text-xs text-muted-foreground mb-3 font-medium">Weekly trend (days per week)</p>
                 
                 {/* Legend - tap to toggle */}
                 <div className="flex flex-wrap gap-2 mb-3">
@@ -288,7 +303,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                 
                 {/* Chart */}
                 <div className="flex items-end gap-1 h-20">
-                  {weeklyTrend.map((week, weekIndex) => (
+                  {weeklyTrend.map((week) => (
                     <div key={week.weekLabel} className="flex-1 flex flex-col items-center gap-0.5">
                       {/* Stacked bars for each symptom */}
                       <div className="w-full flex flex-col-reverse gap-0.5 h-16">
@@ -309,7 +324,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                                 height: isHidden ? '0%' : `${height}%`,
                                 minHeight: count > 0 && !isHidden ? '4px' : '0px',
                               }}
-                              title={`${symptom}: ${count} days`}
+                              title={`${symptom}: ${count} day${count !== 1 ? 's' : ''}`}
                             />
                           );
                         })}
@@ -320,6 +335,13 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                     </div>
                   ))}
                 </div>
+              </div>
+            ) : (
+              /* Not enough data for trend */
+              <div className="pt-4 border-t border-border/50">
+                <p className="text-xs text-muted-foreground text-center py-2">
+                  Not enough data to show a weekly trend yet.
+                </p>
               </div>
             )}
           </>
