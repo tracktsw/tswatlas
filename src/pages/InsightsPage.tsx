@@ -382,11 +382,30 @@ const InsightsPage = () => {
                         <div>
                           <p className="text-xs text-muted-foreground font-medium mb-1.5">Symptoms</p>
                           <div className="flex flex-wrap gap-1.5">
-                            {checkIn.symptomsExperienced.map(entry => (
-                              <Badge key={entry.symptom} variant="outline" className="text-xs rounded-full border-coral/30 text-coral bg-coral/5">
-                                {entry.symptom}
-                              </Badge>
-                            ))}
+                            {checkIn.symptomsExperienced.map(entry => {
+                              const severityColors = {
+                                1: 'border-amber-400/50 text-amber-600 bg-amber-50 dark:bg-amber-950/30',
+                                2: 'border-orange-400/50 text-orange-600 bg-orange-50 dark:bg-orange-950/30',
+                                3: 'border-red-400/50 text-red-600 bg-red-50 dark:bg-red-950/30',
+                              };
+                              const severityLabels = { 1: 'Mild', 2: 'Mod', 3: 'Severe' };
+                              const colorClass = severityColors[entry.severity as 1 | 2 | 3] || severityColors[2];
+                              return (
+                                <Badge 
+                                  key={entry.symptom} 
+                                  variant="outline" 
+                                  className={cn('text-xs rounded-full', colorClass)}
+                                >
+                                  <span className={cn(
+                                    'w-1.5 h-1.5 rounded-full mr-1',
+                                    entry.severity === 1 && 'bg-amber-500',
+                                    entry.severity === 2 && 'bg-orange-500',
+                                    entry.severity === 3 && 'bg-red-500'
+                                  )} />
+                                  {entry.symptom}
+                                </Badge>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
