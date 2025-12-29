@@ -528,6 +528,15 @@ const CheckInPage = () => {
                   ))}
                 </div>
               )}
+              {checkIn.symptomsExperienced && checkIn.symptomsExperienced.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {checkIn.symptomsExperienced.map(s => (
+                    <span key={s} className="text-xs bg-muted text-muted-foreground font-medium px-2.5 py-1 rounded-full">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
