@@ -7,16 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { severityColors, severityLabels } from '@/constants/severityColors';
 
 const INSIGHTS_UNLOCK_THRESHOLD = 30;
-
-// Severity helpers
-const severityLabels: Record<number, string> = { 1: 'Mild', 2: 'Mod', 3: 'Sev' };
-const severityColors: Record<number, string> = {
-  1: 'bg-amber-500',
-  2: 'bg-orange-500',
-  3: 'bg-red-500',
-};
 
 type TimeRange = '7' | '30' | 'all';
 
@@ -387,9 +380,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                       </span>
                       <span className={cn(
                         'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
-                        roundedSev === 1 && 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400',
-                        roundedSev === 2 && 'bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400',
-                        roundedSev === 3 && 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400',
+                        severityColors.badge[roundedSev]
                       )}>
                         {severityLabels[roundedSev]}
                       </span>

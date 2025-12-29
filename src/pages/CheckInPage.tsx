@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { HeartIllustration, SunIllustration, LeafIllustration } from '@/components/illustrations';
 import { SparkleEffect } from '@/components/SparkleEffect';
+import { severityColors, severityLabels } from '@/constants/severityColors';
 
 const treatments = [
   { id: 'nmt', label: 'NMT', description: 'No Moisture Treatment' },
@@ -28,11 +29,7 @@ const symptomsList = [
   'Oozing', 'Swelling', 'Redness', 'Insomnia'
 ];
 
-const severityLabels: Record<1 | 2 | 3, string> = {
-  1: 'Mild',
-  2: 'Mod',
-  3: 'Severe',
-};
+// severityLabels imported from @/constants/severityColors
 
 const CheckInPage = () => {
   const { checkIns, addCheckIn, updateCheckIn, customTreatments, addCustomTreatment, removeCustomTreatment, getTodayCheckInCount } = useUserData();
@@ -503,9 +500,7 @@ const CheckInPage = () => {
                       {selected && (
                         <span className={cn(
                           'w-1.5 h-1.5 rounded-full',
-                          severity === 1 && 'bg-amber-500',
-                          severity === 2 && 'bg-orange-500',
-                          severity === 3 && 'bg-red-500'
+                          severityColors.bg[severity]
                         )} />
                       )}
                       {symptom}
@@ -529,16 +524,16 @@ const CheckInPage = () => {
                             className={cn(
                               'w-5 h-5 rounded-full flex items-center justify-center transition-all',
                               severity === level
-                                ? level === 1 ? 'bg-amber-500' : level === 2 ? 'bg-orange-500' : 'bg-red-500'
+                                ? severityColors.bg[level]
                                 : 'bg-muted/80 hover:bg-muted'
                             )}
-                            title={level === 1 ? 'Mild' : level === 2 ? 'Moderate' : 'Severe'}
+                            title={severityLabels[level]}
                           >
                             <span className={cn(
                               'w-2 h-2 rounded-full',
                               severity === level
                                 ? 'bg-white'
-                                : level === 1 ? 'bg-amber-400/50' : level === 2 ? 'bg-orange-400/50' : 'bg-red-400/50'
+                                : severityColors.bgMuted[level]
                             )} />
                           </button>
                         ))}
