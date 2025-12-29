@@ -26,6 +26,7 @@ export interface CheckIn {
   mood: number;
   skinFeeling: number;
   notes?: string;
+  symptomsExperienced?: string[];
 }
 
 export interface JournalEntry {
@@ -320,6 +321,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           mood: c.mood,
           skinFeeling: c.skin_feeling,
           notes: c.notes || undefined,
+          symptomsExperienced: c.symptoms_experienced || undefined,
         })));
       }
 
@@ -414,6 +416,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         mood: c.mood,
         skinFeeling: c.skin_feeling,
         notes: c.notes || undefined,
+        symptomsExperienced: c.symptoms_experienced || undefined,
       }))
     );
   }, [userId]);
@@ -622,6 +625,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             mood: checkIn.mood,
             skin_feeling: checkIn.skinFeeling,
             notes: checkIn.notes || null,
+            symptoms_experienced: checkIn.symptomsExperienced || [],
             client_request_id: clientRequestId,
           })
           .select()
@@ -656,6 +660,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           mood: data.mood,
           skinFeeling: data.skin_feeling,
           notes: data.notes || undefined,
+          symptomsExperienced: data.symptoms_experienced || undefined,
         };
 
         setCheckIns((prev) => (prev.some((c) => c.id === newCheckIn.id) ? prev : [newCheckIn, ...prev]));
@@ -685,6 +690,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             mood: checkIn.mood,
             skin_feeling: checkIn.skinFeeling,
             notes: checkIn.notes || null,
+            symptoms_experienced: checkIn.symptomsExperienced || [],
           })
           .eq('id', id)
           .select()
@@ -706,6 +712,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   mood: data.mood,
                   skinFeeling: data.skin_feeling,
                   notes: data.notes || undefined,
+                  symptomsExperienced: data.symptoms_experienced || undefined,
                 }
               : c
           )
