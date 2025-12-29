@@ -12,6 +12,7 @@ import PaywallGuard from '@/components/PaywallGuard';
 import { useSubscription } from '@/hooks/useSubscription';
 import { PlantIllustration, SparkleIllustration, SunIllustration } from '@/components/illustrations';
 import DemoEditModal from '@/components/DemoEditModal';
+import SymptomsInsights from '@/components/SymptomsInsights';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
@@ -529,6 +530,9 @@ const InsightsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Symptoms Insights */}
+      <SymptomsInsights checkIns={checkIns} />
 
       {/* Demo Edit Modal - Only for admin in demo mode */}
       {isDemoMode && isAdmin && demoEditDate && (
