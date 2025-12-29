@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback, memo } from 'react';
-import { Image, Check } from 'lucide-react';
+import { Image, Check, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { VirtualPhoto } from '@/hooks/useVirtualizedPhotos';
@@ -65,20 +65,23 @@ const PhotoItem = memo(({
     onLoad?.();
   }, [onLoad]);
 
+  const isOptimistic = photo.isOptimistic === true;
+
   return (
     <div
       ref={imgRef}
       className={cn(
         'glass-card overflow-hidden group relative cursor-pointer transition-all duration-300 hover:shadow-warm hover:-translate-y-1',
         compareMode && isSelected && 'ring-2 ring-coral shadow-glow-coral',
-        compareMode && 'hover:opacity-90'
+        compareMode && 'hover:opacity-90',
+        isOptimistic && 'ring-2 ring-coral/60 animate-pulse'
       )}
-      onClick={() => onSelect(photo)}
+      onClick={() => !isOptimistic && onSelect(photo)}
     >
       {/* Fixed aspect ratio container with blur placeholder */}
       <div className="relative w-full aspect-square bg-muted overflow-hidden">
         {/* Blur placeholder - shows immediately */}
-        {!isLoaded && !hasError && (
+        {!isLoaded && !hasError && !isOptimistic && (
           <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-background/10 to-transparent animate-shimmer" />
           </div>
@@ -96,20 +99,33 @@ const PhotoItem = memo(({
             onError={() => setHasError(true)}
             className={cn(
               'w-full h-full object-cover transition-opacity duration-500',
-              isLoaded ? 'opacity-100' : 'opacity-0'
+              isLoaded ? 'opacity-100' : 'opacity-0',
+              isOptimistic && 'blur-[2px] scale-105'
             )}
           />
         )}
 
+        {/* Optimistic upload overlay */}
+        {isOptimistic && (
+          <div className="absolute inset-0 bg-background/30 flex flex-col items-center justify-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-coral/90 flex items-center justify-center shadow-lg">
+              <Loader2 className="w-5 h-5 text-white animate-spin" />
+            </div>
+            <span className="text-xs font-medium text-foreground bg-background/80 px-2 py-1 rounded-full">
+              Uploading...
+            </span>
+          </div>
+        )}
+
         {/* Error state */}
-        {hasError && (
+        {hasError && !isOptimistic && (
           <div className="absolute inset-0 flex items-center justify-center bg-muted">
             <Image className="w-8 h-8 text-muted-foreground/50" />
           </div>
         )}
 
         {/* Selection indicator for compare mode */}
-        {compareMode && isSelected && (
+        {compareMode && isSelected && !isOptimistic && (
           <div className="absolute top-2 right-2 w-6 h-6 bg-coral rounded-full flex items-center justify-center shadow-md">
             <Check className="w-4 h-4 text-white" />
           </div>

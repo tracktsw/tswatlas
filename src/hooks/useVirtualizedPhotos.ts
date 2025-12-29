@@ -29,6 +29,10 @@ export interface VirtualPhoto {
   /** Computed: takenAt if available, otherwise uploadedAt */
   timestamp: string;
   notes?: string;
+  /** True if this is an optimistic placeholder (upload in progress) */
+  isOptimistic?: boolean;
+  /** Object URL for cleanup (optimistic photos only) */
+  objectUrl?: string;
 }
 
 interface PhotoRow {
@@ -57,6 +61,7 @@ export const useVirtualizedPhotos = ({
   sortOrder = "newest",
 }: UseVirtualizedPhotosOptions) => {
   const [photos, setPhotos] = useState<VirtualPhoto[]>([]);
+  const [optimisticPhotos, setOptimisticPhotos] = useState<VirtualPhoto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -241,23 +246,113 @@ export const useVirtualizedPhotos = ({
 
   const removePhotoFromList = useCallback((id: string) => {
     setPhotos((prev) => prev.filter((p) => p.id !== id));
+    // Also remove from optimistic if present
+    setOptimisticPhotos((prev) => prev.filter((p) => p.id !== id));
   }, []);
+
+  /**
+   * Add an optimistic placeholder photo that appears instantly in the grid.
+   * Returns the temporary ID for later resolution.
+   */
+  const addOptimisticPhoto = useCallback((
+    file: File, 
+    bodyPart: BodyPart, 
+    timestamp: string
+  ): string => {
+    const tempId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const objectUrl = URL.createObjectURL(file);
+    
+    const optimisticPhoto: VirtualPhoto = {
+      id: tempId,
+      thumbnailUrl: objectUrl,
+      bodyPart,
+      takenAt: timestamp,
+      uploadedAt: new Date().toISOString(),
+      timestamp,
+      isOptimistic: true,
+      objectUrl,
+    };
+    
+    setOptimisticPhotos((prev) => [optimisticPhoto, ...prev]);
+    return tempId;
+  }, []);
+
+  /**
+   * Replace an optimistic placeholder with the real uploaded photo.
+   * Cleans up the object URL to free memory.
+   */
+  const resolveOptimisticPhoto = useCallback((tempId: string, realPhoto?: VirtualPhoto) => {
+    setOptimisticPhotos((prev) => {
+      const optimistic = prev.find((p) => p.id === tempId);
+      if (optimistic?.objectUrl) {
+        URL.revokeObjectURL(optimistic.objectUrl);
+      }
+      return prev.filter((p) => p.id !== tempId);
+    });
+    
+    // Add the real photo to the list if provided
+    if (realPhoto) {
+      setPhotos((prev) => {
+        const newTimestamp = new Date(realPhoto.timestamp).getTime();
+        if (sortOrder === "newest") {
+          const insertIndex = prev.findIndex(p => new Date(p.timestamp).getTime() < newTimestamp);
+          if (insertIndex === -1) {
+            return [...prev, realPhoto];
+          }
+          return [...prev.slice(0, insertIndex), realPhoto, ...prev.slice(insertIndex)];
+        } else {
+          const insertIndex = prev.findIndex(p => new Date(p.timestamp).getTime() > newTimestamp);
+          if (insertIndex === -1) {
+            return [...prev, realPhoto];
+          }
+          return [...prev.slice(0, insertIndex), realPhoto, ...prev.slice(insertIndex)];
+        }
+      });
+    }
+  }, [sortOrder]);
+
+  /**
+   * Remove an optimistic photo (e.g., on upload error).
+   * Cleans up the object URL.
+   */
+  const removeOptimisticPhoto = useCallback((tempId: string) => {
+    setOptimisticPhotos((prev) => {
+      const optimistic = prev.find((p) => p.id === tempId);
+      if (optimistic?.objectUrl) {
+        URL.revokeObjectURL(optimistic.objectUrl);
+      }
+      return prev.filter((p) => p.id !== tempId);
+    });
+  }, []);
+
+  // Merge optimistic photos with real photos (optimistic first, then sorted real photos)
+  const allPhotos = useMemo(() => {
+    // Filter optimistic photos by body part if needed
+    const filteredOptimistic = bodyPartFilter === "all" 
+      ? optimisticPhotos 
+      : optimisticPhotos.filter(p => p.bodyPart === bodyPartFilter);
+    
+    return [...filteredOptimistic, ...photos];
+  }, [optimisticPhotos, photos, bodyPartFilter]);
 
   useEffect(() => {
     loadPhotos();
   }, [loadPhotos]);
 
   return {
-    photos,
+    photos: allPhotos,
     isLoading,
     hasMore,
     error,
     loadMore,
     addPhotoToList,
     removePhotoFromList,
+    addOptimisticPhoto,
+    resolveOptimisticPhoto,
+    removeOptimisticPhoto,
     fetchMediumUrl,
     prefetchMediumUrls,
-    totalCount: photos.length,
+    totalCount: allPhotos.length,
     refresh: loadPhotos,
   };
 };
