@@ -282,7 +282,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
             {/* Weekly trend chart */}
             {hasEnoughDataForTrend ? (
               <div className="pt-4 border-t border-border/50">
-                <p className="text-xs text-muted-foreground mb-3 font-medium">Weekly trend (days per week)</p>
+                <p className="text-xs text-muted-foreground mb-3 font-medium">Days symptom reported</p>
                 
                 {/* Legend - tap to toggle */}
                 <div className="flex flex-wrap gap-2 mb-3">
@@ -371,6 +371,11 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                     </div>
                   </div>
                 </div>
+                
+                {/* Helper text */}
+                <p className="text-[10px] text-muted-foreground/70 mt-3 text-center italic">
+                  Counts reflect how many days a symptom was reported on days you logged a check-in.
+                </p>
               </div>
             ) : (
               /* Not enough data for trend */
