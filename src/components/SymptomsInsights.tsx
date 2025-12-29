@@ -315,39 +315,61 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                   })}
                 </div>
                 
-                {/* Chart */}
-                <div className="flex items-end gap-1 h-20">
-                  {weeklyTrend.map((week) => (
-                    <div key={week.weekLabel} className="flex-1 flex flex-col items-center gap-0.5">
-                      {/* Stacked bars for each symptom */}
-                      <div className="w-full flex flex-col-reverse gap-0.5 h-16">
-                        {topSymptoms.map(symptom => {
-                          const count = week.counts[symptom] || 0;
-                          const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
-                          const isHidden = hiddenSymptoms.has(symptom);
-                          
-                          return (
-                            <div
-                              key={symptom}
-                              className={cn(
-                                'w-full rounded-sm transition-all duration-300',
-                                symptomColors[symptom] || 'bg-gray-400',
-                                (count === 0 || isHidden) && 'opacity-0'
-                              )}
-                              style={{ 
-                                height: isHidden ? '0%' : `${height}%`,
-                                minHeight: count > 0 && !isHidden ? '4px' : '0px',
-                              }}
-                              title={`${symptom}: ${count} day${count !== 1 ? 's' : ''}`}
-                            />
-                          );
-                        })}
-                      </div>
-                      <span className="text-[9px] text-muted-foreground mt-1 truncate w-full text-center">
-                        {week.weekLabel}
-                      </span>
+                {/* Chart with Y-axis */}
+                <div className="flex">
+                  {/* Y-axis */}
+                  <div className="flex flex-col justify-between h-20 pr-2 text-right">
+                    <span className="text-[9px] text-muted-foreground leading-none">{maxCount}</span>
+                    {maxCount > 1 && (
+                      <span className="text-[9px] text-muted-foreground leading-none">{Math.round(maxCount / 2)}</span>
+                    )}
+                    <span className="text-[9px] text-muted-foreground leading-none">0</span>
+                  </div>
+                  
+                  {/* Chart area */}
+                  <div className="flex-1 relative">
+                    {/* Horizontal grid lines */}
+                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                      <div className="border-t border-border/30" />
+                      {maxCount > 1 && <div className="border-t border-border/20" />}
+                      <div className="border-t border-border/30" />
                     </div>
-                  ))}
+                    
+                    {/* Bars */}
+                    <div className="flex items-end gap-1 h-20 relative z-10">
+                      {weeklyTrend.map((week) => (
+                        <div key={week.weekLabel} className="flex-1 flex flex-col items-center gap-0.5">
+                          {/* Stacked bars for each symptom */}
+                          <div className="w-full flex flex-col-reverse gap-0.5 h-16">
+                            {topSymptoms.map(symptom => {
+                              const count = week.counts[symptom] || 0;
+                              const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                              const isHidden = hiddenSymptoms.has(symptom);
+                              
+                              return (
+                                <div
+                                  key={symptom}
+                                  className={cn(
+                                    'w-full rounded-sm transition-all duration-300',
+                                    symptomColors[symptom] || 'bg-gray-400',
+                                    (count === 0 || isHidden) && 'opacity-0'
+                                  )}
+                                  style={{ 
+                                    height: isHidden ? '0%' : `${height}%`,
+                                    minHeight: count > 0 && !isHidden ? '4px' : '0px',
+                                  }}
+                                  title={`${symptom}: ${count} day${count !== 1 ? 's' : ''}`}
+                                />
+                              );
+                            })}
+                          </div>
+                          <span className="text-[9px] text-muted-foreground mt-1 truncate w-full text-center">
+                            {week.weekLabel}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
