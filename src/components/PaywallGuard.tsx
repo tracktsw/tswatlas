@@ -1,6 +1,6 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { useSubscription } from '@/hooks/useSubscription';
-import { Lock, Sparkles, Crown } from 'lucide-react';
+import { Lock, Sparkles, Crown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -13,15 +13,23 @@ interface PaywallGuardProps {
 
 const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false }: PaywallGuardProps) => {
   const { isPremium, isLoading } = useSubscription();
+  const [isUpgrading, setIsUpgrading] = useState(false);
 
   const handleUpgrade = async () => {
+    if (isUpgrading) return;
+    setIsUpgrading(true);
+
     try {
+      console.log('[PaywallGuard] Starting checkout...');
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        console.error('[PaywallGuard] No auth session');
         toast.error('Please sign in to subscribe');
+        setIsUpgrading(false);
         return;
       }
 
+      console.log('[PaywallGuard] Invoking create-checkout function...');
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -29,16 +37,26 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
       });
 
       if (error) {
+        console.error('[PaywallGuard] Checkout error:', error);
         toast.error('Failed to start checkout');
+        setIsUpgrading(false);
         return;
       }
 
       if (data?.url) {
-        window.open(data.url, '_blank');
+        console.log('[PaywallGuard] Redirecting to checkout...');
+        // Use location.assign for iOS/PWA compatibility (same-tab navigation)
+        window.location.assign(data.url);
+        // Note: isUpgrading stays true as we're navigating away
+      } else {
+        console.error('[PaywallGuard] No checkout URL in response');
+        toast.error('Failed to start checkout');
+        setIsUpgrading(false);
       }
     } catch (err) {
-      console.error('Checkout error:', err);
+      console.error('[PaywallGuard] Checkout error:', err);
       toast.error('Failed to start checkout');
+      setIsUpgrading(false);
     }
   };
 
@@ -70,9 +88,18 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
             <p className="text-sm text-muted-foreground mb-4">
               {feature} is available with Premium.
             </p>
-            <Button onClick={handleUpgrade} className="gap-2">
-              <Crown className="w-4 h-4" />
-              Upgrade to Premium
+            <Button onClick={handleUpgrade} disabled={isUpgrading} variant="warm" className="gap-2">
+              {isUpgrading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <Crown className="w-4 h-4" />
+                  Upgrade to Premium
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -93,9 +120,18 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
         Get full access to all features including Photo Diary, full Insights, Community, Journal, and AI Coach.
       </p>
       <div className="space-y-3 w-full max-w-xs">
-        <Button onClick={handleUpgrade} className="w-full gap-2" size="lg">
-          <Crown className="w-4 h-4" />
-          Get Premium - £5.99/month
+        <Button onClick={handleUpgrade} disabled={isUpgrading} variant="warm" className="w-full gap-2" size="lg">
+          {isUpgrading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading...
+            </>
+          ) : (
+            <>
+              <Crown className="w-4 h-4" />
+              Get Premium - £5.99/month
+            </>
+          )}
         </Button>
         <p className="text-xs text-muted-foreground">
           Cancel anytime. Your data stays private.
