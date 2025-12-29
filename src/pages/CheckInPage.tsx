@@ -488,7 +488,7 @@ const CheckInPage = () => {
               key={checkIn.id} 
               className={cn(
                 "glass-card-warm p-5 cursor-pointer transition-all hover:shadow-warm",
-                editingCheckIn?.id === checkIn.id && "ring-2 ring-coral"
+                editingCheckIn?.id === checkIn.id && "ring-2 ring-primary"
               )}
               onClick={() => handleStartEdit(checkIn)}
             >
