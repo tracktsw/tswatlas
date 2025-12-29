@@ -86,14 +86,12 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
       });
   }, [filteredCheckIns, daysWithCheckIns]);
 
-  // Weekly trend data for chart
+  // Weekly trend data for chart (days per week). Only include weeks that have at least one check-in.
   const weeklyTrend = useMemo(() => {
-    if (filteredCheckIns.length < 2) return []; // Need at least 2 check-ins for trend
-    
     // Determine date range
     const now = new Date();
     let startDate: Date;
-    
+
     if (timeRange === 'all' && checkIns.length > 0) {
       const oldest = checkIns.reduce((min, c) => {
         const d = new Date(c.timestamp);
@@ -104,43 +102,52 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
       const daysBack = timeRange === '7' ? 6 : 29;
       startDate = startOfWeek(subDays(now, daysBack), { weekStartsOn: 0 });
     }
-    
+
     const weeks = eachWeekOfInterval({ start: startDate, end: now }, { weekStartsOn: 0 });
-    
+
     // Limit to last 8 weeks for readability
     const recentWeeks = weeks.slice(-8);
-    
-    return recentWeeks.map(weekStart => {
-      const weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 });
-      const weekCheckIns = filteredCheckIns.filter(c => {
-        const d = new Date(c.timestamp);
-        return isWithinInterval(d, { start: weekStart, end: weekEnd });
-      });
-      
-      // Count days with each symptom this week
-      const symptomCounts: Record<string, number> = {};
-      const daySymptoms: Record<string, Set<string>> = {};
-      
-      weekCheckIns.forEach(c => {
-        const dateStr = format(new Date(c.timestamp), 'yyyy-MM-dd');
-        const symptoms = c.symptomsExperienced || [];
-        
-        symptoms.forEach(s => {
-          if (!daySymptoms[s]) daySymptoms[s] = new Set();
-          daySymptoms[s].add(dateStr);
+
+    return recentWeeks
+      .map((weekStart) => {
+        const weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 });
+        const weekCheckIns = filteredCheckIns.filter((c) => {
+          const d = new Date(c.timestamp);
+          return isWithinInterval(d, { start: weekStart, end: weekEnd });
         });
-      });
-      
-      Object.entries(daySymptoms).forEach(([s, days]) => {
-        symptomCounts[s] = days.size;
-      });
-      
-      return {
-        weekLabel: format(weekStart, 'MMM d'),
-        counts: symptomCounts,
-        totalDays: new Set(weekCheckIns.map(c => format(new Date(c.timestamp), 'yyyy-MM-dd'))).size,
-      };
-    });
+
+        const totalDaysWithCheckInsThisWeek = new Set(
+          weekCheckIns.map((c) => format(new Date(c.timestamp), 'yyyy-MM-dd'))
+        ).size;
+
+        // Only include weeks that have at least one check-in day
+        if (totalDaysWithCheckInsThisWeek === 0) return null;
+
+        // Count unique days each symptom appeared during this week
+        const daySymptoms: Record<string, Set<string>> = {};
+
+        weekCheckIns.forEach((c) => {
+          const dateStr = format(new Date(c.timestamp), 'yyyy-MM-dd');
+          const symptoms = c.symptomsExperienced || [];
+
+          symptoms.forEach((s) => {
+            if (!daySymptoms[s]) daySymptoms[s] = new Set();
+            daySymptoms[s].add(dateStr);
+          });
+        });
+
+        const symptomCounts: Record<string, number> = {};
+        Object.entries(daySymptoms).forEach(([s, days]) => {
+          symptomCounts[s] = days.size;
+        });
+
+        return {
+          weekLabel: format(weekStart, 'MMM d'),
+          counts: symptomCounts,
+          totalDays: totalDaysWithCheckInsThisWeek,
+        };
+      })
+      .filter((w): w is NonNullable<typeof w> => Boolean(w));
   }, [filteredCheckIns, checkIns, timeRange]);
 
   // Get top symptoms for trend chart (max 4 for readability)
@@ -151,8 +158,10 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
   // Check if we have any symptom data
   const hasSymptomData = symptomStats.length > 0;
 
-  // Check if we have enough data for weekly trend (at least 2 check-ins)
-  const hasEnoughDataForTrend = filteredCheckIns.length >= 2 && weeklyTrend.length > 1 && topSymptoms.length > 0;
+  // Weekly trend chart rules:
+  // - Only show if we have at least 2 different weeks with data (weeks containing check-in days)
+  // - Each bar represents number of days symptom appeared that week
+  const hasEnoughDataForTrend = weeklyTrend.length >= 2 && topSymptoms.length > 0;
 
   // Max value for chart scaling
   const maxCount = useMemo(() => {
@@ -219,9 +228,14 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
         </div>
         
         {/* Check-in context */}
-        <p className="text-xs text-muted-foreground">
-          Based on {totalCheckInsInRange} check-in{totalCheckInsInRange !== 1 ? 's' : ''} across {daysWithCheckIns} day{daysWithCheckIns !== 1 ? 's' : ''} in this period
-        </p>
+        <div className="space-y-0.5">
+          <p className="text-xs text-muted-foreground">
+            Based on {daysWithCheckIns} day{daysWithCheckIns !== 1 ? 's' : ''} with check-ins
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {totalCheckInsInRange} total check-in{totalCheckInsInRange !== 1 ? 's' : ''} logged
+          </p>
+        </div>
 
         {/* Helper text explaining percentages */}
         <p className="text-[11px] text-muted-foreground/70 italic">
@@ -340,7 +354,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
               /* Not enough data for trend */
               <div className="pt-4 border-t border-border/50">
                 <p className="text-xs text-muted-foreground text-center py-2">
-                  Not enough data to show a weekly trend yet.
+                  Not enough data yet to show weekly trends.
                 </p>
               </div>
             )}
