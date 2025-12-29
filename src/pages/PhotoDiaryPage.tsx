@@ -215,8 +215,13 @@ const PhotoDiaryPage = () => {
     }).length;
   }, [contextPhotos]);
 
-  const canUploadMore = isPremium || photosUploadedToday < FREE_DAILY_PHOTO_LIMIT;
-  const remainingUploads = FREE_DAILY_PHOTO_LIMIT - photosUploadedToday;
+  // Single source of truth for upload limits
+  const remainingUploads = Math.max(0, FREE_DAILY_PHOTO_LIMIT - photosUploadedToday);
+  const canUploadMore = isPremium || remainingUploads > 0;
+  
+  // Progress value clamped between 0 and 1 - single source of truth
+  const uploadProgress = Math.min(Math.max(photosUploadedToday / FREE_DAILY_PHOTO_LIMIT, 0), 1);
+  const isLimitReached = !isPremium && uploadProgress >= 1;
 
   const handleUpgrade = async () => {
     if (isUpgrading) return;
@@ -735,17 +740,17 @@ const PhotoDiaryPage = () => {
           <div className="space-y-1.5">
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>{photosUploadedToday} of {FREE_DAILY_PHOTO_LIMIT} used</span>
-              <span>{Math.round((photosUploadedToday / FREE_DAILY_PHOTO_LIMIT) * 100)}%</span>
+              <span>{Math.round(uploadProgress * 100)}%</span>
             </div>
             <div className="h-2.5 bg-muted rounded-full overflow-hidden">
               <div 
                 className={cn(
                   "h-full rounded-full transition-all duration-500",
-                  canUploadMore 
-                    ? "bg-gradient-to-r from-primary to-primary/70" 
-                    : "bg-gradient-to-r from-coral to-destructive"
+                  isLimitReached 
+                    ? "bg-gradient-to-r from-sage to-sage/80" 
+                    : "bg-gradient-to-r from-primary to-primary/70"
                 )}
-                style={{ width: `${Math.min((photosUploadedToday / FREE_DAILY_PHOTO_LIMIT) * 100, 100)}%` }}
+                style={{ width: `${uploadProgress * 100}%` }}
               />
             </div>
           </div>
