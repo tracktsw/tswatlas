@@ -378,6 +378,18 @@ const InsightsPage = () => {
                           ))}
                         </div>
                       )}
+                      {checkIn.symptomsExperienced && checkIn.symptomsExperienced.length > 0 && (
+                        <div>
+                          <p className="text-xs text-muted-foreground font-medium mb-1.5">Symptoms</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {checkIn.symptomsExperienced.map(symptom => (
+                              <Badge key={symptom} variant="outline" className="text-xs rounded-full border-coral/30 text-coral bg-coral/5">
+                                {symptom}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       {checkIn.notes && (
                         <p className="text-sm text-muted-foreground italic">"{checkIn.notes}"</p>
                       )}
