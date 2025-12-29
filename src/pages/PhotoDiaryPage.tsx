@@ -724,6 +724,20 @@ const PhotoDiaryPage = () => {
               />
             </div>
           </div>
+          
+          {/* Upgrade Button */}
+          <Button 
+            onClick={handleUpgrade} 
+            disabled={isUpgrading} 
+            variant="warm" 
+            className="w-full gap-2"
+          >
+            <Crown className="w-4 h-4" />
+            {isUpgrading ? 'Loading...' : 'Upgrade to Premium'}
+          </Button>
+          <p className="text-xs text-center text-muted-foreground">
+            Unlimited photo uploads + Compare feature
+          </p>
         </div>
       )}
 
