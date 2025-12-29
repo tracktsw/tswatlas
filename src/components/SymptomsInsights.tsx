@@ -1,9 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Activity } from 'lucide-react';
+import { Activity, Lock } from 'lucide-react';
 import { CheckIn } from '@/contexts/UserDataContext';
 import { format, subDays, startOfDay, eachWeekOfInterval, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
+import { Progress } from '@/components/ui/progress';
+
+const INSIGHTS_UNLOCK_THRESHOLD = 30;
 
 type TimeRange = '7' | '30' | 'all';
 
@@ -49,6 +53,18 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
     });
     return uniqueDays.size;
   }, [filteredCheckIns]);
+
+  // Total unique days across ALL check-ins (for gating threshold)
+  const totalUniqueDaysLogged = useMemo(() => {
+    const uniqueDays = new Set<string>();
+    checkIns.forEach(c => {
+      uniqueDays.add(format(new Date(c.timestamp), 'yyyy-MM-dd'));
+    });
+    return uniqueDays.size;
+  }, [checkIns]);
+
+  // Check if insights are unlocked (30+ unique days logged)
+  const insightsUnlocked = totalUniqueDaysLogged >= INSIGHTS_UNLOCK_THRESHOLD;
 
   // Total check-ins count for context display
   const totalCheckInsInRange = filteredCheckIns.length;
@@ -279,8 +295,35 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
               ))}
             </div>
 
-            {/* Weekly trend chart */}
-            {hasEnoughDataForTrend ? (
+            {/* Weekly trend chart - gated behind 30 days threshold */}
+            {!insightsUnlocked ? (
+              /* Locked state - not enough data */
+              <div className="pt-4 border-t border-border/50">
+                <div className="text-center py-6 space-y-4">
+                  <div className="flex justify-center">
+                    <div className="p-3 rounded-full bg-muted/50">
+                      <Lock className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-medium text-foreground">Insights unlock after 30 days</p>
+                    <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                      Insights are generated once we have enough data to show meaningful patterns.
+                    </p>
+                  </div>
+                  <div className="space-y-2 max-w-xs mx-auto">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Progress</span>
+                      <span className="font-medium">{totalUniqueDaysLogged} / {INSIGHTS_UNLOCK_THRESHOLD} days logged</span>
+                    </div>
+                    <Progress value={(totalUniqueDaysLogged / INSIGHTS_UNLOCK_THRESHOLD) * 100} className="h-2" />
+                  </div>
+                  <Button asChild variant="outline" size="sm" className="mt-2">
+                    <Link to="/check-in">Log today's check-in</Link>
+                  </Button>
+                </div>
+              </div>
+            ) : hasEnoughDataForTrend ? (
               <div className="pt-4 border-t border-border/50">
                 <p className="text-xs text-muted-foreground mb-3 font-medium">Days symptom reported</p>
                 
