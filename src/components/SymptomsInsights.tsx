@@ -18,6 +18,19 @@ interface SymptomsInsightsProps {
 
 const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
   const [timeRange, setTimeRange] = useState<TimeRange>('7');
+  const [hiddenSymptoms, setHiddenSymptoms] = useState<Set<string>>(new Set());
+
+  const toggleSymptomVisibility = (symptom: string) => {
+    setHiddenSymptoms(prev => {
+      const next = new Set(prev);
+      if (next.has(symptom)) {
+        next.delete(symptom);
+      } else {
+        next.add(symptom);
+      }
+      return next;
+    });
+  };
 
   // Filter check-ins by time range
   const filteredCheckIns = useMemo(() => {
@@ -242,14 +255,35 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
               <div className="pt-4 border-t border-border/50">
                 <p className="text-xs text-muted-foreground mb-3 font-medium">Weekly trend</p>
                 
-                {/* Legend */}
+                {/* Legend - tap to toggle */}
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {topSymptoms.map(symptom => (
-                    <div key={symptom} className="flex items-center gap-1">
-                      <div className={cn('w-2 h-2 rounded-full', symptomColors[symptom] || 'bg-gray-400')} />
-                      <span className="text-[10px] text-muted-foreground">{symptom}</span>
-                    </div>
-                  ))}
+                  {topSymptoms.map(symptom => {
+                    const isHidden = hiddenSymptoms.has(symptom);
+                    return (
+                      <button
+                        key={symptom}
+                        onClick={() => toggleSymptomVisibility(symptom)}
+                        className={cn(
+                          'flex items-center gap-1 px-2 py-1 rounded-full transition-all duration-200',
+                          isHidden 
+                            ? 'opacity-40 bg-muted/30' 
+                            : 'bg-muted/50 hover:bg-muted'
+                        )}
+                      >
+                        <div className={cn(
+                          'w-2 h-2 rounded-full transition-opacity',
+                          symptomColors[symptom] || 'bg-gray-400',
+                          isHidden && 'opacity-50'
+                        )} />
+                        <span className={cn(
+                          'text-[10px]',
+                          isHidden ? 'text-muted-foreground/50 line-through' : 'text-muted-foreground'
+                        )}>
+                          {symptom}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
                 
                 {/* Chart */}
@@ -261,6 +295,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                         {topSymptoms.map(symptom => {
                           const count = week.counts[symptom] || 0;
                           const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                          const isHidden = hiddenSymptoms.has(symptom);
                           
                           return (
                             <div
@@ -268,11 +303,11 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                               className={cn(
                                 'w-full rounded-sm transition-all duration-300',
                                 symptomColors[symptom] || 'bg-gray-400',
-                                count === 0 && 'opacity-0'
+                                (count === 0 || isHidden) && 'opacity-0'
                               )}
                               style={{ 
-                                height: `${height}%`,
-                                minHeight: count > 0 ? '4px' : '0px',
+                                height: isHidden ? '0%' : `${height}%`,
+                                minHeight: count > 0 && !isHidden ? '4px' : '0px',
                               }}
                               title={`${symptom}: ${count} days`}
                             />
