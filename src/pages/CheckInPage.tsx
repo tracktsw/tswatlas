@@ -419,7 +419,7 @@ const CheckInPage = () => {
                   className={cn(
                     'px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200',
                     selectedSymptoms.includes(symptom)
-                      ? 'bg-coral text-white ring-2 ring-coral ring-offset-1 ring-offset-background'
+                      ? 'bg-primary/10 text-foreground ring-2 ring-primary ring-offset-1 ring-offset-background'
                       : 'bg-muted/60 text-muted-foreground hover:bg-muted'
                   )}
                 >
