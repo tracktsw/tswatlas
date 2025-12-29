@@ -162,6 +162,9 @@ const PhotoDiaryPage = () => {
     loadMore,
     addPhotoToList,
     removePhotoFromList,
+    addOptimisticPhoto,
+    resolveOptimisticPhoto,
+    removeOptimisticPhoto,
     fetchMediumUrl,
     prefetchMediumUrls,
     refresh,
@@ -344,6 +347,7 @@ const PhotoDiaryPage = () => {
   const handleConfirmUpload = async () => {
     if (!pendingFile) return;
 
+    // Close modal immediately for better UX
     setIsCapturing(false);
 
     // Decide what to store in taken_at:
@@ -356,10 +360,31 @@ const PhotoDiaryPage = () => {
     const pad = (n: number) => n.toString().padStart(2, '0');
     const takenAtLocal = `${selectedDate.getFullYear()}-${pad(selectedDate.getMonth() + 1)}-${pad(selectedDate.getDate())}T${pad(selectedDate.getHours())}:${pad(selectedDate.getMinutes())}:${pad(selectedDate.getSeconds())}`;
 
-    const photoId = await singleUpload.processAndUploadFile(pendingFile, {
-      bodyPart: newPhotoBodyPart,
-      notes: newPhotoNotes || undefined,
-      takenAtOverride: shouldStoreNullTakenAt ? null : takenAtLocal,
+    // Add optimistic placeholder immediately (instant visual feedback)
+    const tempId = addOptimisticPhoto(
+      pendingFile, 
+      newPhotoBodyPart, 
+      shouldStoreNullTakenAt ? new Date().toISOString() : takenAtLocal
+    );
+
+    // Store refs before clearing state
+    const fileToUpload = pendingFile;
+    const bodyPartToUpload = newPhotoBodyPart;
+    const notesToUpload = newPhotoNotes || undefined;
+    const takenAtToUpload = shouldStoreNullTakenAt ? null : takenAtLocal;
+
+    // Clear form state immediately
+    setNewPhotoNotes('');
+    setPendingFile(null);
+    setDetectedDate(null);
+    setDidUserAdjustDate(false);
+    setDateSource('upload_fallback');
+
+    // Start upload in background
+    const photoId = await singleUpload.processAndUploadFile(fileToUpload, {
+      bodyPart: bodyPartToUpload,
+      notes: notesToUpload,
+      takenAtOverride: takenAtToUpload,
     });
 
     if (photoId) {
@@ -368,17 +393,17 @@ const PhotoDiaryPage = () => {
         const finalDateSource = didUserAdjustDate ? 'user' : dateSource;
         console.log('[PhotoDiary] Upload complete:', {
           photo_id: photoId,
-          taken_at: shouldStoreNullTakenAt ? null : takenAtLocal,
+          taken_at: takenAtToUpload,
           date_source: finalDateSource,
           exif_present: dateSource === 'exif',
           was_camera: dateSource === 'camera_capture',
         });
       }
-      setNewPhotoNotes('');
-      setPendingFile(null);
-      setDetectedDate(null);
-      setDidUserAdjustDate(false);
-      setDateSource('upload_fallback');
+      // Resolve optimistic photo - refresh will handle adding the real photo
+      resolveOptimisticPhoto(tempId);
+    } else {
+      // Upload failed - remove the optimistic placeholder
+      removeOptimisticPhoto(tempId);
     }
   };
 
