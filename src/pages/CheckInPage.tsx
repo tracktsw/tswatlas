@@ -45,6 +45,7 @@ const CheckInPage = () => {
   const [showSparkles, setShowSparkles] = useState(false);
   const [editingCheckIn, setEditingCheckIn] = useState<CheckIn | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [expandedSymptom, setExpandedSymptom] = useState<string | null>(null);
   // Client request ID for idempotent submissions - persists across retries
   const [clientRequestId, setClientRequestId] = useState<string>(() => crypto.randomUUID());
 
@@ -67,13 +68,33 @@ const CheckInPage = () => {
     setSelectedSymptoms((prev) => {
       const existing = prev.find(s => s.symptom === symptom);
       if (existing) {
-        // Remove if already selected
+        // Remove if already selected and collapse
+        setExpandedSymptom(null);
         return prev.filter((s) => s.symptom !== symptom);
       } else {
-        // Add with default severity of 2 (Moderate)
+        // Add with default severity of 2 (Moderate) and expand
+        setExpandedSymptom(symptom);
         return [...prev, { symptom, severity: 2 as const }];
       }
     });
+  };
+
+  const handleSymptomTap = (symptom: string) => {
+    if (isSaving) return;
+    const isSelected = isSymptomSelected(symptom);
+    if (isSelected) {
+      // If already selected, toggle expansion or deselect if already expanded
+      if (expandedSymptom === symptom) {
+        // Collapse and keep selected
+        setExpandedSymptom(null);
+      } else {
+        // Expand this one (collapses others automatically)
+        setExpandedSymptom(symptom);
+      }
+    } else {
+      // Not selected - select it and expand
+      toggleSymptom(symptom);
+    }
   };
 
   const updateSymptomSeverity = (symptom: string, severity: 1 | 2 | 3) => {
@@ -450,38 +471,54 @@ const CheckInPage = () => {
           </div>
 
           {/* Symptoms experienced today */}
-          <div className="space-y-2 animate-slide-up" style={{ animationDelay: '0.22s' }}>
-            <h3 className="font-display font-bold text-lg text-foreground">
-              Symptoms experienced today
+          <div className="space-y-2.5 animate-slide-up" style={{ animationDelay: '0.22s' }}>
+            <h3 className="font-display text-base font-semibold text-muted-foreground">
+              Symptoms
             </h3>
-            <p className="text-xs text-muted-foreground">Tap to select, tap again to adjust severity</p>
             <div className="flex flex-wrap gap-1.5">
               {symptomsList.map((symptom) => {
                 const selected = isSymptomSelected(symptom);
                 const severity = getSymptomSeverity(symptom);
+                const isExpanded = expandedSymptom === symptom;
+                
                 return (
                   <div
                     key={symptom}
                     className={cn(
-                      'flex flex-col rounded-xl transition-all duration-200 overflow-hidden',
+                      'inline-flex items-center rounded-full transition-all duration-200',
                       selected
-                        ? 'bg-primary/10 ring-1 ring-primary/40'
-                        : 'bg-muted/50'
+                        ? 'bg-coral/15 ring-1 ring-coral/30'
+                        : 'bg-muted/60 hover:bg-muted'
                     )}
                   >
                     <button
-                      onClick={() => toggleSymptom(symptom)}
+                      onClick={() => handleSymptomTap(symptom)}
                       className={cn(
-                        'px-3 py-1.5 text-sm font-medium transition-colors',
+                        'px-2.5 py-1 text-xs font-medium transition-colors flex items-center gap-1.5',
                         selected
-                          ? 'text-foreground'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
+                          ? 'text-coral'
+                          : 'text-muted-foreground hover:text-foreground'
                       )}
                     >
+                      {selected && (
+                        <span className={cn(
+                          'w-1.5 h-1.5 rounded-full',
+                          severity === 1 && 'bg-amber-500',
+                          severity === 2 && 'bg-orange-500',
+                          severity === 3 && 'bg-red-500'
+                        )} />
+                      )}
                       {symptom}
+                      {selected && !isExpanded && (
+                        <span className="text-[10px] text-coral/70">
+                          {severityLabels[severity]}
+                        </span>
+                      )}
                     </button>
-                    {selected && (
-                      <div className="flex justify-center gap-1 px-2 pb-1.5 pt-0.5">
+                    
+                    {/* Inline severity selector - only show when expanded */}
+                    {selected && isExpanded && (
+                      <div className="flex items-center gap-0.5 pr-1.5 border-l border-coral/20 ml-0.5 pl-1.5">
                         {([1, 2, 3] as const).map((level) => (
                           <button
                             key={level}
@@ -490,23 +527,31 @@ const CheckInPage = () => {
                               updateSymptomSeverity(symptom, level);
                             }}
                             className={cn(
-                              'flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-all',
+                              'w-5 h-5 rounded-full flex items-center justify-center transition-all',
                               severity === level
-                                ? 'bg-primary text-primary-foreground'
-                                : 'text-muted-foreground hover:bg-primary/20'
+                                ? level === 1 ? 'bg-amber-500' : level === 2 ? 'bg-orange-500' : 'bg-red-500'
+                                : 'bg-muted/80 hover:bg-muted'
                             )}
+                            title={level === 1 ? 'Mild' : level === 2 ? 'Moderate' : 'Severe'}
                           >
-                            <span
-                              className={cn(
-                                'w-1.5 h-1.5 rounded-full border',
-                                severity === level
-                                  ? 'bg-primary-foreground border-primary-foreground'
-                                  : 'border-muted-foreground'
-                              )}
-                            />
-                            {severityLabels[level]}
+                            <span className={cn(
+                              'w-2 h-2 rounded-full',
+                              severity === level
+                                ? 'bg-white'
+                                : level === 1 ? 'bg-amber-400/50' : level === 2 ? 'bg-orange-400/50' : 'bg-red-400/50'
+                            )} />
                           </button>
                         ))}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSymptom(symptom);
+                          }}
+                          className="ml-0.5 p-0.5 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          title="Remove"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
                       </div>
                     )}
                   </div>
