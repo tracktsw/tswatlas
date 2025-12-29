@@ -23,6 +23,10 @@ const treatments = [
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
+const symptoms = [
+  'Burning', 'Itching', 'Thermodysregulation', 'Flaking',
+  'Oozing', 'Swelling', 'Redness', 'Insomnia'
+];
 
 const CheckInPage = () => {
   const { checkIns, addCheckIn, updateCheckIn, customTreatments, addCustomTreatment, getTodayCheckInCount } = useUserData();
@@ -30,6 +34,7 @@ const CheckInPage = () => {
   const [customTreatment, setCustomTreatment] = useState('');
   const [mood, setMood] = useState(3);
   const [skinFeeling, setSkinFeeling] = useState(3);
+  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [showSparkles, setShowSparkles] = useState(false);
   const [editingCheckIn, setEditingCheckIn] = useState<CheckIn | null>(null);
@@ -51,6 +56,11 @@ const CheckInPage = () => {
     setSelectedTreatments((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
   };
 
+  const toggleSymptom = (symptom: string) => {
+    if (isSaving) return;
+    setSelectedSymptoms((prev) => (prev.includes(symptom) ? prev.filter((s) => s !== symptom) : [...prev, symptom]));
+  };
+
   const handleAddCustomTreatment = () => {
     if (isSaving) return;
     const trimmed = customTreatment.trim();
@@ -69,6 +79,7 @@ const CheckInPage = () => {
     setSelectedTreatments(checkIn.treatments);
     setMood(checkIn.mood);
     setSkinFeeling(checkIn.skinFeeling);
+    setSelectedSymptoms(checkIn.symptomsExperienced || []);
     setNotes(checkIn.notes || '');
     setTimeOfDay(checkIn.timeOfDay);
   };
@@ -79,6 +90,7 @@ const CheckInPage = () => {
     setSelectedTreatments([]);
     setMood(3);
     setSkinFeeling(3);
+    setSelectedSymptoms([]);
     setNotes('');
     setTimeOfDay(suggestedTimeOfDay);
   };
@@ -112,6 +124,7 @@ const CheckInPage = () => {
           treatments: selectedTreatments,
           mood,
           skinFeeling,
+          symptomsExperienced: selectedSymptoms.length > 0 ? selectedSymptoms : undefined,
           notes: notes || undefined,
         });
 
@@ -124,6 +137,7 @@ const CheckInPage = () => {
           treatments: selectedTreatments,
           mood,
           skinFeeling,
+          symptomsExperienced: selectedSymptoms.length > 0 ? selectedSymptoms : undefined,
           notes: notes || undefined,
         }, clientRequestId);
 
@@ -139,6 +153,7 @@ const CheckInPage = () => {
       setCustomTreatment('');
       setMood(3);
       setSkinFeeling(3);
+      setSelectedSymptoms([]);
       setNotes('');
     } catch (error: any) {
       const message =
@@ -388,6 +403,29 @@ const CheckInPage = () => {
             <div className="flex justify-between text-xs text-muted-foreground px-2 font-medium">
               <span>Flaring</span>
               <span>Healing</span>
+            </div>
+          </div>
+
+          {/* Symptoms experienced today */}
+          <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.22s' }}>
+            <h3 className="font-display font-bold text-lg text-foreground">
+              Symptoms experienced today
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {symptoms.map((symptom) => (
+                <button
+                  key={symptom}
+                  onClick={() => toggleSymptom(symptom)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200',
+                    selectedSymptoms.includes(symptom)
+                      ? 'bg-coral text-white ring-2 ring-coral ring-offset-1 ring-offset-background'
+                      : 'bg-muted/60 text-muted-foreground hover:bg-muted'
+                  )}
+                >
+                  {symptom}
+                </button>
+              ))}
             </div>
           </div>
 

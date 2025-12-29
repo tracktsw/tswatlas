@@ -114,6 +114,7 @@ export type Database = {
           mood: number
           notes: string | null
           skin_feeling: number
+          symptoms_experienced: string[] | null
           time_of_day: string
           treatments: string[]
           user_id: string
@@ -125,6 +126,7 @@ export type Database = {
           mood: number
           notes?: string | null
           skin_feeling: number
+          symptoms_experienced?: string[] | null
           time_of_day: string
           treatments?: string[]
           user_id: string
@@ -136,6 +138,7 @@ export type Database = {
           mood?: number
           notes?: string | null
           skin_feeling?: number
+          symptoms_experienced?: string[] | null
           time_of_day?: string
           treatments?: string[]
           user_id?: string
