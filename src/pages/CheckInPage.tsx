@@ -29,7 +29,7 @@ const symptoms = [
 ];
 
 const CheckInPage = () => {
-  const { checkIns, addCheckIn, updateCheckIn, customTreatments, addCustomTreatment, getTodayCheckInCount } = useUserData();
+  const { checkIns, addCheckIn, updateCheckIn, customTreatments, addCustomTreatment, removeCustomTreatment, getTodayCheckInCount } = useUserData();
   const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
   const [customTreatment, setCustomTreatment] = useState('');
   const [mood, setMood] = useState(3);
@@ -303,33 +303,48 @@ const CheckInPage = () => {
             {customTreatments.length > 0 && (
               <div className="grid grid-cols-2 gap-3">
                 {customTreatments.map((treatment) => (
-                  <button
+                  <div
                     key={treatment}
-                    onClick={() => toggleTreatment(treatment)}
                     className={cn(
-                      'glass-card p-4 text-left transition-all duration-300 hover:-translate-y-0.5',
+                      'glass-card p-4 text-left transition-all duration-300 hover:-translate-y-0.5 relative',
                       selectedTreatments.includes(treatment) 
                         ? 'ring-2 ring-primary bg-primary/5 shadow-warm' 
                         : 'hover:bg-muted/50 hover:shadow-warm-sm'
                     )}
                   >
-                    <div className="flex items-center gap-2">
-                      <div className={cn(
-                        'w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300',
-                        selectedTreatments.includes(treatment) 
-                          ? 'border-primary bg-white' 
-                          : 'border-muted-foreground'
-                      )}>
-                        {selectedTreatments.includes(treatment) && (
-                          <Check className="w-3.5 h-3.5 text-coral" />
-                        )}
+                    <button
+                      onClick={() => toggleTreatment(treatment)}
+                      className="w-full text-left"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={cn(
+                          'w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300',
+                          selectedTreatments.includes(treatment) 
+                            ? 'border-primary bg-white' 
+                            : 'border-muted-foreground'
+                        )}>
+                          {selectedTreatments.includes(treatment) && (
+                            <Check className="w-3.5 h-3.5 text-coral" />
+                          )}
+                        </div>
+                        <span className="font-semibold text-foreground pr-6">{treatment}</span>
                       </div>
-                      <span className="font-semibold text-foreground">{treatment}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1.5 ml-8">
-                      Custom treatment
-                    </p>
-                  </button>
+                      <p className="text-xs text-muted-foreground mt-1.5 ml-8">
+                        Custom treatment
+                      </p>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeCustomTreatment(treatment);
+                        setSelectedTreatments(prev => prev.filter(t => t !== treatment));
+                      }}
+                      className="absolute top-2 right-2 p-1.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      title="Remove treatment"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
