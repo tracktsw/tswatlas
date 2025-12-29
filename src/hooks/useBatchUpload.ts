@@ -50,8 +50,14 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
       // (HEIC conversion strips metadata, so we must do this first)
       // Returns timezone-less "YYYY-MM-DDTHH:MM:SS" or null
       const exifDate = await extractExifDate(item.file);
+      const dateSource = exifDate ? 'exif' : 'upload_fallback';
+      
       if (import.meta.env.DEV) {
-        console.log('[BatchUpload] EXIF date for', item.file.name + ':', exifDate || 'not found (will use upload date)');
+        console.log('[BatchUpload] Date info for', item.file.name + ':', {
+          taken_at: exifDate || null,
+          date_source: dateSource,
+          exif_present: !!exifDate,
+        });
       }
 
       // Convert HEIC if needed
@@ -152,7 +158,13 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
       }
 
       if (import.meta.env.DEV) {
-        console.log('[BatchUpload] Upload success:', item.file.name, '-> photoId:', insertedPhoto.id);
+        console.log('[BatchUpload] Upload complete:', {
+          photo_id: insertedPhoto.id,
+          file_name: item.file.name,
+          taken_at: exifDate || null,
+          date_source: dateSource,
+          exif_present: !!exifDate,
+        });
       }
 
       updateItem(item.id, { status: 'success', progress: 100, photoId: insertedPhoto.id });

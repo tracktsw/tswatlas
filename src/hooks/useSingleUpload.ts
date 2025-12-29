@@ -160,7 +160,14 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
       setIsUploading(false);
 
       if (import.meta.env.DEV) {
-        console.log('[SingleUpload] Upload success! photoId:', insertedPhoto.id);
+        const dateSource = takenAtOverride !== undefined ? 'override' : (takenAt ? 'exif' : 'upload_fallback');
+        console.log('[SingleUpload] Upload complete:', {
+          photo_id: insertedPhoto.id,
+          taken_at: takenAt,
+          date_source: dateSource,
+          exif_present: takenAtOverride === undefined && !!takenAt,
+          had_override: takenAtOverride !== undefined,
+        });
       }
 
       onSuccess?.(insertedPhoto.id);

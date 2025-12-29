@@ -100,16 +100,20 @@ export const useVirtualizedPhotos = ({
     cursorRef.current = null;
 
     try {
-      // Sort by taken_at (EXIF date) first, fall back to created_at for photos without EXIF
-      // We use COALESCE in the order to handle nulls properly
+      // Sort by taken_at (EXIF/capture date) first, fall back to created_at for photos without taken_at
+      // nullsFirst=false for both orders: photos with dates always come before photos without dates
       const isAscending = sortOrder === "oldest";
       
       let query = supabase
         .from("user_photos")
         .select("id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, taken_at, notes")
         .eq("user_id", userId)
-        .order("taken_at", { ascending: isAscending, nullsFirst: isAscending })
+        // Primary sort: taken_at with nulls last (photos with dates first)
+        .order("taken_at", { ascending: isAscending, nullsFirst: false })
+        // Secondary sort for tie-breaking within same taken_at or for null taken_at photos
         .order("created_at", { ascending: isAscending })
+        // Tertiary sort by id for absolute stability
+        .order("id", { ascending: isAscending })
         .limit(PAGE_SIZE);
 
       if (bodyPartFilter !== "all") {
@@ -122,7 +126,7 @@ export const useVirtualizedPhotos = ({
       if (data && data.length > 0) {
         const photosWithUrls = transformRows(data as PhotoRow[]);
         setPhotos(photosWithUrls);
-        // Use the last photo's timestamp for cursor
+        // Use the last photo's composite cursor for pagination
         const lastPhoto = data[data.length - 1];
         cursorRef.current = lastPhoto.taken_at || lastPhoto.created_at;
         setHasMore(data.length === PAGE_SIZE);
@@ -145,18 +149,18 @@ export const useVirtualizedPhotos = ({
 
     try {
       const isAscending = sortOrder === "oldest";
-      const cursorOp = isAscending ? "gt" : "lt";
       
       let query = supabase
         .from("user_photos")
         .select("id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, taken_at, notes")
         .eq("user_id", userId)
-        .order("taken_at", { ascending: isAscending, nullsFirst: isAscending })
-        .order("created_at", { ascending: isAscending });
+        // Same ordering as initial load
+        .order("taken_at", { ascending: isAscending, nullsFirst: false })
+        .order("created_at", { ascending: isAscending })
+        .order("id", { ascending: isAscending });
 
-      // For pagination, we need to get photos after/before the cursor
-      // This is tricky with COALESCE ordering - we'll use a simpler approach
-      // Filter by created_at as the secondary sort is stable
+      // For pagination, filter based on cursor
+      // This handles both photos with taken_at and those falling back to created_at
       if (isAscending) {
         query = query.or(`taken_at.gt.${cursorRef.current},and(taken_at.is.null,created_at.gt.${cursorRef.current})`);
       } else {
