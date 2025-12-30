@@ -13,6 +13,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { PlantIllustration, SparkleIllustration, SunIllustration } from '@/components/illustrations';
 import DemoEditModal from '@/components/DemoEditModal';
 import SymptomsInsights from '@/components/SymptomsInsights';
+import TriggerPatternsInsights from '@/components/TriggerPatternsInsights';
 import { severityColors, severityLabels } from '@/constants/severityColors';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
@@ -330,6 +331,9 @@ const InsightsPage = () => {
 
         {/* Symptoms Insights */}
         <SymptomsInsights checkIns={checkIns} />
+
+        {/* Trigger Patterns */}
+        <TriggerPatternsInsights checkIns={checkIns} />
 
         {/* Calendar Button */}
         <Dialog open={!!selectedDate || calendarOpen} onOpenChange={(open) => {
