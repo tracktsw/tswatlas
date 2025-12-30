@@ -104,9 +104,26 @@ const TriggerPatternsInsights = ({ checkIns }: TriggerPatternsInsightsProps) => 
       .slice(0, 6); // Show top 6 triggers
   }, [checkIns]);
 
-  // Don't render if no trigger data
+  // Show empty state if no trigger data
   if (triggerStats.length === 0) {
-    return null;
+    return (
+      <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
+        <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-amber-500/20">
+            <AlertTriangle className="w-4 h-4 text-amber-600" />
+          </div>
+          Trigger Patterns
+        </h3>
+        <div className="glass-card p-5">
+          <p className="text-sm text-muted-foreground">
+            Start logging triggers in your daily check-ins to discover patterns over time.
+          </p>
+          <p className="text-xs text-muted-foreground/70 mt-2">
+            Log triggers on at least 2 different days to see correlations.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const maxImpact = Math.max(...triggerStats.map(t => t.impactScore), 1);
