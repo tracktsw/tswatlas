@@ -329,11 +329,11 @@ const InsightsPage = () => {
           </div>
         )}
 
-        {/* Symptoms Insights */}
-        <SymptomsInsights checkIns={checkIns} />
-
         {/* Trigger Patterns */}
         <TriggerPatternsInsights checkIns={checkIns} />
+
+        {/* Symptoms Insights */}
+        <SymptomsInsights checkIns={checkIns} />
 
         {/* Calendar Button */}
         <Dialog open={!!selectedDate || calendarOpen} onOpenChange={(open) => {
