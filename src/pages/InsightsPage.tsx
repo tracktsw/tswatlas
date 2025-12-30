@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles, Eye, Pencil } from 'lucide-react';
+import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles, Eye, Pencil, Crown, Loader2, Flame, Activity, CalendarDays } from 'lucide-react';
 import { useUserData, BodyPart, CheckIn } from '@/contexts/UserDataContext';
 import { useDemoMode } from '@/contexts/DemoModeContext';
 import { format, subDays, startOfDay, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isSameMonth, addMonths, subMonths, getDay, setMonth, setYear } from 'date-fns';
@@ -8,13 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import PaywallGuard from '@/components/PaywallGuard';
 import { useSubscription } from '@/hooks/useSubscription';
 import { PlantIllustration, SparkleIllustration, SunIllustration } from '@/components/illustrations';
 import DemoEditModal from '@/components/DemoEditModal';
 import SymptomsInsights from '@/components/SymptomsInsights';
 import TriggerPatternsInsights from '@/components/TriggerPatternsInsights';
 import { severityColors, severityLabels } from '@/constants/severityColors';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
@@ -44,11 +45,48 @@ const bodyParts: { value: BodyPart; label: string; emoji: string }[] = [
 const InsightsPage = () => {
   const { checkIns: realCheckIns, photos } = useUserData();
   const { isDemoMode, isAdmin, getEffectiveCheckIns } = useDemoMode();
-  const { isPremium } = useSubscription();
+  const { isPremium, isLoading: isSubscriptionLoading } = useSubscription();
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [demoEditDate, setDemoEditDate] = useState<Date | null>(null);
+  const [isUpgrading, setIsUpgrading] = useState(false);
+
+  const handleUpgrade = async () => {
+    if (isUpgrading) return;
+    setIsUpgrading(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please sign in to subscribe');
+        setIsUpgrading(false);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) {
+        toast.error('Failed to start checkout');
+        setIsUpgrading(false);
+        return;
+      }
+
+      if (data?.url) {
+        window.location.assign(data.url);
+      } else {
+        toast.error('Failed to start checkout');
+        setIsUpgrading(false);
+      }
+    } catch (err) {
+      toast.error('Failed to start checkout');
+      setIsUpgrading(false);
+    }
+  };
   
   // Use effective check-ins (real + demo overrides when in demo mode)
   const checkIns = useMemo(() => getEffectiveCheckIns(realCheckIns), [realCheckIns, getEffectiveCheckIns]);
@@ -293,8 +331,76 @@ const InsightsPage = () => {
         </div>
       </div>
 
-      {/* Premium Features Section */}
-      <PaywallGuard feature="Premium Insights" showBlurred>
+      {/* Premium Upsell Section - Show for free users */}
+      {!isPremium && !isSubscriptionLoading && (
+        <div className="glass-card-warm p-6 animate-slide-up" style={{ animationDelay: '0.15s' }}>
+          <div className="text-center space-y-4">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-honey/30 to-coral/20 flex items-center justify-center">
+              <Crown className="w-7 h-7 text-honey" />
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="font-display font-bold text-xl text-foreground">
+                Unlock Premium Insights
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                See what actually helps your skin by analysing your check-ins over time.
+              </p>
+            </div>
+
+            <ul className="text-left space-y-2.5 py-2">
+              <li className="flex items-start gap-2.5">
+                <div className="p-1 rounded-md bg-coral/15 mt-0.5">
+                  <Heart className="w-3.5 h-3.5 text-coral" />
+                </div>
+                <span className="text-sm text-foreground">What helps you insights</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <div className="p-1 rounded-md bg-amber-500/15 mt-0.5">
+                  <Flame className="w-3.5 h-3.5 text-amber-600" />
+                </div>
+                <span className="text-sm text-foreground">Trigger tracking patterns</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <div className="p-1 rounded-md bg-primary/15 mt-0.5">
+                  <Activity className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <span className="text-sm text-foreground">Symptom trends over time</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <div className="p-1 rounded-md bg-honey/20 mt-0.5">
+                  <CalendarDays className="w-3.5 h-3.5 text-honey" />
+                </div>
+                <span className="text-sm text-foreground">Flare calendar at a glance</span>
+              </li>
+            </ul>
+
+            <Button 
+              onClick={handleUpgrade} 
+              disabled={isUpgrading} 
+              variant="warm" 
+              className="w-full gap-2" 
+              size="lg"
+            >
+              {isUpgrading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <Crown className="w-4 h-4" />
+                  Upgrade to Premium
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Premium Features Section - Blurred for free users */}
+      {isPremium ? (
+        <>
         {/* Treatment Effectiveness */}
         {treatmentStats.length > 0 && (
           <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.15s' }}>
@@ -540,7 +646,45 @@ const InsightsPage = () => {
             )}
           </DialogContent>
         </Dialog>
-      </PaywallGuard>
+        </>
+      ) : (
+        <div className="relative">
+          <div className="blur-sm pointer-events-none select-none opacity-60 space-y-6">
+            {/* Blurred placeholder content */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-coral/20">
+                  <Heart className="w-4 h-4 text-coral" />
+                </div>
+                <div className="h-5 w-32 bg-muted rounded" />
+              </div>
+              <div className="glass-card p-5 space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="h-4 w-24 bg-muted rounded" />
+                      <div className="h-3 w-20 bg-muted rounded" />
+                    </div>
+                    <div className="h-3 bg-muted rounded-full" />
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-amber-500/20">
+                  <Flame className="w-4 h-4 text-amber-600" />
+                </div>
+                <div className="h-5 w-28 bg-muted rounded" />
+              </div>
+              <div className="glass-card p-5">
+                <div className="h-20 bg-muted/50 rounded-xl" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Summary */}
       <div className="glass-card-warm p-5 animate-slide-up" style={{ animationDelay: '0.2s' }}>
