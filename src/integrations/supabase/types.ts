@@ -117,6 +117,7 @@ export type Database = {
           symptoms_experienced: Json | null
           time_of_day: string
           treatments: string[]
+          triggers: string[]
           user_id: string
         }
         Insert: {
@@ -129,6 +130,7 @@ export type Database = {
           symptoms_experienced?: Json | null
           time_of_day: string
           treatments?: string[]
+          triggers?: string[]
           user_id: string
         }
         Update: {
@@ -141,6 +143,7 @@ export type Database = {
           symptoms_experienced?: Json | null
           time_of_day?: string
           treatments?: string[]
+          triggers?: string[]
           user_id?: string
         }
         Relationships: []
