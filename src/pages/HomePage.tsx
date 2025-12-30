@@ -266,24 +266,33 @@ const HomePage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Encouragement Card - grounded, not playful */}
-      <div className="glass-card p-5 animate-slide-up relative overflow-hidden" style={{ animationDelay: '0.15s' }}>
-        <div className="decorative-dots absolute inset-0 opacity-30" />
-        <div className="flex items-start gap-4 relative">
-          <div className="p-3 rounded-2xl bg-sage/10">
-            <Leaf className="w-6 h-6 text-sage" />
+      {/* Today's Status */}
+      <div className="glass-card-elevated p-5 animate-slide-up" style={{ animationDelay: '0.15s' }}>
+        <h3 className="font-display font-bold text-lg text-anchor mb-4">Today's Status</h3>
+        <div className="grid grid-cols-4 gap-2">
+          <div className="text-center p-3 rounded-2xl bg-muted/50">
+            <p className="text-2xl font-bold text-foreground">{photos.length}</p>
+            <p className="text-xs text-muted-foreground font-medium mt-1">Photos</p>
           </div>
-          <div>
-            <h2 className="font-display font-bold text-lg text-foreground">One day at a time</h2>
-            <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-              Healing is not linear. Your body is working to restore itself, and every small step matters.
-            </p>
+          <div className="text-center p-3 rounded-2xl bg-sage/8">
+            <p className="text-2xl font-bold text-sage">{todayCheckIns.length}/2</p>
+            <p className="text-xs text-muted-foreground font-medium mt-1">Check-ins</p>
+          </div>
+          <div className="text-center p-3 rounded-2xl bg-muted/50">
+            <p className="text-2xl font-bold text-foreground">{journalEntries.length}</p>
+            <p className="text-xs text-muted-foreground font-medium mt-1">Journal</p>
+          </div>
+          <div className="text-center p-3 rounded-2xl bg-streak/8">
+            <div className="flex items-center justify-center gap-1">
+              <p className="text-2xl font-bold text-streak">{checkInStreak}</p>
+            </div>
+            <p className="text-xs text-muted-foreground font-medium mt-1">Streak</p>
           </div>
         </div>
       </div>
 
       {/* Community Favorites */}
-      <div className="glass-card p-5 animate-slide-up" style={{ animationDelay: '0.17s' }}>
+      <div className="glass-card p-5 animate-slide-up" style={{ animationDelay: '0.2s' }}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5 text-coral" />
@@ -346,31 +355,6 @@ const HomePage = () => {
             </Link>
           </div>
         )}
-      </div>
-
-      {/* Today's Status */}
-      <div className="glass-card-elevated p-5 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-        <h3 className="font-display font-bold text-lg text-anchor mb-4">Today's Status</h3>
-        <div className="grid grid-cols-4 gap-2">
-          <div className="text-center p-3 rounded-2xl bg-muted/50">
-            <p className="text-2xl font-bold text-foreground">{photos.length}</p>
-            <p className="text-xs text-muted-foreground font-medium mt-1">Photos</p>
-          </div>
-          <div className="text-center p-3 rounded-2xl bg-sage/8">
-            <p className="text-2xl font-bold text-sage">{todayCheckIns.length}/2</p>
-            <p className="text-xs text-muted-foreground font-medium mt-1">Check-ins</p>
-          </div>
-          <div className="text-center p-3 rounded-2xl bg-muted/50">
-            <p className="text-2xl font-bold text-foreground">{journalEntries.length}</p>
-            <p className="text-xs text-muted-foreground font-medium mt-1">Journal</p>
-          </div>
-          <div className="text-center p-3 rounded-2xl bg-streak/8">
-            <div className="flex items-center justify-center gap-1">
-              <p className="text-2xl font-bold text-streak">{checkInStreak}</p>
-            </div>
-            <p className="text-xs text-muted-foreground font-medium mt-1">Streak</p>
-          </div>
-        </div>
       </div>
 
       {/* Quick Actions */}
