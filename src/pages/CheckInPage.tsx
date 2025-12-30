@@ -25,7 +25,8 @@ const treatments = [
 const triggersList = [
   { id: 'heat_sweat', label: 'Heat / sweat' },
   { id: 'shower_hard_water', label: 'Shower / hard water' },
-  { id: 'detergent_fragrance', label: 'Detergent / fragrance' },
+  { id: 'detergent', label: 'Detergent' },
+  { id: 'fragrance', label: 'Fragrance' },
   { id: 'stress', label: 'Stress' },
   { id: 'poor_sleep', label: 'Poor sleep' },
   { id: 'exercise', label: 'Exercise' },
@@ -35,6 +36,9 @@ const triggersList = [
   { id: 'new_product', label: 'New product' },
   { id: 'friction_scratching', label: 'Friction / scratching' },
   { id: 'illness_infection', label: 'Illness / infection' },
+  { id: 'pets', label: 'Pets' },
+  { id: 'cold_air', label: 'Cold air' },
+  { id: 'food', label: 'Food' },
 ];
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
@@ -54,6 +58,7 @@ const CheckInPage = () => {
   const [skinFeeling, setSkinFeeling] = useState(3);
   const [selectedSymptoms, setSelectedSymptoms] = useState<SymptomEntry[]>([]);
   const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
+  const [foodTriggerText, setFoodTriggerText] = useState('');
   const [notes, setNotes] = useState('');
   const [showSparkles, setShowSparkles] = useState(false);
   const [editingCheckIn, setEditingCheckIn] = useState<CheckIn | null>(null);
@@ -78,8 +83,23 @@ const CheckInPage = () => {
 
   const toggleTrigger = (id: string) => {
     if (isSaving) return;
-    setSelectedTriggers((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
+    if (id === 'food') {
+      // For food, toggle the selection but don't clear the text immediately
+      setSelectedTriggers((prev) => {
+        if (prev.some(t => t === 'food' || t.startsWith('food:'))) {
+          // Deselecting food - clear the text too
+          setFoodTriggerText('');
+          return prev.filter((t) => t !== 'food' && !t.startsWith('food:'));
+        } else {
+          return [...prev, 'food'];
+        }
+      });
+    } else {
+      setSelectedTriggers((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
+    }
   };
+
+  const isFoodSelected = selectedTriggers.some(t => t === 'food' || t.startsWith('food:'));
 
   const toggleSymptom = (symptom: string) => {
     if (isSaving) return;
@@ -147,7 +167,15 @@ const CheckInPage = () => {
     setMood(checkIn.mood);
     setSkinFeeling(checkIn.skinFeeling);
     setSelectedSymptoms(checkIn.symptomsExperienced || []);
-    setSelectedTriggers(checkIn.triggers || []);
+    // Extract food text from triggers if present
+    const triggers = checkIn.triggers || [];
+    const foodTrigger = triggers.find(t => t.startsWith('food:'));
+    if (foodTrigger) {
+      setFoodTriggerText(foodTrigger.replace('food:', ''));
+    } else {
+      setFoodTriggerText('');
+    }
+    setSelectedTriggers(triggers);
     setNotes(checkIn.notes || '');
     setTimeOfDay(checkIn.timeOfDay);
   };
@@ -160,6 +188,7 @@ const CheckInPage = () => {
     setSkinFeeling(3);
     setSelectedSymptoms([]);
     setSelectedTriggers([]);
+    setFoodTriggerText('');
     setNotes('');
     setTimeOfDay(suggestedTimeOfDay);
   };
@@ -186,6 +215,12 @@ const CheckInPage = () => {
 
     setIsSaving(true);
 
+    // Process triggers: replace 'food' with 'food:text' if text is provided
+    const processedTriggers = selectedTriggers
+      .filter(t => t !== 'food') // Remove plain 'food' entry
+      .filter(t => !t.startsWith('food:')) // Remove any existing food:xxx entries
+      .concat(isFoodSelected && foodTriggerText.trim() ? [`food:${foodTriggerText.trim()}`] : isFoodSelected ? ['food'] : []);
+
     try {
       if (editingCheckIn) {
         await updateCheckIn(editingCheckIn.id, {
@@ -194,7 +229,7 @@ const CheckInPage = () => {
           mood,
           skinFeeling,
           symptomsExperienced: selectedSymptoms.length > 0 ? selectedSymptoms : undefined,
-          triggers: selectedTriggers.length > 0 ? selectedTriggers : undefined,
+          triggers: processedTriggers.length > 0 ? processedTriggers : undefined,
           notes: notes || undefined,
         });
 
@@ -208,7 +243,7 @@ const CheckInPage = () => {
           mood,
           skinFeeling,
           symptomsExperienced: selectedSymptoms.length > 0 ? selectedSymptoms : undefined,
-          triggers: selectedTriggers.length > 0 ? selectedTriggers : undefined,
+          triggers: processedTriggers.length > 0 ? processedTriggers : undefined,
           notes: notes || undefined,
         }, clientRequestId);
 
@@ -226,6 +261,7 @@ const CheckInPage = () => {
       setSkinFeeling(3);
       setSelectedSymptoms([]);
       setSelectedTriggers([]);
+      setFoodTriggerText('');
       setNotes('');
     } catch (error: any) {
       const message =
@@ -454,21 +490,35 @@ const CheckInPage = () => {
               </p>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {triggersList.map(({ id, label }) => (
-                <button
-                  key={id}
-                  onClick={() => toggleTrigger(id)}
-                  className={cn(
-                    'py-2.5 px-3 text-sm font-medium rounded-full transition-all duration-200 text-left',
-                    selectedTriggers.includes(id)
-                      ? 'bg-primary/5 ring-2 ring-primary text-foreground'
-                      : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
+              {triggersList.map(({ id, label }) => {
+                const isSelected = id === 'food' ? isFoodSelected : selectedTriggers.includes(id);
+                return (
+                  <button
+                    key={id}
+                    onClick={() => toggleTrigger(id)}
+                    className={cn(
+                      'py-2.5 px-3 text-sm font-medium rounded-full transition-all duration-200 text-left',
+                      isSelected
+                        ? 'bg-primary/5 ring-2 ring-primary text-foreground'
+                        : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
+            {/* Food input field - shown when Food is selected */}
+            {isFoodSelected && (
+              <div className="mt-2">
+                <Input
+                  placeholder="What food? (e.g., dairy, gluten)"
+                  value={foodTriggerText}
+                  onChange={(e) => setFoodTriggerText(e.target.value)}
+                  className="h-10 rounded-xl border-2"
+                />
+              </div>
+            )}
           </div>
 
           {/* Mood Rating */}
@@ -721,11 +771,22 @@ const CheckInPage = () => {
                 <div className="mt-3">
                   <p className="text-xs text-muted-foreground mb-1.5 font-medium">Triggers logged today</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {checkIn.triggers.map(triggerId => (
-                      <span key={triggerId} className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-400 font-medium px-2.5 py-1 rounded-full">
-                        {triggersList.find(t => t.id === triggerId)?.label || triggerId}
-                      </span>
-                    ))}
+                    {checkIn.triggers.map(triggerId => {
+                      // Handle food:xxx format
+                      if (triggerId.startsWith('food:')) {
+                        const foodText = triggerId.replace('food:', '');
+                        return (
+                          <span key={triggerId} className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-400 font-medium px-2.5 py-1 rounded-full">
+                            Food: {foodText}
+                          </span>
+                        );
+                      }
+                      return (
+                        <span key={triggerId} className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-400 font-medium px-2.5 py-1 rounded-full">
+                          {triggersList.find(t => t.id === triggerId)?.label || triggerId}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               )}
