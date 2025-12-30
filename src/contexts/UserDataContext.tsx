@@ -32,6 +32,7 @@ export interface CheckIn {
   skinFeeling: number;
   notes?: string;
   symptomsExperienced?: SymptomEntry[];
+  triggers?: string[];
 }
 
 export interface JournalEntry {
@@ -349,6 +350,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           skinFeeling: c.skin_feeling,
           notes: c.notes || undefined,
           symptomsExperienced: parseSymptoms(c.symptoms_experienced),
+          triggers: (c as any).triggers || undefined,
         })));
       }
 
@@ -444,6 +446,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         skinFeeling: c.skin_feeling,
         notes: c.notes || undefined,
         symptomsExperienced: parseSymptoms(c.symptoms_experienced),
+        triggers: (c as any).triggers || undefined,
       }))
     );
   }, [userId]);
@@ -653,6 +656,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             skin_feeling: checkIn.skinFeeling,
             notes: checkIn.notes || null,
             symptoms_experienced: JSON.parse(JSON.stringify(checkIn.symptomsExperienced || [])),
+            triggers: checkIn.triggers || [],
             client_request_id: clientRequestId,
           })
           .select()
@@ -688,6 +692,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           skinFeeling: data.skin_feeling,
           notes: data.notes || undefined,
           symptomsExperienced: parseSymptoms(data.symptoms_experienced),
+          triggers: (data as any).triggers || undefined,
         };
 
         setCheckIns((prev) => (prev.some((c) => c.id === newCheckIn.id) ? prev : [newCheckIn, ...prev]));
@@ -718,6 +723,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             skin_feeling: checkIn.skinFeeling,
             notes: checkIn.notes || null,
             symptoms_experienced: JSON.parse(JSON.stringify(checkIn.symptomsExperienced || [])),
+            triggers: checkIn.triggers || [],
           })
           .eq('id', id)
           .select()
@@ -740,6 +746,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   skinFeeling: data.skin_feeling,
                   notes: data.notes || undefined,
                   symptomsExperienced: parseSymptoms(data.symptoms_experienced),
+                  triggers: (data as any).triggers || undefined,
                 }
               : c
           )

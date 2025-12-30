@@ -22,6 +22,21 @@ const treatments = [
   { id: 'meditation', label: 'Meditation', description: 'Stress management' },
 ];
 
+const triggersList = [
+  { id: 'heat_sweat', label: 'Heat / sweat' },
+  { id: 'shower_hard_water', label: 'Shower / hard water' },
+  { id: 'detergent_fragrance', label: 'Detergent / fragrance' },
+  { id: 'stress', label: 'Stress' },
+  { id: 'poor_sleep', label: 'Poor sleep' },
+  { id: 'exercise', label: 'Exercise' },
+  { id: 'alcohol', label: 'Alcohol' },
+  { id: 'spicy_food', label: 'Spicy food' },
+  { id: 'dust_pollen', label: 'Dust / pollen' },
+  { id: 'new_product', label: 'New product' },
+  { id: 'friction_scratching', label: 'Friction / scratching' },
+  { id: 'illness_infection', label: 'Illness / infection' },
+];
+
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
 const symptomsList = [
@@ -38,6 +53,7 @@ const CheckInPage = () => {
   const [mood, setMood] = useState(3);
   const [skinFeeling, setSkinFeeling] = useState(3);
   const [selectedSymptoms, setSelectedSymptoms] = useState<SymptomEntry[]>([]);
+  const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [showSparkles, setShowSparkles] = useState(false);
   const [editingCheckIn, setEditingCheckIn] = useState<CheckIn | null>(null);
@@ -58,6 +74,11 @@ const CheckInPage = () => {
   const toggleTreatment = (id: string) => {
     if (isSaving) return;
     setSelectedTreatments((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
+  };
+
+  const toggleTrigger = (id: string) => {
+    if (isSaving) return;
+    setSelectedTriggers((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
   };
 
   const toggleSymptom = (symptom: string) => {
@@ -126,6 +147,7 @@ const CheckInPage = () => {
     setMood(checkIn.mood);
     setSkinFeeling(checkIn.skinFeeling);
     setSelectedSymptoms(checkIn.symptomsExperienced || []);
+    setSelectedTriggers(checkIn.triggers || []);
     setNotes(checkIn.notes || '');
     setTimeOfDay(checkIn.timeOfDay);
   };
@@ -137,6 +159,7 @@ const CheckInPage = () => {
     setMood(3);
     setSkinFeeling(3);
     setSelectedSymptoms([]);
+    setSelectedTriggers([]);
     setNotes('');
     setTimeOfDay(suggestedTimeOfDay);
   };
@@ -171,6 +194,7 @@ const CheckInPage = () => {
           mood,
           skinFeeling,
           symptomsExperienced: selectedSymptoms.length > 0 ? selectedSymptoms : undefined,
+          triggers: selectedTriggers.length > 0 ? selectedTriggers : undefined,
           notes: notes || undefined,
         });
 
@@ -184,6 +208,7 @@ const CheckInPage = () => {
           mood,
           skinFeeling,
           symptomsExperienced: selectedSymptoms.length > 0 ? selectedSymptoms : undefined,
+          triggers: selectedTriggers.length > 0 ? selectedTriggers : undefined,
           notes: notes || undefined,
         }, clientRequestId);
 
@@ -200,6 +225,7 @@ const CheckInPage = () => {
       setMood(3);
       setSkinFeeling(3);
       setSelectedSymptoms([]);
+      setSelectedTriggers([]);
       setNotes('');
     } catch (error: any) {
       const message =
@@ -414,6 +440,34 @@ const CheckInPage = () => {
               >
                 <Plus className="w-5 h-5" />
               </Button>
+            </div>
+          </div>
+
+          {/* Triggers today */}
+          <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.12s' }}>
+            <div>
+              <h3 className="font-display font-bold text-lg text-foreground">
+                Triggers today
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Tap to select what might have worsened symptoms.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {triggersList.map(({ id, label }) => (
+                <button
+                  key={id}
+                  onClick={() => toggleTrigger(id)}
+                  className={cn(
+                    'py-2.5 px-3 text-sm font-medium rounded-full transition-all duration-200 text-left',
+                    selectedTriggers.includes(id)
+                      ? 'bg-coral/15 ring-1 ring-coral/40 text-coral'
+                      : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -661,6 +715,18 @@ const CheckInPage = () => {
                       {entry.symptom} ({severityLabels[entry.severity]})
                     </span>
                   ))}
+                </div>
+              )}
+              {checkIn.triggers && checkIn.triggers.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs text-muted-foreground mb-1.5 font-medium">Triggers logged today</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {checkIn.triggers.map(triggerId => (
+                      <span key={triggerId} className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-400 font-medium px-2.5 py-1 rounded-full">
+                        {triggersList.find(t => t.id === triggerId)?.label || triggerId}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
