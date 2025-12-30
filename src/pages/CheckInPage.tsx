@@ -595,7 +595,7 @@ const CheckInPage = () => {
                     <button
                       onClick={() => handleSymptomTap(symptom)}
                       className={cn(
-                        'px-2.5 py-1 text-xs font-medium transition-colors flex items-center gap-1.5',
+                        'px-3 py-1.5 text-sm font-medium transition-colors flex items-center gap-2',
                         selected
                           ? 'text-coral'
                           : 'text-muted-foreground hover:text-foreground'
@@ -603,7 +603,7 @@ const CheckInPage = () => {
                     >
                       {selected && (
                         <span className={cn(
-                          'w-1.5 h-1.5 rounded-full',
+                          'w-2 h-2 rounded-full',
                           severityColors.bg[severity]
                         )} />
                       )}
