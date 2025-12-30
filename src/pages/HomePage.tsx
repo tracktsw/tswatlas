@@ -1,19 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, CheckCircle, BarChart3, Users, BookOpen, Settings, Calendar as CalendarIcon, Flame, Pencil, Leaf, Sun, Loader2, Crown, Sparkles } from 'lucide-react';
+import { Camera, CheckCircle, BarChart3, Users, BookOpen, Settings, Calendar as CalendarIcon, Flame, Pencil, Leaf, Sun, Loader2, Crown, Sparkles, Trophy } from 'lucide-react';
 import { LeafIllustration, PlantIllustration } from '@/components/illustrations';
 import compassLogo from '@/assets/compass-logo.png';
 import { useUserData } from '@/contexts/UserDataContext';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useTopTreatments } from '@/hooks/useTopTreatments';
 import { format, differenceInDays, parseISO, subDays, startOfDay } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 const HomePage = () => {
   const { photos, checkIns, journalEntries, tswStartDate, setTswStartDate, isLoading, isSyncing, refreshPhotos } = useUserData();
   const { isPremium, isLoading: isSubscriptionLoading } = useSubscription();
+  const { data: topTreatments, isLoading: isLoadingTreatments } = useTopTreatments(3);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     tswStartDate ? parseISO(tswStartDate) : undefined
@@ -277,6 +280,72 @@ const HomePage = () => {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Community Favorites */}
+      <div className="glass-card p-5 animate-slide-up" style={{ animationDelay: '0.17s' }}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-coral" />
+            <h3 className="font-display font-bold text-lg text-anchor">Community Favorites</h3>
+          </div>
+          <Link to="/community" className="text-xs text-sage font-medium hover:underline">
+            View all →
+          </Link>
+        </div>
+        
+        {isLoadingTreatments ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3">
+                <Skeleton className="w-8 h-8 rounded-lg" />
+                <div className="flex-1">
+                  <Skeleton className="h-4 w-3/4 mb-1" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : topTreatments && topTreatments.length > 0 ? (
+          <div className="space-y-3">
+            {topTreatments.map((treatment, index) => {
+              const rankColors = [
+                'bg-amber-400/20 text-amber-600', // Gold
+                'bg-slate-300/30 text-slate-500', // Silver
+                'bg-amber-600/20 text-amber-700', // Bronze
+              ];
+              const rankEmoji = ['🥇', '🥈', '🥉'];
+              
+              return (
+                <div key={treatment.id} className="flex items-center gap-3">
+                  <div className={cn(
+                    "w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold",
+                    rankColors[index]
+                  )}>
+                    {rankEmoji[index]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-foreground truncate">{treatment.name}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="capitalize">{treatment.category}</span>
+                      <span>•</span>
+                      <span className="text-sage font-medium">{treatment.helpfulPercentage}% helpful</span>
+                      <span>•</span>
+                      <span>{treatment.totalVotes} votes</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-sm text-muted-foreground">No community votes yet.</p>
+            <Link to="/community" className="text-sm text-sage font-medium hover:underline mt-1 inline-block">
+              Be the first to vote →
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Today's Status */}
