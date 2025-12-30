@@ -461,7 +461,7 @@ const CheckInPage = () => {
                   className={cn(
                     'py-2.5 px-3 text-sm font-medium rounded-full transition-all duration-200 text-left',
                     selectedTriggers.includes(id)
-                      ? 'bg-coral/15 ring-1 ring-coral/40 text-coral'
+                      ? 'bg-primary/5 ring-2 ring-primary text-foreground'
                       : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
