@@ -868,7 +868,7 @@ const PhotoDiaryPage = () => {
         {!isPremium && !canUploadMore && (
           <div className="space-y-1">
             <Button 
-              variant="warm" 
+              variant="default" 
               className="w-full gap-2 h-12"
               onClick={handleUpgrade}
               disabled={isUpgrading}
