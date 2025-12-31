@@ -370,7 +370,7 @@ const InsightsPage = () => {
 
         {/* Glass overlay with CTA for free users */}
         {!isPremium && !isSubscriptionLoading && (
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-start justify-center pt-8">
             <motion.div 
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
