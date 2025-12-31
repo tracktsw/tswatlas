@@ -33,21 +33,23 @@ const TriggerPatternsInsights = ({ checkIns }: TriggerPatternsInsightsProps) => 
     
     if (checkInsWithTriggers.length === 0) return [];
 
-    // Build stats: for each trigger, calculate average symptom severity and skin feeling
+    // Build stats: for each trigger, calculate average symptom severity and skin intensity
     const stats: Record<string, { 
       count: number; 
       totalSymptomSeverity: number;
       totalSymptoms: number;
-      badDays: number; // days with skin feeling <= 2
-      avgSkinFeeling: number;
-      totalSkinFeeling: number;
+      highIntensityDays: number; // days with intensity >= 3 (Active/High-intensity)
+      totalIntensity: number;
     }> = {};
 
     checkInsWithTriggers.forEach(checkIn => {
       const triggers = checkIn.triggers || [];
       const symptoms = checkIn.symptomsExperienced || [];
       const totalSeverity = symptoms.reduce((sum, s) => sum + s.severity, 0);
-      const isBadDay = checkIn.skinFeeling <= 2;
+      
+      // Use skin_intensity if available, otherwise convert from skinFeeling (1-5 → 4-0)
+      const intensity = checkIn.skinIntensity ?? (5 - checkIn.skinFeeling);
+      const isHighIntensityDay = intensity >= 3; // Active (3) or High-intensity (4)
 
       triggers.forEach(triggerId => {
         // Handle food:xxx format
@@ -58,35 +60,34 @@ const TriggerPatternsInsights = ({ checkIns }: TriggerPatternsInsightsProps) => 
             count: 0,
             totalSymptomSeverity: 0,
             totalSymptoms: 0,
-            badDays: 0,
-            avgSkinFeeling: 0,
-            totalSkinFeeling: 0,
+            highIntensityDays: 0,
+            totalIntensity: 0,
           };
         }
         stats[normalizedId].count++;
         stats[normalizedId].totalSymptomSeverity += totalSeverity;
         stats[normalizedId].totalSymptoms += symptoms.length;
-        stats[normalizedId].totalSkinFeeling += checkIn.skinFeeling;
-        if (isBadDay) {
-          stats[normalizedId].badDays++;
+        stats[normalizedId].totalIntensity += intensity;
+        if (isHighIntensityDay) {
+          stats[normalizedId].highIntensityDays++;
         }
       });
     });
 
     // Calculate impact score: higher = worse correlation with symptoms
-    // Impact = (bad day rate * 100) + (avg symptom severity when present)
+    // Impact = (high intensity day rate * 70) + (avg symptom severity * 10) + (avg intensity * 4)
     return Object.entries(stats)
       .filter(([_, data]) => data.count >= 2) // Need at least 2 occurrences for meaningful data
       .map(([id, data]) => {
-        const badDayRate = data.badDays / data.count;
+        const highIntensityRate = data.highIntensityDays / data.count;
         const avgSymptomSeverity = data.totalSymptoms > 0 
           ? data.totalSymptomSeverity / data.totalSymptoms 
           : 0;
-        const avgSkinFeeling = data.totalSkinFeeling / data.count;
+        const avgIntensity = data.totalIntensity / data.count;
         
-        // Impact score: weighted combination of bad day rate and avg symptom severity
-        // Bad days (skin <= 2) are weighted heavily
-        const impactScore = (badDayRate * 70) + (avgSymptomSeverity * 10) + ((5 - avgSkinFeeling) * 4);
+        // Impact score: weighted combination of high intensity day rate and avg symptom severity
+        // Higher intensity (3-4) days are weighted heavily
+        const impactScore = (highIntensityRate * 70) + (avgSymptomSeverity * 10) + (avgIntensity * 4);
 
         // Get label for trigger
         let label = triggersList.find(t => t.id === id)?.label || id;
@@ -95,8 +96,8 @@ const TriggerPatternsInsights = ({ checkIns }: TriggerPatternsInsightsProps) => 
           id,
           label,
           count: data.count,
-          badDayRate: Math.round(badDayRate * 100),
-          avgSkinFeeling: Math.round(avgSkinFeeling * 10) / 10,
+          highIntensityRate: Math.round(highIntensityRate * 100),
+          avgIntensity: Math.round(avgIntensity * 10) / 10,
           impactScore: Math.round(impactScore),
         };
       })
@@ -138,11 +139,11 @@ const TriggerPatternsInsights = ({ checkIns }: TriggerPatternsInsightsProps) => 
       </h3>
       <div className="glass-card p-5 space-y-4">
         <p className="text-xs text-muted-foreground">
-          Triggers most associated with worse symptom days
+          Triggers most associated with high-intensity days
         </p>
-        {triggerStats.map(({ id, label, count, badDayRate, impactScore }, index) => {
+        {triggerStats.map(({ id, label, count, highIntensityRate, impactScore }, index) => {
           const barWidth = (impactScore / maxImpact) * 100;
-          const isHighImpact = badDayRate >= 50;
+          const isHighImpact = highIntensityRate >= 50;
           
           return (
             <div 
@@ -161,7 +162,7 @@ const TriggerPatternsInsights = ({ checkIns }: TriggerPatternsInsightsProps) => 
                   )}
                 </span>
                 <span className="text-xs text-muted-foreground font-medium">
-                  {badDayRate}% bad days ({count} times)
+                  {highIntensityRate}% high-intensity days ({count} times)
                 </span>
               </div>
               <div className="h-3 bg-muted rounded-full overflow-hidden">
@@ -179,7 +180,7 @@ const TriggerPatternsInsights = ({ checkIns }: TriggerPatternsInsightsProps) => 
           );
         })}
         <p className="text-[10px] text-muted-foreground/70 mt-3 pt-3 border-t border-muted/50">
-          Based on days when trigger was logged. Higher bar = stronger correlation with worse skin days.
+          Based on days when trigger was logged. Higher bar = stronger correlation with high-intensity days.
         </p>
       </div>
     </div>
