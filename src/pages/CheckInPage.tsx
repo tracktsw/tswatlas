@@ -614,7 +614,7 @@ const CheckInPage = () => {
             <h3 className="font-display text-base font-semibold text-muted-foreground">
               Symptoms
             </h3>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1.5">
               {symptomsList.map((symptom) => {
                 const selected = isSymptomSelected(symptom);
                 const severity = getSymptomSeverity(symptom);
@@ -633,7 +633,7 @@ const CheckInPage = () => {
                     <button
                       onClick={() => handleSymptomTap(symptom)}
                       className={cn(
-                        'px-2.5 py-1 text-[13px] font-medium transition-colors flex items-center gap-1.5',
+                        'px-3.5 py-1.5 text-sm font-medium transition-colors flex items-center gap-1.5',
                         selected
                           ? 'text-coral'
                           : 'text-muted-foreground/80 hover:text-foreground'
