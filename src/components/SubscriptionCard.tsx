@@ -233,10 +233,13 @@ const SubscriptionCard = () => {
             ) : (
               <>
                 <Crown className="w-4 h-4" />
-                Get Premium - £5.99/month
+                Start 7-day free trial
               </>
             )}
           </Button>
+          <p className="text-xs text-muted-foreground mt-2">
+            £5.99/month after · Cancel anytime
+          </p>
         </div>
       </div>
     </div>
