@@ -734,49 +734,85 @@ const CheckInPage = () => {
           </div>
 
           {/* Pain Scale */}
-          <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.25s' }}>
+          <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
             <h3 className="font-display font-bold text-lg text-foreground">
-              How much pain are you in right now?
+              Pain level today
             </h3>
-            <div className="flex flex-wrap gap-1.5">
-              {Array.from({ length: 11 }, (_, i) => i).map((level) => {
-                // Gradient from light yellow (0) to dark red (10)
-                const painColors = [
-                  'bg-yellow-200 text-yellow-900 ring-yellow-400',      // 0 - light yellow
-                  'bg-yellow-300 text-yellow-900 ring-yellow-500',      // 1
-                  'bg-amber-300 text-amber-900 ring-amber-500',         // 2
-                  'bg-amber-400 text-amber-950 ring-amber-600',         // 3
-                  'bg-orange-400 text-orange-950 ring-orange-600',      // 4
-                  'bg-orange-500 text-white ring-orange-700',           // 5
-                  'bg-orange-600 text-white ring-orange-800',           // 6
-                  'bg-red-500 text-white ring-red-700',                 // 7
-                  'bg-red-600 text-white ring-red-800',                 // 8
-                  'bg-red-700 text-white ring-red-900',                 // 9
-                  'bg-red-800 text-white ring-red-950',                 // 10 - dark red
-                ];
-                
-                return (
-                  <button
-                    key={level}
-                    onClick={() => setPainScore(painScore === level ? null : level)}
-                    className={cn(
-                      'w-9 h-9 rounded-full text-sm font-medium transition-all duration-200 flex items-center justify-center',
-                      painScore === level
-                        ? `${painColors[level]} ring-2 ring-offset-1 scale-110`
-                        : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
-                    )}
-                  >
-                    {level}
-                  </button>
-                );
-              })}
+            <div className="px-1">
+              {/* Custom slider with colored thumb */}
+              <div className="relative pt-2 pb-1">
+                <input
+                  type="range"
+                  min={0}
+                  max={10}
+                  step={1}
+                  value={painScore ?? 5}
+                  onChange={(e) => setPainScore(parseInt(e.target.value))}
+                  className="w-full h-2 bg-muted rounded-full appearance-none cursor-pointer"
+                  style={{
+                    WebkitAppearance: 'none',
+                    background: 'hsl(var(--muted))',
+                  }}
+                />
+                {/* Custom thumb overlay */}
+                <style>{`
+                  input[type='range']::-webkit-slider-thumb {
+                    -webkit-appearance: none;
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    border: 2px solid white;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+                    background: ${
+                      painScore === null ? 'hsl(var(--muted-foreground))' :
+                      painScore <= 2 ? '#fde047' :
+                      painScore <= 4 ? '#fbbf24' :
+                      painScore <= 6 ? '#f97316' :
+                      painScore <= 8 ? '#ef4444' :
+                      '#b91c1c'
+                    };
+                  }
+                  input[type='range']::-moz-range-thumb {
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    border: 2px solid white;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+                    background: ${
+                      painScore === null ? 'hsl(var(--muted-foreground))' :
+                      painScore <= 2 ? '#fde047' :
+                      painScore <= 4 ? '#fbbf24' :
+                      painScore <= 6 ? '#f97316' :
+                      painScore <= 8 ? '#ef4444' :
+                      '#b91c1c'
+                    };
+                  }
+                `}</style>
+              </div>
+              {/* Display current value */}
+              {painScore !== null && (
+                <div className="text-center mb-2">
+                  <span className={cn(
+                    'inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold',
+                    painScore <= 2 ? 'bg-yellow-300 text-yellow-900' :
+                    painScore <= 4 ? 'bg-amber-400 text-amber-950' :
+                    painScore <= 6 ? 'bg-orange-500 text-white' :
+                    painScore <= 8 ? 'bg-red-500 text-white' :
+                    'bg-red-700 text-white'
+                  )}>
+                    {painScore}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between text-[11px] text-muted-foreground">
+                <span>No pain</span>
+                <span>Worst pain imaginable</span>
+              </div>
             </div>
-            <div className="flex justify-between text-[10px] text-muted-foreground/70 px-1">
-              <span>0 = No pain</span>
-              <span>10 = Worst pain imaginable</span>
-            </div>
-            <p className="text-[10px] text-muted-foreground/60">
-              Include skin pain, burning, or soreness.
+            <p className="text-[10px] text-muted-foreground/70">
+              Includes skin pain, burning, or soreness.
             </p>
           </div>
 
