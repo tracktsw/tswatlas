@@ -19,8 +19,8 @@ const buttonVariants = cva(
         action: "bg-action text-action-foreground shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
         warm: "bg-action text-action-foreground shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
         soft: "bg-cream-dark text-foreground hover:bg-muted shadow-sm",
-        // Gold variant - for upgrade/premium CTAs with shimmer
-        gold: "bg-gold text-gold-foreground shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 hover:brightness-105 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent before:-translate-x-full hover:before:translate-x-full before:transition-transform before:duration-700 before:ease-in-out",
+        // Gold variant - for upgrade/premium CTAs with shimmer and glow
+        gold: "bg-gold text-gold-foreground shadow-[0_0_20px_-5px_hsl(var(--gold))] hover:shadow-[0_0_25px_-3px_hsl(var(--gold))] hover:-translate-y-0.5 active:translate-y-0 hover:brightness-105 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent before:-translate-x-full hover:before:translate-x-full before:transition-transform before:duration-700 before:ease-in-out",
       },
       size: {
         default: "h-11 px-5 py-2.5",
