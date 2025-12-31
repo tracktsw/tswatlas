@@ -101,6 +101,10 @@ const InsightsPage = () => {
       const avgSkin = dayCheckIns.length 
         ? dayCheckIns.reduce((sum, c) => sum + c.skinFeeling, 0) / dayCheckIns.length 
         : 0;
+      const painScores = dayCheckIns.filter(c => c.painScore !== null && c.painScore !== undefined);
+      const avgPain = painScores.length 
+        ? Math.round(painScores.reduce((sum, c) => sum + (c.painScore || 0), 0) / painScores.length)
+        : null;
       
       return {
         date,
@@ -108,6 +112,7 @@ const InsightsPage = () => {
         checkIns: dayCheckIns.length,
         avgMood,
         avgSkin,
+        avgPain,
       };
     });
   }, [checkIns, last7Days]);
@@ -242,7 +247,7 @@ const InsightsPage = () => {
         </h3>
         <div className="glass-card p-5">
           <div className="flex justify-between gap-2">
-            {weeklyData.map(({ date, avgMood, avgSkin, checkIns: count }, index) => {
+            {weeklyData.map(({ date, avgMood, avgSkin, avgPain, checkIns: count }, index) => {
               return (
                 <div 
                   key={date.toISOString()} 
@@ -261,12 +266,27 @@ const InsightsPage = () => {
                     {format(date, 'EEE')}
                   </p>
                   <div className={cn(
-                    'aspect-square rounded-2xl flex items-center justify-center text-lg mb-1.5 transition-all duration-300',
+                    'aspect-square rounded-2xl flex flex-col items-center justify-center text-lg mb-1.5 transition-all duration-300',
                     count > 0 
                       ? 'bg-gradient-to-br from-primary/15 to-sage-light/50 shadow-warm-sm' 
                       : 'bg-muted/50'
                   )}>
                     {count > 0 ? skinEmojis[Math.round(avgSkin) - 1] || '—' : '—'}
+                    {avgPain !== null && (
+                      <span 
+                        title={`Pain: ${avgPain}/10`}
+                        className={cn(
+                          'text-[8px] font-bold px-1 py-0 rounded-full mt-0.5 leading-tight',
+                          avgPain <= 2 ? 'bg-yellow-200 text-yellow-900' :
+                          avgPain <= 4 ? 'bg-amber-300 text-amber-900' :
+                          avgPain <= 6 ? 'bg-orange-400 text-white' :
+                          avgPain <= 8 ? 'bg-red-500 text-white' :
+                          'bg-red-700 text-white'
+                        )}
+                      >
+                        {avgPain}
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm">
                     {count > 0 ? moodEmojis[Math.round(avgMood) - 1] : ''}
