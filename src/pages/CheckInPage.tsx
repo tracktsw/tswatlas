@@ -331,7 +331,7 @@ const CheckInPage = () => {
       {!editingCheckIn && (
         <div className="flex gap-3 animate-slide-up" style={{ animationDelay: '0.05s' }}>
           <Button
-            variant={timeOfDay === 'morning' ? 'warm' : 'outline'}
+            variant={timeOfDay === 'morning' ? 'default' : 'outline'}
             className={cn(
               'flex-1 gap-2 h-12 rounded-2xl',
               hasMorningCheckIn && 'opacity-50'
