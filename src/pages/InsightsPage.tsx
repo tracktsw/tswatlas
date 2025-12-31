@@ -324,17 +324,32 @@ const InsightsPage = () => {
         {/* Glass overlay with CTA for free users */}
         {!isPremium && !isSubscriptionLoading && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="glass-card-warm p-6 mx-4 max-w-xs text-center shadow-warm border border-white/30 backdrop-blur-sm">
+            <div className="glass-card-warm p-6 mx-4 max-w-sm text-center shadow-warm border border-white/30 backdrop-blur-sm">
               <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-br from-honey/40 to-coral/30 flex items-center justify-center mb-4">
                 <Crown className="w-6 h-6 text-honey" />
               </div>
               
               <h3 className="font-display font-bold text-lg text-foreground mb-2">
-                Unlock Your Insights
+                Your skin follows patterns. We can show you.
               </h3>
-              <p className="text-muted-foreground text-sm mb-4">
-                See which treatments work best for your skin
+              <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
+                Based on your check-ins, patterns are starting to form. Premium helps you understand what often precedes, worsens, or settles flares — using your own data.
               </p>
+
+              <ul className="text-left text-sm text-muted-foreground space-y-2 mb-5">
+                <li className="flex items-start gap-2">
+                  <span className="text-honey mt-0.5">•</span>
+                  <span>What often appears before flares</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-honey mt-0.5">•</span>
+                  <span>What's linked to longer vs shorter flares</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-honey mt-0.5">•</span>
+                  <span>What tends to coincide with calmer periods</span>
+                </li>
+              </ul>
 
               <Button 
                 onClick={handleUpgrade} 
@@ -356,7 +371,7 @@ const InsightsPage = () => {
                 )}
               </Button>
               <p className="text-xs text-muted-foreground mt-2">
-                7 days free · £5.99/month after
+                7 days free · £5.99/month after · Cancel anytime
               </p>
             </div>
           </div>
