@@ -624,7 +624,7 @@ const CheckInPage = () => {
                   <div
                     key={symptom}
                     className={cn(
-                      'flex items-center rounded-xl transition-all duration-200 min-h-[46px]',
+                      'relative flex items-center rounded-xl transition-all duration-200 min-h-[46px] overflow-hidden',
                       selected
                         ? 'ring-2 ring-primary bg-primary/5'
                         : 'bg-muted/50 hover:bg-muted'
@@ -633,19 +633,21 @@ const CheckInPage = () => {
                     <button
                       onClick={() => handleSymptomTap(symptom)}
                       className={cn(
-                        'flex-1 px-3 py-2.5 text-sm font-medium transition-colors flex items-center gap-2',
+                        'flex-1 min-w-0 px-3 py-2.5 text-sm font-medium transition-colors flex items-center justify-between gap-2',
                         selected
                           ? 'text-foreground'
                           : 'text-muted-foreground/80 hover:text-foreground'
                       )}
                     >
-                      {selected && (
-                        <span className={cn(
-                          'w-2 h-2 rounded-full flex-shrink-0',
-                          severityColors.bg[severity]
-                        )} />
-                      )}
-                      <span className="flex-1 text-left">{symptom}</span>
+                      <span className="flex items-center gap-2 min-w-0 flex-1">
+                        {selected && (
+                          <span className={cn(
+                            'w-2 h-2 rounded-full flex-shrink-0',
+                            severityColors.bg[severity]
+                          )} />
+                        )}
+                        <span className="truncate text-left">{symptom}</span>
+                      </span>
                       {selected && !isExpanded && (
                         <span className={cn(
                           'text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0',
@@ -660,7 +662,7 @@ const CheckInPage = () => {
                     
                     {/* Inline severity selector - only show when expanded */}
                     {selected && isExpanded && (
-                      <div className="flex items-center gap-1 pr-2 border-l border-primary/30 pl-2">
+                      <div className="flex items-center gap-1 pr-2 border-l border-primary/30 pl-2 flex-shrink-0">
                         {([1, 2, 3] as const).map((level) => (
                           <button
                             key={level}
