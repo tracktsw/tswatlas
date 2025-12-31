@@ -117,7 +117,7 @@ const JournalPage = () => {
                       className={cn(
                         'flex-1 py-3 text-xl rounded-2xl transition-all duration-300',
                         newMood === idx + 1 
-                          ? 'bg-gradient-to-br from-coral/20 to-coral-light shadow-warm scale-110' 
+                          ? 'bg-emerald-500/10 ring-2 ring-emerald-500/50 scale-110' 
                           : 'bg-muted/50 hover:bg-muted hover:scale-105'
                       )}
                     >

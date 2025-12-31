@@ -290,7 +290,7 @@ const CommunityPage = () => {
       {/* Treatments List */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-coral" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       ) : (
         <div className="space-y-4">

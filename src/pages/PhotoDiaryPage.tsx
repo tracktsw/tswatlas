@@ -796,7 +796,7 @@ const PhotoDiaryPage = () => {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="font-display text-xl flex items-center gap-2">
-              <Lock className="w-5 h-5 text-coral" />
+              <Lock className="w-5 h-5 text-primary" />
               Compare is Premium
             </DialogTitle>
           </DialogHeader>
@@ -1012,8 +1012,8 @@ const PhotoDiaryPage = () => {
       ) : photos.length === 0 ? (
         <div className="glass-card-warm p-8 text-center animate-fade-in relative overflow-hidden">
           <LeafIllustration variant="cluster" className="w-20 h-20 absolute -right-4 -bottom-4 opacity-15" />
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-coral/20 to-coral-light flex items-center justify-center relative">
-            <Image className="w-8 h-8 text-coral" />
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary/20 to-sage-light flex items-center justify-center relative">
+            <Image className="w-8 h-8 text-primary" />
           </div>
           <p className="font-display font-bold text-lg text-foreground">No photos yet</p>
           <p className="text-muted-foreground mt-1">
@@ -1040,7 +1040,7 @@ const PhotoDiaryPage = () => {
               {/* Sticky Header */}
               <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-muted/95 backdrop-blur-sm border-b border-border/50">
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold bg-coral/10 text-coral px-3 py-1 rounded-full">
+                  <span className="text-sm font-semibold bg-primary/10 text-primary px-3 py-1 rounded-full">
                     {bodyParts.find(b => b.value === viewingPhoto.bodyPart)?.label}
                   </span>
                   <div className="text-sm text-muted-foreground">
