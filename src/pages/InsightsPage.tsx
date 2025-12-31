@@ -636,6 +636,39 @@ const InsightsPage = () => {
                     );
                   })}
                 </div>
+
+                {/* Legend */}
+                <div className="mt-4 pt-4 border-t border-border/50 space-y-3">
+                  <p className="text-xs font-semibold text-muted-foreground">Legend</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-muted-foreground w-12">Mood:</span>
+                      <div className="flex gap-1.5">
+                        {moodEmojis.map((emoji, i) => (
+                          <span key={i} title={['Very low', 'Low', 'Okay', 'Good', 'Great'][i]} className="text-sm">{emoji}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-muted-foreground w-12">Skin:</span>
+                      <div className="flex gap-1.5">
+                        {skinEmojis.map((emoji, i) => (
+                          <span key={i} title={['Very bad', 'Bad', 'Okay', 'Good', 'Great'][i]} className="text-sm">{emoji}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-muted-foreground w-12">Pain:</span>
+                      <div className="flex gap-1 items-center">
+                        <span className="bg-yellow-200 text-yellow-900 text-[9px] font-bold px-1.5 py-0.5 rounded-full">1-2</span>
+                        <span className="bg-amber-300 text-amber-900 text-[9px] font-bold px-1.5 py-0.5 rounded-full">3-4</span>
+                        <span className="bg-orange-400 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">5-6</span>
+                        <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">7-8</span>
+                        <span className="bg-red-700 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">9-10</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </DialogContent>
