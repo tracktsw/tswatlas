@@ -13,6 +13,7 @@ import { PlantIllustration, SparkleIllustration, SunIllustration } from '@/compo
 import DemoEditModal from '@/components/DemoEditModal';
 import SymptomsInsights from '@/components/SymptomsInsights';
 import TriggerPatternsInsights from '@/components/TriggerPatternsInsights';
+import { FlareStatusBadge } from '@/components/FlareStatusBadge';
 import { severityColors, severityLabels } from '@/constants/severityColors';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -146,20 +147,6 @@ const InsightsPage = () => {
       .sort((a, b) => b[1] - a[1]);
   }, [photos]);
 
-  const overallTrend = useMemo(() => {
-    if (checkIns.length < 2) return null;
-    const sorted = [...checkIns].sort((a, b) => 
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
-    const firstHalf = sorted.slice(0, Math.floor(sorted.length / 2));
-    const secondHalf = sorted.slice(Math.floor(sorted.length / 2));
-    
-    const firstAvg = firstHalf.reduce((s, c) => s + c.skinFeeling, 0) / firstHalf.length;
-    const secondAvg = secondHalf.reduce((s, c) => s + c.skinFeeling, 0) / secondHalf.length;
-    
-    return secondAvg > firstAvg ? 'improving' : secondAvg < firstAvg ? 'declining' : 'stable';
-  }, [checkIns]);
-
   // Calendar data
   const calendarDays = useMemo(() => {
     const start = startOfMonth(calendarMonth);
@@ -238,41 +225,8 @@ const InsightsPage = () => {
         <p className="text-muted-foreground">Your healing patterns</p>
       </div>
 
-      {/* Overall Trend */}
-      {overallTrend && (
-        <div className={cn(
-          'glass-card-warm p-5 animate-slide-up relative overflow-hidden',
-          overallTrend === 'improving' && 'ring-2 ring-primary/30'
-        )} style={{ animationDelay: '0.05s' }}>
-          {overallTrend === 'improving' && (
-            <PlantIllustration variant="growing" className="w-16 h-20 absolute -right-2 -bottom-4 opacity-15" />
-          )}
-          <div className="flex items-center gap-4 relative">
-            <div className={cn(
-              'w-14 h-14 rounded-2xl flex items-center justify-center shadow-warm-sm',
-              overallTrend === 'improving' 
-                ? 'bg-gradient-to-br from-primary/20 to-sage-light' 
-                : 'bg-muted'
-            )}>
-              <TrendingUp className={cn(
-                'w-7 h-7',
-                overallTrend === 'improving' ? 'text-primary' : 'text-muted-foreground',
-                overallTrend === 'declining' && 'rotate-180'
-              )} />
-            </div>
-            <div>
-              <p className="font-display font-bold text-lg text-foreground">
-                {overallTrend === 'improving' ? 'Skin is improving!' : 
-                 overallTrend === 'declining' ? 'Skin may be flaring' : 
-                 'Skin is stable'}
-              </p>
-              <p className="text-muted-foreground">
-                Based on your recent check-ins
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Flare Status Badge */}
+      <FlareStatusBadge />
 
       {/* Weekly Overview */}
       <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
