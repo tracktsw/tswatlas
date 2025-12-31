@@ -36,7 +36,7 @@ const triggersList = [
   // Internal triggers
   { id: 'stress', label: 'Stress' },
   { id: 'poor_sleep', label: 'Poor Sleep' },
-  { id: 'hormonal_changes', label: 'Hormonal Changes (Period / Cycle)' },
+  { id: 'hormonal_changes', label: 'Hormonal Changes' },
   { id: 'illness_infection', label: 'Illness / Infection' },
   // Activity & consumption
   { id: 'exercise', label: 'Exercise' },
