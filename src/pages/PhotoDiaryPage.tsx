@@ -630,7 +630,7 @@ const PhotoDiaryPage = () => {
             {!isPremium && <Lock className="w-3.5 h-3.5" />}
             Compare
             {!isPremium && (
-              <span className="text-[10px] font-semibold bg-coral/15 text-coral px-1.5 py-0.5 rounded-full">
+              <span className="text-[10px] font-semibold bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">
                 Premium
               </span>
             )}
@@ -651,7 +651,7 @@ const PhotoDiaryPage = () => {
 
       {compareMode && selectedPhotos.length < 2 && (
         <div className="glass-card p-5 text-center text-muted-foreground animate-fade-in">
-          <Sparkles className="w-8 h-8 mx-auto mb-2 text-coral" />
+          <Sparkles className="w-8 h-8 mx-auto mb-2 text-primary" />
           Select {2 - selectedPhotos.length} more photo{selectedPhotos.length === 0 ? 's' : ''} to compare
         </div>
       )}
