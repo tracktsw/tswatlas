@@ -14,6 +14,7 @@ import { PlantIllustration, SparkleIllustration, SunIllustration } from '@/compo
 import DemoEditModal from '@/components/DemoEditModal';
 import SymptomsInsights from '@/components/SymptomsInsights';
 import TriggerPatternsInsights from '@/components/TriggerPatternsInsights';
+import PainTrendsInsights from '@/components/PainTrendsInsights';
 import { FlareStatusBadge } from '@/components/FlareStatusBadge';
 import { severityColors, severityLabels } from '@/constants/severityColors';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,7 +52,7 @@ const InsightsPage = () => {
   const { checkIns: realCheckIns, photos } = useUserData();
   const { isDemoMode, isAdmin, getEffectiveCheckIns } = useDemoMode();
   const { isPremium, isLoading: isSubscriptionLoading } = useSubscription();
-  const { baselineConfidence } = useFlareState();
+  const { baselineConfidence, dailyFlareStates } = useFlareState();
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -385,6 +386,9 @@ const InsightsPage = () => {
           </div>
         )}
       </div>
+
+      {/* Pain Trends - Available to all users when data threshold met */}
+      <PainTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
 
       {/* Calendar Button - Premium only */}
       {isPremium && (
