@@ -626,7 +626,7 @@ const CheckInPage = () => {
                     className={cn(
                       'flex items-center rounded-xl transition-all duration-200 min-h-[46px]',
                       selected
-                        ? 'bg-emerald-500/10 ring-2 ring-emerald-500/50'
+                        ? 'ring-2 ring-primary bg-primary/5'
                         : 'bg-muted/50 hover:bg-muted'
                     )}
                   >
@@ -635,7 +635,7 @@ const CheckInPage = () => {
                       className={cn(
                         'flex-1 px-3 py-2.5 text-sm font-medium transition-colors flex items-center gap-2',
                         selected
-                          ? 'text-emerald-700 dark:text-emerald-500'
+                          ? 'text-foreground'
                           : 'text-muted-foreground/80 hover:text-foreground'
                       )}
                     >
@@ -660,7 +660,7 @@ const CheckInPage = () => {
                     
                     {/* Inline severity selector - only show when expanded */}
                     {selected && isExpanded && (
-                      <div className="flex items-center gap-1 pr-2 border-l border-emerald-500/30 pl-2">
+                      <div className="flex items-center gap-1 pr-2 border-l border-primary/30 pl-2">
                         {([1, 2, 3] as const).map((level) => (
                           <button
                             key={level}
