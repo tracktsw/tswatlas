@@ -480,7 +480,7 @@ const CheckInPage = () => {
                         : 'border-muted-foreground/50'
                     )}>
                       {selectedTreatments.includes(id) && (
-                        <Check className="w-3 h-3 text-coral" />
+                        <Check className="w-3 h-3 text-primary" />
                       )}
                     </div>
                     <span className="font-semibold text-foreground text-sm">{label}</span>
@@ -517,7 +517,7 @@ const CheckInPage = () => {
                             : 'border-muted-foreground/50'
                         )}>
                           {selectedTreatments.includes(treatment) && (
-                            <Check className="w-3 h-3 text-coral" />
+                            <Check className="w-3 h-3 text-primary" />
                           )}
                         </div>
                         <span className="font-semibold text-foreground text-sm pr-5">{treatment}</span>
@@ -935,7 +935,7 @@ const CheckInPage = () => {
               {checkIn.treatments.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-3">
                   {checkIn.treatments.map(t => (
-                    <span key={t} className="text-xs bg-coral/10 text-coral font-medium px-2.5 py-1 rounded-full">
+                    <span key={t} className="text-xs bg-primary/10 text-primary font-medium px-2.5 py-1 rounded-full">
                       {treatments.find(tr => tr.id === t)?.label || t}
                     </span>
                   ))}
