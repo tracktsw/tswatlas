@@ -869,6 +869,12 @@ const CheckInPage = () => {
                   <span className="text-muted-foreground">Skin:</span> 
                   <span className="text-lg">{skinEmojis[checkIn.skinFeeling - 1]}</span>
                 </span>
+                {checkIn.sleepScore !== null && checkIn.sleepScore !== undefined && (
+                  <span className="flex items-center gap-1">
+                    <span className="text-muted-foreground">Sleep:</span> 
+                    <span className="text-lg">{sleepOptions.find(s => s.value === checkIn.sleepScore)?.emoji}</span>
+                  </span>
+                )}
                 {checkIn.painScore !== null && checkIn.painScore !== undefined && (
                   <span className="flex items-center gap-1">
                     <span className="text-muted-foreground">Pain:</span> 
