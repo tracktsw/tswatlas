@@ -411,7 +411,7 @@ const CheckInPage = () => {
                   className={cn(
                     'flex-1 py-4 text-2xl rounded-2xl transition-all duration-300',
                     mood === idx + 1 
-                      ? 'bg-gradient-to-br from-honey/30 to-coral-light shadow-warm scale-110' 
+                      ? 'bg-emerald-500/10 ring-2 ring-emerald-500/50 scale-110' 
                       : 'bg-muted/50 hover:bg-muted hover:scale-105'
                   )}
                 >
