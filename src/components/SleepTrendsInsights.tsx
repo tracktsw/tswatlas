@@ -156,9 +156,30 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
     });
   }, [sleepData, flareStateByDate]);
 
-  // Show nothing if insufficient data
+  // Show placeholder if insufficient data
   if (sleepData.length < MIN_SLEEP_ENTRIES) {
-    return null;
+    return (
+      <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
+        <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-indigo-500/20">
+            <Moon className="w-4 h-4 text-indigo-500" />
+          </div>
+          Sleep Trends
+        </h3>
+        
+        <div className="glass-card p-5">
+          <div className="text-center py-6">
+            <Moon className="w-8 h-8 text-muted-foreground/50 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground mb-1">
+              {sleepData.length} of {MIN_SLEEP_ENTRIES} entries logged
+            </p>
+            <p className="text-xs text-muted-foreground/70">
+              Log a few more check-ins with sleep data to see your trends
+            </p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
