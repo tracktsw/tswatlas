@@ -389,32 +389,32 @@ const CheckInPage = () => {
             <h3 className="font-display font-bold text-lg text-foreground">
               What did you use today?
             </h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               {treatments.map(({ id, label, description }) => (
                 <button
                   key={id}
                   onClick={() => toggleTreatment(id)}
                   className={cn(
-                    'glass-card p-4 text-left transition-all duration-300 hover:-translate-y-0.5',
+                    'glass-card px-3 py-2.5 text-left transition-all duration-300 hover:-translate-y-0.5',
                     selectedTreatments.includes(id) 
                       ? 'ring-2 ring-primary bg-primary/5 shadow-warm' 
-                      : 'hover:bg-muted/50 hover:shadow-warm-sm'
+                      : 'border-border/50 hover:bg-muted/50 hover:shadow-warm-sm'
                   )}
                 >
                   <div className="flex items-center gap-2">
                     <div className={cn(
-                      'w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300',
+                      'w-5 h-5 rounded-full border-[1.5px] flex items-center justify-center transition-all duration-300 flex-shrink-0',
                       selectedTreatments.includes(id) 
                         ? 'border-primary bg-white' 
-                        : 'border-muted-foreground'
+                        : 'border-muted-foreground/50'
                     )}>
                       {selectedTreatments.includes(id) && (
-                        <Check className="w-3.5 h-3.5 text-coral" />
+                        <Check className="w-3 h-3 text-coral" />
                       )}
                     </div>
-                    <span className="font-semibold text-foreground">{label}</span>
+                    <span className="font-semibold text-foreground text-sm">{label}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1.5 ml-8">
+                  <p className="text-[11px] text-muted-foreground/70 mt-0.5 ml-7 leading-tight">
                     {description}
                   </p>
                 </button>
@@ -423,15 +423,15 @@ const CheckInPage = () => {
             
             {/* Custom treatments as buttons */}
             {customTreatments.length > 0 && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 {customTreatments.map((treatment) => (
                   <div
                     key={treatment}
                     className={cn(
-                      'glass-card p-4 text-left transition-all duration-300 hover:-translate-y-0.5 relative',
+                      'glass-card px-3 py-2.5 text-left transition-all duration-300 hover:-translate-y-0.5 relative',
                       selectedTreatments.includes(treatment) 
                         ? 'ring-2 ring-primary bg-primary/5 shadow-warm' 
-                        : 'hover:bg-muted/50 hover:shadow-warm-sm'
+                        : 'border-border/50 hover:bg-muted/50 hover:shadow-warm-sm'
                     )}
                   >
                     <button
@@ -440,18 +440,18 @@ const CheckInPage = () => {
                     >
                       <div className="flex items-center gap-2">
                         <div className={cn(
-                          'w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300',
+                          'w-5 h-5 rounded-full border-[1.5px] flex items-center justify-center transition-all duration-300 flex-shrink-0',
                           selectedTreatments.includes(treatment) 
                             ? 'border-primary bg-white' 
-                            : 'border-muted-foreground'
+                            : 'border-muted-foreground/50'
                         )}>
                           {selectedTreatments.includes(treatment) && (
-                            <Check className="w-3.5 h-3.5 text-coral" />
+                            <Check className="w-3 h-3 text-coral" />
                           )}
                         </div>
-                        <span className="font-semibold text-foreground pr-6">{treatment}</span>
+                        <span className="font-semibold text-foreground text-sm pr-5">{treatment}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1.5 ml-8">
+                      <p className="text-[11px] text-muted-foreground/70 mt-0.5 ml-7 leading-tight">
                         Custom treatment
                       </p>
                     </button>
@@ -461,10 +461,10 @@ const CheckInPage = () => {
                         removeCustomTreatment(treatment);
                         setSelectedTreatments(prev => prev.filter(t => t !== treatment));
                       }}
-                      className="absolute top-2 right-2 p-1.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      className="absolute top-1.5 right-1.5 p-1 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                       title="Remove treatment"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ))}
