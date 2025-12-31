@@ -185,10 +185,10 @@ const HomePage = () => {
           {/* Premium Badge */}
           {!isSubscriptionLoading && isPremium && (
             <div className="flex flex-col items-center gap-0.5">
-              <div className="p-1.5 rounded-xl bg-coral/10">
-                <Crown className="w-4 h-4 text-coral" />
+              <div className="p-1.5 rounded-xl bg-primary/10">
+                <Crown className="w-4 h-4 text-primary" />
               </div>
-              <span className="text-[9px] font-semibold text-coral">Premium</span>
+              <span className="text-[9px] font-semibold text-primary">Premium</span>
             </div>
           )}
           <Link 
