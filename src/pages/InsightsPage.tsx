@@ -400,7 +400,7 @@ const InsightsPage = () => {
               <Button 
                 onClick={handleUpgrade} 
                 disabled={isUpgrading} 
-                variant="warm" 
+                variant="gold" 
                 className="w-full gap-2" 
                 size="default"
               >
