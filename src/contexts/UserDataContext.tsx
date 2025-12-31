@@ -30,6 +30,7 @@ export interface CheckIn {
   treatments: string[];
   mood: number;
   skinFeeling: number;
+  skinIntensity?: number; // 4=High-intensity, 3=Active, 2=Noticeable, 1=Settling, 0=Calm
   notes?: string;
   symptomsExperienced?: SymptomEntry[];
   triggers?: string[];
@@ -348,6 +349,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           treatments: c.treatments,
           mood: c.mood,
           skinFeeling: c.skin_feeling,
+          skinIntensity: (c as any).skin_intensity ?? undefined,
           notes: c.notes || undefined,
           symptomsExperienced: parseSymptoms(c.symptoms_experienced),
           triggers: (c as any).triggers || undefined,
@@ -444,6 +446,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         treatments: c.treatments,
         mood: c.mood,
         skinFeeling: c.skin_feeling,
+        skinIntensity: (c as any).skin_intensity ?? undefined,
         notes: c.notes || undefined,
         symptomsExperienced: parseSymptoms(c.symptoms_experienced),
         triggers: (c as any).triggers || undefined,
@@ -646,6 +649,9 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       try {
+        // Calculate skin_intensity from skinFeeling (1-5 → 4-0)
+        const skinIntensity = 5 - checkIn.skinFeeling;
+
         const { data, error } = await supabase
           .from('user_check_ins')
           .insert({
@@ -654,6 +660,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             treatments: checkIn.treatments,
             mood: checkIn.mood,
             skin_feeling: checkIn.skinFeeling,
+            skin_intensity: skinIntensity,
             notes: checkIn.notes || null,
             symptoms_experienced: JSON.parse(JSON.stringify(checkIn.symptomsExperienced || [])),
             triggers: checkIn.triggers || [],
@@ -690,6 +697,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           treatments: data.treatments,
           mood: data.mood,
           skinFeeling: data.skin_feeling,
+          skinIntensity: (data as any).skin_intensity ?? undefined,
           notes: data.notes || undefined,
           symptomsExperienced: parseSymptoms(data.symptoms_experienced),
           triggers: (data as any).triggers || undefined,
@@ -714,6 +722,9 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       try {
+        // Calculate skin_intensity from skinFeeling (1-5 → 4-0)
+        const skinIntensity = 5 - checkIn.skinFeeling;
+
         const { data, error } = await supabase
           .from('user_check_ins')
           .update({
@@ -721,6 +732,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             treatments: checkIn.treatments,
             mood: checkIn.mood,
             skin_feeling: checkIn.skinFeeling,
+            skin_intensity: skinIntensity,
             notes: checkIn.notes || null,
             symptoms_experienced: JSON.parse(JSON.stringify(checkIn.symptomsExperienced || [])),
             triggers: checkIn.triggers || [],
@@ -744,6 +756,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   treatments: data.treatments,
                   mood: data.mood,
                   skinFeeling: data.skin_feeling,
+                  skinIntensity: (data as any).skin_intensity ?? undefined,
                   notes: data.notes || undefined,
                   symptomsExperienced: parseSymptoms(data.symptoms_experienced),
                   triggers: (data as any).triggers || undefined,
