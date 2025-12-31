@@ -67,6 +67,7 @@ const CheckInPage = () => {
   const [selectedSymptoms, setSelectedSymptoms] = useState<SymptomEntry[]>([]);
   const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
   const [foodTriggerText, setFoodTriggerText] = useState('');
+  const [painScore, setPainScore] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
   const [showSparkles, setShowSparkles] = useState(false);
   const [editingCheckIn, setEditingCheckIn] = useState<CheckIn | null>(null);
@@ -184,6 +185,7 @@ const CheckInPage = () => {
       setFoodTriggerText('');
     }
     setSelectedTriggers(triggers);
+    setPainScore(checkIn.painScore ?? null);
     setNotes(checkIn.notes || '');
     setTimeOfDay(checkIn.timeOfDay);
   };
@@ -197,6 +199,7 @@ const CheckInPage = () => {
     setSelectedSymptoms([]);
     setSelectedTriggers([]);
     setFoodTriggerText('');
+    setPainScore(null);
     setNotes('');
     setTimeOfDay(suggestedTimeOfDay);
   };
@@ -238,6 +241,7 @@ const CheckInPage = () => {
           skinFeeling,
           symptomsExperienced: selectedSymptoms.length > 0 ? selectedSymptoms : undefined,
           triggers: processedTriggers.length > 0 ? processedTriggers : undefined,
+          painScore: painScore ?? undefined,
           notes: notes || undefined,
         });
 
@@ -252,6 +256,7 @@ const CheckInPage = () => {
           skinFeeling,
           symptomsExperienced: selectedSymptoms.length > 0 ? selectedSymptoms : undefined,
           triggers: processedTriggers.length > 0 ? processedTriggers : undefined,
+          painScore: painScore ?? undefined,
           notes: notes || undefined,
         }, clientRequestId);
 
@@ -270,6 +275,7 @@ const CheckInPage = () => {
       setSelectedSymptoms([]);
       setSelectedTriggers([]);
       setFoodTriggerText('');
+      setPainScore(null);
       setNotes('');
     } catch (error: any) {
       const message =
@@ -675,6 +681,36 @@ const CheckInPage = () => {
                 );
               })}
             </div>
+          </div>
+
+          {/* Pain Scale */}
+          <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.23s' }}>
+            <h3 className="font-display text-base font-semibold text-muted-foreground">
+              Pain level today
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {Array.from({ length: 11 }, (_, i) => i).map((level) => (
+                <button
+                  key={level}
+                  onClick={() => setPainScore(painScore === level ? null : level)}
+                  className={cn(
+                    'w-9 h-9 rounded-full text-sm font-medium transition-all duration-200 flex items-center justify-center',
+                    painScore === level
+                      ? 'bg-muted-foreground/20 ring-1 ring-muted-foreground/40 text-foreground'
+                      : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )}
+                >
+                  {level}
+                </button>
+              ))}
+            </div>
+            <div className="flex justify-between text-[10px] text-muted-foreground/70 px-1">
+              <span>0 = No pain</span>
+              <span>10 = Worst pain imaginable</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground/60">
+              Include skin pain, burning, or soreness.
+            </p>
           </div>
 
           {/* Notes */}

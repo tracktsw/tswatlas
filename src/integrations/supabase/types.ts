@@ -113,6 +113,7 @@ export type Database = {
           id: string
           mood: number
           notes: string | null
+          pain_score: number | null
           skin_feeling: number
           skin_intensity: number | null
           symptoms_experienced: Json | null
@@ -127,6 +128,7 @@ export type Database = {
           id?: string
           mood: number
           notes?: string | null
+          pain_score?: number | null
           skin_feeling: number
           skin_intensity?: number | null
           symptoms_experienced?: Json | null
@@ -141,6 +143,7 @@ export type Database = {
           id?: string
           mood?: number
           notes?: string | null
+          pain_score?: number | null
           skin_feeling?: number
           skin_intensity?: number | null
           symptoms_experienced?: Json | null

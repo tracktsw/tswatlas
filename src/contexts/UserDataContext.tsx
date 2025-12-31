@@ -31,6 +31,7 @@ export interface CheckIn {
   mood: number;
   skinFeeling: number;
   skinIntensity?: number; // 4=High-intensity, 3=Active, 2=Noticeable, 1=Settling, 0=Calm
+  painScore?: number; // 0-10 pain scale (optional)
   notes?: string;
   symptomsExperienced?: SymptomEntry[];
   triggers?: string[];
@@ -350,6 +351,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           mood: c.mood,
           skinFeeling: c.skin_feeling,
           skinIntensity: (c as any).skin_intensity ?? undefined,
+          painScore: (c as any).pain_score ?? undefined,
           notes: c.notes || undefined,
           symptomsExperienced: parseSymptoms(c.symptoms_experienced),
           triggers: (c as any).triggers || undefined,
@@ -447,6 +449,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         mood: c.mood,
         skinFeeling: c.skin_feeling,
         skinIntensity: (c as any).skin_intensity ?? undefined,
+        painScore: (c as any).pain_score ?? undefined,
         notes: c.notes || undefined,
         symptomsExperienced: parseSymptoms(c.symptoms_experienced),
         triggers: (c as any).triggers || undefined,
@@ -661,6 +664,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             mood: checkIn.mood,
             skin_feeling: checkIn.skinFeeling,
             skin_intensity: skinIntensity,
+            pain_score: checkIn.painScore ?? null,
             notes: checkIn.notes || null,
             symptoms_experienced: JSON.parse(JSON.stringify(checkIn.symptomsExperienced || [])),
             triggers: checkIn.triggers || [],
@@ -698,6 +702,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           mood: data.mood,
           skinFeeling: data.skin_feeling,
           skinIntensity: (data as any).skin_intensity ?? undefined,
+          painScore: (data as any).pain_score ?? undefined,
           notes: data.notes || undefined,
           symptomsExperienced: parseSymptoms(data.symptoms_experienced),
           triggers: (data as any).triggers || undefined,
@@ -733,6 +738,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             mood: checkIn.mood,
             skin_feeling: checkIn.skinFeeling,
             skin_intensity: skinIntensity,
+            pain_score: checkIn.painScore ?? null,
             notes: checkIn.notes || null,
             symptoms_experienced: JSON.parse(JSON.stringify(checkIn.symptomsExperienced || [])),
             triggers: checkIn.triggers || [],
@@ -757,6 +763,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   mood: data.mood,
                   skinFeeling: data.skin_feeling,
                   skinIntensity: (data as any).skin_intensity ?? undefined,
+                  painScore: (data as any).pain_score ?? undefined,
                   notes: data.notes || undefined,
                   symptomsExperienced: parseSymptoms(data.symptoms_experienced),
                   triggers: (data as any).triggers || undefined,
