@@ -324,29 +324,29 @@ const InsightsPage = () => {
         {/* Glass overlay with CTA for free users */}
         {!isPremium && !isSubscriptionLoading && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="glass-card-warm p-6 mx-4 max-w-sm text-center shadow-warm border border-white/30 backdrop-blur-sm">
-              <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-br from-honey/40 to-coral/30 flex items-center justify-center mb-4">
-                <Crown className="w-6 h-6 text-honey" />
+            <div className="bg-background/80 backdrop-blur-sm px-5 py-4 mx-4 max-w-sm text-center rounded-2xl shadow-sm border border-border/50">
+              <div className="w-9 h-9 mx-auto rounded-xl bg-muted/60 flex items-center justify-center mb-3">
+                <Crown className="w-4 h-4 text-muted-foreground/70" />
               </div>
               
-              <h3 className="font-display font-bold text-lg text-foreground mb-2">
+              <h3 className="font-display font-semibold text-base text-foreground mb-1.5">
                 Your skin follows patterns. We can show you.
               </h3>
-              <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
+              <p className="text-muted-foreground text-sm mb-3 leading-relaxed">
                 Based on your check-ins, patterns are starting to form. Premium helps you understand what often precedes, worsens, or settles flares — using your own data.
               </p>
 
-              <ul className="text-left text-sm text-muted-foreground space-y-2 mb-5">
+              <ul className="text-left text-sm text-muted-foreground space-y-1.5 mb-4">
                 <li className="flex items-start gap-2">
-                  <span className="text-honey mt-0.5">•</span>
+                  <span className="text-muted-foreground/60 mt-0.5">•</span>
                   <span>What often appears before flares</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-honey mt-0.5">•</span>
+                  <span className="text-muted-foreground/60 mt-0.5">•</span>
                   <span>What's linked to longer vs shorter flares</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-honey mt-0.5">•</span>
+                  <span className="text-muted-foreground/60 mt-0.5">•</span>
                   <span>What tends to coincide with calmer periods</span>
                 </li>
               </ul>
@@ -356,7 +356,7 @@ const InsightsPage = () => {
                 disabled={isUpgrading} 
                 variant="warm" 
                 className="w-full gap-2" 
-                size="lg"
+                size="default"
               >
                 {isUpgrading ? (
                   <>
@@ -370,7 +370,7 @@ const InsightsPage = () => {
                   </>
                 )}
               </Button>
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-xs text-muted-foreground mt-1.5">
                 7 days free · £5.99/month after · Cancel anytime
               </p>
             </div>
