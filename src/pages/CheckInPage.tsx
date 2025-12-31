@@ -692,17 +692,17 @@ const CheckInPage = () => {
               {Array.from({ length: 11 }, (_, i) => i).map((level) => {
                 // Gradient from light yellow (0) to dark red (10)
                 const painColors = [
-                  'bg-yellow-200 text-yellow-900',      // 0 - light yellow
-                  'bg-yellow-300 text-yellow-900',      // 1
-                  'bg-amber-300 text-amber-900',        // 2
-                  'bg-amber-400 text-amber-950',        // 3
-                  'bg-orange-400 text-orange-950',      // 4
-                  'bg-orange-500 text-white',           // 5
-                  'bg-orange-600 text-white',           // 6
-                  'bg-red-500 text-white',              // 7
-                  'bg-red-600 text-white',              // 8
-                  'bg-red-700 text-white',              // 9
-                  'bg-red-800 text-white',              // 10 - dark red
+                  'bg-yellow-200 text-yellow-900 ring-yellow-400',      // 0 - light yellow
+                  'bg-yellow-300 text-yellow-900 ring-yellow-500',      // 1
+                  'bg-amber-300 text-amber-900 ring-amber-500',         // 2
+                  'bg-amber-400 text-amber-950 ring-amber-600',         // 3
+                  'bg-orange-400 text-orange-950 ring-orange-600',      // 4
+                  'bg-orange-500 text-white ring-orange-700',           // 5
+                  'bg-orange-600 text-white ring-orange-800',           // 6
+                  'bg-red-500 text-white ring-red-700',                 // 7
+                  'bg-red-600 text-white ring-red-800',                 // 8
+                  'bg-red-700 text-white ring-red-900',                 // 9
+                  'bg-red-800 text-white ring-red-950',                 // 10 - dark red
                 ];
                 
                 return (
@@ -712,7 +712,7 @@ const CheckInPage = () => {
                     className={cn(
                       'w-9 h-9 rounded-full text-sm font-medium transition-all duration-200 flex items-center justify-center',
                       painScore === level
-                        ? `${painColors[level]} ring-2 ring-offset-1 ring-current scale-110`
+                        ? `${painColors[level]} ring-2 ring-offset-1 scale-110`
                         : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
                     )}
                   >
