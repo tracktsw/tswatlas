@@ -804,17 +804,17 @@ const PhotoDiaryPage = () => {
             <p className="text-muted-foreground text-center">
               Unlock side-by-side photo comparison to visually track your skin's progress over time.
             </p>
-            <div className="p-4 bg-gradient-to-br from-coral/10 to-honey/10 rounded-xl space-y-2">
+            <div className="p-4 bg-gradient-to-br from-primary/10 to-sage-light/30 rounded-xl space-y-2">
               <div className="flex items-center gap-2 text-sm">
-                <Sparkles className="w-4 h-4 text-coral" />
+                <Sparkles className="w-4 h-4 text-primary" />
                 <span>Compare photos side by side</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <Sparkles className="w-4 h-4 text-coral" />
+                <Sparkles className="w-4 h-4 text-primary" />
                 <span>Track visual progress over time</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <Sparkles className="w-4 h-4 text-coral" />
+                <Sparkles className="w-4 h-4 text-primary" />
                 <span>Unlimited photo uploads</span>
               </div>
             </div>
