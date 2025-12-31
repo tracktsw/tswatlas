@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles, Eye, Pencil, Crown, Loader2, Flame, Activity, CalendarDays } from 'lucide-react';
+import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles, Eye, Pencil, Crown, Loader2, Flame, Activity, CalendarDays, Moon } from 'lucide-react';
 import { useUserData, BodyPart, CheckIn } from '@/contexts/UserDataContext';
 import { useDemoMode } from '@/contexts/DemoModeContext';
 import { format, subDays, startOfDay, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isSameMonth, addMonths, subMonths, getDay, setMonth, setYear } from 'date-fns';
@@ -24,6 +24,7 @@ import { useFlareState } from '@/hooks/useFlareState';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
+const sleepEmojis = ['😫', '😪', '😐', '😌', '😴'];
 
 const treatments = [
   { id: 'nmt', label: 'NMT' },
@@ -106,6 +107,10 @@ const InsightsPage = () => {
       const avgPain = painScores.length 
         ? Math.round(painScores.reduce((sum, c) => sum + (c.painScore || 0), 0) / painScores.length)
         : null;
+      const sleepScores = dayCheckIns.filter(c => c.sleepScore !== null && c.sleepScore !== undefined);
+      const avgSleep = sleepScores.length 
+        ? Math.round(sleepScores.reduce((sum, c) => sum + (c.sleepScore || 0), 0) / sleepScores.length)
+        : null;
       
       return {
         date,
@@ -114,6 +119,7 @@ const InsightsPage = () => {
         avgMood,
         avgSkin,
         avgPain,
+        avgSleep,
       };
     });
   }, [checkIns, last7Days]);
@@ -248,7 +254,7 @@ const InsightsPage = () => {
         </h3>
         <div className="glass-card p-5">
           <div className="flex justify-between gap-2">
-            {weeklyData.map(({ date, avgMood, avgSkin, avgPain, checkIns: count }, index) => {
+            {weeklyData.map(({ date, avgMood, avgSkin, avgPain, avgSleep, checkIns: count }, index) => {
               return (
                 <div 
                   key={date.toISOString()} 
@@ -273,21 +279,31 @@ const InsightsPage = () => {
                       : 'bg-muted/50'
                   )}>
                     {count > 0 ? skinEmojis[Math.round(avgSkin) - 1] || '—' : '—'}
-                    {avgPain !== null && (
-                      <span 
-                        title={`Pain: ${avgPain}/10`}
-                        className={cn(
-                          'text-[8px] font-bold px-1 py-0 rounded-full mt-0.5 leading-tight',
-                          avgPain <= 2 ? 'bg-yellow-200 text-yellow-900' :
-                          avgPain <= 4 ? 'bg-amber-300 text-amber-900' :
-                          avgPain <= 6 ? 'bg-orange-400 text-white' :
-                          avgPain <= 8 ? 'bg-red-500 text-white' :
-                          'bg-red-700 text-white'
-                        )}
-                      >
-                        {avgPain}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-0.5 mt-0.5">
+                      {avgPain !== null && (
+                        <span 
+                          title={`Pain: ${avgPain}/10`}
+                          className={cn(
+                            'text-[8px] font-bold px-1 py-0 rounded-full leading-tight',
+                            avgPain <= 2 ? 'bg-yellow-200 text-yellow-900' :
+                            avgPain <= 4 ? 'bg-amber-300 text-amber-900' :
+                            avgPain <= 6 ? 'bg-orange-400 text-white' :
+                            avgPain <= 8 ? 'bg-red-500 text-white' :
+                            'bg-red-700 text-white'
+                          )}
+                        >
+                          {avgPain}
+                        </span>
+                      )}
+                      {avgSleep !== null && (
+                        <span 
+                          title={`Sleep: ${['Very poor', 'Poor', 'Okay', 'Good', 'Very good'][avgSleep - 1]}`}
+                          className="text-[9px] leading-none"
+                        >
+                          {sleepEmojis[avgSleep - 1]}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <p className="text-sm">
                     {count > 0 ? moodEmojis[Math.round(avgMood) - 1] : ''}
@@ -452,6 +468,11 @@ const InsightsPage = () => {
                         <div className="flex gap-2 items-center">
                           <span title="Mood" className="text-lg">{moodEmojis[checkIn.mood - 1]}</span>
                           <span title="Skin" className="text-lg">{skinEmojis[checkIn.skinFeeling - 1]}</span>
+                          {checkIn.sleepScore !== null && checkIn.sleepScore !== undefined && (
+                            <span title={`Sleep: ${['Very poor', 'Poor', 'Okay', 'Good', 'Very good'][checkIn.sleepScore - 1]}`} className="text-lg">
+                              {sleepEmojis[checkIn.sleepScore - 1]}
+                            </span>
+                          )}
                           {checkIn.painScore !== null && checkIn.painScore !== undefined && (
                             <span 
                               title="Pain" 
@@ -612,6 +633,10 @@ const InsightsPage = () => {
                     const avgPain = painScores.length 
                       ? Math.round(painScores.reduce((sum, c) => sum + (c.painScore || 0), 0) / painScores.length)
                       : null;
+                    const sleepScores = dayCheckIns.filter(c => c.sleepScore !== null && c.sleepScore !== undefined);
+                    const avgSleep = sleepScores.length 
+                      ? Math.round(sleepScores.reduce((sum, c) => sum + (c.sleepScore || 0), 0) / sleepScores.length)
+                      : null;
                     
                     return (
                       <button
@@ -638,6 +663,11 @@ const InsightsPage = () => {
                             )}
                             {avgSkin > 0 && (
                               <span className="text-[9px] leading-none" title="Skin">{skinEmojis[avgSkin - 1]}</span>
+                            )}
+                            {avgSleep !== null && (
+                              <span className="text-[9px] leading-none" title={`Sleep: ${['Very poor', 'Poor', 'Okay', 'Good', 'Very good'][avgSleep - 1]}`}>
+                                {sleepEmojis[avgSleep - 1]}
+                              </span>
                             )}
                           </div>
                         )}
@@ -689,6 +719,14 @@ const InsightsPage = () => {
                         <span className="bg-orange-400 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">5-6</span>
                         <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">7-8</span>
                         <span className="bg-red-700 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">9-10</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-muted-foreground w-12">Sleep:</span>
+                      <div className="flex gap-1.5">
+                        {sleepEmojis.map((emoji, i) => (
+                          <span key={i} title={['Very poor', 'Poor', 'Okay', 'Good', 'Very good'][i]} className="text-sm">{emoji}</span>
+                        ))}
                       </div>
                     </div>
                   </div>
