@@ -18,6 +18,7 @@ import { FlareStatusBadge } from '@/components/FlareStatusBadge';
 import { severityColors, severityLabels } from '@/constants/severityColors';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useFlareState } from '@/hooks/useFlareState';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
@@ -50,6 +51,7 @@ const InsightsPage = () => {
   const { checkIns: realCheckIns, photos } = useUserData();
   const { isDemoMode, isAdmin, getEffectiveCheckIns } = useDemoMode();
   const { isPremium, isLoading: isSubscriptionLoading } = useSubscription();
+  const { baselineConfidence } = useFlareState();
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -316,7 +318,7 @@ const InsightsPage = () => {
           )}
 
           {/* Trigger Patterns */}
-          <TriggerPatternsInsights checkIns={checkIns} />
+          <TriggerPatternsInsights checkIns={checkIns} baselineConfidence={baselineConfidence} />
 
           {/* Symptoms Insights */}
           <SymptomsInsights checkIns={checkIns} />
