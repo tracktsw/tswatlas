@@ -116,6 +116,7 @@ export type Database = {
           pain_score: number | null
           skin_feeling: number
           skin_intensity: number | null
+          sleep_score: number | null
           symptoms_experienced: Json | null
           time_of_day: string
           treatments: string[]
@@ -131,6 +132,7 @@ export type Database = {
           pain_score?: number | null
           skin_feeling: number
           skin_intensity?: number | null
+          sleep_score?: number | null
           symptoms_experienced?: Json | null
           time_of_day: string
           treatments?: string[]
@@ -146,6 +148,7 @@ export type Database = {
           pain_score?: number | null
           skin_feeling?: number
           skin_intensity?: number | null
+          sleep_score?: number | null
           symptoms_experienced?: Json | null
           time_of_day?: string
           treatments?: string[]

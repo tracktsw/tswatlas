@@ -53,7 +53,15 @@ const skinIntensityLabels = ['High-intensity', 'Active', 'Noticeable', 'Settling
 const skinIntensityValues = [4, 3, 2, 1, 0];
 const symptomsList = [
   'Burning', 'Itching', 'Thermodysregulation', 'Flaking',
-  'Oozing', 'Swelling', 'Redness', 'Insomnia'
+  'Oozing', 'Swelling', 'Redness'
+];
+
+const sleepOptions = [
+  { value: 1, label: 'Very poor', emoji: '😫' },
+  { value: 2, label: 'Poor', emoji: '😩' },
+  { value: 3, label: 'Okay', emoji: '😐' },
+  { value: 4, label: 'Good', emoji: '🙂' },
+  { value: 5, label: 'Very good', emoji: '😴' },
 ];
 
 // severityLabels imported from @/constants/severityColors
@@ -68,6 +76,7 @@ const CheckInPage = () => {
   const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
   const [foodTriggerText, setFoodTriggerText] = useState('');
   const [painScore, setPainScore] = useState<number | null>(null);
+  const [sleepScore, setSleepScore] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
   const [showSparkles, setShowSparkles] = useState(false);
   const [editingCheckIn, setEditingCheckIn] = useState<CheckIn | null>(null);
@@ -186,6 +195,7 @@ const CheckInPage = () => {
     }
     setSelectedTriggers(triggers);
     setPainScore(checkIn.painScore ?? null);
+    setSleepScore(checkIn.sleepScore ?? null);
     setNotes(checkIn.notes || '');
     setTimeOfDay(checkIn.timeOfDay);
   };
@@ -200,6 +210,7 @@ const CheckInPage = () => {
     setSelectedTriggers([]);
     setFoodTriggerText('');
     setPainScore(null);
+    setSleepScore(null);
     setNotes('');
     setTimeOfDay(suggestedTimeOfDay);
   };
@@ -242,6 +253,7 @@ const CheckInPage = () => {
           symptomsExperienced: selectedSymptoms.length > 0 ? selectedSymptoms : undefined,
           triggers: processedTriggers.length > 0 ? processedTriggers : undefined,
           painScore: painScore ?? undefined,
+          sleepScore: sleepScore ?? undefined,
           notes: notes || undefined,
         });
 
@@ -257,6 +269,7 @@ const CheckInPage = () => {
           symptomsExperienced: selectedSymptoms.length > 0 ? selectedSymptoms : undefined,
           triggers: processedTriggers.length > 0 ? processedTriggers : undefined,
           painScore: painScore ?? undefined,
+          sleepScore: sleepScore ?? undefined,
           notes: notes || undefined,
         }, clientRequestId);
 
@@ -276,6 +289,7 @@ const CheckInPage = () => {
       setSelectedTriggers([]);
       setFoodTriggerText('');
       setPainScore(null);
+      setSleepScore(null);
       setNotes('');
     } catch (error: any) {
       const message =
@@ -680,6 +694,42 @@ const CheckInPage = () => {
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Sleep Quality */}
+          <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.225s' }}>
+            <div>
+              <h3 className="font-display text-base font-semibold text-muted-foreground">
+                How was your sleep?
+              </h3>
+              <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+                Overall sleep quality, including waking from symptoms.
+              </p>
+            </div>
+            <div className="flex gap-1.5">
+              {sleepOptions.map(({ value, label, emoji }) => (
+                <button
+                  key={value}
+                  onClick={() => setSleepScore(sleepScore === value ? null : value)}
+                  className={cn(
+                    'flex-1 py-2.5 rounded-xl transition-all duration-200 flex flex-col items-center gap-0.5',
+                    sleepScore === value
+                      ? 'bg-indigo-500/15 ring-1 ring-indigo-500/40 scale-105'
+                      : 'bg-muted/50 hover:bg-muted hover:scale-102'
+                  )}
+                >
+                  <span className="text-lg">{emoji}</span>
+                  <span className={cn(
+                    'text-[9px] font-medium leading-tight',
+                    sleepScore === value
+                      ? 'text-indigo-600 dark:text-indigo-400'
+                      : 'text-muted-foreground/70'
+                  )}>
+                    {label}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
 
