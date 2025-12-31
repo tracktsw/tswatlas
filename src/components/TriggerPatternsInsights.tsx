@@ -4,22 +4,27 @@ import { CheckIn } from '@/contexts/UserDataContext';
 import { cn } from '@/lib/utils';
 
 const triggersList = [
+  // Environmental triggers
   { id: 'heat_sweat', label: 'Heat / sweat' },
+  { id: 'cold_air', label: 'Cold air' },
+  { id: 'weather_change', label: 'Weather change' },
   { id: 'shower_hard_water', label: 'Shower / hard water' },
+  { id: 'dust_pollen', label: 'Dust / pollen' },
   { id: 'detergent', label: 'Detergent' },
   { id: 'fragrance', label: 'Fragrance' },
+  { id: 'new_product', label: 'New product' },
+  { id: 'pets', label: 'Pets' },
+  // Internal triggers
   { id: 'stress', label: 'Stress' },
   { id: 'poor_sleep', label: 'Poor sleep' },
+  { id: 'hormonal_changes', label: 'Hormonal changes (period / cycle)' },
+  { id: 'illness_infection', label: 'Illness / infection' },
+  // Activity & consumption
   { id: 'exercise', label: 'Exercise' },
   { id: 'alcohol', label: 'Alcohol' },
   { id: 'spicy_food', label: 'Spicy food' },
-  { id: 'dust_pollen', label: 'Dust / pollen' },
-  { id: 'new_product', label: 'New product' },
-  { id: 'friction_scratching', label: 'Friction / scratching' },
-  { id: 'illness_infection', label: 'Illness / infection' },
-  { id: 'pets', label: 'Pets' },
-  { id: 'cold_air', label: 'Cold air' },
   { id: 'food', label: 'Food' },
+  { id: 'friction_scratching', label: 'Friction / scratching' },
 ];
 
 interface TriggerPatternsInsightsProps {
