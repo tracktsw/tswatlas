@@ -274,120 +274,97 @@ const InsightsPage = () => {
         </div>
       </div>
 
-      {/* Premium Upsell Section - Show for free users */}
-      {!isPremium && !isSubscriptionLoading && (
-        <div className="glass-card-warm p-6 animate-slide-up" style={{ animationDelay: '0.15s' }}>
-          <div className="text-center space-y-4">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-honey/30 to-coral/20 flex items-center justify-center">
-              <Crown className="w-7 h-7 text-honey" />
-            </div>
-            
-            <div className="space-y-2">
-              <h3 className="font-display font-bold text-xl text-foreground">
-                Unlock Premium Insights
+      {/* Premium Features Section */}
+      <div className="relative animate-slide-up" style={{ animationDelay: '0.15s' }}>
+        {/* Content - blurred for free users */}
+        <div className={cn(
+          "space-y-6 transition-all duration-500",
+          !isPremium && !isSubscriptionLoading && "blur-[6px] pointer-events-none select-none"
+        )}>
+          {/* Treatment Effectiveness */}
+          {treatmentStats.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-coral/20">
+                  <Heart className="w-4 h-4 text-coral" />
+                </div>
+                What's Helping You
               </h3>
-              <p className="text-muted-foreground text-sm">
-                See what actually helps your skin by analysing your check-ins over time.
-              </p>
-            </div>
-
-            <ul className="text-left space-y-2.5 py-2">
-              <li className="flex items-start gap-2.5">
-                <div className="p-1 rounded-md bg-coral/15 mt-0.5">
-                  <Heart className="w-3.5 h-3.5 text-coral" />
-                </div>
-                <span className="text-sm text-foreground">What helps you insights</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <div className="p-1 rounded-md bg-amber-500/15 mt-0.5">
-                  <Flame className="w-3.5 h-3.5 text-amber-600" />
-                </div>
-                <span className="text-sm text-foreground">Trigger tracking patterns</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <div className="p-1 rounded-md bg-primary/15 mt-0.5">
-                  <Activity className="w-3.5 h-3.5 text-primary" />
-                </div>
-                <span className="text-sm text-foreground">Symptom trends over time</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <div className="p-1 rounded-md bg-honey/20 mt-0.5">
-                  <CalendarDays className="w-3.5 h-3.5 text-honey" />
-                </div>
-                <span className="text-sm text-foreground">Flare calendar at a glance</span>
-              </li>
-            </ul>
-
-            <Button 
-              onClick={handleUpgrade} 
-              disabled={isUpgrading} 
-              variant="warm" 
-              className="w-full gap-2" 
-              size="lg"
-            >
-              {isUpgrading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Loading...
-                </>
-              ) : (
-                <>
-                  <Crown className="w-4 h-4" />
-                  Start 7-day free trial
-                </>
-              )}
-            </Button>
-            <p className="text-xs text-muted-foreground text-center mt-2">
-              £5.99/month after · Cancel anytime
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Premium Features Section - Blurred for free users */}
-      {isPremium ? (
-        <>
-        {/* Treatment Effectiveness */}
-        {treatmentStats.length > 0 && (
-          <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.15s' }}>
-            <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-coral/20">
-                <Heart className="w-4 h-4 text-coral" />
+              <div className="glass-card p-5 space-y-4">
+                {treatmentStats.slice(0, 4).map(({ id, label, count, effectiveness }, index) => (
+                  <div 
+                    key={id} 
+                    className="space-y-2"
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-foreground">{label}</span>
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {effectiveness}% good days ({count} uses)
+                      </span>
+                    </div>
+                    <div className="h-3 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-700"
+                        style={{ width: `${effectiveness}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
-              What's Helping You
-            </h3>
-            <div className="glass-card p-5 space-y-4">
-              {treatmentStats.map(({ id, label, count, effectiveness }, index) => (
-                <div 
-                  key={id} 
-                  className="space-y-2 animate-slide-up"
-                  style={{ animationDelay: `${0.2 + index * 0.03}s` }}
-                >
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-foreground">{label}</span>
-                    <span className="text-xs text-muted-foreground font-medium">
-                      {effectiveness}% good days ({count} uses)
-                    </span>
-                  </div>
-                  <div className="h-3 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-700"
-                      style={{ width: `${effectiveness}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+            </div>
+          )}
+
+          {/* Trigger Patterns */}
+          <TriggerPatternsInsights checkIns={checkIns} />
+
+          {/* Symptoms Insights */}
+          <SymptomsInsights checkIns={checkIns} />
+        </div>
+
+        {/* Glass overlay with CTA for free users */}
+        {!isPremium && !isSubscriptionLoading && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="glass-card-warm p-6 mx-4 max-w-xs text-center shadow-warm border border-white/30 backdrop-blur-sm">
+              <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-br from-honey/40 to-coral/30 flex items-center justify-center mb-4">
+                <Crown className="w-6 h-6 text-honey" />
+              </div>
+              
+              <h3 className="font-display font-bold text-lg text-foreground mb-2">
+                Unlock Your Insights
+              </h3>
+              <p className="text-muted-foreground text-sm mb-4">
+                See which treatments work best for your skin
+              </p>
+
+              <Button 
+                onClick={handleUpgrade} 
+                disabled={isUpgrading} 
+                variant="warm" 
+                className="w-full gap-2" 
+                size="lg"
+              >
+                {isUpgrading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <Crown className="w-4 h-4" />
+                    Start free trial
+                  </>
+                )}
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                7 days free · £5.99/month after
+              </p>
             </div>
           </div>
         )}
+      </div>
 
-        {/* Trigger Patterns */}
-        <TriggerPatternsInsights checkIns={checkIns} />
-
-        {/* Symptoms Insights */}
-        <SymptomsInsights checkIns={checkIns} />
-
-        {/* Calendar Button */}
+      {/* Calendar Button - Premium only */}
+      {isPremium && (
         <Dialog open={!!selectedDate || calendarOpen} onOpenChange={(open) => {
           if (!open) {
             setSelectedDate(null);
@@ -592,44 +569,6 @@ const InsightsPage = () => {
             )}
           </DialogContent>
         </Dialog>
-        </>
-      ) : (
-        <div className="relative">
-          <div className="blur-sm pointer-events-none select-none opacity-60 space-y-6">
-            {/* Blurred placeholder content */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-coral/20">
-                  <Heart className="w-4 h-4 text-coral" />
-                </div>
-                <div className="h-5 w-32 bg-muted rounded" />
-              </div>
-              <div className="glass-card p-5 space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <div className="h-4 w-24 bg-muted rounded" />
-                      <div className="h-3 w-20 bg-muted rounded" />
-                    </div>
-                    <div className="h-3 bg-muted rounded-full" />
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-amber-500/20">
-                  <Flame className="w-4 h-4 text-amber-600" />
-                </div>
-                <div className="h-5 w-28 bg-muted rounded" />
-              </div>
-              <div className="glass-card p-5">
-                <div className="h-20 bg-muted/50 rounded-xl" />
-              </div>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Stats Summary */}
