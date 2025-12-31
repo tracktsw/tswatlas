@@ -736,7 +736,7 @@ const CheckInPage = () => {
           {/* Pain Scale */}
           <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.25s' }}>
             <h3 className="font-display text-base font-semibold text-muted-foreground">
-              Pain level today
+              How much pain are you in right now?
             </h3>
             <div className="flex flex-wrap gap-1.5">
               {Array.from({ length: 11 }, (_, i) => i).map((level) => {
