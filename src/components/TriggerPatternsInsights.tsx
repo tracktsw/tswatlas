@@ -136,11 +136,6 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
       .slice(0, 6); // Show top 6 triggers
   }, [checkIns]);
 
-  // Don't show section at all if baseline confidence is 'early'
-  if (baselineConfidence === 'early') {
-    return null;
-  }
-
   // Check if user has logged any triggers at all
   const hasAnyTriggers = checkIns.some(c => c.triggers && c.triggers.length > 0);
 
