@@ -711,7 +711,7 @@ const PhotoDiaryPage = () => {
       {isPremium ? (
         <div className="glass-card p-4 animate-fade-in">
           <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <Crown className="w-4 h-4 text-coral" />
+            <Crown className="w-4 h-4 text-primary" />
             Unlimited photo uploads
           </p>
         </div>
