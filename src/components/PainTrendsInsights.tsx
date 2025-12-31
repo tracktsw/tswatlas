@@ -139,9 +139,34 @@ const PainTrendsInsights = ({ checkIns, dailyFlareStates }: PainTrendsInsightsPr
     }));
   }, [painData]);
 
-  // Don't render if insufficient data
+  // Show placeholder if insufficient data
   if (painData.length < MIN_PAIN_ENTRIES) {
-    return null;
+    return (
+      <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.3s' }}>
+        <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-amber-500/20">
+            <Activity className="w-4 h-4 text-amber-500" />
+          </div>
+          Pain Trends
+        </h3>
+        
+        <div className="glass-card p-5">
+          <div className="text-center py-4">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-amber-500/10 flex items-center justify-center">
+              <Activity className="w-6 h-6 text-amber-500/50" />
+            </div>
+            <p className="text-sm font-medium text-foreground mb-1">
+              {painData.length === 0 
+                ? "No pain data yet" 
+                : `${painData.length} of ${MIN_PAIN_ENTRIES} entries logged`}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Log pain scores in your check-ins to see trends over time
+            </p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
