@@ -689,20 +689,37 @@ const CheckInPage = () => {
               Pain level today
             </h3>
             <div className="flex flex-wrap gap-1.5">
-              {Array.from({ length: 11 }, (_, i) => i).map((level) => (
-                <button
-                  key={level}
-                  onClick={() => setPainScore(painScore === level ? null : level)}
-                  className={cn(
-                    'w-9 h-9 rounded-full text-sm font-medium transition-all duration-200 flex items-center justify-center',
-                    painScore === level
-                      ? 'bg-muted-foreground/20 ring-1 ring-muted-foreground/40 text-foreground'
-                      : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
-                  )}
-                >
-                  {level}
-                </button>
-              ))}
+              {Array.from({ length: 11 }, (_, i) => i).map((level) => {
+                // Gradient from light yellow (0) to dark red (10)
+                const painColors = [
+                  'bg-yellow-200 text-yellow-900',      // 0 - light yellow
+                  'bg-yellow-300 text-yellow-900',      // 1
+                  'bg-amber-300 text-amber-900',        // 2
+                  'bg-amber-400 text-amber-950',        // 3
+                  'bg-orange-400 text-orange-950',      // 4
+                  'bg-orange-500 text-white',           // 5
+                  'bg-orange-600 text-white',           // 6
+                  'bg-red-500 text-white',              // 7
+                  'bg-red-600 text-white',              // 8
+                  'bg-red-700 text-white',              // 9
+                  'bg-red-800 text-white',              // 10 - dark red
+                ];
+                
+                return (
+                  <button
+                    key={level}
+                    onClick={() => setPainScore(painScore === level ? null : level)}
+                    className={cn(
+                      'w-9 h-9 rounded-full text-sm font-medium transition-all duration-200 flex items-center justify-center',
+                      painScore === level
+                        ? `${painColors[level]} ring-2 ring-offset-1 ring-current scale-110`
+                        : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                  >
+                    {level}
+                  </button>
+                );
+              })}
             </div>
             <div className="flex justify-between text-[10px] text-muted-foreground/70 px-1">
               <span>0 = No pain</span>
