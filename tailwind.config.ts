@@ -63,6 +63,11 @@ export default {
           DEFAULT: "hsl(var(--action))",
           foreground: "hsl(var(--action-foreground))",
         },
+        // Gold color - upgrade/premium CTAs
+        gold: {
+          DEFAULT: "hsl(var(--gold))",
+          foreground: "hsl(var(--gold-foreground))",
+        },
         // Semantic colors
         sage: {
           DEFAULT: "hsl(var(--sage))",

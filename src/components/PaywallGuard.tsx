@@ -72,7 +72,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
             <p className="text-sm text-muted-foreground mb-4">
               {feature} is available with Premium.
             </p>
-            <Button onClick={handleUpgrade} disabled={isUpgrading} variant="default" className="gap-2">
+            <Button onClick={handleUpgrade} disabled={isUpgrading} variant="gold" className="gap-2">
               {isUpgrading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -107,7 +107,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
         Get full access to all features including Photo Diary, full Insights, Community, Journal, and AI Coach.
       </p>
       <div className="space-y-3 w-full max-w-xs">
-        <Button onClick={handleUpgrade} disabled={isUpgrading} variant="default" className="w-full gap-2" size="lg">
+        <Button onClick={handleUpgrade} disabled={isUpgrading} variant="gold" className="w-full gap-2" size="lg">
           {isUpgrading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />

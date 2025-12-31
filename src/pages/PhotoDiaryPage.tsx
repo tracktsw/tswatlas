@@ -747,7 +747,7 @@ const PhotoDiaryPage = () => {
           <Button 
             onClick={handleUpgrade} 
             disabled={isUpgrading} 
-            variant="default" 
+            variant="gold" 
             className="w-full gap-2"
           >
             <Crown className="w-4 h-4" />
@@ -776,7 +776,7 @@ const PhotoDiaryPage = () => {
               <p className="text-sm text-muted-foreground">Your limit resets tomorrow</p>
             </div>
             <div className="space-y-2">
-              <Button onClick={handleUpgrade} disabled={isUpgrading} variant="default" className="w-full gap-2">
+              <Button onClick={handleUpgrade} disabled={isUpgrading} variant="gold" className="w-full gap-2">
                 <Crown className="w-4 h-4" />
                 {isUpgrading ? 'Loading...' : 'Start 30-day free trial'}
               </Button>
@@ -823,7 +823,7 @@ const PhotoDiaryPage = () => {
                 onClick={handleUpgrade} 
                 disabled={isUpgrading}
                 className="w-full gap-2"
-                variant="warm"
+                variant="gold"
               >
                 <Crown className="w-4 h-4" />
                 {isUpgrading ? 'Loading...' : 'Start 30-day free trial'}
@@ -868,7 +868,7 @@ const PhotoDiaryPage = () => {
         {!isPremium && !canUploadMore && (
           <div className="space-y-1">
             <Button 
-              variant="default" 
+              variant="gold" 
               className="w-full gap-2 h-12"
               onClick={handleUpgrade}
               disabled={isUpgrading}

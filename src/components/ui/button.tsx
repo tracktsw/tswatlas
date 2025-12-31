@@ -19,6 +19,8 @@ const buttonVariants = cva(
         action: "bg-action text-action-foreground shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
         warm: "bg-action text-action-foreground shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
         soft: "bg-cream-dark text-foreground hover:bg-muted shadow-sm",
+        // Gold variant - for upgrade/premium CTAs
+        gold: "bg-gold text-gold-foreground shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 hover:brightness-105",
       },
       size: {
         default: "h-11 px-5 py-2.5",
