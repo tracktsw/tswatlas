@@ -5,26 +5,26 @@ import { cn } from '@/lib/utils';
 
 const triggersList = [
   // Environmental triggers
-  { id: 'heat_sweat', label: 'Heat / sweat' },
-  { id: 'cold_air', label: 'Cold air' },
-  { id: 'weather_change', label: 'Weather change' },
-  { id: 'shower_hard_water', label: 'Shower / hard water' },
-  { id: 'dust_pollen', label: 'Dust / pollen' },
+  { id: 'heat_sweat', label: 'Heat / Sweat' },
+  { id: 'cold_air', label: 'Cold Air' },
+  { id: 'weather_change', label: 'Weather Change' },
+  { id: 'shower_hard_water', label: 'Shower / Hard Water' },
+  { id: 'dust_pollen', label: 'Dust / Pollen' },
   { id: 'detergent', label: 'Detergent' },
   { id: 'fragrance', label: 'Fragrance' },
-  { id: 'new_product', label: 'New product' },
+  { id: 'new_product', label: 'New Product' },
   { id: 'pets', label: 'Pets' },
   // Internal triggers
   { id: 'stress', label: 'Stress' },
-  { id: 'poor_sleep', label: 'Poor sleep' },
-  { id: 'hormonal_changes', label: 'Hormonal changes (period / cycle)' },
-  { id: 'illness_infection', label: 'Illness / infection' },
+  { id: 'poor_sleep', label: 'Poor Sleep' },
+  { id: 'hormonal_changes', label: 'Hormonal Changes (Period / Cycle)' },
+  { id: 'illness_infection', label: 'Illness / Infection' },
   // Activity & consumption
   { id: 'exercise', label: 'Exercise' },
   { id: 'alcohol', label: 'Alcohol' },
-  { id: 'spicy_food', label: 'Spicy food' },
+  { id: 'spicy_food', label: 'Spicy Food' },
   { id: 'food', label: 'Food' },
-  { id: 'friction_scratching', label: 'Friction / scratching' },
+  { id: 'friction_scratching', label: 'Friction / Scratching' },
 ];
 
 interface TriggerPatternsInsightsProps {
