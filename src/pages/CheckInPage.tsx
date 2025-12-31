@@ -810,7 +810,7 @@ const CheckInPage = () => {
                 </span>
                 <Pencil className="w-4 h-4 text-muted-foreground" />
               </div>
-              <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-4 text-sm flex-wrap">
                 <span className="flex items-center gap-1">
                   <span className="text-muted-foreground">Mood:</span> 
                   <span className="text-lg">{moodEmojis[checkIn.mood - 1]}</span>
@@ -819,6 +819,21 @@ const CheckInPage = () => {
                   <span className="text-muted-foreground">Skin:</span> 
                   <span className="text-lg">{skinEmojis[checkIn.skinFeeling - 1]}</span>
                 </span>
+                {checkIn.painScore !== null && checkIn.painScore !== undefined && (
+                  <span className="flex items-center gap-1">
+                    <span className="text-muted-foreground">Pain:</span> 
+                    <span className={cn(
+                      'text-xs font-medium px-2 py-0.5 rounded-full',
+                      checkIn.painScore <= 2 ? 'bg-yellow-200 text-yellow-900' :
+                      checkIn.painScore <= 4 ? 'bg-amber-300 text-amber-900' :
+                      checkIn.painScore <= 6 ? 'bg-orange-400 text-white' :
+                      checkIn.painScore <= 8 ? 'bg-red-500 text-white' :
+                      'bg-red-700 text-white'
+                    )}>
+                      {checkIn.painScore}/10
+                    </span>
+                  </span>
+                )}
               </div>
               {checkIn.treatments.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-3">
