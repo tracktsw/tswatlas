@@ -581,6 +581,13 @@ const InsightsPage = () => {
                     const avgSkin = dayCheckIns.length 
                       ? Math.round(dayCheckIns.reduce((sum, c) => sum + c.skinFeeling, 0) / dayCheckIns.length)
                       : 0;
+                    const avgMood = dayCheckIns.length 
+                      ? Math.round(dayCheckIns.reduce((sum, c) => sum + c.mood, 0) / dayCheckIns.length)
+                      : 0;
+                    const painScores = dayCheckIns.filter(c => c.painScore !== null && c.painScore !== undefined);
+                    const avgPain = painScores.length 
+                      ? Math.round(painScores.reduce((sum, c) => sum + (c.painScore || 0), 0) / painScores.length)
+                      : null;
                     
                     return (
                       <button
@@ -588,20 +595,42 @@ const InsightsPage = () => {
                         onClick={() => hasData && setSelectedDate(date)}
                         disabled={!hasData}
                         className={cn(
-                          'aspect-square rounded-xl flex flex-col items-center justify-center text-xs transition-all duration-300 relative',
+                          'aspect-square rounded-xl flex flex-col items-center justify-center text-xs transition-all duration-300 relative p-0.5',
                           hasData ? 'hover:bg-coral/20 hover:shadow-warm-sm cursor-pointer' : 'cursor-default',
                           isToday && 'ring-2 ring-coral',
                           hasData && 'bg-gradient-to-br from-primary/10 to-sage-light/30'
                         )}
                       >
                         <span className={cn(
-                          'font-semibold',
+                          'font-semibold text-[11px]',
                           hasData ? 'text-foreground' : 'text-muted-foreground'
                         )}>
                           {format(date, 'd')}
                         </span>
-                        {hasData && avgSkin > 0 && (
-                          <span className="text-[10px] leading-none">{skinEmojis[avgSkin - 1]}</span>
+                        {hasData && (
+                          <div className="flex items-center gap-0.5 mt-0.5">
+                            {avgMood > 0 && (
+                              <span className="text-[9px] leading-none" title="Mood">{moodEmojis[avgMood - 1]}</span>
+                            )}
+                            {avgSkin > 0 && (
+                              <span className="text-[9px] leading-none" title="Skin">{skinEmojis[avgSkin - 1]}</span>
+                            )}
+                          </div>
+                        )}
+                        {avgPain !== null && (
+                          <span 
+                            title={`Pain: ${avgPain}/10`}
+                            className={cn(
+                              'text-[7px] font-bold px-1 py-0 rounded-full mt-0.5 leading-tight',
+                              avgPain <= 2 ? 'bg-yellow-200 text-yellow-900' :
+                              avgPain <= 4 ? 'bg-amber-300 text-amber-900' :
+                              avgPain <= 6 ? 'bg-orange-400 text-white' :
+                              avgPain <= 8 ? 'bg-red-500 text-white' :
+                              'bg-red-700 text-white'
+                            )}
+                          >
+                            {avgPain}
+                          </span>
                         )}
                       </button>
                     );
