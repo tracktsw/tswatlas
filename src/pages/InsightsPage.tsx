@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles, Eye, Pencil, Crown, Loader2, Flame, Activity, CalendarDays } from 'lucide-react';
 import { useUserData, BodyPart, CheckIn } from '@/contexts/UserDataContext';
 import { useDemoMode } from '@/contexts/DemoModeContext';
@@ -324,7 +325,12 @@ const InsightsPage = () => {
         {/* Glass overlay with CTA for free users */}
         {!isPremium && !isSubscriptionLoading && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="bg-background/80 backdrop-blur-sm px-5 py-4 mx-4 max-w-sm text-center rounded-2xl shadow-sm border border-border/50">
+            <motion.div 
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut", delay: 0.2 }}
+              className="bg-background/80 backdrop-blur-sm px-5 py-4 mx-4 max-w-sm text-center rounded-2xl shadow-sm border border-border/50"
+            >
               <div className="w-9 h-9 mx-auto rounded-xl bg-muted/60 flex items-center justify-center mb-3">
                 <Crown className="w-4 h-4 text-muted-foreground/70" />
               </div>
@@ -373,7 +379,7 @@ const InsightsPage = () => {
               <p className="text-xs text-muted-foreground mt-1.5">
                 7 days free · £5.99/month after · Cancel anytime
               </p>
-            </div>
+            </motion.div>
           </div>
         )}
       </div>
