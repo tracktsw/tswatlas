@@ -661,7 +661,7 @@ const PhotoDiaryPage = () => {
         {/* Body Part Pills */}
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
           <Button
-            variant={selectedBodyPart === 'all' ? 'warm' : 'outline'}
+            variant={selectedBodyPart === 'all' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setSelectedBodyPart('all')}
             className="shrink-0 rounded-xl"
@@ -671,7 +671,7 @@ const PhotoDiaryPage = () => {
           {bodyParts.map(({ value, label }) => (
             <Button
               key={value}
-              variant={selectedBodyPart === value ? 'warm' : 'outline'}
+              variant={selectedBodyPart === value ? 'default' : 'outline'}
               size="sm"
               onClick={() => setSelectedBodyPart(value)}
               className="shrink-0 rounded-xl"
@@ -846,7 +846,7 @@ const PhotoDiaryPage = () => {
       {/* Add Photo Button */}
       <div className="space-y-3">
         <Button 
-          variant={!isPremium && !canUploadMore ? "outline" : "warm"}
+          variant={!isPremium && !canUploadMore ? "outline" : "default"}
           className="w-full gap-2 h-12"
           onClick={handleAddPhotoClick}
           disabled={!isPremium && !canUploadMore}
