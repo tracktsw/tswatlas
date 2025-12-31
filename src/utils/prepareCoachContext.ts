@@ -10,6 +10,14 @@ interface SymptomAnalysis {
   correlatedTreatments: { treatment: string; coOccurrence: number }[];
 }
 
+interface SleepAnalysis {
+  entriesCount: number;
+  avgScore: number;
+  trend: 'improving' | 'declining' | 'stable';
+  lowSleepDays: number; // days with score <= 2
+  goodSleepDays: number; // days with score >= 4
+}
+
 interface CoachContext {
   dataQuality: {
     totalCheckIns: number;
@@ -27,12 +35,14 @@ interface CoachContext {
       timeOfDay: string;
       mood: number;
       skinFeeling: number;
+      sleepScore?: number;
       symptoms: SymptomEntry[];
       treatments: string[];
       notes?: string;
     }[];
     avgMood: number;
     avgSkin: number;
+    avgSleep: number | null;
     symptomsSummary: SymptomAnalysis[];
     treatmentsUsed: { treatment: string; count: number }[];
   };
@@ -40,12 +50,15 @@ interface CoachContext {
     checkInsCount: number;
     avgMood: number;
     avgSkin: number;
+    avgSleep: number | null;
+    sleepAnalysis: SleepAnalysis | null;
     symptomsSummary: SymptomAnalysis[];
     treatmentsUsed: { treatment: string; count: number; avgSkinWhenUsed: number }[];
   };
   trends: {
     moodTrend: 'improving' | 'declining' | 'stable';
     skinTrend: 'improving' | 'declining' | 'stable';
+    sleepTrend: 'improving' | 'declining' | 'stable' | null;
     symptomPatterns: {
       symptom: string;
       pattern: string;
@@ -53,6 +66,7 @@ interface CoachContext {
     treatmentCorrelations: {
       observation: string;
     }[];
+    sleepObservations: string[];
   };
   photoCount: number;
   journalCount: number;
@@ -342,6 +356,104 @@ export function prepareCoachContext(
   const symptomPatterns = findSymptomPatterns(last30CheckIns, last30Symptoms);
   const treatmentCorrelations = findTreatmentCorrelations(last30CheckIns);
 
+  // Sleep analysis
+  const last7SleepScores = last7CheckIns
+    .filter(c => c.sleepScore !== null && c.sleepScore !== undefined)
+    .map(c => c.sleepScore as number);
+  
+  const last30SleepScores = last30CheckIns
+    .filter(c => c.sleepScore !== null && c.sleepScore !== undefined)
+    .map(c => c.sleepScore as number);
+
+  const avg7Sleep = last7SleepScores.length > 0
+    ? Math.round((last7SleepScores.reduce((a, b) => a + b, 0) / last7SleepScores.length) * 10) / 10
+    : null;
+
+  const avg30Sleep = last30SleepScores.length > 0
+    ? Math.round((last30SleepScores.reduce((a, b) => a + b, 0) / last30SleepScores.length) * 10) / 10
+    : null;
+
+  // Sleep trend
+  let sleepTrend: 'improving' | 'declining' | 'stable' | null = null;
+  const sleepCheckIns = last14CheckIns.filter(c => c.sleepScore !== null && c.sleepScore !== undefined);
+  
+  if (sleepCheckIns.length >= 4) {
+    const midpoint = Math.floor(sleepCheckIns.length / 2);
+    const firstHalfSleep = sleepCheckIns.slice(0, midpoint);
+    const secondHalfSleep = sleepCheckIns.slice(midpoint);
+    
+    const firstSleep = firstHalfSleep.reduce((sum, c) => sum + (c.sleepScore || 0), 0) / firstHalfSleep.length;
+    const secondSleep = secondHalfSleep.reduce((sum, c) => sum + (c.sleepScore || 0), 0) / secondHalfSleep.length;
+    
+    sleepTrend = 'stable';
+    if (secondSleep - firstSleep > 0.3) sleepTrend = 'improving';
+    else if (secondSleep - firstSleep < -0.3) sleepTrend = 'declining';
+  }
+
+  // Sleep analysis for last 30 days
+  let sleepAnalysis: SleepAnalysis | null = null;
+  if (last30SleepScores.length >= 5) {
+    sleepAnalysis = {
+      entriesCount: last30SleepScores.length,
+      avgScore: avg30Sleep!,
+      trend: sleepTrend || 'stable',
+      lowSleepDays: last30SleepScores.filter(s => s <= 2).length,
+      goodSleepDays: last30SleepScores.filter(s => s >= 4).length,
+    };
+  }
+
+  // Sleep observations
+  const sleepObservations: string[] = [];
+  
+  if (last30SleepScores.length >= 5) {
+    // Check correlation between sleep and skin
+    const checkInsWithBoth = last30CheckIns.filter(
+      c => c.sleepScore !== null && c.sleepScore !== undefined
+    );
+    
+    if (checkInsWithBoth.length >= 5) {
+      const poorSleepDays = checkInsWithBoth.filter(c => (c.sleepScore || 0) <= 2);
+      const goodSleepDays = checkInsWithBoth.filter(c => (c.sleepScore || 0) >= 4);
+      
+      if (poorSleepDays.length >= 2 && goodSleepDays.length >= 2) {
+        const avgSkinPoorSleep = poorSleepDays.reduce((sum, c) => sum + c.skinFeeling, 0) / poorSleepDays.length;
+        const avgSkinGoodSleep = goodSleepDays.reduce((sum, c) => sum + c.skinFeeling, 0) / goodSleepDays.length;
+        
+        if (avgSkinGoodSleep - avgSkinPoorSleep > 0.5) {
+          sleepObservations.push(
+            `Skin tends to feel better on days following good sleep (avg ${avgSkinGoodSleep.toFixed(1)}/5 vs ${avgSkinPoorSleep.toFixed(1)}/5 on poor sleep days).`
+          );
+        }
+      }
+      
+      // Check correlation between sleep and mood
+      if (poorSleepDays.length >= 2 && goodSleepDays.length >= 2) {
+        const avgMoodPoorSleep = poorSleepDays.reduce((sum, c) => sum + c.mood, 0) / poorSleepDays.length;
+        const avgMoodGoodSleep = goodSleepDays.reduce((sum, c) => sum + c.mood, 0) / goodSleepDays.length;
+        
+        if (avgMoodGoodSleep - avgMoodPoorSleep > 0.5) {
+          sleepObservations.push(
+            `Mood appears higher on days with better sleep quality.`
+          );
+        }
+      }
+    }
+    
+    // General sleep quality observation
+    if (sleepAnalysis) {
+      const lowSleepPercent = Math.round((sleepAnalysis.lowSleepDays / sleepAnalysis.entriesCount) * 100);
+      if (lowSleepPercent >= 40) {
+        sleepObservations.push(
+          `${lowSleepPercent}% of recent nights were rated as poor or very poor sleep.`
+        );
+      } else if (sleepAnalysis.goodSleepDays / sleepAnalysis.entriesCount >= 0.6) {
+        sleepObservations.push(
+          `Sleep quality has generally been good recently.`
+        );
+      }
+    }
+  }
+
   // TSW duration
   let tswDuration: string | null = null;
   if (tswStartDate) {
@@ -368,6 +480,7 @@ export function prepareCoachContext(
         timeOfDay: c.timeOfDay,
         mood: c.mood,
         skinFeeling: c.skinFeeling,
+        sleepScore: c.sleepScore,
         symptoms: c.symptomsExperienced || [],
         treatments: c.treatments,
         notes: c.notes,
@@ -378,6 +491,7 @@ export function prepareCoachContext(
       avgSkin: last7CheckIns.length > 0
         ? Math.round((last7CheckIns.reduce((sum, c) => sum + c.skinFeeling, 0) / last7CheckIns.length) * 10) / 10
         : 0,
+      avgSleep: avg7Sleep,
       symptomsSummary: last7Symptoms,
       treatmentsUsed: Object.entries(last7Treatments)
         .map(([treatment, count]) => ({ treatment, count }))
@@ -391,6 +505,8 @@ export function prepareCoachContext(
       avgSkin: last30CheckIns.length > 0
         ? Math.round((last30CheckIns.reduce((sum, c) => sum + c.skinFeeling, 0) / last30CheckIns.length) * 10) / 10
         : 0,
+      avgSleep: avg30Sleep,
+      sleepAnalysis,
       symptomsSummary: last30Symptoms,
       treatmentsUsed: Object.entries(last30Treatments)
         .map(([treatment, data]) => ({
@@ -405,8 +521,10 @@ export function prepareCoachContext(
     trends: {
       moodTrend,
       skinTrend,
+      sleepTrend,
       symptomPatterns,
       treatmentCorrelations,
+      sleepObservations,
     },
     photoCount: photos.length,
     journalCount: journalEntries.length,

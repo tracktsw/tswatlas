@@ -74,6 +74,8 @@ If there are fewer than 7 check-ins:
 - Treatment-symptom correlations (better/worse on certain treatment days)
 - Time-of-day patterns (morning vs evening check-in differences)
 - Severity trends (improving, stable, worsening)
+- Sleep-symptom correlations (how sleep quality relates to skin/symptoms)
+- Sleep-mood correlations (relationship between sleep and emotional wellbeing)
 - Missing data patterns (are certain days consistently missed?)
 
 Remember: You have ACCESS to their data. Use it. Don't ask them to tell you what you already know.`;
@@ -117,6 +119,7 @@ serve(async (req) => {
       userContext += `- Check-ins: ${userData.last7Days?.checkIns?.length || 0}\n`;
       userContext += `- Average mood: ${userData.last7Days?.avgMood || 'N/A'}/5\n`;
       userContext += `- Average skin rating: ${userData.last7Days?.avgSkin || 'N/A'}/5\n`;
+      userContext += `- Average sleep quality: ${userData.last7Days?.avgSleep !== null ? userData.last7Days.avgSleep + '/5' : 'No sleep data'}\n`;
       
       if (userData.last7Days?.symptomsSummary?.length > 0) {
         userContext += `\n### Symptoms (Last 7 Days):\n`;
@@ -141,7 +144,8 @@ serve(async (req) => {
           const symptoms = c.symptoms?.length > 0 
             ? c.symptoms.map((s: any) => `${s.symptom}(sev:${s.severity})`).join(', ')
             : 'none';
-          userContext += `- ${c.date} ${c.timeOfDay}: mood ${c.mood}/5, skin ${c.skinFeeling}/5, symptoms: ${symptoms}, treatments: ${c.treatments?.join(', ') || 'none'}${c.notes ? `, notes: "${c.notes}"` : ''}\n`;
+          const sleepStr = c.sleepScore ? `, sleep ${c.sleepScore}/5` : '';
+          userContext += `- ${c.date} ${c.timeOfDay}: mood ${c.mood}/5, skin ${c.skinFeeling}/5${sleepStr}, symptoms: ${symptoms}, treatments: ${c.treatments?.join(', ') || 'none'}${c.notes ? `, notes: "${c.notes}"` : ''}\n`;
         });
       }
 
@@ -150,6 +154,18 @@ serve(async (req) => {
       userContext += `- Total check-ins: ${userData.last30Days?.checkInsCount || 0}\n`;
       userContext += `- Average mood: ${userData.last30Days?.avgMood || 'N/A'}/5\n`;
       userContext += `- Average skin rating: ${userData.last30Days?.avgSkin || 'N/A'}/5\n`;
+      userContext += `- Average sleep quality: ${userData.last30Days?.avgSleep !== null ? userData.last30Days.avgSleep + '/5' : 'No sleep data'}\n`;
+      
+      // Sleep analysis
+      if (userData.last30Days?.sleepAnalysis) {
+        const sa = userData.last30Days.sleepAnalysis;
+        userContext += `\n### Sleep Analysis:\n`;
+        userContext += `- Sleep entries: ${sa.entriesCount}\n`;
+        userContext += `- Average sleep score: ${sa.avgScore}/5\n`;
+        userContext += `- Sleep trend: ${sa.trend}\n`;
+        userContext += `- Poor sleep days (1-2): ${sa.lowSleepDays}\n`;
+        userContext += `- Good sleep days (4-5): ${sa.goodSleepDays}\n`;
+      }
 
       if (userData.last30Days?.symptomsSummary?.length > 0) {
         userContext += `\n### Symptoms (Last 30 Days):\n`;
@@ -172,6 +188,14 @@ serve(async (req) => {
       userContext += `\n## IDENTIFIED PATTERNS\n`;
       userContext += `- Mood trend: ${userData.trends?.moodTrend || 'unknown'}\n`;
       userContext += `- Skin trend: ${userData.trends?.skinTrend || 'unknown'}\n`;
+      userContext += `- Sleep trend: ${userData.trends?.sleepTrend || 'insufficient data'}\n`;
+
+      if (userData.trends?.sleepObservations?.length > 0) {
+        userContext += `\n### Sleep Observations:\n`;
+        userData.trends.sleepObservations.forEach((obs: string) => {
+          userContext += `- ${obs}\n`;
+        });
+      }
 
       if (userData.trends?.symptomPatterns?.length > 0) {
         userContext += `\n### Symptom Patterns:\n`;
