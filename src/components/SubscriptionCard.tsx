@@ -221,6 +221,7 @@ const SubscriptionCard = () => {
           </p>
           <Button 
             size="sm" 
+            variant="gold"
             className="mt-3 gap-2"
             onClick={handleUpgrade}
             disabled={isCheckoutLoading}
