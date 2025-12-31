@@ -42,6 +42,8 @@ const bodyParts: { value: BodyPart; label: string; emoji: string }[] = [
   { value: 'back', label: 'Back', emoji: '🔙' },
 ];
 
+const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
+
 const InsightsPage = () => {
   const { checkIns: realCheckIns, photos } = useUserData();
   const { isDemoMode, isAdmin, getEffectiveCheckIns } = useDemoMode();
@@ -58,30 +60,17 @@ const InsightsPage = () => {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      
+      if (!session?.user?.email) {
         toast.error('Please sign in to subscribe');
         setIsUpgrading(false);
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (error) {
-        toast.error('Failed to start checkout');
-        setIsUpgrading(false);
-        return;
-      }
-
-      if (data?.url) {
-        window.location.assign(data.url);
-      } else {
-        toast.error('Failed to start checkout');
-        setIsUpgrading(false);
-      }
+      // Redirect to Stripe Payment Link with prefilled email
+      const paymentUrl = `${STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(session.user.email)}`;
+      window.location.assign(paymentUrl);
+      // Note: isUpgrading stays true as we're navigating away
     } catch (err) {
       toast.error('Failed to start checkout');
       setIsUpgrading(false);

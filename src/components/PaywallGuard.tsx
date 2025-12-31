@@ -11,6 +11,8 @@ interface PaywallGuardProps {
   showBlurred?: boolean;
 }
 
+const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
+
 const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false }: PaywallGuardProps) => {
   const { isPremium, isLoading } = useSubscription();
   const [isUpgrading, setIsUpgrading] = useState(false);
@@ -22,37 +24,19 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
     try {
       console.log('[PaywallGuard] Starting checkout...');
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.error('[PaywallGuard] No auth session');
+      
+      if (!session?.user?.email) {
+        console.error('[PaywallGuard] No auth session or email');
         toast.error('Please sign in to subscribe');
         setIsUpgrading(false);
         return;
       }
 
-      console.log('[PaywallGuard] Invoking create-checkout function...');
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (error) {
-        console.error('[PaywallGuard] Checkout error:', error);
-        toast.error('Failed to start checkout');
-        setIsUpgrading(false);
-        return;
-      }
-
-      if (data?.url) {
-        console.log('[PaywallGuard] Redirecting to checkout...');
-        // Use location.assign for iOS/PWA compatibility (same-tab navigation)
-        window.location.assign(data.url);
-        // Note: isUpgrading stays true as we're navigating away
-      } else {
-        console.error('[PaywallGuard] No checkout URL in response');
-        toast.error('Failed to start checkout');
-        setIsUpgrading(false);
-      }
+      // Redirect to Stripe Payment Link with prefilled email
+      const paymentUrl = `${STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(session.user.email)}`;
+      console.log('[PaywallGuard] Redirecting to Payment Link...');
+      window.location.assign(paymentUrl);
+      // Note: isUpgrading stays true as we're navigating away
     } catch (err) {
       console.error('[PaywallGuard] Checkout error:', err);
       toast.error('Failed to start checkout');

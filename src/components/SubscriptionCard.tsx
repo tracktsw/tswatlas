@@ -21,6 +21,8 @@ const getPlatform = (): string => {
   return isStandalone ? 'Desktop-PWA' : 'Desktop-Browser';
 };
 
+const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
+
 const SubscriptionCard = () => {
   const { isPremium, isAdmin, isLoading, subscriptionEnd, refreshSubscription } = useSubscription();
   
@@ -44,51 +46,18 @@ const SubscriptionCard = () => {
       console.log('[UPGRADE] CheckoutStart - Getting session...');
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session) {
-        console.error('[UPGRADE] CheckoutError - No auth session');
+      if (!session?.user?.email) {
+        console.error('[UPGRADE] CheckoutError - No auth session or email');
         toast.error('Please sign in to subscribe');
         setIsCheckoutLoading(false);
         return;
       }
 
-      console.log('[UPGRADE] CheckoutStart - Invoking create-checkout function...', { userId: session.user.id });
-
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      console.log('[UPGRADE] CheckoutResponse', { 
-        status: error ? 'error' : 'success',
-        hasUrl: !!data?.url,
-        error: error?.message || data?.error || null
-      });
-
-      if (error) {
-        console.error('[UPGRADE] CheckoutError - Function error:', error);
-        toast.error('Checkout couldn\'t start. Please try again.');
-        setIsCheckoutLoading(false);
-        return;
-      }
-
-      if (data?.error) {
-        console.error('[UPGRADE] CheckoutError - API error:', data.error);
-        toast.error('Checkout couldn\'t start. Please try again.');
-        setIsCheckoutLoading(false);
-        return;
-      }
-
-      if (data?.url) {
-        console.log('[UPGRADE] CheckoutRedirect', { url: data.url.substring(0, 50) + '...' });
-        // Use window.location.assign for same-tab navigation (iOS/PWA compatible)
-        window.location.assign(data.url);
-        // Note: isCheckoutLoading stays true as we're navigating away
-      } else {
-        console.error('[UPGRADE] CheckoutError - No URL in response');
-        toast.error('Checkout couldn\'t start. Please try again.');
-        setIsCheckoutLoading(false);
-      }
+      // Redirect to Stripe Payment Link with prefilled email
+      const paymentUrl = `${STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(session.user.email)}`;
+      console.log('[UPGRADE] Redirecting to Payment Link...');
+      window.location.assign(paymentUrl);
+      // Note: isCheckoutLoading stays true as we're navigating away
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       console.error('[UPGRADE] CheckoutError - Exception:', errorMessage);
