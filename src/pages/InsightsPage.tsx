@@ -377,7 +377,7 @@ const InsightsPage = () => {
                 )}
               </Button>
               <p className="text-xs text-muted-foreground mt-1.5">
-                7 days free · £5.99/month after · Cancel anytime
+                30 days free · £5.99/month after · Cancel anytime
               </p>
             </motion.div>
           </div>
