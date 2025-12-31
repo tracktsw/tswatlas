@@ -611,7 +611,7 @@ const CheckInPage = () => {
 
           {/* Symptoms experienced today */}
           <div className="space-y-2 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            <h3 className="font-display text-base font-semibold text-muted-foreground">
+            <h3 className="font-display font-bold text-lg text-foreground">
               Symptoms
             </h3>
             <div className="flex flex-wrap gap-1.5">
@@ -700,7 +700,7 @@ const CheckInPage = () => {
           {/* Sleep Quality */}
           <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.22s' }}>
             <div>
-              <h3 className="font-display text-base font-semibold text-muted-foreground">
+              <h3 className="font-display font-bold text-lg text-foreground">
                 How was your sleep?
               </h3>
               <p className="text-[10px] text-muted-foreground/70 mt-0.5">
@@ -735,7 +735,7 @@ const CheckInPage = () => {
 
           {/* Pain Scale */}
           <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.25s' }}>
-            <h3 className="font-display text-base font-semibold text-muted-foreground">
+            <h3 className="font-display font-bold text-lg text-foreground">
               How much pain are you in right now?
             </h3>
             <div className="flex flex-wrap gap-1.5">
