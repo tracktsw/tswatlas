@@ -398,10 +398,67 @@ const CheckInPage = () => {
 
       {canSubmit && (
         <>
-          {/* Treatments */}
+          {/* Mood Rating */}
           <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
             <h3 className="font-display font-bold text-lg text-foreground">
-              What did you use today?
+              How's your mood today?
+            </h3>
+            <div className="flex justify-between gap-2">
+              {moodEmojis.map((emoji, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setMood(idx + 1)}
+                  className={cn(
+                    'flex-1 py-4 text-2xl rounded-2xl transition-all duration-300',
+                    mood === idx + 1 
+                      ? 'bg-gradient-to-br from-honey/30 to-coral-light shadow-warm scale-110' 
+                      : 'bg-muted/50 hover:bg-muted hover:scale-105'
+                  )}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Skin Feeling Rating */}
+          <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.12s' }}>
+            <h3 className="font-display font-bold text-lg text-foreground">
+              How's your skin feeling?
+            </h3>
+            <div className="flex justify-between gap-1">
+              {skinEmojis.map((emoji, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSkinFeeling(idx + 1)}
+                  className={cn(
+                    'flex-1 flex flex-col items-center py-3 px-1 rounded-2xl transition-all duration-300',
+                    skinFeeling === idx + 1 
+                      ? 'bg-gradient-to-br from-primary/20 to-sage-light shadow-warm scale-105' 
+                      : 'bg-muted/50 hover:bg-muted hover:scale-102'
+                  )}
+                >
+                  <span className="text-2xl">{emoji}</span>
+                  <span className={cn(
+                    'text-[10px] mt-1.5 font-medium leading-tight text-center',
+                    skinFeeling === idx + 1 
+                      ? 'text-foreground' 
+                      : 'text-muted-foreground'
+                  )}>
+                    {skinIntensityLabels[idx]}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground text-center px-2">
+              Tip: We look at patterns over days to understand flares.
+            </p>
+          </div>
+
+          {/* Treatments */}
+          <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.15s' }}>
+            <h3 className="font-display font-bold text-lg text-foreground">
+              What did you do today?
             </h3>
             <div className="grid grid-cols-2 gap-2">
               {treatments.map(({ id, label, description }) => (
@@ -508,7 +565,7 @@ const CheckInPage = () => {
           </div>
 
           {/* Triggers today */}
-          <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.12s' }}>
+          <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.18s' }}>
             <div>
               <h3 className="font-display font-bold text-lg text-foreground">
                 Triggers today
@@ -552,65 +609,8 @@ const CheckInPage = () => {
             </p>
           </div>
 
-          {/* Mood Rating */}
-          <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.15s' }}>
-            <h3 className="font-display font-bold text-lg text-foreground">
-              How's your mood?
-            </h3>
-            <div className="flex justify-between gap-2">
-              {moodEmojis.map((emoji, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setMood(idx + 1)}
-                  className={cn(
-                    'flex-1 py-4 text-2xl rounded-2xl transition-all duration-300',
-                    mood === idx + 1 
-                      ? 'bg-gradient-to-br from-honey/30 to-coral-light shadow-warm scale-110' 
-                      : 'bg-muted/50 hover:bg-muted hover:scale-105'
-                  )}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Skin Feeling Rating */}
-          <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            <h3 className="font-display font-bold text-lg text-foreground">
-              How's your skin feeling?
-            </h3>
-            <div className="flex justify-between gap-1">
-              {skinEmojis.map((emoji, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSkinFeeling(idx + 1)}
-                  className={cn(
-                    'flex-1 flex flex-col items-center py-3 px-1 rounded-2xl transition-all duration-300',
-                    skinFeeling === idx + 1 
-                      ? 'bg-gradient-to-br from-primary/20 to-sage-light shadow-warm scale-105' 
-                      : 'bg-muted/50 hover:bg-muted hover:scale-102'
-                  )}
-                >
-                  <span className="text-2xl">{emoji}</span>
-                  <span className={cn(
-                    'text-[10px] mt-1.5 font-medium leading-tight text-center',
-                    skinFeeling === idx + 1 
-                      ? 'text-foreground' 
-                      : 'text-muted-foreground'
-                  )}>
-                    {skinIntensityLabels[idx]}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground text-center px-2">
-              Tip: We look at patterns over days to understand flares.
-            </p>
-          </div>
-
           {/* Symptoms experienced today */}
-          <div className="space-y-2 animate-slide-up" style={{ animationDelay: '0.22s' }}>
+          <div className="space-y-2 animate-slide-up" style={{ animationDelay: '0.2s' }}>
             <h3 className="font-display text-base font-semibold text-muted-foreground">
               Symptoms
             </h3>
@@ -698,7 +698,7 @@ const CheckInPage = () => {
           </div>
 
           {/* Sleep Quality */}
-          <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.225s' }}>
+          <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.22s' }}>
             <div>
               <h3 className="font-display text-base font-semibold text-muted-foreground">
                 How was your sleep?
@@ -734,7 +734,7 @@ const CheckInPage = () => {
           </div>
 
           {/* Pain Scale */}
-          <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.23s' }}>
+          <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.25s' }}>
             <h3 className="font-display text-base font-semibold text-muted-foreground">
               Pain level today
             </h3>
@@ -781,7 +781,7 @@ const CheckInPage = () => {
           </div>
 
           {/* Notes */}
-          <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
+          <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.28s' }}>
             <h3 className="font-display font-bold text-lg text-foreground">
               Any notes? (optional)
             </h3>
