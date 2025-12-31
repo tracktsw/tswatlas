@@ -626,7 +626,7 @@ const CheckInPage = () => {
                     className={cn(
                       'flex items-center rounded-xl transition-all duration-200 min-h-[46px]',
                       selected
-                        ? 'bg-coral/15 ring-1 ring-coral/30'
+                        ? 'bg-emerald-500/10 ring-2 ring-emerald-500/50'
                         : 'bg-muted/50 hover:bg-muted'
                     )}
                   >
@@ -635,7 +635,7 @@ const CheckInPage = () => {
                       className={cn(
                         'flex-1 px-3 py-2.5 text-sm font-medium transition-colors flex items-center gap-2',
                         selected
-                          ? 'text-coral'
+                          ? 'text-emerald-700 dark:text-emerald-500'
                           : 'text-muted-foreground/80 hover:text-foreground'
                       )}
                     >
@@ -660,7 +660,7 @@ const CheckInPage = () => {
                     
                     {/* Inline severity selector - only show when expanded */}
                     {selected && isExpanded && (
-                      <div className="flex items-center gap-1 pr-2 border-l border-coral/20 pl-2">
+                      <div className="flex items-center gap-1 pr-2 border-l border-emerald-500/30 pl-2">
                         {([1, 2, 3] as const).map((level) => (
                           <button
                             key={level}
@@ -720,7 +720,7 @@ const CheckInPage = () => {
                   className={cn(
                     'flex-1 py-2.5 rounded-xl transition-all duration-200 flex flex-col items-center gap-0.5',
                     sleepScore === value
-                      ? 'bg-indigo-500/15 ring-1 ring-indigo-500/40 scale-105'
+                      ? 'bg-emerald-500/10 ring-2 ring-emerald-500/50 scale-105'
                       : 'bg-muted/50 hover:bg-muted hover:scale-102'
                   )}
                 >
@@ -728,7 +728,7 @@ const CheckInPage = () => {
                   <span className={cn(
                     'text-[9px] font-medium leading-tight',
                     sleepScore === value
-                      ? 'text-indigo-600 dark:text-indigo-400'
+                      ? 'text-emerald-700 dark:text-emerald-500'
                       : 'text-muted-foreground/70'
                   )}>
                     {label}
