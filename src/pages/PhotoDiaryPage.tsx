@@ -223,6 +223,8 @@ const PhotoDiaryPage = () => {
   const uploadProgress = Math.min(Math.max(photosUploadedToday / FREE_DAILY_PHOTO_LIMIT, 0), 1);
   const isLimitReached = !isPremium && uploadProgress >= 1;
 
+  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
+
   const handleUpgrade = async () => {
     if (isUpgrading) return;
     setIsUpgrading(true);
@@ -230,32 +232,18 @@ const PhotoDiaryPage = () => {
     try {
       console.log('[Upgrade] Starting checkout...');
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      
+      if (!session?.user?.email) {
         toast.error('Please sign in to subscribe');
         setIsUpgrading(false);
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (error) {
-        console.error('[Upgrade] Checkout error:', error);
-        toast.error('Failed to start checkout');
-        setIsUpgrading(false);
-        return;
-      }
-
-      if (data?.url) {
-        console.log('[Upgrade] Redirecting to checkout...');
-        // Use location.assign for iOS/PWA compatibility (same-tab navigation)
-        window.location.assign(data.url);
-      } else {
-        setIsUpgrading(false);
-      }
+      // Redirect to Stripe Payment Link with prefilled email
+      const paymentUrl = `${STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(session.user.email)}`;
+      console.log('[Upgrade] Redirecting to Payment Link...');
+      window.location.assign(paymentUrl);
+      // Note: isUpgrading stays true as we're navigating away
     } catch (err) {
       console.error('[Upgrade] Checkout error:', err);
       toast.error('Failed to start checkout');
@@ -763,10 +751,10 @@ const PhotoDiaryPage = () => {
             className="w-full gap-2"
           >
             <Crown className="w-4 h-4" />
-            {isUpgrading ? 'Loading...' : 'Upgrade to Premium'}
+            {isUpgrading ? 'Loading...' : 'Start 7-day free trial'}
           </Button>
           <p className="text-xs text-center text-muted-foreground">
-            Unlimited photo uploads + Compare feature
+            £5.99/month after · Cancel anytime
           </p>
         </div>
       )}
@@ -790,10 +778,10 @@ const PhotoDiaryPage = () => {
             <div className="space-y-2">
               <Button onClick={handleUpgrade} disabled={isUpgrading} variant="warm" className="w-full gap-2">
                 <Crown className="w-4 h-4" />
-                {isUpgrading ? 'Loading...' : 'Upgrade to Premium'}
+                {isUpgrading ? 'Loading...' : 'Start 7-day free trial'}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                Just £5.99/month • Cancel anytime
+                £5.99/month after · Cancel anytime
               </p>
             </div>
             <Button variant="ghost" onClick={() => setShowUpgradePrompt(false)} className="w-full">
@@ -838,10 +826,10 @@ const PhotoDiaryPage = () => {
                 variant="warm"
               >
                 <Crown className="w-4 h-4" />
-                {isUpgrading ? 'Loading...' : 'Upgrade to Premium'}
+                {isUpgrading ? 'Loading...' : 'Start 7-day free trial'}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                Just £5.99/month • Cancel anytime
+                £5.99/month after · Cancel anytime
               </p>
             </div>
             <Button 
@@ -878,15 +866,20 @@ const PhotoDiaryPage = () => {
         
         {/* Upgrade CTA when limit reached */}
         {!isPremium && !canUploadMore && (
-          <Button 
-            variant="warm" 
-            className="w-full gap-2 h-12"
-            onClick={handleUpgrade}
-            disabled={isUpgrading}
-          >
-            <Crown className="w-5 h-5" />
-            {isUpgrading ? 'Loading...' : 'Upgrade to Premium for unlimited uploads'}
-          </Button>
+          <div className="space-y-1">
+            <Button 
+              variant="warm" 
+              className="w-full gap-2 h-12"
+              onClick={handleUpgrade}
+              disabled={isUpgrading}
+            >
+              <Crown className="w-5 h-5" />
+              {isUpgrading ? 'Loading...' : 'Start 7-day free trial'}
+            </Button>
+            <p className="text-xs text-center text-muted-foreground">
+              £5.99/month after · Cancel anytime
+            </p>
+          </div>
         )}
       </div>
 

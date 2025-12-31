@@ -379,10 +379,13 @@ const InsightsPage = () => {
               ) : (
                 <>
                   <Crown className="w-4 h-4" />
-                  Upgrade to Premium
+                  Start 7-day free trial
                 </>
               )}
             </Button>
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              £5.99/month after · Cancel anytime
+            </p>
           </div>
         </div>
       )}

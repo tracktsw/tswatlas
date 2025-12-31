@@ -81,10 +81,13 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
               ) : (
                 <>
                   <Crown className="w-4 h-4" />
-                  Upgrade to Premium
+                  Start 7-day free trial
                 </>
               )}
             </Button>
+            <p className="text-xs text-muted-foreground mt-2">
+              £5.99/month after · Cancel anytime
+            </p>
           </div>
         </div>
       </div>
@@ -113,12 +116,12 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
           ) : (
             <>
               <Crown className="w-4 h-4" />
-              Get Premium - £5.99/month
+              Start 7-day free trial
             </>
           )}
         </Button>
         <p className="text-xs text-muted-foreground">
-          Cancel anytime. Your data stays private.
+          £5.99/month after · Cancel anytime
         </p>
       </div>
     </div>
