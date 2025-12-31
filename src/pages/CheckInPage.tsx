@@ -850,7 +850,7 @@ const CheckInPage = () => {
             )}
             <Button
               onClick={handleSubmit}
-              variant="warm"
+              variant="default"
               className={cn("h-12 text-base", editingCheckIn ? "flex-1" : "w-full")}
               size="lg"
               disabled={!canSubmit || isSaving}
