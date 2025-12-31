@@ -434,7 +434,7 @@ const CheckInPage = () => {
                   className={cn(
                     'flex-1 flex flex-col items-center py-3 px-1 rounded-2xl transition-all duration-300',
                     skinFeeling === idx + 1 
-                      ? 'bg-gradient-to-br from-primary/20 to-sage-light shadow-warm scale-105' 
+                      ? 'bg-emerald-500/10 ring-2 ring-emerald-500/50 scale-105' 
                       : 'bg-muted/50 hover:bg-muted hover:scale-102'
                   )}
                 >
