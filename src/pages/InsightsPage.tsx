@@ -360,6 +360,12 @@ const InsightsPage = () => {
 
           {/* Symptoms Insights */}
           <SymptomsInsights checkIns={checkIns} />
+
+          {/* Sleep Trends */}
+          <SleepTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
+
+          {/* Pain Trends */}
+          <PainTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
         </div>
 
         {/* Glass overlay with CTA for free users */}
@@ -423,12 +429,6 @@ const InsightsPage = () => {
           </div>
         )}
       </div>
-
-      {/* Sleep Trends - Available to all users when data threshold met */}
-      <SleepTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
-
-      {/* Pain Trends - Available to all users when data threshold met */}
-      <PainTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
 
       {/* Calendar Button - Premium only */}
       {isPremium && (
