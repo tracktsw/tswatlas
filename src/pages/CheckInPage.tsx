@@ -610,11 +610,11 @@ const CheckInPage = () => {
           </div>
 
           {/* Symptoms experienced today */}
-          <div className="space-y-2 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+          <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.2s' }}>
             <h3 className="font-display font-bold text-lg text-foreground">
               Symptoms
             </h3>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="grid grid-cols-2 gap-2">
               {symptomsList.map((symptom) => {
                 const selected = isSymptomSelected(symptom);
                 const severity = getSymptomSeverity(symptom);
@@ -624,7 +624,7 @@ const CheckInPage = () => {
                   <div
                     key={symptom}
                     className={cn(
-                      'inline-flex items-center rounded-full transition-all duration-200',
+                      'flex items-center rounded-xl transition-all duration-200 min-h-[46px]',
                       selected
                         ? 'bg-coral/15 ring-1 ring-coral/30'
                         : 'bg-muted/50 hover:bg-muted'
@@ -633,7 +633,7 @@ const CheckInPage = () => {
                     <button
                       onClick={() => handleSymptomTap(symptom)}
                       className={cn(
-                        'px-3.5 py-1.5 text-sm font-medium transition-colors flex items-center gap-1.5',
+                        'flex-1 px-3 py-2.5 text-sm font-medium transition-colors flex items-center gap-2',
                         selected
                           ? 'text-coral'
                           : 'text-muted-foreground/80 hover:text-foreground'
@@ -641,13 +641,18 @@ const CheckInPage = () => {
                     >
                       {selected && (
                         <span className={cn(
-                          'w-1.5 h-1.5 rounded-full',
+                          'w-2 h-2 rounded-full flex-shrink-0',
                           severityColors.bg[severity]
                         )} />
                       )}
-                      {symptom}
+                      <span className="flex-1 text-left">{symptom}</span>
                       {selected && !isExpanded && (
-                        <span className="text-[9px] text-coral/70">
+                        <span className={cn(
+                          'text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0',
+                          severity === 1 ? 'bg-yellow-200/80 text-yellow-800' :
+                          severity === 2 ? 'bg-orange-200/80 text-orange-800' :
+                          'bg-red-200/80 text-red-800'
+                        )}>
                           {severityLabels[severity]}
                         </span>
                       )}
@@ -655,7 +660,7 @@ const CheckInPage = () => {
                     
                     {/* Inline severity selector - only show when expanded */}
                     {selected && isExpanded && (
-                      <div className="flex items-center gap-0.5 pr-1 border-l border-coral/20 ml-0.5 pl-1">
+                      <div className="flex items-center gap-1 pr-2 border-l border-coral/20 pl-2">
                         {([1, 2, 3] as const).map((level) => (
                           <button
                             key={level}
@@ -664,7 +669,7 @@ const CheckInPage = () => {
                               updateSymptomSeverity(symptom, level);
                             }}
                             className={cn(
-                              'w-4 h-4 rounded-full flex items-center justify-center transition-all',
+                              'w-5 h-5 rounded-full flex items-center justify-center transition-all',
                               severity === level
                                 ? severityColors.bg[level]
                                 : 'bg-muted/80 hover:bg-muted'
@@ -672,7 +677,7 @@ const CheckInPage = () => {
                             title={severityLabels[level]}
                           >
                             <span className={cn(
-                              'w-1.5 h-1.5 rounded-full',
+                              'w-2 h-2 rounded-full',
                               severity === level
                                 ? 'bg-white'
                                 : severityColors.bgMuted[level]
@@ -684,10 +689,10 @@ const CheckInPage = () => {
                             e.stopPropagation();
                             toggleSymptom(symptom);
                           }}
-                          className="ml-0.5 p-0.5 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          className="ml-1 p-1 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                           title="Remove"
                         >
-                          <X className="w-2.5 h-2.5" />
+                          <X className="w-3 h-3" />
                         </button>
                       </div>
                     )}
