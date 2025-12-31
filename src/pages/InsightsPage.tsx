@@ -14,6 +14,7 @@ import { PlantIllustration, SparkleIllustration, SunIllustration } from '@/compo
 import DemoEditModal from '@/components/DemoEditModal';
 import SymptomsInsights from '@/components/SymptomsInsights';
 import TriggerPatternsInsights from '@/components/TriggerPatternsInsights';
+import SleepTrendsInsights from '@/components/SleepTrendsInsights';
 import PainTrendsInsights from '@/components/PainTrendsInsights';
 import { FlareStatusBadge } from '@/components/FlareStatusBadge';
 import { severityColors, severityLabels } from '@/constants/severityColors';
@@ -406,6 +407,9 @@ const InsightsPage = () => {
           </div>
         )}
       </div>
+
+      {/* Sleep Trends - Available to all users when data threshold met */}
+      <SleepTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
 
       {/* Pain Trends - Available to all users when data threshold met */}
       <PainTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
