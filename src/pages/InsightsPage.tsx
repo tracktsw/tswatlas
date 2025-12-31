@@ -425,9 +425,24 @@ const InsightsPage = () => {
                         <span className="text-sm text-muted-foreground font-medium">
                           {format(new Date(checkIn.timestamp), 'h:mm a')}
                         </span>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 items-center">
                           <span title="Mood" className="text-lg">{moodEmojis[checkIn.mood - 1]}</span>
                           <span title="Skin" className="text-lg">{skinEmojis[checkIn.skinFeeling - 1]}</span>
+                          {checkIn.painScore !== null && checkIn.painScore !== undefined && (
+                            <span 
+                              title="Pain" 
+                              className={cn(
+                                'text-xs font-medium px-2 py-0.5 rounded-full',
+                                checkIn.painScore <= 2 ? 'bg-yellow-200 text-yellow-900' :
+                                checkIn.painScore <= 4 ? 'bg-amber-300 text-amber-900' :
+                                checkIn.painScore <= 6 ? 'bg-orange-400 text-white' :
+                                checkIn.painScore <= 8 ? 'bg-red-500 text-white' :
+                                'bg-red-700 text-white'
+                              )}
+                            >
+                              {checkIn.painScore}/10
+                            </span>
+                          )}
                         </div>
                       </div>
                       {checkIn.treatments.length > 0 && (
