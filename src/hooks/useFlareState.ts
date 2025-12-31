@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useUserData } from '@/contexts/UserDataContext';
-import { analyzeFlareState, FlareAnalysis } from '@/utils/flareStateEngine';
+import { analyzeFlareState, FlareAnalysis, BaselineConfidence } from '@/utils/flareStateEngine';
 
 /**
  * Hook to get the current flare state analysis for the logged-in user.
@@ -14,6 +14,7 @@ export function useFlareState(): FlareAnalysis & { isLoading: boolean } {
       return {
         dailyBurdens: [],
         baselineBurdenScore: null,
+        baselineConfidence: 'early' as BaselineConfidence,
         flareThreshold: null,
         flareEpisodes: [],
         dailyFlareStates: [],
@@ -59,6 +60,22 @@ export function getFlareStateLabel(state: FlareAnalysis['currentState']): string
       return 'Peak flare';
     case 'resolving_flare':
       return 'Resolving';
+    default:
+      return 'Unknown';
+  }
+}
+
+/**
+ * Get a human-readable label for baseline confidence
+ */
+export function getConfidenceLabel(confidence: BaselineConfidence): string {
+  switch (confidence) {
+    case 'early':
+      return 'Learning';
+    case 'provisional':
+      return 'Provisional';
+    case 'mature':
+      return 'Established';
     default:
       return 'Unknown';
   }

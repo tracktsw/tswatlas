@@ -1,7 +1,7 @@
-import { Flame, TrendingUp, TrendingDown, Activity, Minus } from 'lucide-react';
+import { Flame, TrendingUp, TrendingDown, Activity, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useFlareState, getFlareStateLabel } from '@/hooks/useFlareState';
-import { FlareState } from '@/utils/flareStateEngine';
+import { useFlareState, getFlareStateLabel, getConfidenceLabel } from '@/hooks/useFlareState';
+import { FlareState, BaselineConfidence } from '@/utils/flareStateEngine';
 import { PlantIllustration } from '@/components/illustrations';
 
 const stateConfig: Record<FlareState, {
@@ -53,16 +53,51 @@ interface FlareStatusBadgeProps {
 }
 
 export function FlareStatusBadge({ className }: FlareStatusBadgeProps) {
-  const { currentState, isInActiveFlare, currentFlareDuration, isLoading, dailyBurdens } = useFlareState();
+  const { 
+    currentState, 
+    isInActiveFlare, 
+    currentFlareDuration, 
+    isLoading, 
+    dailyBurdens,
+    baselineConfidence 
+  } = useFlareState();
   
-  // Need at least some data to show meaningful state
-  if (isLoading || dailyBurdens.length < 3) {
+  // Need at least some data to show anything
+  if (isLoading || dailyBurdens.length < 1) {
     return null;
+  }
+  
+  // Early phase: show learning state
+  if (baselineConfidence === 'early') {
+    const checkInsNeeded = 7 - dailyBurdens.length;
+    return (
+      <div 
+        className={cn(
+          'glass-card-warm p-5 animate-slide-up relative overflow-hidden ring-2 ring-muted/30',
+          className
+        )}
+      >
+        <div className="flex items-center gap-4 relative">
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-warm-sm bg-gradient-to-br from-muted/30 to-muted/10">
+            <BookOpen className="w-7 h-7 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="font-display font-bold text-lg text-foreground">
+              Learning your baseline
+            </p>
+            <p className="text-muted-foreground">
+              {checkInsNeeded} more check-in{checkInsNeeded !== 1 ? 's' : ''} needed for flare detection
+            </p>
+          </div>
+        </div>
+      </div>
+    );
   }
   
   const config = stateConfig[currentState];
   const Icon = config.icon;
   const label = getFlareStateLabel(currentState);
+  const confidenceLabel = getConfidenceLabel(baselineConfidence);
   
   return (
     <div 
@@ -84,14 +119,21 @@ export function FlareStatusBadge({ className }: FlareStatusBadgeProps) {
           <Icon className={cn('w-7 h-7', config.iconColor)} />
         </div>
         <div>
-          <p className="font-display font-bold text-lg text-foreground">
-            {label}
+          <div className="flex items-center gap-2">
+            <p className="font-display font-bold text-lg text-foreground">
+              {label}
+            </p>
             {isInActiveFlare && currentFlareDuration && currentFlareDuration > 1 && (
-              <span className="text-muted-foreground font-normal text-sm ml-2">
-                Day {currentFlareDuration}
+              <span className="text-muted-foreground font-normal text-sm">
+                · Day {currentFlareDuration}
               </span>
             )}
-          </p>
+            {baselineConfidence === 'provisional' && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-muted/50 text-muted-foreground">
+                {confidenceLabel}
+              </span>
+            )}
+          </div>
           <p className="text-muted-foreground">
             {config.description}
           </p>

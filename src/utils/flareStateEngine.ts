@@ -1,8 +1,8 @@
 /**
- * Flare State Engine
+ * Flare State Engine (Progressive Edition)
  * 
- * System-derived flare detection based on sustained symptom burden over time.
- * This logic is transparent, explainable, and independent of user's subjective selections.
+ * System-derived flare detection that works from day 1, improves with more data,
+ * handles missed days safely, and classifies skin state without alarming users.
  */
 
 // Symptom weights for burden calculation
@@ -24,6 +24,8 @@ export type FlareState =
   | 'peak_flare' 
   | 'resolving_flare';
 
+export type BaselineConfidence = 'early' | 'provisional' | 'mature';
+
 export interface DailyBurden {
   date: string;
   score: number;
@@ -35,15 +37,16 @@ export interface FlareEpisode {
   startDate: string;
   endDate: string | null;
   peakDate: string;
-  durationDays: number;
+  durationDays: number; // Count of logged days only
   peakBurdenScore: number;
   isActive: boolean;
+  isPaused: boolean; // Paused due to missed days
 }
 
 export interface DailyFlareState {
   date: string;
   burdenScore: number;
-  rollingAverage3d: number | null;
+  rollingAverage3: number | null;
   flareState: FlareState;
   isInFlareEpisode: boolean;
 }
@@ -51,6 +54,7 @@ export interface DailyFlareState {
 export interface FlareAnalysis {
   dailyBurdens: DailyBurden[];
   baselineBurdenScore: number | null;
+  baselineConfidence: BaselineConfidence;
   flareThreshold: number | null;
   flareEpisodes: FlareEpisode[];
   dailyFlareStates: DailyFlareState[];
@@ -71,16 +75,13 @@ interface CheckInData {
  * Calculate daily flare burden score from a check-in
  */
 export function calculateDailyBurdenScore(checkIn: CheckInData): number {
-  // Get skin intensity (use stored value or derive from skinFeeling)
   const skinIntensity = checkIn.skinIntensity ?? (5 - checkIn.skinFeeling);
   
-  // Calculate symptom weights
   let symptomScore = 0;
   if (checkIn.symptomsExperienced && Array.isArray(checkIn.symptomsExperienced)) {
     for (const symptom of checkIn.symptomsExperienced) {
       const normalizedName = symptom.name.toLowerCase().replace(/\s+/g, '');
       const weight = SYMPTOM_WEIGHTS[normalizedName] ?? 0;
-      // Only count if symptom was selected (severity > 0)
       if (symptom.severity > 0) {
         symptomScore += weight;
       }
@@ -92,9 +93,9 @@ export function calculateDailyBurdenScore(checkIn: CheckInData): number {
 
 /**
  * Group check-ins by date and calculate daily burden scores
+ * Missing days are NOT created - they remain null
  */
 export function calculateDailyBurdens(checkIns: CheckInData[]): DailyBurden[] {
-  // Group check-ins by date
   const byDate = new Map<string, CheckInData[]>();
   
   for (const checkIn of checkIns) {
@@ -105,7 +106,6 @@ export function calculateDailyBurdens(checkIns: CheckInData[]): DailyBurden[] {
     byDate.get(date)!.push(checkIn);
   }
   
-  // Calculate daily burden (use highest score if multiple check-ins per day)
   const dailyBurdens: DailyBurden[] = [];
   
   for (const [date, dayCheckIns] of byDate) {
@@ -143,79 +143,125 @@ export function calculateDailyBurdens(checkIns: CheckInData[]): DailyBurden[] {
     });
   }
   
-  // Sort by date ascending
   return dailyBurdens.sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /**
- * Calculate personal baseline from last 30-45 days
- * Baseline = median of lowest 25% of scores
+ * Determine baseline confidence level based on check-in count
  */
-export function calculateBaselineBurdenScore(dailyBurdens: DailyBurden[]): number | null {
-  if (dailyBurdens.length < 7) {
-    // Need at least a week of data for meaningful baseline
+export function getBaselineConfidence(checkInCount: number): BaselineConfidence {
+  if (checkInCount < 7) return 'early';
+  if (checkInCount < 20) return 'provisional';
+  return 'mature';
+}
+
+/**
+ * Calculate progressive personal baseline based on available data
+ */
+export function calculateBaselineBurdenScore(
+  dailyBurdens: DailyBurden[],
+  confidence: BaselineConfidence
+): number | null {
+  if (confidence === 'early') {
+    // Not enough data for baseline
     return null;
   }
   
-  // Get last 30-45 days of data
+  if (confidence === 'provisional') {
+    // Use median of ALL available scores
+    return calculateMedian(dailyBurdens.map(b => b.score));
+  }
+  
+  // Mature: median of lowest 25% from last 30-45 days
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - 45);
   const cutoffStr = cutoffDate.toISOString().split('T')[0];
   
-  const recentBurdens = dailyBurdens.filter(b => b.date >= cutoffStr);
+  let recentBurdens = dailyBurdens.filter(b => b.date >= cutoffStr);
   
+  // Fall back to all data if not enough recent data
   if (recentBurdens.length < 7) {
-    // Fall back to all available data if not enough recent data
-    return calculateBaselineFromScores(dailyBurdens.map(b => b.score));
+    recentBurdens = dailyBurdens;
   }
   
-  return calculateBaselineFromScores(recentBurdens.map(b => b.score));
+  const scores = recentBurdens.map(b => b.score).sort((a, b) => a - b);
+  const lowest25PercentCount = Math.max(1, Math.floor(scores.length * 0.25));
+  const lowest25Percent = scores.slice(0, lowest25PercentCount);
+  
+  return calculateMedian(lowest25Percent);
 }
 
-function calculateBaselineFromScores(scores: number[]): number | null {
-  if (scores.length === 0) return null;
-  
-  // Sort ascending
-  const sorted = [...scores].sort((a, b) => a - b);
-  
-  // Take lowest 25%
-  const lowest25PercentCount = Math.max(1, Math.floor(sorted.length * 0.25));
-  const lowest25Percent = sorted.slice(0, lowest25PercentCount);
-  
-  // Return median of lowest 25%
-  const mid = Math.floor(lowest25Percent.length / 2);
-  if (lowest25Percent.length % 2 === 0) {
-    return (lowest25Percent[mid - 1] + lowest25Percent[mid]) / 2;
+function calculateMedian(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) {
+    return (sorted[mid - 1] + sorted[mid]) / 2;
   }
-  return lowest25Percent[mid];
+  return sorted[mid];
 }
 
 /**
- * Calculate 3-day rolling average for a specific date
+ * Calculate flare threshold based on baseline confidence
  */
-export function calculate3DayRollingAverage(
-  dailyBurdens: DailyBurden[],
-  dateIndex: number
+export function calculateFlareThreshold(
+  baseline: number | null,
+  confidence: BaselineConfidence
 ): number | null {
-  if (dateIndex < 2) return null;
+  if (baseline === null || confidence === 'early') {
+    return null;
+  }
   
+  // Provisional: stricter threshold (1.8x)
+  // Mature: standard threshold (1.5x)
+  const multiplier = confidence === 'provisional' ? 1.8 : 1.5;
+  return baseline * multiplier;
+}
+
+/**
+ * Gap-tolerant rolling average: uses last 3 AVAILABLE check-ins, not calendar days
+ */
+export function calculateRollingAverage3(
+  dailyBurdens: DailyBurden[],
+  currentIndex: number
+): number | null {
+  if (currentIndex < 2) return null;
+  
+  // Get the 3 most recent scores including current
   const scores = [
-    dailyBurdens[dateIndex].score,
-    dailyBurdens[dateIndex - 1].score,
-    dailyBurdens[dateIndex - 2].score,
+    dailyBurdens[currentIndex].score,
+    dailyBurdens[currentIndex - 1].score,
+    dailyBurdens[currentIndex - 2].score,
   ];
   
   return scores.reduce((a, b) => a + b, 0) / 3;
 }
 
 /**
- * Detect flare episodes based on rolling average exceeding threshold
+ * Check if there are missed days between two dates
+ */
+function getMissedDaysBetween(date1: string, date2: string): number {
+  const d1 = new Date(date1);
+  const d2 = new Date(date2);
+  const diffTime = Math.abs(d2.getTime() - d1.getTime());
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  return Math.max(0, diffDays - 1); // Subtract 1 because consecutive days have 0 missed
+}
+
+/**
+ * Detect flare episodes with gap tolerance and phase-specific rules
  */
 export function detectFlareEpisodes(
   dailyBurdens: DailyBurden[],
-  flareThreshold: number
+  flareThreshold: number,
+  confidence: BaselineConfidence
 ): FlareEpisode[] {
-  if (dailyBurdens.length < 3) return [];
+  if (dailyBurdens.length < 3 || confidence === 'early') {
+    return [];
+  }
+  
+  // Provisional requires 3 consecutive, mature requires 2
+  const requiredConsecutive = confidence === 'provisional' ? 3 : 2;
   
   const episodes: FlareEpisode[] = [];
   let currentEpisode: {
@@ -223,14 +269,24 @@ export function detectFlareEpisodes(
     peakIndex: number;
     peakScore: number;
     consecutiveAbove: number;
+    loggedDays: number;
+    isPaused: boolean;
   } | null = null;
   let consecutiveBelow = 0;
   
   for (let i = 2; i < dailyBurdens.length; i++) {
-    const rollingAvg = calculate3DayRollingAverage(dailyBurdens, i);
+    const rollingAvg = calculateRollingAverage3(dailyBurdens, i);
     if (rollingAvg === null) continue;
     
+    // Check for missed days (gap tolerance)
+    const missedDays = getMissedDaysBetween(dailyBurdens[i - 1].date, dailyBurdens[i].date);
+    
     const isAboveThreshold = rollingAvg > flareThreshold;
+    
+    if (currentEpisode !== null && missedDays >= 2) {
+      // Pause episode due to too many missed days
+      currentEpisode.isPaused = true;
+    }
     
     if (isAboveThreshold) {
       consecutiveBelow = 0;
@@ -241,30 +297,41 @@ export function detectFlareEpisodes(
           peakIndex: i,
           peakScore: dailyBurdens[i].score,
           consecutiveAbove: 1,
+          loggedDays: 1,
+          isPaused: false,
         };
-      } else {
+      } else if (!currentEpisode.isPaused) {
         currentEpisode.consecutiveAbove++;
+        currentEpisode.loggedDays++;
+        if (dailyBurdens[i].score > currentEpisode.peakScore) {
+          currentEpisode.peakScore = dailyBurdens[i].score;
+          currentEpisode.peakIndex = i;
+        }
+      } else if (currentEpisode.isPaused && missedDays <= 1) {
+        // Resume paused episode if gap is acceptable
+        currentEpisode.isPaused = false;
+        currentEpisode.loggedDays++;
         if (dailyBurdens[i].score > currentEpisode.peakScore) {
           currentEpisode.peakScore = dailyBurdens[i].score;
           currentEpisode.peakIndex = i;
         }
       }
     } else {
-      if (currentEpisode !== null) {
+      if (currentEpisode !== null && !currentEpisode.isPaused) {
         consecutiveBelow++;
         
-        // Flare ends after 2 consecutive days below threshold
         if (consecutiveBelow >= 2) {
-          // Only count as flare if it lasted at least 2 consecutive days above threshold
-          if (currentEpisode.consecutiveAbove >= 2) {
+          // Only count as flare if it met the required consecutive threshold
+          if (currentEpisode.consecutiveAbove >= requiredConsecutive) {
             const endIndex = i - consecutiveBelow;
             episodes.push({
               startDate: dailyBurdens[currentEpisode.startIndex].date,
               endDate: dailyBurdens[endIndex].date,
               peakDate: dailyBurdens[currentEpisode.peakIndex].date,
-              durationDays: endIndex - currentEpisode.startIndex + 1,
+              durationDays: currentEpisode.loggedDays,
               peakBurdenScore: currentEpisode.peakScore,
               isActive: false,
+              isPaused: false,
             });
           }
           currentEpisode = null;
@@ -275,15 +342,15 @@ export function detectFlareEpisodes(
   }
   
   // Handle ongoing flare at end of data
-  if (currentEpisode !== null && currentEpisode.consecutiveAbove >= 2) {
-    const lastIndex = dailyBurdens.length - 1;
+  if (currentEpisode !== null && currentEpisode.consecutiveAbove >= requiredConsecutive) {
     episodes.push({
       startDate: dailyBurdens[currentEpisode.startIndex].date,
-      endDate: null, // Still active
+      endDate: null,
       peakDate: dailyBurdens[currentEpisode.peakIndex].date,
-      durationDays: lastIndex - currentEpisode.startIndex + 1,
+      durationDays: currentEpisode.loggedDays,
       peakBurdenScore: currentEpisode.peakScore,
-      isActive: true,
+      isActive: !currentEpisode.isPaused,
+      isPaused: currentEpisode.isPaused,
     });
   }
   
@@ -291,17 +358,18 @@ export function detectFlareEpisodes(
 }
 
 /**
- * Assign flare state to each day
+ * Assign flare state to each logged day (missing days get no state)
  */
 export function assignDailyFlareStates(
   dailyBurdens: DailyBurden[],
   baselineBurdenScore: number | null,
   flareThreshold: number | null,
-  flareEpisodes: FlareEpisode[]
+  flareEpisodes: FlareEpisode[],
+  confidence: BaselineConfidence
 ): DailyFlareState[] {
   const states: DailyFlareState[] = [];
   
-  // Build a map of dates to their episode (if any)
+  // Build a map of dates to their episode
   const dateToEpisode = new Map<string, FlareEpisode>();
   for (const episode of flareEpisodes) {
     const startDate = new Date(episode.startDate);
@@ -313,7 +381,7 @@ export function assignDailyFlareStates(
     }
   }
   
-  // Get peak scores within each episode for top 20% calculation
+  // Get peak thresholds for top 20% calculation per episode
   const episodePeakThresholds = new Map<FlareEpisode, number>();
   for (const episode of flareEpisodes) {
     const episodeScores = dailyBurdens
@@ -332,13 +400,24 @@ export function assignDailyFlareStates(
   
   for (let i = 0; i < dailyBurdens.length; i++) {
     const burden = dailyBurdens[i];
-    const rollingAvg = calculate3DayRollingAverage(dailyBurdens, i);
+    const rollingAvg = calculateRollingAverage3(dailyBurdens, i);
     const episode = dateToEpisode.get(burden.date);
     
     let flareState: FlareState = 'stable';
     
-    if (episode) {
-      // Check if this is a peak day (top 20% within episode)
+    // Early phase: only stable (no flare detection)
+    if (confidence === 'early') {
+      states.push({
+        date: burden.date,
+        burdenScore: burden.score,
+        rollingAverage3: rollingAvg,
+        flareState: 'stable',
+        isInFlareEpisode: false,
+      });
+      continue;
+    }
+    
+    if (episode && !episode.isPaused) {
       const peakThreshold = episodePeakThresholds.get(episode) ?? episode.peakBurdenScore;
       if (burden.score >= peakThreshold) {
         flareState = 'peak_flare';
@@ -346,7 +425,7 @@ export function assignDailyFlareStates(
         flareState = 'active_flare';
       }
     } else if (baselineBurdenScore !== null && flareThreshold !== null) {
-      // Check for resolving flare (episode just ended, scores decreasing)
+      // Check for resolving flare
       const recentEpisode = flareEpisodes.find(ep => {
         if (!ep.endDate) return false;
         const endDate = new Date(ep.endDate);
@@ -364,30 +443,34 @@ export function assignDailyFlareStates(
         }
       }
       
-      // Check for pre-flare (rising but not yet in flare)
+      // Check for pre-flare
       if (flareState === 'stable' && i >= 2 && rollingAvg !== null) {
-        const isRising = 
-          dailyBurdens[i].score > dailyBurdens[i - 1].score &&
-          dailyBurdens[i - 1].score > dailyBurdens[i - 2].score;
+        // Need at least 2 check-ins in last 3 calendar days for pre_flare
+        const threeDaysAgo = new Date(burden.date);
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+        const recentCheckIns = dailyBurdens.filter(b => {
+          const bDate = new Date(b.date);
+          return bDate >= threeDaysAgo && bDate <= new Date(burden.date);
+        });
         
-        if (isRising && rollingAvg < flareThreshold && burden.score > baselineBurdenScore) {
-          flareState = 'pre_flare';
+        if (recentCheckIns.length >= 2) {
+          const isRising = 
+            dailyBurdens[i].score > dailyBurdens[i - 1].score &&
+            dailyBurdens[i - 1].score > dailyBurdens[i - 2].score;
+          
+          if (isRising && rollingAvg < flareThreshold && burden.score > baselineBurdenScore) {
+            flareState = 'pre_flare';
+          }
         }
-      }
-      
-      // Stable if score <= baseline and no flare
-      if (flareState === 'stable' && burden.score > baselineBurdenScore) {
-        // Score is above baseline but not in pattern - still stable but elevated
-        flareState = 'stable';
       }
     }
     
     states.push({
       date: burden.date,
       burdenScore: burden.score,
-      rollingAverage3d: rollingAvg,
+      rollingAverage3: rollingAvg,
       flareState,
-      isInFlareEpisode: !!episode,
+      isInFlareEpisode: !!episode && !episode.isPaused,
     });
   }
   
@@ -398,36 +481,27 @@ export function assignDailyFlareStates(
  * Main analysis function - computes complete flare analysis from check-ins
  */
 export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
-  // Calculate daily burdens
   const dailyBurdens = calculateDailyBurdens(checkIns);
+  const confidence = getBaselineConfidence(dailyBurdens.length);
+  const baselineBurdenScore = calculateBaselineBurdenScore(dailyBurdens, confidence);
+  const flareThreshold = calculateFlareThreshold(baselineBurdenScore, confidence);
   
-  // Calculate baseline
-  const baselineBurdenScore = calculateBaselineBurdenScore(dailyBurdens);
-  
-  // Calculate flare threshold (baseline × 1.5)
-  const flareThreshold = baselineBurdenScore !== null 
-    ? baselineBurdenScore * 1.5 
-    : null;
-  
-  // Detect flare episodes
   const flareEpisodes = flareThreshold !== null
-    ? detectFlareEpisodes(dailyBurdens, flareThreshold)
+    ? detectFlareEpisodes(dailyBurdens, flareThreshold, confidence)
     : [];
   
-  // Assign daily flare states
   const dailyFlareStates = assignDailyFlareStates(
     dailyBurdens,
     baselineBurdenScore,
     flareThreshold,
-    flareEpisodes
+    flareEpisodes,
+    confidence
   );
   
-  // Determine current state
   const currentState = dailyFlareStates.length > 0
     ? dailyFlareStates[dailyFlareStates.length - 1].flareState
     : 'stable';
   
-  // Check if currently in active flare
   const activeFlare = flareEpisodes.find(ep => ep.isActive);
   const isInActiveFlare = !!activeFlare;
   const currentFlareDuration = activeFlare?.durationDays ?? null;
@@ -435,6 +509,7 @@ export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
   return {
     dailyBurdens,
     baselineBurdenScore,
+    baselineConfidence: confidence,
     flareThreshold,
     flareEpisodes,
     dailyFlareStates,
