@@ -503,7 +503,7 @@ const CheckInPage = () => {
                 Tap to select what might have worsened symptoms.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-1.5">
               {triggersList.map(({ id, label }) => {
                 const isSelected = id === 'food' ? isFoodSelected : selectedTriggers.includes(id);
                 return (
@@ -511,10 +511,10 @@ const CheckInPage = () => {
                     key={id}
                     onClick={() => toggleTrigger(id)}
                     className={cn(
-                      'py-2.5 px-3 text-sm font-medium rounded-full transition-all duration-200 text-left',
+                      'py-2 px-3 text-sm font-medium rounded-full transition-all duration-200 text-left',
                       isSelected
-                        ? 'bg-primary/5 ring-2 ring-primary text-foreground'
-                        : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+                        ? 'bg-primary/5 ring-[1.5px] ring-primary text-foreground'
+                        : 'bg-muted/50 text-muted-foreground/80 hover:bg-muted hover:text-foreground'
                     )}
                   >
                     {label}
@@ -596,11 +596,11 @@ const CheckInPage = () => {
           </div>
 
           {/* Symptoms experienced today */}
-          <div className="space-y-2.5 animate-slide-up" style={{ animationDelay: '0.22s' }}>
+          <div className="space-y-2 animate-slide-up" style={{ animationDelay: '0.22s' }}>
             <h3 className="font-display text-base font-semibold text-muted-foreground">
               Symptoms
             </h3>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1">
               {symptomsList.map((symptom) => {
                 const selected = isSymptomSelected(symptom);
                 const severity = getSymptomSeverity(symptom);
@@ -613,27 +613,27 @@ const CheckInPage = () => {
                       'inline-flex items-center rounded-full transition-all duration-200',
                       selected
                         ? 'bg-coral/15 ring-1 ring-coral/30'
-                        : 'bg-muted/60 hover:bg-muted'
+                        : 'bg-muted/50 hover:bg-muted'
                     )}
                   >
                     <button
                       onClick={() => handleSymptomTap(symptom)}
                       className={cn(
-                        'px-3 py-1.5 text-sm font-medium transition-colors flex items-center gap-2',
+                        'px-2.5 py-1 text-[13px] font-medium transition-colors flex items-center gap-1.5',
                         selected
                           ? 'text-coral'
-                          : 'text-muted-foreground hover:text-foreground'
+                          : 'text-muted-foreground/80 hover:text-foreground'
                       )}
                     >
                       {selected && (
                         <span className={cn(
-                          'w-2 h-2 rounded-full',
+                          'w-1.5 h-1.5 rounded-full',
                           severityColors.bg[severity]
                         )} />
                       )}
                       {symptom}
                       {selected && !isExpanded && (
-                        <span className="text-[10px] text-coral/70">
+                        <span className="text-[9px] text-coral/70">
                           {severityLabels[severity]}
                         </span>
                       )}
@@ -641,7 +641,7 @@ const CheckInPage = () => {
                     
                     {/* Inline severity selector - only show when expanded */}
                     {selected && isExpanded && (
-                      <div className="flex items-center gap-0.5 pr-1.5 border-l border-coral/20 ml-0.5 pl-1.5">
+                      <div className="flex items-center gap-0.5 pr-1 border-l border-coral/20 ml-0.5 pl-1">
                         {([1, 2, 3] as const).map((level) => (
                           <button
                             key={level}
@@ -650,7 +650,7 @@ const CheckInPage = () => {
                               updateSymptomSeverity(symptom, level);
                             }}
                             className={cn(
-                              'w-5 h-5 rounded-full flex items-center justify-center transition-all',
+                              'w-4 h-4 rounded-full flex items-center justify-center transition-all',
                               severity === level
                                 ? severityColors.bg[level]
                                 : 'bg-muted/80 hover:bg-muted'
@@ -658,7 +658,7 @@ const CheckInPage = () => {
                             title={severityLabels[level]}
                           >
                             <span className={cn(
-                              'w-2 h-2 rounded-full',
+                              'w-1.5 h-1.5 rounded-full',
                               severity === level
                                 ? 'bg-white'
                                 : severityColors.bgMuted[level]
@@ -673,7 +673,7 @@ const CheckInPage = () => {
                           className="ml-0.5 p-0.5 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                           title="Remove"
                         >
-                          <X className="w-3 h-3" />
+                          <X className="w-2.5 h-2.5" />
                         </button>
                       </div>
                     )}
