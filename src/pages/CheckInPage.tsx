@@ -43,6 +43,9 @@ const triggersList = [
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
+const skinIntensityLabels = ['High-intensity', 'Active', 'Noticeable', 'Settling', 'Calm'];
+// Mapping: Red=4, Orange=3, Yellow=2, Green=1, Heart=0
+const skinIntensityValues = [4, 3, 2, 1, 0];
 const symptomsList = [
   'Burning', 'Itching', 'Thermodysregulation', 'Flaking',
   'Oozing', 'Swelling', 'Redness', 'Insomnia'
@@ -549,26 +552,33 @@ const CheckInPage = () => {
             <h3 className="font-display font-bold text-lg text-foreground">
               How's your skin feeling?
             </h3>
-            <div className="flex justify-between gap-2">
+            <div className="flex justify-between gap-1">
               {skinEmojis.map((emoji, idx) => (
                 <button
                   key={idx}
                   onClick={() => setSkinFeeling(idx + 1)}
                   className={cn(
-                    'flex-1 py-4 text-2xl rounded-2xl transition-all duration-300',
+                    'flex-1 flex flex-col items-center py-3 px-1 rounded-2xl transition-all duration-300',
                     skinFeeling === idx + 1 
-                      ? 'bg-gradient-to-br from-primary/20 to-sage-light shadow-warm scale-110' 
-                      : 'bg-muted/50 hover:bg-muted hover:scale-105'
+                      ? 'bg-gradient-to-br from-primary/20 to-sage-light shadow-warm scale-105' 
+                      : 'bg-muted/50 hover:bg-muted hover:scale-102'
                   )}
                 >
-                  {emoji}
+                  <span className="text-2xl">{emoji}</span>
+                  <span className={cn(
+                    'text-[10px] mt-1.5 font-medium leading-tight text-center',
+                    skinFeeling === idx + 1 
+                      ? 'text-foreground' 
+                      : 'text-muted-foreground'
+                  )}>
+                    {skinIntensityLabels[idx]}
+                  </span>
                 </button>
               ))}
             </div>
-            <div className="flex justify-between text-xs text-muted-foreground px-2 font-medium">
-              <span>Flaring</span>
-              <span>Healing</span>
-            </div>
+            <p className="text-xs text-muted-foreground text-center px-2">
+              Tip: We look at patterns over days to understand flares.
+            </p>
           </div>
 
           {/* Symptoms experienced today */}
