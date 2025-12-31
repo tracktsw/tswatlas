@@ -747,7 +747,7 @@ const PhotoDiaryPage = () => {
           <Button 
             onClick={handleUpgrade} 
             disabled={isUpgrading} 
-            variant="warm" 
+            variant="default" 
             className="w-full gap-2"
           >
             <Crown className="w-4 h-4" />
@@ -776,7 +776,7 @@ const PhotoDiaryPage = () => {
               <p className="text-sm text-muted-foreground">Your limit resets tomorrow</p>
             </div>
             <div className="space-y-2">
-              <Button onClick={handleUpgrade} disabled={isUpgrading} variant="warm" className="w-full gap-2">
+              <Button onClick={handleUpgrade} disabled={isUpgrading} variant="default" className="w-full gap-2">
                 <Crown className="w-4 h-4" />
                 {isUpgrading ? 'Loading...' : 'Start 30-day free trial'}
               </Button>
