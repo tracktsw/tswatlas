@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { CheckIn, SymptomEntry } from '@/contexts/UserDataContext';
+import { format, subDays } from 'date-fns';
 
 // Admin email that can access demo mode
 const DEMO_ADMIN_EMAIL = 'haroon_7860@live.co.uk';
@@ -20,10 +21,23 @@ interface DemoModeContextType {
   getDemoCheckInsForDate: (dateStr: string) => DemoCheckIn | undefined;
   clearDemoData: () => void;
   deleteDemoCheckIn: (dateStr: string) => void;
+  generateSampleData: () => void;
   getEffectiveCheckIns: (realCheckIns: CheckIn[]) => CheckIn[];
 }
 
 const DemoModeContext = createContext<DemoModeContextType | undefined>(undefined);
+
+// Sample data generation helpers
+const symptomsList = ['Burning', 'Itching', 'Thermodysregulation', 'Flaking', 'Oozing', 'Swelling', 'Redness'];
+const triggersList = ['heat_sweat', 'stress', 'poor_sleep', 'shower_hard_water', 'weather_change', 'food', 'dust_pollen'];
+const treatmentsList = ['nmt', 'moisturizer', 'rlt', 'salt_bath', 'cold_compress', 'antihistamine', 'exercise', 'meditation'];
+
+const pickRandom = <T,>(arr: T[], count: number): T[] => {
+  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+};
+
+const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
 
 export const DemoModeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isDemoMode, setIsDemoMode] = useState(false);
@@ -115,6 +129,106 @@ export const DemoModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setDemoCheckIns(new Map());
   }, []);
 
+  // Generate 30 days of realistic sample data for marketing
+  const generateSampleData = useCallback(() => {
+    if (!isDemoMode || !isAdmin) return;
+
+    const newMap = new Map<string, DemoCheckIn>();
+    const today = new Date();
+    
+    // Create a realistic TSW healing journey pattern
+    // Start with a flare, gradual improvement, small setback, then recovery
+    const basePattern = [
+      // Days 1-7: Active flare period
+      { skinBase: 1, moodBase: 2, painBase: 7, sleepBase: 2, intensity: 4 },
+      { skinBase: 1, moodBase: 2, painBase: 8, sleepBase: 1, intensity: 4 },
+      { skinBase: 2, moodBase: 2, painBase: 7, sleepBase: 2, intensity: 4 },
+      { skinBase: 2, moodBase: 3, painBase: 6, sleepBase: 2, intensity: 3 },
+      { skinBase: 2, moodBase: 2, painBase: 7, sleepBase: 2, intensity: 3 },
+      { skinBase: 2, moodBase: 3, painBase: 5, sleepBase: 3, intensity: 3 },
+      { skinBase: 3, moodBase: 3, painBase: 5, sleepBase: 3, intensity: 3 },
+      // Days 8-14: Starting to settle
+      { skinBase: 3, moodBase: 3, painBase: 4, sleepBase: 3, intensity: 2 },
+      { skinBase: 3, moodBase: 4, painBase: 4, sleepBase: 4, intensity: 2 },
+      { skinBase: 3, moodBase: 3, painBase: 3, sleepBase: 3, intensity: 2 },
+      { skinBase: 4, moodBase: 4, painBase: 3, sleepBase: 4, intensity: 2 },
+      { skinBase: 3, moodBase: 4, painBase: 2, sleepBase: 4, intensity: 2 },
+      { skinBase: 4, moodBase: 4, painBase: 2, sleepBase: 4, intensity: 1 },
+      { skinBase: 4, moodBase: 4, painBase: 2, sleepBase: 5, intensity: 1 },
+      // Days 15-21: Small setback / mini flare
+      { skinBase: 3, moodBase: 3, painBase: 4, sleepBase: 3, intensity: 2 },
+      { skinBase: 2, moodBase: 2, painBase: 5, sleepBase: 2, intensity: 3 },
+      { skinBase: 2, moodBase: 3, painBase: 5, sleepBase: 3, intensity: 3 },
+      { skinBase: 3, moodBase: 3, painBase: 4, sleepBase: 3, intensity: 2 },
+      { skinBase: 3, moodBase: 4, painBase: 3, sleepBase: 4, intensity: 2 },
+      { skinBase: 4, moodBase: 4, painBase: 3, sleepBase: 4, intensity: 1 },
+      { skinBase: 4, moodBase: 4, painBase: 2, sleepBase: 4, intensity: 1 },
+      // Days 22-30: Recovery and calm period
+      { skinBase: 4, moodBase: 4, painBase: 2, sleepBase: 4, intensity: 1 },
+      { skinBase: 4, moodBase: 5, painBase: 1, sleepBase: 5, intensity: 1 },
+      { skinBase: 5, moodBase: 5, painBase: 1, sleepBase: 5, intensity: 0 },
+      { skinBase: 4, moodBase: 4, painBase: 2, sleepBase: 4, intensity: 1 },
+      { skinBase: 5, moodBase: 5, painBase: 1, sleepBase: 5, intensity: 0 },
+      { skinBase: 5, moodBase: 5, painBase: 0, sleepBase: 5, intensity: 0 },
+      { skinBase: 4, moodBase: 4, painBase: 1, sleepBase: 4, intensity: 0 },
+      { skinBase: 5, moodBase: 5, painBase: 0, sleepBase: 5, intensity: 0 },
+      { skinBase: 5, moodBase: 5, painBase: 0, sleepBase: 5, intensity: 0 },
+    ];
+
+    for (let i = 0; i < 30; i++) {
+      const date = subDays(today, 29 - i);
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const pattern = basePattern[i];
+      
+      // Add some randomness
+      const variance = () => Math.random() > 0.7 ? (Math.random() > 0.5 ? 1 : -1) : 0;
+      
+      const skinFeeling = clamp(pattern.skinBase + variance(), 1, 5);
+      const mood = clamp(pattern.moodBase + variance(), 1, 5);
+      const painScore = clamp(pattern.painBase + (Math.random() > 0.5 ? 1 : -1), 0, 10);
+      const sleepScore = clamp(pattern.sleepBase + variance(), 1, 5);
+      const skinIntensity = pattern.intensity;
+      
+      // Generate symptoms based on intensity
+      const symptomCount = skinIntensity >= 3 ? Math.floor(Math.random() * 3) + 2 : 
+                           skinIntensity >= 1 ? Math.floor(Math.random() * 2) + 1 : 0;
+      const symptoms: SymptomEntry[] = pickRandom(symptomsList, symptomCount).map(s => ({
+        symptom: s,
+        severity: (skinIntensity >= 3 ? 3 : skinIntensity >= 1 ? 2 : 1) as 1 | 2 | 3,
+      }));
+      
+      // Triggers on bad days
+      const triggerCount = skinFeeling <= 2 ? Math.floor(Math.random() * 2) + 1 : 
+                           skinFeeling <= 3 ? (Math.random() > 0.5 ? 1 : 0) : 0;
+      const triggers = pickRandom(triggersList, triggerCount);
+      
+      // Treatments - more on bad days, some on good days
+      const treatmentCount = skinFeeling <= 2 ? Math.floor(Math.random() * 3) + 2 :
+                             skinFeeling <= 4 ? Math.floor(Math.random() * 2) + 1 :
+                             Math.random() > 0.5 ? 1 : 0;
+      const treatments = pickRandom(treatmentsList, treatmentCount);
+
+      const demoCheckIn: DemoCheckIn = {
+        id: `demo-${dateStr}`,
+        timestamp: `${dateStr}T12:00:00.000Z`,
+        timeOfDay: 'morning',
+        mood,
+        skinFeeling,
+        skinIntensity,
+        painScore,
+        sleepScore,
+        symptomsExperienced: symptoms.length > 0 ? symptoms : undefined,
+        triggers: triggers.length > 0 ? triggers : undefined,
+        treatments,
+        isDemo: true,
+      };
+
+      newMap.set(dateStr, demoCheckIn);
+    }
+
+    setDemoCheckIns(newMap);
+  }, [isDemoMode, isAdmin]);
+
   // Merge real check-ins with demo overrides for display
   const getEffectiveCheckIns = useCallback((realCheckIns: CheckIn[]): CheckIn[] => {
     if (!isDemoMode) return realCheckIns;
@@ -174,6 +288,7 @@ export const DemoModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       getDemoCheckInsForDate,
       clearDemoData,
       deleteDemoCheckIn,
+      generateSampleData,
       getEffectiveCheckIns,
     }}>
       {children}
