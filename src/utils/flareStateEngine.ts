@@ -424,12 +424,19 @@ export function assignDailyFlareStates(
     }
     
     if (episode && !episode.isPaused) {
-      const peakThreshold = episodePeakThresholds.get(episode) ?? episode.peakBurdenScore;
-      if (burden.score >= peakThreshold) {
-        flareState = 'peak_flare';
-      } else {
-        flareState = 'active_flare';
+      // Only assign flare states if this day actually has flare-level symptoms
+      // Don't blindly assign based on episode date range - a good day is stable
+      if (isDefinitelyGoodDay(burden)) {
+        flareState = 'stable';
+      } else if (flareThreshold !== null && burden.score >= flareThreshold) {
+        const peakThreshold = episodePeakThresholds.get(episode) ?? episode.peakBurdenScore;
+        if (burden.score >= peakThreshold) {
+          flareState = 'peak_flare';
+        } else {
+          flareState = 'active_flare';
+        }
       }
+      // Otherwise leave as stable even if within episode date range
     } else if (baselineBurdenScore !== null && flareThreshold !== null) {
       // Check for resolving flare
       const recentEpisode = flareEpisodes.find(ep => {
@@ -484,10 +491,24 @@ export function assignDailyFlareStates(
 }
 
 /**
+ * Check if a day is definitely a "good day" that cannot be in a flare
+ * Used to override incorrect flare classifications
+ */
+function isDefinitelyGoodDay(burden: DailyBurden): boolean {
+  // If skin intensity is low (0-1) and symptoms are minimal, it's a good day
+  return burden.skinIntensity <= 1 && burden.symptomScore <= 2;
+}
+
+/**
  * Check if the current day qualifies as a flare using absolute thresholds
  * Used when relative detection fails (e.g., high baseline)
  */
 function checkAbsoluteFlareState(burden: DailyBurden): FlareState {
+  // Good day override - cannot be flare if symptoms are minimal
+  if (isDefinitelyGoodDay(burden)) {
+    return 'stable';
+  }
+  
   // Peak flare: very high skin intensity with significant symptoms
   if (burden.skinIntensity >= 4 && burden.symptomScore >= 3) {
     return 'peak_flare';
@@ -547,19 +568,26 @@ export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
     ? dailyFlareStates[dailyFlareStates.length - 1].flareState
     : 'stable';
   
-  // If relative detection says "stable" but we have a high baseline,
-  // use absolute thresholds on the most recent day
-  if (currentState === 'stable' && hasHighBaseline && dailyBurdens.length > 0) {
+  // Final safety check: if most recent day is clearly good, force stable
+  // This prevents classification errors from episode date ranges
+  if (dailyBurdens.length > 0) {
     const mostRecentBurden = dailyBurdens[dailyBurdens.length - 1];
-    currentState = checkAbsoluteFlareState(mostRecentBurden);
-  }
-  
-  // Also check absolute thresholds during early phase when relative detection isn't available
-  if (confidence === 'early' && dailyBurdens.length > 0) {
-    const mostRecentBurden = dailyBurdens[dailyBurdens.length - 1];
-    const absoluteState = checkAbsoluteFlareState(mostRecentBurden);
-    if (absoluteState !== 'stable') {
-      currentState = absoluteState;
+    
+    // Good day always wins - cannot be in a flare with minimal symptoms
+    if (isDefinitelyGoodDay(mostRecentBurden)) {
+      currentState = 'stable';
+    } 
+    // If relative detection says "stable" but we have a high baseline,
+    // use absolute thresholds on the most recent day
+    else if (currentState === 'stable' && hasHighBaseline) {
+      currentState = checkAbsoluteFlareState(mostRecentBurden);
+    }
+    // Also check absolute thresholds during early phase when relative detection isn't available
+    else if (confidence === 'early') {
+      const absoluteState = checkAbsoluteFlareState(mostRecentBurden);
+      if (absoluteState !== 'stable') {
+        currentState = absoluteState;
+      }
     }
   }
   
