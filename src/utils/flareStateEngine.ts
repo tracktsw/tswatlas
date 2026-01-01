@@ -249,10 +249,40 @@ function isSeverityTrendWorsening(metrics: DailyMetrics[], lookbackDays: number 
 }
 
 /**
+ * Get the RECENT trend direction based on the last few days only
+ * This is more useful than comparing first-half vs second-half for detecting current state
+ */
+function getRecentTrendDirection(
+  metrics: DailyMetrics[], 
+  field: 'avgSeverity' | 'painScore' | 'skinIntensity',
+  lookback: number = 3
+): 'worsening' | 'stable' | 'improving' {
+  if (metrics.length < lookback) return 'stable';
+  
+  const recentDays = metrics.slice(-lookback);
+  let worseningCount = 0;
+  let improvingCount = 0;
+  
+  for (let i = 1; i < recentDays.length; i++) {
+    const prev = recentDays[i - 1][field];
+    const curr = recentDays[i][field];
+    if (prev === null || curr === null) continue;
+    
+    if (curr > prev + 0.5) worseningCount++;
+    else if (curr < prev - 0.5) improvingCount++;
+  }
+  
+  // Need clear majority to determine trend
+  if (worseningCount >= lookback - 1) return 'worsening';
+  if (improvingCount >= lookback - 1) return 'improving';
+  return 'stable';
+}
+
+/**
  * Check if user is in STABLE-SEVERE state
  * TRUE if:
  * - Persistently high severity (pain ≥5 OR avg severity ≥2 OR skin intensity ≥3) for ≥7 days
- * - NO upward trend (not worsening)
+ * - Recent trend (last 3 days) is NOT worsening (stable or improving)
  * This represents their current baseline, not an active flare
  */
 function shouldBeStableSevere(metrics: DailyMetrics[]): boolean {
@@ -262,21 +292,28 @@ function shouldBeStableSevere(metrics: DailyMetrics[]): boolean {
   
   // Check for persistently high severity
   const daysWithHighSeverity = last7Days.filter(m => 
-    m.painScore >= 5 || m.avgSeverity >= 2 || m.skinIntensity >= 3
+    (m.painScore !== null && m.painScore >= 5) || 
+    m.avgSeverity >= 2 || 
+    (m.skinIntensity !== null && m.skinIntensity >= 3)
   ).length;
   
   // Need at least 5 of 7 days with high severity to be "persistently high"
   if (daysWithHighSeverity < 5) return false;
   
-  // Check NO upward trend (not worsening) - key distinction from active flare
+  // Check RECENT trend direction (last 3 days) - key distinction from active flare
+  // If currently worsening, it's a flare, not stable-severe
+  const recentPainTrend = getRecentTrendDirection(metrics, 'painScore', 3);
+  const recentSeverityTrend = getRecentTrendDirection(metrics, 'avgSeverity', 3);
+  
+  // If BOTH pain AND severity are actively worsening in recent days, it's a flare
+  if (recentPainTrend === 'worsening' && recentSeverityTrend === 'worsening') return false;
+  
+  // Check for consecutive worsening - but only if it's still active
   const severityWorseningCount = getConsecutiveWorseningCount(metrics, 'avgSeverity');
   const painWorseningCount = getConsecutiveWorseningCount(metrics, 'painScore');
   
-  // If there's active worsening, it's a flare, not stable-severe
-  if (severityWorseningCount >= 2 || painWorseningCount >= 2) return false;
-  
-  // Check that severity trend is NOT worsening
-  if (isSeverityTrendWorsening(metrics, 7)) return false;
+  // If there's active consecutive worsening (3+ days), it's a flare
+  if (severityWorseningCount >= 3 || painWorseningCount >= 3) return false;
   
   return true;
 }
@@ -490,7 +527,27 @@ export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
           currentFlareStartIdx = null;
         }
       }
-      // Priority 3: Check if ACTIVE FLARE
+      // Priority 3: Check if STABLE-SEVERE (high but NOT actively worsening)
+      // This must come BEFORE active_flare check — if symptoms are high but stable/improving, it's stable-severe
+      else if (shouldBeStableSevere(metricsUpToNow)) {
+        flareState = 'stable_severe';
+        isInFlareEpisode = false;
+        // If we were in a flare but now stable-severe, end the episode
+        if (currentFlareStartIdx !== null) {
+          flareEpisodes.push({
+            startDate: allMetrics[currentFlareStartIdx].date,
+            endDate: allMetrics[i > 0 ? i - 1 : i].date,
+            peakDate: allMetrics[currentFlareStartIdx].date,
+            durationDays: i - currentFlareStartIdx,
+            peakBurdenScore: burdenScore,
+            isActive: false,
+            isPaused: false,
+          });
+          currentFlareStartIdx = null;
+        }
+        explanation = 'Symptoms are severe but consistent — this reflects your current baseline, not an active flare.';
+      }
+      // Priority 4: Check if ACTIVE FLARE
       else if (shouldBeActiveFlare(metricsUpToNow)) {
         flareState = 'active_flare';
         isInFlareEpisode = true;
@@ -500,7 +557,7 @@ export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
         }
         explanation = 'Active flare — sustained symptom worsening detected.';
       }
-      // Priority 4: Check if EARLY FLARE
+      // Priority 5: Check if EARLY FLARE
       else if (shouldBeEarlyFlare(metricsUpToNow)) {
         flareState = 'early_flare';
         isInFlareEpisode = true;
@@ -510,15 +567,10 @@ export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
         }
         explanation = 'Early flare signs — monitoring trend.';
       }
-      // Priority 5: Check if STABLE-SEVERE (high but not worsening)
-      else if (shouldBeStableSevere(metricsUpToNow)) {
-        flareState = 'stable_severe';
-        explanation = 'Symptoms are severe but consistent — this reflects your current baseline, not an active flare.';
-      }
       // Default: STABLE
       else {
         flareState = 'stable';
-        explanation = 'No flare detected.';
+        explanation = 'Symptoms stable — no concerns.';
       }
     }
     
