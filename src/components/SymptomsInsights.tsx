@@ -1,14 +1,13 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { Activity, Lock, ChevronDown, TrendingUp } from 'lucide-react';
 import { CheckIn } from '@/contexts/UserDataContext';
-import { format, subDays, startOfDay, eachDayOfInterval, eachWeekOfInterval, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
+import { format, subDays, startOfDay, eachWeekOfInterval, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { severityColors, severityLabels } from '@/constants/severityColors';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 const INSIGHTS_UNLOCK_THRESHOLD = 30;
 
@@ -129,143 +128,63 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
     );
   }, [filteredCheckIns]);
 
-  // Severity trend chart data - compute independently for each time bucket
-  // CRITICAL: This must be computed from raw check-ins, NOT reused from symptomStats
-  const severityTrendData = useMemo(() => {
-    const now = startOfDay(new Date());
-    
-    // Determine date range and granularity based on tab
-    // Last 7 days = 7 daily buckets
-    // Last 30 days = 30 daily buckets
-    // All time = weekly buckets (Sunday-Saturday)
+  // Weekly average severity trend per symptom
+  const weeklySeverityTrend = useMemo(() => {
+    const now = new Date();
     let startDate: Date;
-    let rangeCheckIns: CheckIn[];
-    let granularity: 'daily' | 'weekly';
-    
-    if (timeRange === 'all') {
-      rangeCheckIns = checkIns;
-      granularity = 'weekly'; // All time ALWAYS uses weekly
-      if (checkIns.length === 0) {
-        return { data: [], granularity, symptoms: [], insufficientData: true };
-      }
+
+    if (timeRange === 'all' && checkIns.length > 0) {
       const oldest = checkIns.reduce((min, c) => {
         const d = new Date(c.timestamp);
         return d < min ? d : min;
       }, new Date());
-      startDate = startOfWeek(oldest, { weekStartsOn: 0 }); // Start from week boundary
+      startDate = startOfWeek(oldest, { weekStartsOn: 0 });
     } else {
-      granularity = 'daily';
       const daysBack = timeRange === '7' ? 6 : 29;
-      startDate = subDays(now, daysBack);
-      rangeCheckIns = checkIns.filter(c => {
-        const checkInDate = startOfDay(new Date(c.timestamp));
-        return checkInDate >= startDate && checkInDate <= now;
-      });
+      startDate = startOfWeek(subDays(now, daysBack), { weekStartsOn: 0 });
     }
 
-    // Get all symptoms with severity data in this range (sorted by frequency)
-    const symptomCounts: Record<string, number> = {};
-    rangeCheckIns.forEach(c => {
-      (c.symptomsExperienced || []).forEach(entry => {
-        if (entry.severity !== undefined && entry.severity >= 1 && entry.severity <= 3) {
-          symptomCounts[entry.symptom] = (symptomCounts[entry.symptom] || 0) + 1;
-        }
-      });
-    });
-    
-    const allSymptoms = Object.entries(symptomCounts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([symptom]) => symptom);
+    const weeks = eachWeekOfInterval({ start: startDate, end: now }, { weekStartsOn: 0 });
+    const recentWeeks = weeks.slice(-8);
 
-    if (allSymptoms.length === 0) {
-      return { data: [], granularity, symptoms: [], insufficientData: true };
-    }
+    return recentWeeks
+      .map((weekStart) => {
+        const weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 });
+        const weekCheckIns = filteredCheckIns.filter((c) => {
+          const d = new Date(c.timestamp);
+          return isWithinInterval(d, { start: weekStart, end: weekEnd });
+        });
 
-    // Build buckets based on granularity
-    let buckets: { start: Date; end: Date; label: string }[] = [];
-    
-    if (granularity === 'daily') {
-      // Create exactly 7 or 30 daily buckets
-      const days = eachDayOfInterval({ start: startDate, end: now });
-      buckets = days.map(day => ({
-        start: startOfDay(day),
-        end: new Date(startOfDay(day).getTime() + 24 * 60 * 60 * 1000 - 1),
-        label: format(day, 'MMM d')
-      }));
-    } else {
-      // Weekly buckets for "All time" - Sunday to Saturday
-      const weeks = eachWeekOfInterval({ start: startDate, end: now }, { weekStartsOn: 0 });
-      buckets = weeks.map(weekStart => ({
-        start: startOfWeek(weekStart, { weekStartsOn: 0 }),
-        end: endOfWeek(weekStart, { weekStartsOn: 0 }),
-        label: format(weekStart, 'MMM d')
-      }));
-    }
+        if (weekCheckIns.length === 0) return null;
 
-    // Calculate average severity per symptom per bucket
-    // Each bucket produces exactly ONE point per symptom (the average)
-    const data = buckets.map(bucket => {
-      const bucketCheckIns = rangeCheckIns.filter(c => {
-        const d = new Date(c.timestamp);
-        return isWithinInterval(d, { start: bucket.start, end: bucket.end });
-      });
+        // Calculate average severity per symptom this week
+        const symptomSeverities: Record<string, { sum: number; count: number }> = {};
 
-      const result: Record<string, number | null | string | Date> = { 
-        label: bucket.label,
-        date: bucket.start
-      };
-
-      // For each symptom, compute the AVERAGE severity in this bucket
-      allSymptoms.forEach(symptom => {
-        const severities: number[] = [];
-        bucketCheckIns.forEach(c => {
-          (c.symptomsExperienced || []).forEach(entry => {
-            if (entry.symptom === symptom && entry.severity !== undefined && entry.severity >= 1 && entry.severity <= 3) {
-              severities.push(entry.severity);
+        weekCheckIns.forEach((c) => {
+          const symptoms = c.symptomsExperienced || [];
+          symptoms.forEach((entry) => {
+            if (!symptomSeverities[entry.symptom]) {
+              symptomSeverities[entry.symptom] = { sum: 0, count: 0 };
             }
+            symptomSeverities[entry.symptom].sum += entry.severity || 2;
+            symptomSeverities[entry.symptom].count += 1;
           });
         });
 
-        if (severities.length > 0) {
-          // Average severity for this symptom in this bucket
-          result[symptom] = severities.reduce((a, b) => a + b, 0) / severities.length;
-        } else {
-          // No data for this symptom in this bucket - use null for gap
-          result[symptom] = null;
-        }
-      });
+        const avgSeverities: Record<string, number> = {};
+        Object.entries(symptomSeverities).forEach(([s, data]) => {
+          avgSeverities[s] = data.count > 0 ? data.sum / data.count : 0;
+        });
 
-      return result;
-    });
+        return {
+          weekLabel: format(weekStart, 'MMM d'),
+          avgSeverities,
+        };
+      })
+      .filter((w): w is NonNullable<typeof w> => Boolean(w));
+  }, [filteredCheckIns, checkIns, timeRange]);
 
-    // Count buckets that have ANY severity data (for insufficient data check)
-    let bucketsWithData = 0;
-    data.forEach(bucket => {
-      const hasAnyData = allSymptoms.some(s => bucket[s] !== null);
-      if (hasAnyData) bucketsWithData++;
-    });
 
-    if (bucketsWithData < 3) {
-      return { data: [], granularity, symptoms: allSymptoms, insufficientData: true };
-    }
-
-    return { data, granularity, symptoms: allSymptoms, insufficientData: false };
-  }, [checkIns, timeRange]);
-
-  // Get top 3 symptoms for default visibility
-  const top3Symptoms = useMemo(() => {
-    return severityTrendData.symptoms.slice(0, 3);
-  }, [severityTrendData.symptoms]);
-
-  // Reset hidden symptoms when time range changes, showing only top 3 by default
-  useEffect(() => {
-    if (severityTrendData.symptoms.length > 0) {
-      const toHide = new Set(severityTrendData.symptoms.filter(s => !top3Symptoms.includes(s)));
-      setHiddenSymptoms(toHide);
-    }
-  }, [timeRange, severityTrendData.symptoms, top3Symptoms]);
-
-  // Weekly trend for frequency chart (existing)
   const weeklyTrend = useMemo(() => {
     // Determine date range
     const now = new Date();
@@ -338,6 +257,23 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
   // Check if we have any symptom data
   const hasSymptomData = symptomStats.length > 0;
 
+  // Weekly trend chart rules:
+  // - Only show if we have at least 2 different weeks with data (weeks containing check-in days)
+  // - Each bar represents number of days symptom appeared that week
+  const hasEnoughDataForTrend = weeklyTrend.length >= 2 && chartSymptoms.length > 0;
+
+  // Max value for chart scaling
+  const maxCount = useMemo(() => {
+    if (weeklyTrend.length === 0) return 1;
+    let max = 1;
+    weeklyTrend.forEach(week => {
+      Object.values(week.counts).forEach(count => {
+        if (count > max) max = count;
+      });
+    });
+    return max;
+  }, [weeklyTrend]);
+
   // Colors for symptoms
   const symptomColors: Record<string, string> = {
     'Burning': 'bg-red-400',
@@ -348,52 +284,6 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
     'Swelling': 'bg-pink-400',
     'Redness': 'bg-rose-400',
     'Insomnia': 'bg-indigo-400',
-  };
-
-  // Stroke colors for recharts lines (hex values)
-  const symptomStrokeColors: Record<string, string> = {
-    'Burning': '#f87171',
-    'Itching': '#fb923c',
-    'Thermodysregulation': '#c084fc',
-    'Flaking': '#fbbf24',
-    'Oozing': '#eab308',
-    'Swelling': '#f472b6',
-    'Redness': '#fb7185',
-    'Insomnia': '#818cf8',
-  };
-
-  // Generate a consistent color for unknown symptoms
-  const getStrokeColor = (symptom: string) => {
-    if (symptomStrokeColors[symptom]) return symptomStrokeColors[symptom];
-    // Generate a consistent color based on symptom name hash
-    let hash = 0;
-    for (let i = 0; i < symptom.length; i++) {
-      hash = symptom.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const hue = Math.abs(hash) % 360;
-    return `hsl(${hue}, 60%, 55%)`;
-  };
-
-  // Custom Y-axis tick formatter
-  const severityTickFormatter = (value: number) => {
-    if (value === 1) return 'Mild';
-    if (value === 2) return 'Mod';
-    if (value === 3) return 'Sev';
-    return '';
-  };
-
-  // X-axis tick interval based on granularity and data length
-  const getXAxisInterval = () => {
-    const dataLength = severityTrendData.data.length;
-    if (timeRange === '7') return 0; // Show all 7 days
-    if (timeRange === '30') {
-      if (dataLength <= 10) return 0;
-      return Math.floor(dataLength / 6); // Show ~6 labels
-    }
-    // All time
-    if (dataLength <= 10) return 0;
-    if (dataLength <= 20) return 1;
-    return Math.floor(dataLength / 8);
   };
 
   return (
@@ -500,7 +390,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
               })}
             </div>
 
-            {/* Severity trend chart - gated behind 30 days threshold */}
+            {/* Weekly trend chart - gated behind 30 days threshold */}
             {!insightsUnlocked ? (
               /* Locked state - not enough data */
               <div className="pt-4 border-t border-border/50">
@@ -528,134 +418,258 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                   </Button>
                 </div>
               </div>
-            ) : (
+            ) : hasEnoughDataForTrend ? (
               <div className="pt-4 border-t border-border/50">
-                {/* Collapsible severity trends section */}
-                <Collapsible open={severityTrendOpen} onOpenChange={setSeverityTrendOpen}>
-                  <CollapsibleTrigger asChild>
-                    <button className="flex items-center justify-between w-full py-2 px-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-xs font-medium text-foreground">Severity trends</span>
-                      </div>
-                      <ChevronDown className={cn(
-                        'w-4 h-4 text-muted-foreground transition-transform duration-200',
-                        severityTrendOpen && 'rotate-180'
-                      )} />
-                    </button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-3">
-                    {severityTrendData.insufficientData ? (
-                      <div className="text-center py-4">
-                        <p className="text-sm text-muted-foreground">
-                          Not enough data yet. Log symptom severity on at least 3 days to see trends.
-                        </p>
-                      </div>
-                    ) : severityTrendData.data.length === 0 ? (
-                      <div className="text-center py-4">
-                        <p className="text-sm text-muted-foreground">
-                          No severity data available for this time range.
-                        </p>
-                      </div>
-                    ) : (
-                      <>
-                        {/* Legend - clickable chips */}
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {severityTrendData.symptoms.map(symptom => {
-                            const isHidden = hiddenSymptoms.has(symptom);
-                            return (
-                              <button
-                                key={symptom}
-                                onClick={() => toggleSymptomVisibility(symptom)}
-                                className={cn(
-                                  'relative flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-200 overflow-hidden max-w-[160px]',
-                                  isHidden 
-                                    ? 'opacity-40 bg-muted/30' 
-                                    : 'bg-muted/50 hover:bg-muted'
-                                )}
-                              >
-                                <div 
-                                  className="w-2.5 h-2.5 rounded-full flex-shrink-0 transition-opacity"
-                                  style={{ backgroundColor: getStrokeColor(symptom), opacity: isHidden ? 0.5 : 1 }}
-                                />
-                                <span className={cn(
-                                  'text-xs font-medium truncate',
-                                  isHidden ? 'text-muted-foreground/50 line-through' : 'text-muted-foreground'
-                                )}>
-                                  {symptom}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                        
-                        {/* Line chart */}
-                        <div className="h-48 w-full">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart
-                              data={severityTrendData.data}
-                              margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
-                            >
-                              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                              <XAxis 
-                                dataKey="label" 
-                                tick={{ fontSize: 10 }}
-                                interval={getXAxisInterval()}
-                                axisLine={{ strokeOpacity: 0.3 }}
-                                tickLine={{ strokeOpacity: 0.3 }}
-                              />
-                              <YAxis 
-                                domain={[1, 3]}
-                                ticks={[1, 2, 3]}
-                                tickFormatter={severityTickFormatter}
-                                tick={{ fontSize: 10 }}
-                                axisLine={{ strokeOpacity: 0.3 }}
-                                tickLine={{ strokeOpacity: 0.3 }}
-                                width={35}
-                              />
-                              <Tooltip 
-                                contentStyle={{ 
-                                  fontSize: 12, 
-                                  backgroundColor: 'hsl(var(--popover))',
-                                  border: '1px solid hsl(var(--border))',
-                                  borderRadius: '8px'
-                                }}
-                                labelStyle={{ fontWeight: 600, marginBottom: 4 }}
-                                formatter={(value: number | null, name: string) => {
-                                  if (value === null) return ['-', name];
-                                  const label = value <= 1.5 ? 'Mild' : value <= 2.5 ? 'Moderate' : 'Severe';
-                                  return [`${value.toFixed(1)} (${label})`, name];
-                                }}
-                              />
-                              {severityTrendData.symptoms.map(symptom => {
-                                if (hiddenSymptoms.has(symptom)) return null;
-                                return (
-                                  <Line
-                                    key={symptom}
-                                    type="monotone"
-                                    dataKey={symptom}
-                                    stroke={getStrokeColor(symptom)}
-                                    strokeWidth={2}
-                                    dot={{ r: 3, strokeWidth: 0, fill: getStrokeColor(symptom) }}
-                                    activeDot={{ r: 5 }}
-                                    connectNulls={false}
-                                  />
-                                );
-                              })}
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-                        
-                        <p className="text-[10px] text-muted-foreground/70 mt-2 text-center italic">
-                          {severityTrendData.granularity === 'daily' 
-                            ? 'Daily average severity per symptom (Mild=1, Mod=2, Severe=3)'
-                            : 'Weekly average severity per symptom (Mild=1, Mod=2, Severe=3)'
-                          }
-                        </p>
-                      </>
+                <p className="text-xs text-muted-foreground mb-3 font-medium">Days symptom reported</p>
+                
+                {/* Legend - tap to toggle */}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {chartSymptoms.map(symptom => {
+                    const isHidden = hiddenSymptoms.has(symptom);
+                    return (
+                      <button
+                        key={symptom}
+                        onClick={() => toggleSymptomVisibility(symptom)}
+                        className={cn(
+                          'flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-200',
+                          isHidden 
+                            ? 'opacity-40 bg-muted/30' 
+                            : 'bg-muted/50 hover:bg-muted'
+                        )}
+                      >
+                        <div className={cn(
+                          'w-2.5 h-2.5 rounded-full transition-opacity',
+                          symptomColors[symptom] || 'bg-gray-400',
+                          isHidden && 'opacity-50'
+                        )} />
+                        <span className={cn(
+                          'text-xs font-medium',
+                          isHidden ? 'text-muted-foreground/50 line-through' : 'text-muted-foreground'
+                        )}>
+                          {symptom}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                {/* Chart with Y-axis */}
+                <div className="flex">
+                  {/* Y-axis */}
+                  <div className="flex flex-col justify-between h-20 pr-2 text-right">
+                    <span className="text-[9px] text-muted-foreground leading-none">{maxCount}</span>
+                    {maxCount > 1 && (
+                      <span className="text-[9px] text-muted-foreground leading-none">{Math.round(maxCount / 2)}</span>
                     )}
-                  </CollapsibleContent>
-                </Collapsible>
+                    <span className="text-[9px] text-muted-foreground leading-none">0</span>
+                  </div>
+                  
+                  {/* Chart area */}
+                  <div className="flex-1 relative">
+                    {/* Horizontal grid lines */}
+                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                      <div className="border-t border-border/30" />
+                      {maxCount > 1 && <div className="border-t border-border/20" />}
+                      <div className="border-t border-border/30" />
+                    </div>
+                    
+                    {/* Bars */}
+                    <div className="flex items-end gap-1 h-20 relative z-10">
+                      {weeklyTrend.map((week) => (
+                        <div key={week.weekLabel} className="flex-1 flex flex-col items-center gap-0.5">
+                          {/* Stacked bars for each symptom */}
+                          <div className="w-full flex flex-col-reverse gap-0.5 h-16">
+                            {chartSymptoms.map(symptom => {
+                              const count = week.counts[symptom] || 0;
+                              const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                              const isHidden = hiddenSymptoms.has(symptom);
+                              
+                              return (
+                                <div
+                                  key={symptom}
+                                  className={cn(
+                                    'w-full rounded-sm transition-all duration-300',
+                                    symptomColors[symptom] || 'bg-gray-400',
+                                    (count === 0 || isHidden) && 'opacity-0'
+                                  )}
+                                  style={{ 
+                                    height: isHidden ? '0%' : `${height}%`,
+                                    minHeight: count > 0 && !isHidden ? '4px' : '0px',
+                                  }}
+                                  title={`${symptom}: ${count} day${count !== 1 ? 's' : ''}`}
+                                />
+                              );
+                            })}
+                          </div>
+                          <span className="text-[9px] text-muted-foreground mt-1 truncate w-full text-center">
+                            {week.weekLabel}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Helper text */}
+                <p className="text-[10px] text-muted-foreground/70 mt-3 text-center italic">
+                  Counts reflect how many days a symptom was reported on days you logged a check-in.
+                </p>
+
+                {/* Collapsible severity trends section */}
+                {weeklySeverityTrend.length >= 2 && (
+                  <Collapsible open={severityTrendOpen} onOpenChange={setSeverityTrendOpen} className="mt-4">
+                    <CollapsibleTrigger asChild>
+                      <button className="flex items-center justify-between w-full py-2 px-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-xs font-medium text-foreground">Severity trends</span>
+                        </div>
+                        <ChevronDown className={cn(
+                          'w-4 h-4 text-muted-foreground transition-transform duration-200',
+                          severityTrendOpen && 'rotate-180'
+                        )} />
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-3">
+                      {/* Legend */}
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {chartSymptoms.map(symptom => {
+                          const isHidden = hiddenSymptoms.has(symptom);
+                          return (
+                            <button
+                              key={symptom}
+                              onClick={() => toggleSymptomVisibility(symptom)}
+                              className={cn(
+                                'flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-200',
+                                isHidden 
+                                  ? 'opacity-40 bg-muted/30' 
+                                  : 'bg-muted/50 hover:bg-muted'
+                              )}
+                            >
+                              <div className={cn(
+                                'w-2.5 h-2.5 rounded-full transition-opacity',
+                                symptomColors[symptom] || 'bg-gray-400',
+                                isHidden && 'opacity-50'
+                              )} />
+                              <span className={cn(
+                                'text-xs font-medium',
+                                isHidden ? 'text-muted-foreground/50 line-through' : 'text-muted-foreground'
+                              )}>
+                                {symptom}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Severity line chart */}
+                      <div className="flex">
+                        {/* Y-axis */}
+                        <div className="flex flex-col justify-between h-32 pr-2 text-right">
+                          <span className="text-[10px] text-muted-foreground leading-none">Severe</span>
+                          <span className="text-[10px] text-muted-foreground leading-none">Moderate</span>
+                          <span className="text-[10px] text-muted-foreground leading-none">Mild</span>
+                        </div>
+                        
+                        {/* Chart area */}
+                        <div className="flex-1 relative">
+                          {/* Horizontal grid lines */}
+                          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                            <div className="border-t border-red-300/30" />
+                            <div className="border-t border-orange-300/30" />
+                            <div className="border-t border-amber-300/30" />
+                          </div>
+                          
+                          {/* SVG lines for trends */}
+                          <svg 
+                            className="w-full h-32 relative z-10"
+                            preserveAspectRatio="none"
+                            viewBox={`0 -10 ${weeklySeverityTrend.length * 100} 120`}
+                          >
+                            {chartSymptoms.map(symptom => {
+                              const isHidden = hiddenSymptoms.has(symptom);
+                              if (isHidden) return null;
+                              
+                              const points = weeklySeverityTrend
+                                .map((week, i) => {
+                                  const sev = week.avgSeverities[symptom];
+                                  if (!sev) return null;
+                                  // Map severity 1-3 to y-position (3=top=5, 1=bottom=95) with padding
+                                  const y = 5 + ((3 - sev) / 2) * 90;
+                                  const x = i * 100 + 50;
+                                  return { x, y, sev };
+                                })
+                                .filter((p): p is { x: number; y: number; sev: number } => p !== null);
+                              
+                              if (points.length < 2) return null;
+                              
+                              const pathD = points
+                                .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
+                                .join(' ');
+                              
+                              const colorMap: Record<string, string> = {
+                                'Burning': '#f87171',
+                                'Itching': '#fb923c',
+                                'Thermodysregulation': '#a855f7',
+                                'Flaking': '#fbbf24',
+                                'Oozing': '#eab308',
+                                'Swelling': '#f472b6',
+                                'Redness': '#fb7185',
+                                'Insomnia': '#818cf8',
+                              };
+                              
+                              return (
+                                <g key={symptom}>
+                                  <path
+                                    d={pathD}
+                                    fill="none"
+                                    stroke={colorMap[symptom] || '#9ca3af'}
+                                    strokeWidth="2.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="transition-opacity duration-300"
+                                  />
+                                  {points.map((p, i) => (
+                                    <circle
+                                      key={i}
+                                      cx={p.x}
+                                      cy={p.y}
+                                      r="4"
+                                      fill={colorMap[symptom] || '#9ca3af'}
+                                      className="transition-opacity duration-300"
+                                    />
+                                  ))}
+                                </g>
+                              );
+                            })}
+                          </svg>
+                          
+                          {/* X-axis labels */}
+                          <div className="flex">
+                            {weeklySeverityTrend.map((week) => (
+                              <div key={week.weekLabel} className="flex-1 text-center">
+                                <span className="text-[9px] text-muted-foreground truncate">
+                                  {week.weekLabel}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <p className="text-[10px] text-muted-foreground/70 mt-2 text-center italic">
+                        Average severity per symptom each week (Mild=1, Mod=2, Severe=3)
+                      </p>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+              </div>
+            ) : (
+              /* Not enough data for trend */
+              <div className="pt-4 border-t border-border/50">
+                <p className="text-xs text-muted-foreground text-center py-2">
+                  Not enough data yet to show weekly trends.
+                </p>
               </div>
             )}
           </>
