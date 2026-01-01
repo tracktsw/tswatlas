@@ -444,19 +444,19 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                             key={symptom}
                             onClick={() => toggleSymptomVisibility(symptom)}
                             className={cn(
-                              'flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-200',
+                              'relative flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-200 overflow-hidden max-w-[160px]',
                               isHidden 
                                 ? 'opacity-40 bg-muted/30' 
                                 : 'bg-muted/50 hover:bg-muted'
                             )}
                           >
                             <div className={cn(
-                              'w-2.5 h-2.5 rounded-full transition-opacity',
+                              'w-2.5 h-2.5 rounded-full flex-shrink-0 transition-opacity',
                               symptomColors[symptom] || 'bg-gray-400',
                               isHidden && 'opacity-50'
                             )} />
                             <span className={cn(
-                              'text-xs font-medium',
+                              'text-xs font-medium truncate',
                               isHidden ? 'text-muted-foreground/50 line-through' : 'text-muted-foreground'
                             )}>
                               {symptom}
