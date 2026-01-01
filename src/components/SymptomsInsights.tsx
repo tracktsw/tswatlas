@@ -485,43 +485,12 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                             <div className="border-t border-amber-300/30" />
                           </div>
                           
-                          {/* SVG lines for trends with gradients */}
+                          {/* SVG lines for trends */}
                           <svg 
                             className="w-full h-32 relative z-10"
                             preserveAspectRatio="none"
                             viewBox={`0 -10 ${weeklySeverityTrend.length * 100} 120`}
                           >
-                            {/* Gradient definitions */}
-                            <defs>
-                              {chartSymptoms.map(symptom => {
-                                const colorMap: Record<string, string> = {
-                                  'Burning': '#f87171',
-                                  'Itching': '#fb923c',
-                                  'Thermodysregulation': '#a855f7',
-                                  'Flaking': '#fbbf24',
-                                  'Oozing': '#eab308',
-                                  'Swelling': '#f472b6',
-                                  'Redness': '#fb7185',
-                                  'Insomnia': '#818cf8',
-                                };
-                                const color = colorMap[symptom] || '#9ca3af';
-                                return (
-                                  <linearGradient key={`grad-${symptom}`} id={`gradient-${symptom.replace(/\s/g, '')}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                                    <stop offset="0%" stopColor={color} stopOpacity="0.4" />
-                                    <stop offset="100%" stopColor={color} stopOpacity="0.05" />
-                                  </linearGradient>
-                                );
-                              })}
-                              {/* Glow filter */}
-                              <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                                <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-                                <feMerge>
-                                  <feMergeNode in="coloredBlur"/>
-                                  <feMergeNode in="SourceGraphic"/>
-                                </feMerge>
-                              </filter>
-                            </defs>
-                            
                             {chartSymptoms.map(symptom => {
                               const isHidden = hiddenSymptoms.has(symptom);
                               if (isHidden) return null;
@@ -539,23 +508,9 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                               
                               if (points.length < 2) return null;
                               
-                              // Create smooth curved path using cubic bezier
-                              const createSmoothPath = (pts: typeof points) => {
-                                if (pts.length < 2) return '';
-                                let path = `M ${pts[0].x} ${pts[0].y}`;
-                                for (let i = 0; i < pts.length - 1; i++) {
-                                  const p0 = pts[i];
-                                  const p1 = pts[i + 1];
-                                  const midX = (p0.x + p1.x) / 2;
-                                  path += ` C ${midX} ${p0.y}, ${midX} ${p1.y}, ${p1.x} ${p1.y}`;
-                                }
-                                return path;
-                              };
-                              
-                              const pathD = createSmoothPath(points);
-                              
-                              // Create closed area path for gradient fill
-                              const areaPath = pathD + ` L ${points[points.length - 1].x} 100 L ${points[0].x} 100 Z`;
+                              const pathD = points
+                                .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
+                                .join(' ');
                               
                               const colorMap: Record<string, string> = {
                                 'Burning': '#f87171',
@@ -569,14 +524,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                               };
                               
                               return (
-                                <g key={symptom} className="animate-fade-in" style={{ animationDuration: '0.5s' }}>
-                                  {/* Gradient fill area */}
-                                  <path
-                                    d={areaPath}
-                                    fill={`url(#gradient-${symptom.replace(/\s/g, '')})`}
-                                    className="transition-all duration-500"
-                                  />
-                                  {/* Main line with glow */}
+                                <g key={symptom}>
                                   <path
                                     d={pathD}
                                     fill="none"
@@ -584,46 +532,17 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                                     strokeWidth="2.5"
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
-                                    filter="url(#glow)"
-                                    className="transition-all duration-500"
-                                    style={{
-                                      strokeDasharray: '1000',
-                                      strokeDashoffset: '0',
-                                      animation: 'drawLine 1s ease-out forwards',
-                                    }}
+                                    className="transition-opacity duration-300"
                                   />
-                                  {/* Data points with pulse effect */}
                                   {points.map((p, i) => (
-                                    <g key={i}>
-                                      {/* Outer glow ring */}
-                                      <circle
-                                        cx={p.x}
-                                        cy={p.y}
-                                        r="6"
-                                        fill={colorMap[symptom] || '#9ca3af'}
-                                        opacity="0.2"
-                                        className="transition-all duration-300"
-                                      />
-                                      {/* Inner point */}
-                                      <circle
-                                        cx={p.x}
-                                        cy={p.y}
-                                        r="4"
-                                        fill={colorMap[symptom] || '#9ca3af'}
-                                        className="transition-all duration-300"
-                                        style={{
-                                          animation: `scaleIn 0.3s ease-out ${0.1 * i}s both`,
-                                        }}
-                                      />
-                                      {/* White center dot */}
-                                      <circle
-                                        cx={p.x}
-                                        cy={p.y}
-                                        r="1.5"
-                                        fill="white"
-                                        opacity="0.8"
-                                      />
-                                    </g>
+                                    <circle
+                                      key={i}
+                                      cx={p.x}
+                                      cy={p.y}
+                                      r="4"
+                                      fill={colorMap[symptom] || '#9ca3af'}
+                                      className="transition-opacity duration-300"
+                                    />
                                   ))}
                                 </g>
                               );
