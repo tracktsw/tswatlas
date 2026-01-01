@@ -1,4 +1,4 @@
-import { Flame, TrendingUp, TrendingDown, Activity, BookOpen } from 'lucide-react';
+import { Flame, TrendingUp, TrendingDown, Activity, BookOpen, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFlareState, getFlareStateLabel, getConfidenceLabel } from '@/hooks/useFlareState';
 import { FlareState, BaselineConfidence } from '@/utils/flareStateEngine';
@@ -18,33 +18,40 @@ const stateConfig: Record<FlareState, {
     ringColor: 'ring-primary/30',
     description: 'Your symptoms are at baseline',
   },
-  pre_flare: {
-    icon: Activity,
+  unstable: {
+    icon: AlertTriangle,
     gradient: 'bg-gradient-to-br from-yellow-500/20 to-amber-100',
     iconColor: 'text-yellow-600',
     ringColor: 'ring-yellow-500/30',
-    description: 'Symptoms are rising',
+    description: 'Single-day spike — monitoring trends',
+  },
+  early_flare: {
+    icon: Activity,
+    gradient: 'bg-gradient-to-br from-orange-400/20 to-amber-100',
+    iconColor: 'text-orange-500',
+    ringColor: 'ring-orange-400/30',
+    description: 'Worsening trend detected (2 days)',
   },
   active_flare: {
     icon: Flame,
     gradient: 'bg-gradient-to-br from-orange-500/20 to-amber-100',
     iconColor: 'text-orange-600',
     ringColor: 'ring-orange-500/30',
-    description: 'Active flare detected',
+    description: 'Active flare — sustained worsening',
   },
   peak_flare: {
     icon: Flame,
     gradient: 'bg-gradient-to-br from-red-500/20 to-coral-light',
     iconColor: 'text-red-600',
     ringColor: 'ring-red-500/30',
-    description: 'Peak flare activity',
+    description: 'Peak flare — severe symptoms persisting',
   },
-  resolving_flare: {
+  recovering: {
     icon: TrendingDown,
     gradient: 'bg-gradient-to-br from-blue-500/20 to-sky-100',
     iconColor: 'text-blue-600',
     ringColor: 'ring-blue-500/30',
-    description: 'Flare is resolving',
+    description: 'Improving after flare',
   },
 };
 
@@ -59,7 +66,8 @@ export function FlareStatusBadge({ className }: FlareStatusBadgeProps) {
     currentFlareDuration, 
     isLoading, 
     dailyBurdens,
-    baselineConfidence 
+    baselineConfidence,
+    dailyFlareStates,
   } = useFlareState();
   
   // Need at least some data to show anything
@@ -99,6 +107,11 @@ export function FlareStatusBadge({ className }: FlareStatusBadgeProps) {
   const label = getFlareStateLabel(currentState);
   const confidenceLabel = getConfidenceLabel(baselineConfidence);
   
+  // Get explanation from most recent day if available
+  const latestExplanation = dailyFlareStates.length > 0 
+    ? dailyFlareStates[dailyFlareStates.length - 1].explanation 
+    : undefined;
+  
   return (
     <div 
       className={cn(
@@ -118,7 +131,7 @@ export function FlareStatusBadge({ className }: FlareStatusBadgeProps) {
         )}>
           <Icon className={cn('w-7 h-7', config.iconColor)} />
         </div>
-        <div>
+        <div className="flex-1">
           <div className="flex items-center gap-2">
             <p className="font-display font-bold text-lg text-foreground">
               {label}
@@ -139,6 +152,12 @@ export function FlareStatusBadge({ className }: FlareStatusBadgeProps) {
           </p>
         </div>
       </div>
+      {/* Tooltip explanation for flares */}
+      {(currentState === 'early_flare' || currentState === 'active_flare' || currentState === 'peak_flare') && (
+        <p className="mt-3 text-xs text-muted-foreground/80 italic border-t border-border/50 pt-3">
+          A flare is detected based on sustained symptom worsening over multiple days — not a single bad day.
+        </p>
+      )}
     </div>
   );
 }

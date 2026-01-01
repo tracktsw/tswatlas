@@ -1,25 +1,66 @@
 /**
- * Flare State Engine (Simplified Edition)
+ * Flare State Engine (Multi-Day Trend-Based System)
  * 
- * Algorithm:
- * - dailySeverity = average symptom severity for each day
- * - rollingBaseline = average dailySeverity over previous 14 days
- * - Flare starts when dailySeverity >= baseline + 0.5 for ≥3 consecutive days
- * - Peak flare day = day with highest dailySeverity within that flare window
+ * Key principles:
+ * - Flares CANNOT be triggered by a single day
+ * - Requires ≥2 consecutive days of worsening in ≥2 metrics
+ * - Peak flare requires ALL strict criteria for ≥3 days
+ * - States: stable, unstable, early_flare, active_flare, recovering, peak_flare
  */
 
 export type FlareState = 
   | 'stable' 
-  | 'pre_flare' 
-  | 'active_flare' 
-  | 'peak_flare' 
-  | 'resolving_flare';
+  | 'unstable'      // 1-day spike only
+  | 'early_flare'   // worsening for 2 days
+  | 'active_flare'  // worsening for ≥3 days
+  | 'peak_flare'    // all strict criteria met for ≥3 days
+  | 'recovering';   // improving after flare
 
 export type BaselineConfidence = 'early' | 'provisional' | 'mature';
 
+// Severity mapping: Mild=1, Moderate=2, Severe=3
+const SEVERITY_MAP = { mild: 1, moderate: 2, severe: 3 } as const;
+
+// Pain tiers: 1-2 = tier 1, 3-4 = tier 2, 5-6 = tier 3, 7+ = tier 4
+function getPainTier(pain: number): number {
+  if (pain <= 2) return 1;
+  if (pain <= 4) return 2;
+  if (pain <= 6) return 3;
+  return 4;
+}
+
+// Skin state tiers: 0-1 = green, 2 = yellow, 3-4 = orange, 5 = red
+function getSkinTier(skinIntensity: number): number {
+  if (skinIntensity <= 1) return 1; // green
+  if (skinIntensity === 2) return 2; // yellow
+  if (skinIntensity <= 4) return 3; // orange
+  return 4; // red
+}
+
+// Sleep/Mood tiers (1-5 scale, higher = worse for this calculation)
+function getWellnessTier(score: number): number {
+  // Score is 1-5 where 5 is best, so invert for "worseness"
+  if (score >= 4) return 1; // good
+  if (score === 3) return 2; // neutral
+  if (score === 2) return 3; // poor
+  return 4; // very poor
+}
+
+export interface DailyMetrics {
+  date: string;
+  avgSymptomSeverity: number;     // average of symptom severities (1-3 scale)
+  skinTier: number;               // 1-4 (green to red)
+  painTier: number;               // 1-4
+  sleepTier: number;              // 1-4 (inverted, higher = worse)
+  moodTier: number;               // 1-4 (inverted, higher = worse)
+  rawPain: number;                // 1-10 scale
+  rawSkinIntensity: number;       // 0-5 scale
+  severeSymptomCount: number;     // count of symptoms marked severe
+}
+
 export interface DailyBurden {
   date: string;
-  score: number; // dailySeverity = average symptom severity
+  score: number;
   skinIntensity: number;
   symptomScore: number;
 }
@@ -37,9 +78,10 @@ export interface FlareEpisode {
 export interface DailyFlareState {
   date: string;
   burdenScore: number;
-  rollingAverage3: number | null; // kept for compatibility, but we use 14-day baseline now
+  rollingAverage3: number | null;
   flareState: FlareState;
   isInFlareEpisode: boolean;
+  explanation?: string;
 }
 
 export interface FlareAnalysis {
@@ -60,37 +102,176 @@ interface CheckInData {
   skinIntensity?: number;
   skinFeeling: number;
   symptomsExperienced?: Array<{ name: string; severity: number }>;
+  pain_score?: number;
+  sleep_score?: number;
+  mood?: number;
 }
 
 /**
- * Calculate daily severity from a check-in
- * dailySeverity = average of all symptom severities (0-3 scale each)
+ * Calculate daily metrics from check-ins for a single day
  */
-function calculateDailySeverity(checkIn: CheckInData): number {
-  const symptoms = checkIn.symptomsExperienced ?? [];
+function calculateDailyMetrics(dayCheckIns: CheckInData[]): DailyMetrics {
+  let totalSymptomSeverity = 0;
+  let symptomCount = 0;
+  let maxSkinIntensity = 0;
+  let maxPain = 0;
+  let avgSleep = 3; // default neutral
+  let avgMood = 3; // default neutral
+  let severeSymptomCount = 0;
   
-  if (symptoms.length === 0) {
-    // Fall back to skin intensity/feeling if no symptoms
+  let sleepSum = 0;
+  let sleepCount = 0;
+  let moodSum = 0;
+  let moodCount = 0;
+  
+  for (const checkIn of dayCheckIns) {
+    // Skin intensity
     const skinIntensity = checkIn.skinIntensity ?? (5 - checkIn.skinFeeling);
-    return skinIntensity; // 0-5 scale
+    maxSkinIntensity = Math.max(maxSkinIntensity, skinIntensity);
+    
+    // Pain
+    const pain = checkIn.pain_score ?? 0;
+    maxPain = Math.max(maxPain, pain);
+    
+    // Sleep (1-5, higher = better)
+    if (checkIn.sleep_score !== undefined && checkIn.sleep_score !== null) {
+      sleepSum += checkIn.sleep_score;
+      sleepCount++;
+    }
+    
+    // Mood (1-5, higher = better)
+    if (checkIn.mood !== undefined && checkIn.mood !== null) {
+      moodSum += checkIn.mood;
+      moodCount++;
+    }
+    
+    // Symptoms
+    const symptoms = checkIn.symptomsExperienced ?? [];
+    for (const symptom of symptoms) {
+      // severity: 1=mild, 2=moderate, 3=severe
+      totalSymptomSeverity += symptom.severity;
+      symptomCount++;
+      if (symptom.severity === 3) {
+        severeSymptomCount++;
+      }
+    }
   }
   
-  // Average severity of all symptoms (each symptom is 0-3)
-  const totalSeverity = symptoms.reduce((sum, s) => sum + s.severity, 0);
-  const avgSeverity = totalSeverity / symptoms.length;
+  const avgSymptomSeverity = symptomCount > 0 ? totalSymptomSeverity / symptomCount : 0;
+  avgSleep = sleepCount > 0 ? sleepSum / sleepCount : 3;
+  avgMood = moodCount > 0 ? moodSum / moodCount : 3;
   
-  // Include skin intensity in the average for a more complete picture
-  const skinIntensity = checkIn.skinIntensity ?? (5 - checkIn.skinFeeling);
-  // Normalize skin intensity (0-5) to same scale as symptoms (0-3)
-  const normalizedSkin = (skinIntensity / 5) * 3;
-  
-  return (avgSeverity + normalizedSkin) / 2;
+  return {
+    date: dayCheckIns[0].created_at.split('T')[0],
+    avgSymptomSeverity,
+    skinTier: getSkinTier(maxSkinIntensity),
+    painTier: getPainTier(maxPain),
+    sleepTier: getWellnessTier(avgSleep),
+    moodTier: getWellnessTier(avgMood),
+    rawPain: maxPain,
+    rawSkinIntensity: maxSkinIntensity,
+    severeSymptomCount,
+  };
 }
 
 /**
- * Group check-ins by date and calculate daily severity scores
+ * Calculate 7-day baseline for each metric
  */
-export function calculateDailyBurdens(checkIns: CheckInData[]): DailyBurden[] {
+interface BaselineMetrics {
+  avgSymptomSeverity: number;
+  skinTier: number;
+  painTier: number;
+  sleepTier: number;
+  moodTier: number;
+}
+
+function calculate7DayBaseline(
+  allMetrics: DailyMetrics[],
+  currentIndex: number
+): BaselineMetrics | null {
+  if (currentIndex < 1) return null;
+  
+  const currentDate = new Date(allMetrics[currentIndex].date);
+  const sevenDaysAgo = new Date(currentDate);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
+  const windowMetrics: DailyMetrics[] = [];
+  for (let i = 0; i < currentIndex; i++) {
+    const d = new Date(allMetrics[i].date);
+    if (d >= sevenDaysAgo && d < currentDate) {
+      windowMetrics.push(allMetrics[i]);
+    }
+  }
+  
+  if (windowMetrics.length === 0) return null;
+  
+  const n = windowMetrics.length;
+  return {
+    avgSymptomSeverity: windowMetrics.reduce((s, m) => s + m.avgSymptomSeverity, 0) / n,
+    skinTier: windowMetrics.reduce((s, m) => s + m.skinTier, 0) / n,
+    painTier: windowMetrics.reduce((s, m) => s + m.painTier, 0) / n,
+    sleepTier: windowMetrics.reduce((s, m) => s + m.sleepTier, 0) / n,
+    moodTier: windowMetrics.reduce((s, m) => s + m.moodTier, 0) / n,
+  };
+}
+
+/**
+ * Count how many metrics worsened compared to baseline
+ * Returns count of worsening metrics (0-5)
+ */
+function countWorseningMetrics(
+  current: DailyMetrics,
+  baseline: BaselineMetrics
+): number {
+  let count = 0;
+  
+  // Average symptom severity increases by ≥1 level
+  if (current.avgSymptomSeverity >= baseline.avgSymptomSeverity + 1) {
+    count++;
+  }
+  
+  // Skin state worsens (tier increases)
+  if (current.skinTier > baseline.skinTier) {
+    count++;
+  }
+  
+  // Pain category increases
+  if (current.painTier > baseline.painTier) {
+    count++;
+  }
+  
+  // Sleep worsens by ≥1 tier
+  if (current.sleepTier > baseline.sleepTier) {
+    count++;
+  }
+  
+  // Mood worsens by ≥1 tier
+  if (current.moodTier > baseline.moodTier) {
+    count++;
+  }
+  
+  return count;
+}
+
+/**
+ * Check if a day meets STRICT peak flare criteria
+ * ALL must be true:
+ * - Pain ≥7
+ * - Skin state = red (tier 4)
+ * - ≥2 symptoms marked Severe
+ */
+function meetsPeakFlareCriteria(metrics: DailyMetrics): boolean {
+  return (
+    metrics.rawPain >= 7 &&
+    metrics.skinTier === 4 && // red
+    metrics.severeSymptomCount >= 2
+  );
+}
+
+/**
+ * Group check-ins by date and calculate all daily metrics
+ */
+function calculateAllDailyMetrics(checkIns: CheckInData[]): DailyMetrics[] {
   const byDate = new Map<string, CheckInData[]>();
   
   for (const checkIn of checkIns) {
@@ -101,65 +282,16 @@ export function calculateDailyBurdens(checkIns: CheckInData[]): DailyBurden[] {
     byDate.get(date)!.push(checkIn);
   }
   
-  const dailyBurdens: DailyBurden[] = [];
-  
-  for (const [date, dayCheckIns] of byDate) {
-    // Average severity across all check-ins for the day
-    let totalSeverity = 0;
-    let maxSkinIntensity = 0;
-    let maxSymptomScore = 0;
-    
-    for (const checkIn of dayCheckIns) {
-      totalSeverity += calculateDailySeverity(checkIn);
-      
-      const skinIntensity = checkIn.skinIntensity ?? (5 - checkIn.skinFeeling);
-      maxSkinIntensity = Math.max(maxSkinIntensity, skinIntensity);
-      
-      const symptoms = checkIn.symptomsExperienced ?? [];
-      const symptomTotal = symptoms.reduce((sum, s) => sum + s.severity, 0);
-      maxSymptomScore = Math.max(maxSymptomScore, symptomTotal);
-    }
-    
-    const avgSeverity = totalSeverity / dayCheckIns.length;
-    
-    dailyBurdens.push({
-      date,
-      score: avgSeverity, // This is now the dailySeverity
-      skinIntensity: maxSkinIntensity,
-      symptomScore: maxSymptomScore,
-    });
+  const metrics: DailyMetrics[] = [];
+  for (const [, dayCheckIns] of byDate) {
+    metrics.push(calculateDailyMetrics(dayCheckIns));
   }
   
-  return dailyBurdens.sort((a, b) => a.date.localeCompare(b.date));
+  return metrics.sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /**
- * Calculate 14-day rolling baseline for a given day index
- * Returns the average dailySeverity over the previous 14 days (excluding current day)
- */
-function calculate14DayBaseline(dailyBurdens: DailyBurden[], currentIndex: number): number | null {
-  if (currentIndex < 1) return null;
-  
-  const currentDate = new Date(dailyBurdens[currentIndex].date);
-  const fourteenDaysAgo = new Date(currentDate);
-  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-  
-  // Get all days in the 14-day window before current day
-  const windowScores: number[] = [];
-  for (let i = 0; i < currentIndex; i++) {
-    const d = new Date(dailyBurdens[i].date);
-    if (d >= fourteenDaysAgo && d < currentDate) {
-      windowScores.push(dailyBurdens[i].score);
-    }
-  }
-  
-  if (windowScores.length === 0) return null;
-  
-  return windowScores.reduce((a, b) => a + b, 0) / windowScores.length;
-}
-
-/**
- * Determine baseline confidence level based on check-in count
+ * Determine baseline confidence
  */
 export function getBaselineConfidence(checkInCount: number): BaselineConfidence {
   if (checkInCount < 7) return 'early';
@@ -168,118 +300,256 @@ export function getBaselineConfidence(checkInCount: number): BaselineConfidence 
 }
 
 /**
- * Calculate overall baseline (for display purposes)
+ * Main flare detection algorithm
  */
-export function calculateBaselineBurdenScore(
-  dailyBurdens: DailyBurden[],
-  confidence: BaselineConfidence
-): number | null {
-  if (dailyBurdens.length === 0) return null;
-  if (confidence === 'early') return null;
-  
-  // Use average of all scores as the overall baseline
-  const sum = dailyBurdens.reduce((a, b) => a + b.score, 0);
-  return sum / dailyBurdens.length;
-}
-
-/**
- * Calculate flare threshold (baseline + 0.5)
- */
-export function calculateFlareThreshold(
-  baseline: number | null,
-  confidence: BaselineConfidence
-): number | null {
-  if (baseline === null || confidence === 'early') {
-    return null;
-  }
-  return baseline + 0.5;
-}
-
-/**
- * Detect flare episodes
- * A flare starts when dailySeverity >= baseline + 0.5 for ≥3 consecutive days
- */
-export function detectFlareEpisodes(
-  dailyBurdens: DailyBurden[],
-  flareThreshold: number,
-  confidence: BaselineConfidence
-): FlareEpisode[] {
-  if (dailyBurdens.length < 3 || confidence === 'early') {
-    return [];
+export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
+  if (checkIns.length === 0) {
+    return createEmptyAnalysis();
   }
   
-  const episodes: FlareEpisode[] = [];
-  let consecutiveAbove: number[] = []; // indices of consecutive days above threshold
+  const allMetrics = calculateAllDailyMetrics(checkIns);
+  const confidence = getBaselineConfidence(checkIns.length);
   
-  for (let i = 0; i < dailyBurdens.length; i++) {
-    const baseline = calculate14DayBaseline(dailyBurdens, i);
-    const threshold = baseline !== null ? baseline + 0.5 : flareThreshold;
+  // Build daily flare states with the new multi-day logic
+  const dailyFlareStates: DailyFlareState[] = [];
+  const flareEpisodes: FlareEpisode[] = [];
+  
+  // Track consecutive worsening days
+  let consecutiveWorseningDays = 0;
+  let consecutivePeakDays = 0;
+  let currentFlareStartIdx: number | null = null;
+  let peakIdx: number | null = null;
+  let peakScore = 0;
+  
+  for (let i = 0; i < allMetrics.length; i++) {
+    const metrics = allMetrics[i];
+    const baseline = calculate7DayBaseline(allMetrics, i);
     
-    const isAboveThreshold = dailyBurdens[i].score >= threshold;
+    let flareState: FlareState = 'stable';
+    let isInFlareEpisode = false;
+    let explanation: string | undefined;
     
-    if (isAboveThreshold) {
-      consecutiveAbove.push(i);
+    // Calculate burden score for compatibility
+    const burdenScore = metrics.avgSymptomSeverity + (metrics.rawSkinIntensity / 5) * 3;
+    
+    if (confidence === 'early' || baseline === null) {
+      // Not enough data - default to stable
+      flareState = 'stable';
+      explanation = 'Not enough data to detect trends yet.';
     } else {
-      // Check if we had a valid flare (≥3 consecutive days)
-      if (consecutiveAbove.length >= 3) {
-        const startIdx = consecutiveAbove[0];
-        const endIdx = consecutiveAbove[consecutiveAbove.length - 1];
+      const worseningCount = countWorseningMetrics(metrics, baseline);
+      const isWorsening = worseningCount >= 2; // At least 2 metrics worsening
+      const meetsPeak = meetsPeakFlareCriteria(metrics);
+      
+      if (isWorsening) {
+        consecutiveWorseningDays++;
         
-        // Find peak day
-        let peakIdx = startIdx;
-        let peakScore = dailyBurdens[startIdx].score;
-        for (const idx of consecutiveAbove) {
-          if (dailyBurdens[idx].score > peakScore) {
-            peakScore = dailyBurdens[idx].score;
-            peakIdx = idx;
+        if (meetsPeak) {
+          consecutivePeakDays++;
+        } else {
+          consecutivePeakDays = 0;
+        }
+        
+        if (consecutiveWorseningDays === 1) {
+          // Just 1 day - unstable (single-day spike)
+          flareState = 'unstable';
+          explanation = 'Single-day symptom change detected. Monitoring for trends.';
+        } else if (consecutiveWorseningDays === 2) {
+          // 2 consecutive days - early flare
+          flareState = 'early_flare';
+          isInFlareEpisode = true;
+          if (currentFlareStartIdx === null) {
+            currentFlareStartIdx = i - 1; // Started yesterday
+          }
+          explanation = 'A flare is detected based on sustained symptom worsening over multiple days — not a single bad day.';
+        } else if (consecutiveWorseningDays >= 3) {
+          // ≥3 consecutive days
+          isInFlareEpisode = true;
+          
+          // Check for peak flare (strict criteria for ≥3 days)
+          if (consecutivePeakDays >= 3) {
+            flareState = 'peak_flare';
+            explanation = 'Peak flare: severe symptoms persisting for 3+ days with pain ≥7, red skin, and multiple severe symptoms.';
+          } else {
+            flareState = 'active_flare';
+            explanation = 'A flare is detected based on sustained symptom worsening over multiple days — not a single bad day.';
           }
         }
         
-        episodes.push({
-          startDate: dailyBurdens[startIdx].date,
-          endDate: dailyBurdens[endIdx].date,
-          peakDate: dailyBurdens[peakIdx].date,
-          durationDays: consecutiveAbove.length,
-          peakBurdenScore: peakScore,
-          isActive: false,
-          isPaused: false,
-        });
+        // Track peak within episode
+        if (isInFlareEpisode && burdenScore > peakScore) {
+          peakScore = burdenScore;
+          peakIdx = i;
+        }
+      } else {
+        // Not worsening today
+        
+        // Check if we just ended a flare
+        if (consecutiveWorseningDays >= 2 && currentFlareStartIdx !== null) {
+          // We had a valid flare that just ended
+          const startMetrics = allMetrics[currentFlareStartIdx];
+          const endMetrics = allMetrics[i - 1];
+          
+          flareEpisodes.push({
+            startDate: startMetrics.date,
+            endDate: endMetrics.date,
+            peakDate: peakIdx !== null ? allMetrics[peakIdx].date : endMetrics.date,
+            durationDays: consecutiveWorseningDays,
+            peakBurdenScore: peakScore,
+            isActive: false,
+            isPaused: false,
+          });
+          
+          // This day is recovering
+          flareState = 'recovering';
+          explanation = 'Symptoms improving after flare period.';
+        } else if (consecutiveWorseningDays === 1) {
+          // Single spike that didn't continue - just stable now
+          flareState = 'stable';
+        }
+        
+        // Reset counters
+        consecutiveWorseningDays = 0;
+        consecutivePeakDays = 0;
+        currentFlareStartIdx = null;
+        peakIdx = null;
+        peakScore = 0;
       }
-      consecutiveAbove = [];
     }
+    
+    // Update previous day's state if needed (for early_flare retroactive)
+    if (consecutiveWorseningDays === 2 && dailyFlareStates.length > 0) {
+      const prevState = dailyFlareStates[dailyFlareStates.length - 1];
+      if (prevState.flareState === 'unstable') {
+        prevState.flareState = 'early_flare';
+        prevState.isInFlareEpisode = true;
+        prevState.explanation = 'A flare is detected based on sustained symptom worsening over multiple days — not a single bad day.';
+      }
+    }
+    
+    dailyFlareStates.push({
+      date: metrics.date,
+      burdenScore,
+      rollingAverage3: baseline?.avgSymptomSeverity ?? null,
+      flareState,
+      isInFlareEpisode,
+      explanation,
+    });
   }
   
   // Handle ongoing flare at end of data
-  if (consecutiveAbove.length >= 3) {
-    const startIdx = consecutiveAbove[0];
-    const endIdx = consecutiveAbove[consecutiveAbove.length - 1];
+  if (consecutiveWorseningDays >= 2 && currentFlareStartIdx !== null) {
+    const startMetrics = allMetrics[currentFlareStartIdx];
+    const endMetrics = allMetrics[allMetrics.length - 1];
     
-    let peakIdx = startIdx;
-    let peakScore = dailyBurdens[startIdx].score;
-    for (const idx of consecutiveAbove) {
-      if (dailyBurdens[idx].score > peakScore) {
-        peakScore = dailyBurdens[idx].score;
-        peakIdx = idx;
-      }
-    }
-    
-    episodes.push({
-      startDate: dailyBurdens[startIdx].date,
+    flareEpisodes.push({
+      startDate: startMetrics.date,
       endDate: null, // Still active
-      peakDate: dailyBurdens[peakIdx].date,
-      durationDays: consecutiveAbove.length,
+      peakDate: peakIdx !== null ? allMetrics[peakIdx].date : endMetrics.date,
+      durationDays: consecutiveWorseningDays,
       peakBurdenScore: peakScore,
       isActive: true,
       isPaused: false,
     });
   }
   
-  return episodes;
+  // Determine current state
+  const currentState = dailyFlareStates.length > 0
+    ? dailyFlareStates[dailyFlareStates.length - 1].flareState
+    : 'stable';
+  
+  const activeFlare = flareEpisodes.find(ep => ep.isActive);
+  
+  // Convert to legacy DailyBurden format for compatibility
+  const dailyBurdens: DailyBurden[] = allMetrics.map(m => ({
+    date: m.date,
+    score: m.avgSymptomSeverity + (m.rawSkinIntensity / 5) * 3,
+    skinIntensity: m.rawSkinIntensity,
+    symptomScore: m.avgSymptomSeverity * 3, // rough estimate
+  }));
+  
+  // Calculate baseline for display
+  const baselineBurdenScore = dailyBurdens.length >= 7
+    ? dailyBurdens.slice(-7).reduce((s, b) => s + b.score, 0) / Math.min(7, dailyBurdens.length)
+    : null;
+  
+  return {
+    dailyBurdens,
+    baselineBurdenScore,
+    baselineConfidence: confidence,
+    flareThreshold: baselineBurdenScore !== null ? baselineBurdenScore + 0.5 : null,
+    flareEpisodes,
+    dailyFlareStates,
+    currentState,
+    isInActiveFlare: activeFlare !== undefined,
+    currentFlareDuration: activeFlare?.durationDays ?? null,
+  };
 }
 
-/**
- * Assign flare state to each logged day
- */
+function createEmptyAnalysis(): FlareAnalysis {
+  return {
+    dailyBurdens: [],
+    baselineBurdenScore: null,
+    baselineConfidence: 'early',
+    flareThreshold: null,
+    flareEpisodes: [],
+    dailyFlareStates: [],
+    currentState: 'stable',
+    isInActiveFlare: false,
+    currentFlareDuration: null,
+  };
+}
+
+// Legacy exports for compatibility
+export function calculateDailyBurdens(checkIns: CheckInData[]): DailyBurden[] {
+  const metrics = calculateAllDailyMetrics(checkIns);
+  return metrics.map(m => ({
+    date: m.date,
+    score: m.avgSymptomSeverity + (m.rawSkinIntensity / 5) * 3,
+    skinIntensity: m.rawSkinIntensity,
+    symptomScore: m.avgSymptomSeverity * 3,
+  }));
+}
+
+export function calculateDailyBurdenScore(checkIn: CheckInData): number {
+  const metrics = calculateDailyMetrics([checkIn]);
+  return metrics.avgSymptomSeverity + (metrics.rawSkinIntensity / 5) * 3;
+}
+
+export function calculateRollingAverage3(
+  dailyBurdens: DailyBurden[],
+  currentIndex: number
+): number | null {
+  if (currentIndex < 3) return null;
+  const window = dailyBurdens.slice(currentIndex - 3, currentIndex);
+  return window.reduce((s, b) => s + b.score, 0) / window.length;
+}
+
+export function calculateBaselineBurdenScore(
+  dailyBurdens: DailyBurden[],
+  confidence: BaselineConfidence
+): number | null {
+  if (dailyBurdens.length === 0 || confidence === 'early') return null;
+  return dailyBurdens.reduce((s, b) => s + b.score, 0) / dailyBurdens.length;
+}
+
+export function calculateFlareThreshold(
+  baseline: number | null,
+  confidence: BaselineConfidence
+): number | null {
+  if (baseline === null || confidence === 'early') return null;
+  return baseline + 0.5;
+}
+
+export function detectFlareEpisodes(
+  dailyBurdens: DailyBurden[],
+  flareThreshold: number,
+  confidence: BaselineConfidence
+): FlareEpisode[] {
+  // This is now handled internally by analyzeFlareState
+  return [];
+}
+
 export function assignDailyFlareStates(
   dailyBurdens: DailyBurden[],
   baselineBurdenScore: number | null,
@@ -287,147 +557,12 @@ export function assignDailyFlareStates(
   flareEpisodes: FlareEpisode[],
   confidence: BaselineConfidence
 ): DailyFlareState[] {
-  const states: DailyFlareState[] = [];
-  
-  // Build set of dates in flare episodes and their peak dates
-  const flareDates = new Set<string>();
-  const peakDates = new Set<string>();
-  
-  for (const episode of flareEpisodes) {
-    peakDates.add(episode.peakDate);
-    
-    // Add all dates in episode
-    const startDate = new Date(episode.startDate);
-    const endDate = episode.endDate ? new Date(episode.endDate) : new Date();
-    
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().split('T')[0];
-      flareDates.add(dateStr);
-    }
-  }
-  
-  for (let i = 0; i < dailyBurdens.length; i++) {
-    const burden = dailyBurdens[i];
-    const baseline = calculate14DayBaseline(dailyBurdens, i);
-    
-    let flareState: FlareState = 'stable';
-    const isInFlare = flareDates.has(burden.date);
-    
-    if (confidence === 'early') {
-      // Not enough data - everything is stable
-      flareState = 'stable';
-    } else if (isInFlare) {
-      if (peakDates.has(burden.date)) {
-        flareState = 'peak_flare';
-      } else {
-        flareState = 'active_flare';
-      }
-    } else if (baseline !== null) {
-      const threshold = baseline + 0.5;
-      
-      // Check for pre_flare: severity rising but not yet 3 days
-      if (i >= 1 && burden.score >= threshold) {
-        const prev = dailyBurdens[i - 1];
-        if (burden.score > prev.score) {
-          flareState = 'pre_flare';
-        }
-      }
-      
-      // Check for resolving_flare: recently ended flare and severity dropping
-      const recentEndedEpisode = flareEpisodes.find(ep => {
-        if (!ep.endDate) return false;
-        const endDate = new Date(ep.endDate);
-        const burdenDate = new Date(burden.date);
-        const daysSinceEnd = Math.floor((burdenDate.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24));
-        return daysSinceEnd > 0 && daysSinceEnd <= 3;
-      });
-      
-      if (recentEndedEpisode && i >= 1) {
-        const prev = dailyBurdens[i - 1];
-        if (burden.score < prev.score) {
-          flareState = 'resolving_flare';
-        }
-      }
-    }
-    
-    states.push({
-      date: burden.date,
-      burdenScore: burden.score,
-      rollingAverage3: baseline, // Using 14-day baseline instead
-      flareState,
-      isInFlareEpisode: isInFlare,
-    });
-  }
-  
-  return states;
-}
-
-/**
- * Main analysis function
- */
-export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
-  if (checkIns.length === 0) {
-    return {
-      dailyBurdens: [],
-      baselineBurdenScore: null,
-      baselineConfidence: 'early',
-      flareThreshold: null,
-      flareEpisodes: [],
-      dailyFlareStates: [],
-      currentState: 'stable',
-      isInActiveFlare: false,
-      currentFlareDuration: null,
-    };
-  }
-  
-  const dailyBurdens = calculateDailyBurdens(checkIns);
-  const confidence = getBaselineConfidence(checkIns.length);
-  const baselineBurdenScore = calculateBaselineBurdenScore(dailyBurdens, confidence);
-  const flareThreshold = calculateFlareThreshold(baselineBurdenScore, confidence);
-  
-  const flareEpisodes = flareThreshold !== null 
-    ? detectFlareEpisodes(dailyBurdens, flareThreshold, confidence)
-    : [];
-  
-  const dailyFlareStates = assignDailyFlareStates(
-    dailyBurdens,
-    baselineBurdenScore,
-    flareThreshold,
-    flareEpisodes,
-    confidence
-  );
-  
-  // Determine current state from most recent day
-  const currentState = dailyFlareStates.length > 0
-    ? dailyFlareStates[dailyFlareStates.length - 1].flareState
-    : 'stable';
-  
-  // Check if currently in an active flare
-  const activeFlare = flareEpisodes.find(ep => ep.isActive);
-  const isInActiveFlare = activeFlare !== null && activeFlare !== undefined;
-  const currentFlareDuration = activeFlare?.durationDays ?? null;
-  
-  return {
-    dailyBurdens,
-    baselineBurdenScore,
-    baselineConfidence: confidence,
-    flareThreshold,
-    flareEpisodes,
-    dailyFlareStates,
-    currentState,
-    isInActiveFlare,
-    currentFlareDuration,
-  };
-}
-
-// Keep exports for compatibility with existing code
-export function calculateDailyBurdenScore(checkIn: CheckInData): number {
-  return calculateDailySeverity(checkIn);
-}
-
-export function calculateRollingAverage3(
-  dailyBurdens: DailyBurden[],
-  currentIndex: number
-): number | null {
-  return calculate14DayBaseline(dailyBurdens, currentIndex);
+  // This is now handled internally by analyzeFlareState
+  return dailyBurdens.map(b => ({
+    date: b.date,
+    burdenScore: b.score,
+    rollingAverage3: null,
+    flareState: 'stable' as FlareState,
+    isInFlareEpisode: false,
+  }));
 }
