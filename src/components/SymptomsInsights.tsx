@@ -584,7 +584,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                           <svg 
                             className="w-full h-16 relative z-10"
                             preserveAspectRatio="none"
-                            viewBox={`0 0 ${weeklySeverityTrend.length * 100} 100`}
+                            viewBox={`0 -10 ${weeklySeverityTrend.length * 100} 120`}
                           >
                             {chartSymptoms.map(symptom => {
                               const isHidden = hiddenSymptoms.has(symptom);
@@ -594,8 +594,8 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                                 .map((week, i) => {
                                   const sev = week.avgSeverities[symptom];
                                   if (!sev) return null;
-                                  // Map severity 1-3 to y-position (3=top=0, 1=bottom=100)
-                                  const y = ((3 - sev) / 2) * 100;
+                                  // Map severity 1-3 to y-position (3=top=5, 1=bottom=95) with padding
+                                  const y = 5 + ((3 - sev) / 2) * 90;
                                   const x = i * 100 + 50;
                                   return { x, y, sev };
                                 })
