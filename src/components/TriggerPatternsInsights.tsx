@@ -232,22 +232,44 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
   // Check if user has logged any triggers at all
   const hasAnyTriggers = checkIns.some(c => c.triggers && c.triggers.length > 0);
 
+  const TimePeriodToggle = () => (
+    <div className="flex gap-1 bg-muted/50 rounded-lg p-0.5">
+      {(['week', 'month', 'all'] as TimePeriod[]).map((period) => (
+        <button
+          key={period}
+          onClick={() => setTimePeriod(period)}
+          className={cn(
+            "px-3 py-1 text-xs font-medium rounded-md transition-all",
+            timePeriod === period 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {period === 'week' ? '7d' : period === 'month' ? '30d' : 'All'}
+        </button>
+      ))}
+    </div>
+  );
+
   // Show insufficient data message if user has triggers but none meet criteria
   if (hasAnyTriggers && activePatterns.length === 0 && resolvedTriggers.length === 0) {
     return (
       <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
-        <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-muted">
-            <Eye className="w-4 h-4 text-muted-foreground" />
-          </div>
-          Patterns We're Watching
-        </h3>
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-muted">
+              <Eye className="w-4 h-4 text-muted-foreground" />
+            </div>
+            Patterns We're Watching
+          </h3>
+          <TimePeriodToggle />
+        </div>
         <div className="glass-card p-5">
           <p className="text-sm text-muted-foreground">
-            Not enough data yet to identify clear trigger patterns.
+            Not enough data {timePeriod !== 'all' ? `in the last ${timePeriod === 'week' ? '7' : '30'} days` : ''} to identify clear trigger patterns.
           </p>
           <p className="text-xs text-muted-foreground/70 mt-2">
-            Patterns become clearer as more days are logged.
+            {timePeriod !== 'all' ? 'Try viewing "All" time or ' : ''}Patterns become clearer as more days are logged.
           </p>
         </div>
       </div>
@@ -258,12 +280,15 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
   if (activePatterns.length === 0 && resolvedTriggers.length === 0) {
     return (
       <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
-        <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-muted">
-            <Eye className="w-4 h-4 text-muted-foreground" />
-          </div>
-          Patterns We're Watching
-        </h3>
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-muted">
+              <Eye className="w-4 h-4 text-muted-foreground" />
+            </div>
+            Patterns We're Watching
+          </h3>
+          <TimePeriodToggle />
+        </div>
         <div className="glass-card p-5">
           <p className="text-sm text-muted-foreground">
             Start logging triggers in your daily check-ins to discover patterns over time.
@@ -297,25 +322,6 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     }
     return null;
   };
-
-  const TimePeriodToggle = () => (
-    <div className="flex gap-1 bg-muted/50 rounded-lg p-0.5">
-      {(['week', 'month', 'all'] as TimePeriod[]).map((period) => (
-        <button
-          key={period}
-          onClick={() => setTimePeriod(period)}
-          className={cn(
-            "px-3 py-1 text-xs font-medium rounded-md transition-all",
-            timePeriod === period 
-              ? "bg-background text-foreground shadow-sm" 
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          {period === 'week' ? '7d' : period === 'month' ? '30d' : 'All'}
-        </button>
-      ))}
-    </div>
-  );
 
   return (
     <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
