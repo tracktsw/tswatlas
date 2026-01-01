@@ -95,8 +95,7 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
     sleepData.forEach(entry => {
       const flareState = flareStateByDate.get(entry.date);
       const isFlaring = flareState?.isInFlareEpisode || 
-        flareState?.flareState === 'active_flare' || 
-        flareState?.flareState === 'early_flare';
+        flareState?.flareState === 'active_flare';
       if (isFlaring) {
         if (!currentPeriod) {
           currentPeriod = { start: entry.date, end: entry.date };
@@ -134,8 +133,7 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
     sleepData.forEach(entry => {
       const flareState = flareStateByDate.get(entry.date);
       const isFlaring = flareState?.isInFlareEpisode || 
-        flareState?.flareState === 'active_flare' || 
-        flareState?.flareState === 'early_flare';
+        flareState?.flareState === 'active_flare';
       if (isFlaring) {
         flareSleepScores.push(entry.sleepScore);
       } else {
@@ -170,8 +168,7 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
     return sleepData.map(entry => {
       const flareState = flareStateByDate.get(entry.date);
       const isFlaring = flareState?.isInFlareEpisode || 
-        flareState?.flareState === 'active_flare' || 
-        flareState?.flareState === 'early_flare';
+        flareState?.flareState === 'active_flare';
       
       return {
         date: entry.date,
