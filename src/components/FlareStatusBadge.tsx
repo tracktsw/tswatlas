@@ -120,16 +120,9 @@ export function FlareStatusBadge({ className }: FlareStatusBadgeProps) {
           <Icon className={cn('w-7 h-7', config.iconColor)} />
         </div>
         <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <p className="font-display font-bold text-lg text-foreground">
-              {label}
-            </p>
-            {baselineConfidence === 'provisional' && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-muted/50 text-muted-foreground">
-                {confidenceLabel}
-              </span>
-            )}
-          </div>
+          <p className="font-display font-bold text-lg text-foreground">
+            {label}
+          </p>
           <p className="text-muted-foreground">
             {config.description}
           </p>
