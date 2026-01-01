@@ -242,18 +242,30 @@ const InsightsPage = () => {
         
         {/* Demo Mode Controls */}
         {isDemoMode && isAdmin && (
-          <div className="flex gap-2 mt-3">
+          <div className="flex gap-2 mt-3 flex-wrap">
             <Button
               variant="outline"
               size="sm"
               className="gap-1.5 text-amber-600 border-amber-500/30 hover:bg-amber-500/10"
               onClick={() => {
-                generateSampleData();
+                generateSampleData(30);
                 toast.success('Generated 30 days of sample data');
               }}
             >
               <Wand2 className="w-3.5 h-3.5" />
-              Generate 30 Days
+              30 Days
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-amber-600 border-amber-500/30 hover:bg-amber-500/10"
+              onClick={() => {
+                generateSampleData(365);
+                toast.success('Generated 365 days of sample data');
+              }}
+            >
+              <Wand2 className="w-3.5 h-3.5" />
+              365 Days
             </Button>
             {demoCheckIns.size > 0 && (
               <Button
