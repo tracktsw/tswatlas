@@ -21,7 +21,7 @@ interface DemoModeContextType {
   getDemoCheckInsForDate: (dateStr: string) => DemoCheckIn | undefined;
   clearDemoData: () => void;
   deleteDemoCheckIn: (dateStr: string) => void;
-  generateSampleData: () => void;
+  generateSampleData: (days?: number) => void;
   getEffectiveCheckIns: (realCheckIns: CheckIn[]) => CheckIn[];
 }
 
@@ -129,15 +129,15 @@ export const DemoModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setDemoCheckIns(new Map());
   }, []);
 
-  // Generate 30 days of realistic sample data for marketing
-  const generateSampleData = useCallback(() => {
+  // Generate sample data for marketing - supports variable days
+  const generateSampleData = useCallback((days: number = 30) => {
     if (!isDemoMode || !isAdmin) return;
 
     const newMap = new Map<string, DemoCheckIn>();
     const today = new Date();
     
-    // Create a realistic TSW healing journey pattern
-    // Start with a flare, gradual improvement, small setback, then recovery
+    // Create a realistic TSW healing journey pattern (30-day cycle)
+    // This pattern repeats for longer periods with gradual overall improvement
     const basePattern = [
       // Days 1-7: Active flare period
       { skinBase: 1, moodBase: 2, painBase: 7, sleepBase: 2, intensity: 4 },
@@ -175,19 +175,27 @@ export const DemoModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       { skinBase: 5, moodBase: 5, painBase: 0, sleepBase: 5, intensity: 0 },
     ];
 
-    for (let i = 0; i < 30; i++) {
-      const date = subDays(today, 29 - i);
+    for (let i = 0; i < days; i++) {
+      const date = subDays(today, days - 1 - i);
       const dateStr = format(date, 'yyyy-MM-dd');
-      const pattern = basePattern[i];
+      
+      // Get pattern index (cycle through the 30-day pattern)
+      const patternIndex = i % basePattern.length;
+      const pattern = basePattern[patternIndex];
+      
+      // For longer periods, apply gradual healing trend
+      // As we get closer to present day, things generally improve
+      const progressFactor = days > 30 ? Math.min(i / days, 0.5) : 0;
+      const healingBonus = Math.floor(progressFactor * 2); // Up to +1-2 improvement
       
       // Add some randomness
       const variance = () => Math.random() > 0.7 ? (Math.random() > 0.5 ? 1 : -1) : 0;
       
-      const skinFeeling = clamp(pattern.skinBase + variance(), 1, 5);
-      const mood = clamp(pattern.moodBase + variance(), 1, 5);
-      const painScore = clamp(pattern.painBase + (Math.random() > 0.5 ? 1 : -1), 0, 10);
-      const sleepScore = clamp(pattern.sleepBase + variance(), 1, 5);
-      const skinIntensity = pattern.intensity;
+      const skinFeeling = clamp(pattern.skinBase + variance() + healingBonus, 1, 5);
+      const mood = clamp(pattern.moodBase + variance() + healingBonus, 1, 5);
+      const painScore = clamp(pattern.painBase + (Math.random() > 0.5 ? 1 : -1) - healingBonus, 0, 10);
+      const sleepScore = clamp(pattern.sleepBase + variance() + Math.floor(healingBonus / 2), 1, 5);
+      const skinIntensity = clamp(pattern.intensity - Math.floor(healingBonus / 2), 0, 4);
       
       // Generate symptoms based on intensity
       const symptomCount = skinIntensity >= 3 ? Math.floor(Math.random() * 3) + 2 : 
