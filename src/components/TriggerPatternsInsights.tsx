@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Eye } from 'lucide-react';
+import { Eye, TrendingDown, TrendingUp, CheckCircle2 } from 'lucide-react';
 import { CheckIn } from '@/contexts/UserDataContext';
 import { cn } from '@/lib/utils';
 import { BaselineConfidence } from '@/utils/flareStateEngine';
@@ -33,33 +33,81 @@ interface TriggerPatternsInsightsProps {
   baselineConfidence: BaselineConfidence;
 }
 
+type TrendType = 'improving' | 'worsening' | 'stable';
+
+interface TriggerStat {
+  id: string;
+  label: string;
+  uniqueDays: number;
+  percentWorse: number;
+  impactScore: number;
+  isHighConfidence: boolean;
+  trend: TrendType;
+  recentImpact: number;
+  historicalImpact: number;
+}
+
+interface ResolvedTrigger {
+  id: string;
+  label: string;
+  totalDays: number;
+  wasPercentWorse: number;
+  nowPercentBetter: number;
+}
+
+const RECENT_DAYS = 14;
+const TREND_THRESHOLD = 0.3;
+const IMPACT_THRESHOLD = 0.3;
+
 const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatternsInsightsProps) => {
-  const triggerStats = useMemo(() => {
-    // Only consider check-ins that have triggers
+  const { activePatterns, resolvedTriggers } = useMemo(() => {
     const checkInsWithTriggers = checkIns.filter(c => c.triggers && c.triggers.length > 0);
     
-    if (checkInsWithTriggers.length === 0) return [];
+    if (checkInsWithTriggers.length === 0) {
+      return { activePatterns: [], resolvedTriggers: [] };
+    }
 
-    // Calculate BASELINE intensity across ALL check-ins (not just those with triggers)
+    // Split check-ins into recent (last 14 days) and historical
+    const now = new Date();
+    const recentCutoff = new Date(now.getTime() - RECENT_DAYS * 24 * 60 * 60 * 1000);
+    
+    const recentCheckIns = checkIns.filter(c => new Date(c.timestamp) >= recentCutoff);
+    const historicalCheckIns = checkIns.filter(c => new Date(c.timestamp) < recentCutoff);
+    
+    // Calculate baselines for each period
     const allIntensities = checkIns.map(c => c.skinIntensity ?? (5 - c.skinFeeling));
-    const baselineIntensity = allIntensities.reduce((a, b) => a + b, 0) / allIntensities.length;
+    const overallBaseline = allIntensities.reduce((a, b) => a + b, 0) / allIntensities.length;
+    
+    const recentIntensities = recentCheckIns.map(c => c.skinIntensity ?? (5 - c.skinFeeling));
+    const recentBaseline = recentIntensities.length > 0 
+      ? recentIntensities.reduce((a, b) => a + b, 0) / recentIntensities.length 
+      : overallBaseline;
+    
+    const historicalIntensities = historicalCheckIns.map(c => c.skinIntensity ?? (5 - c.skinFeeling));
+    const historicalBaseline = historicalIntensities.length > 0 
+      ? historicalIntensities.reduce((a, b) => a + b, 0) / historicalIntensities.length 
+      : overallBaseline;
 
-    // Build stats: for each trigger, calculate unique days and intensity metrics
+    // Build comprehensive stats for each trigger
     const stats: Record<string, { 
       uniqueDays: Set<string>;
       totalIntensity: number;
       totalCount: number;
+      recentDays: Set<string>;
+      recentIntensity: number;
+      recentCount: number;
+      historicalDays: Set<string>;
+      historicalIntensity: number;
+      historicalCount: number;
     }> = {};
 
     checkInsWithTriggers.forEach(checkIn => {
       const date = checkIn.timestamp.split('T')[0];
       const triggers = checkIn.triggers || [];
-      
-      // Use skin_intensity if available, otherwise convert from skinFeeling (1-5 → 4-0)
       const intensity = checkIn.skinIntensity ?? (5 - checkIn.skinFeeling);
+      const isRecent = new Date(checkIn.timestamp) >= recentCutoff;
 
       triggers.forEach(triggerId => {
-        // Handle food:xxx format
         const normalizedId = triggerId.startsWith('food:') ? 'food' : triggerId;
         
         if (!stats[normalizedId]) {
@@ -67,62 +115,110 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
             uniqueDays: new Set(),
             totalIntensity: 0,
             totalCount: 0,
+            recentDays: new Set(),
+            recentIntensity: 0,
+            recentCount: 0,
+            historicalDays: new Set(),
+            historicalIntensity: 0,
+            historicalCount: 0,
           };
         }
         
         stats[normalizedId].uniqueDays.add(date);
         stats[normalizedId].totalCount++;
         stats[normalizedId].totalIntensity += intensity;
+        
+        if (isRecent) {
+          stats[normalizedId].recentDays.add(date);
+          stats[normalizedId].recentCount++;
+          stats[normalizedId].recentIntensity += intensity;
+        } else {
+          stats[normalizedId].historicalDays.add(date);
+          stats[normalizedId].historicalCount++;
+          stats[normalizedId].historicalIntensity += intensity;
+        }
       });
     });
 
-    // Filter and calculate impact scores using COMPARATIVE analysis
-    // Requirements: 3+ unique days AND trigger days must be WORSE than baseline
-    return Object.entries(stats)
-      .filter(([_, data]) => {
-        const uniqueDayCount = data.uniqueDays.size;
-        const triggerDayIntensity = data.totalIntensity / data.totalCount;
-        const impactDelta = triggerDayIntensity - baselineIntensity;
-        
-        // Only show triggers where intensity is notably worse than baseline (>0.3 threshold)
-        return uniqueDayCount >= 3 && impactDelta > 0.3;
-      })
-      .map(([id, data]) => {
-        const uniqueDayCount = data.uniqueDays.size;
-        const triggerDayIntensity = data.totalIntensity / data.totalCount;
-        const impactDelta = triggerDayIntensity - baselineIntensity;
-        
-        // Impact score based on how much WORSE trigger days are compared to baseline
-        const impactScore = impactDelta * 25; // Scale for display
-        
-        // Percentage worse than baseline
-        const percentWorse = Math.round((impactDelta / Math.max(baselineIntensity, 0.5)) * 100);
+    const activePatterns: TriggerStat[] = [];
+    const resolvedTriggers: ResolvedTrigger[] = [];
 
-        // Get label for trigger
-        const label = triggersList.find(t => t.id === id)?.label || id;
-        
-        // High confidence if 7+ days and significant impact
+    Object.entries(stats).forEach(([id, data]) => {
+      const uniqueDayCount = data.uniqueDays.size;
+      const triggerDayIntensity = data.totalIntensity / data.totalCount;
+      const impactDelta = triggerDayIntensity - overallBaseline;
+      const label = triggersList.find(t => t.id === id)?.label || id;
+      
+      // Calculate period-specific impacts
+      const recentImpact = data.recentCount > 0 
+        ? (data.recentIntensity / data.recentCount) - recentBaseline 
+        : 0;
+      const historicalImpact = data.historicalCount > 0 
+        ? (data.historicalIntensity / data.historicalCount) - historicalBaseline 
+        : 0;
+      
+      // Determine trend (only if we have data in both periods)
+      let trend: TrendType = 'stable';
+      const hasRecentData = data.recentDays.size >= 2;
+      const hasHistoricalData = data.historicalDays.size >= 2;
+      
+      if (hasRecentData && hasHistoricalData) {
+        const trendDelta = recentImpact - historicalImpact;
+        if (trendDelta < -TREND_THRESHOLD) {
+          trend = 'improving';
+        } else if (trendDelta > TREND_THRESHOLD) {
+          trend = 'worsening';
+        }
+      }
+
+      // Check if this was a previous pattern that's now resolved
+      const wasPattern = data.historicalDays.size >= 3 && historicalImpact > IMPACT_THRESHOLD;
+      const isCurrentlyPattern = uniqueDayCount >= 3 && impactDelta > IMPACT_THRESHOLD;
+      const recentlyImproved = hasRecentData && recentImpact <= 0;
+
+      if (wasPattern && !isCurrentlyPattern && recentlyImproved) {
+        // This trigger has graduated out of concern
+        resolvedTriggers.push({
+          id,
+          label,
+          totalDays: uniqueDayCount,
+          wasPercentWorse: Math.round((historicalImpact / Math.max(historicalBaseline, 0.5)) * 100),
+          nowPercentBetter: Math.round(Math.abs(recentImpact / Math.max(recentBaseline, 0.5)) * 100),
+        });
+      } else if (isCurrentlyPattern) {
+        // Still an active pattern
+        const impactScore = impactDelta * 25;
+        const percentWorse = Math.round((impactDelta / Math.max(overallBaseline, 0.5)) * 100);
         const isHighConfidence = uniqueDayCount >= 7 && impactDelta > 0.5;
         
-        return {
+        activePatterns.push({
           id,
           label,
           uniqueDays: uniqueDayCount,
           percentWorse,
-          avgIntensity: Math.round(triggerDayIntensity * 10) / 10,
           impactScore: Math.round(impactScore * 10) / 10,
           isHighConfidence,
-        };
-      })
-      .sort((a, b) => b.impactScore - a.impactScore)
-      .slice(0, 6); // Show top 6 triggers
+          trend,
+          recentImpact,
+          historicalImpact,
+        });
+      }
+    });
+
+    // Sort active patterns by impact score
+    activePatterns.sort((a, b) => b.impactScore - a.impactScore);
+    
+    return { 
+      activePatterns: activePatterns.slice(0, 6), 
+      resolvedTriggers: resolvedTriggers.slice(0, 3) 
+    };
   }, [checkIns]);
 
   // Check if user has logged any triggers at all
   const hasAnyTriggers = checkIns.some(c => c.triggers && c.triggers.length > 0);
 
   // Show insufficient data message if user has triggers but none meet criteria
-  if (hasAnyTriggers && triggerStats.length === 0) {
+  if (hasAnyTriggers && activePatterns.length === 0 && resolvedTriggers.length === 0) {
     return (
       <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
         <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
@@ -144,7 +240,7 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
   }
 
   // Show empty state if no trigger data at all
-  if (triggerStats.length === 0) {
+  if (activePatterns.length === 0 && resolvedTriggers.length === 0) {
     return (
       <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
         <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
@@ -165,7 +261,27 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     );
   }
 
-  const maxImpact = Math.max(...triggerStats.map(t => t.impactScore), 1);
+  const maxImpact = Math.max(...activePatterns.map(t => t.impactScore), 1);
+
+  const TrendIndicator = ({ trend }: { trend: TrendType }) => {
+    if (trend === 'improving') {
+      return (
+        <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded-full">
+          <TrendingDown className="w-3 h-3" />
+          Improving
+        </span>
+      );
+    }
+    if (trend === 'worsening') {
+      return (
+        <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/50 px-1.5 py-0.5 rounded-full">
+          <TrendingUp className="w-3 h-3" />
+          Worsening
+        </span>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
@@ -175,52 +291,89 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
         </div>
         Patterns We're Watching
       </h3>
-      <div className="glass-card p-5 space-y-4">
-        <p className="text-xs text-muted-foreground">
-          Triggers correlated with worse-than-average skin days
-        </p>
-        {triggerStats.map(({ id, label, uniqueDays, percentWorse, impactScore, isHighConfidence }, index) => {
-          const barWidth = (impactScore / maxImpact) * 100;
-          
-          return (
-            <div 
-              key={id} 
-              className="space-y-2 animate-slide-up"
-              style={{ animationDelay: `${0.3 + index * 0.03}s` }}
-            >
-              <div className="flex justify-between items-center">
-                <span className={cn(
-                  "font-semibold",
-                  isHighConfidence ? "text-amber-700 dark:text-amber-400" : "text-foreground"
-                )}>
+      
+      {/* Active Patterns */}
+      {activePatterns.length > 0 && (
+        <div className="glass-card p-5 space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Triggers correlated with worse-than-average skin days
+          </p>
+          {activePatterns.map(({ id, label, uniqueDays, percentWorse, impactScore, isHighConfidence, trend }, index) => {
+            const barWidth = (impactScore / maxImpact) * 100;
+            
+            return (
+              <div 
+                key={id} 
+                className="space-y-2 animate-slide-up"
+                style={{ animationDelay: `${0.3 + index * 0.03}s` }}
+              >
+                <div className="flex justify-between items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={cn(
+                      "font-semibold truncate",
+                      isHighConfidence ? "text-amber-700 dark:text-amber-400" : "text-foreground"
+                    )}>
+                      {label}
+                    </span>
+                    <TrendIndicator trend={trend} />
+                  </div>
+                  <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">
+                    {isHighConfidence 
+                      ? `${percentWorse}% worse`
+                      : 'Early pattern'
+                    }
+                    <span className="text-muted-foreground/60 ml-1">({uniqueDays}d)</span>
+                  </span>
+                </div>
+                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className={cn(
+                      "h-full rounded-full transition-all duration-700",
+                      isHighConfidence 
+                        ? "bg-gradient-to-r from-amber-500 to-amber-400" 
+                        : "bg-gradient-to-r from-muted-foreground/40 to-muted-foreground/30"
+                    )}
+                    style={{ width: `${barWidth}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+          <p className="text-[10px] text-muted-foreground/70 mt-3 pt-3 border-t border-muted/50">
+            Based on repeated check-ins over time. Early data may be inconclusive.
+          </p>
+        </div>
+      )}
+
+      {/* No Longer a Concern Section */}
+      {resolvedTriggers.length > 0 && (
+        <div className="glass-card p-5 space-y-3 bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-800/30">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+              No Longer a Concern
+            </p>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            These triggers were previously flagged but recent data shows improvement
+          </p>
+          <div className="space-y-2">
+            {resolvedTriggers.map(({ id, label, totalDays, wasPercentWorse, nowPercentBetter }) => (
+              <div 
+                key={id} 
+                className="flex items-center justify-between py-2 border-b border-emerald-200/30 dark:border-emerald-800/20 last:border-0"
+              >
+                <span className="font-medium text-sm text-foreground">
                   {label}
                 </span>
-                <span className="text-xs text-muted-foreground font-medium">
-                  {isHighConfidence 
-                    ? `${percentWorse}% worse than avg`
-                    : 'Early pattern'
-                  }
-                  <span className="text-muted-foreground/60 ml-1">({uniqueDays} days)</span>
+                <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                  Was {wasPercentWorse}% worse → Now {nowPercentBetter > 0 ? `${nowPercentBetter}% better` : 'normal'}
                 </span>
               </div>
-              <div className="h-3 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className={cn(
-                    "h-full rounded-full transition-all duration-700",
-                    isHighConfidence 
-                      ? "bg-gradient-to-r from-amber-500 to-amber-400" 
-                      : "bg-gradient-to-r from-muted-foreground/40 to-muted-foreground/30"
-                  )}
-                  style={{ width: `${barWidth}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
-        <p className="text-[10px] text-muted-foreground/70 mt-3 pt-3 border-t border-muted/50">
-          Based on repeated check-ins over time. Early data may be inconclusive.
-        </p>
-      </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
