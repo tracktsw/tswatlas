@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Eye, TrendingDown, TrendingUp, CheckCircle2 } from 'lucide-react';
 import { CheckIn } from '@/contexts/UserDataContext';
 import { cn } from '@/lib/utils';
@@ -34,6 +34,7 @@ interface TriggerPatternsInsightsProps {
 }
 
 type TrendType = 'improving' | 'worsening' | 'stable';
+type TimePeriod = 'week' | 'month' | 'all';
 
 interface TriggerStat {
   id: string;
@@ -55,24 +56,38 @@ interface ResolvedTrigger {
   nowPercentBetter: number;
 }
 
-const RECENT_DAYS = 14;
 const TREND_THRESHOLD = 0.3;
 const IMPACT_THRESHOLD = 0.3;
 
+const PERIOD_DAYS: Record<TimePeriod, number> = {
+  week: 7,
+  month: 30,
+  all: 9999,
+};
+
 const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatternsInsightsProps) => {
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('all');
   const { activePatterns, resolvedTriggers } = useMemo(() => {
-    const checkInsWithTriggers = checkIns.filter(c => c.triggers && c.triggers.length > 0);
+    // Filter check-ins by selected time period
+    const now = new Date();
+    const periodDays = PERIOD_DAYS[timePeriod];
+    const periodCutoff = new Date(now.getTime() - periodDays * 24 * 60 * 60 * 1000);
+    const filteredCheckIns = timePeriod === 'all' 
+      ? checkIns 
+      : checkIns.filter(c => new Date(c.timestamp) >= periodCutoff);
+    
+    const checkInsWithTriggers = filteredCheckIns.filter(c => c.triggers && c.triggers.length > 0);
     
     if (checkInsWithTriggers.length === 0) {
       return { activePatterns: [], resolvedTriggers: [] };
     }
 
-    // Split check-ins into recent (last 14 days) and historical
-    const now = new Date();
-    const recentCutoff = new Date(now.getTime() - RECENT_DAYS * 24 * 60 * 60 * 1000);
+    // Split check-ins into recent (last 14 days within period) and historical
+    const recentDays = Math.min(14, periodDays / 2);
+    const recentCutoff = new Date(now.getTime() - recentDays * 24 * 60 * 60 * 1000);
     
-    const recentCheckIns = checkIns.filter(c => new Date(c.timestamp) >= recentCutoff);
-    const historicalCheckIns = checkIns.filter(c => new Date(c.timestamp) < recentCutoff);
+    const recentCheckIns = filteredCheckIns.filter(c => new Date(c.timestamp) >= recentCutoff);
+    const historicalCheckIns = filteredCheckIns.filter(c => new Date(c.timestamp) < recentCutoff);
     
     // Calculate baselines for each period
     const allIntensities = checkIns.map(c => c.skinIntensity ?? (5 - c.skinFeeling));
@@ -212,7 +227,7 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
       activePatterns: activePatterns.slice(0, 6), 
       resolvedTriggers: resolvedTriggers.slice(0, 3) 
     };
-  }, [checkIns]);
+  }, [checkIns, timePeriod]);
 
   // Check if user has logged any triggers at all
   const hasAnyTriggers = checkIns.some(c => c.triggers && c.triggers.length > 0);
@@ -283,14 +298,36 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     return null;
   };
 
+  const TimePeriodToggle = () => (
+    <div className="flex gap-1 bg-muted/50 rounded-lg p-0.5">
+      {(['week', 'month', 'all'] as TimePeriod[]).map((period) => (
+        <button
+          key={period}
+          onClick={() => setTimePeriod(period)}
+          className={cn(
+            "px-3 py-1 text-xs font-medium rounded-md transition-all",
+            timePeriod === period 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {period === 'week' ? '7d' : period === 'month' ? '30d' : 'All'}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
-      <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
-        <div className="p-1.5 rounded-lg bg-muted">
-          <Eye className="w-4 h-4 text-muted-foreground" />
-        </div>
-        Patterns We're Watching
-      </h3>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-muted">
+            <Eye className="w-4 h-4 text-muted-foreground" />
+          </div>
+          Patterns We're Watching
+        </h3>
+        <TimePeriodToggle />
+      </div>
       
       {/* Active Patterns */}
       {activePatterns.length > 0 && (
