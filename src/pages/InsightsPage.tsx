@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles, Eye, Pencil, Crown, Loader2, Flame, Activity, CalendarDays, Moon } from 'lucide-react';
+import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles, Eye, Pencil, Crown, Loader2, Flame, Activity, CalendarDays, Moon, Wand2, Trash2 } from 'lucide-react';
 import { useUserData, BodyPart, CheckIn } from '@/contexts/UserDataContext';
 import { useDemoMode } from '@/contexts/DemoModeContext';
 import { format, subDays, startOfDay, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isSameMonth, addMonths, subMonths, getDay, setMonth, setYear } from 'date-fns';
@@ -52,7 +52,7 @@ const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
 
 const InsightsPage = () => {
   const { checkIns: realCheckIns, photos } = useUserData();
-  const { isDemoMode, isAdmin, getEffectiveCheckIns, demoCheckIns } = useDemoMode();
+  const { isDemoMode, isAdmin, getEffectiveCheckIns, demoCheckIns, generateSampleData, clearDemoData } = useDemoMode();
   const { isPremium, isLoading: isSubscriptionLoading } = useSubscription();
   const { baselineConfidence, dailyFlareStates } = useFlareState();
   const [calendarMonth, setCalendarMonth] = useState(new Date());
@@ -239,6 +239,38 @@ const InsightsPage = () => {
           )}
         </div>
         <p className="text-muted-foreground">Your healing patterns</p>
+        
+        {/* Demo Mode Controls */}
+        {isDemoMode && isAdmin && (
+          <div className="flex gap-2 mt-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-amber-600 border-amber-500/30 hover:bg-amber-500/10"
+              onClick={() => {
+                generateSampleData();
+                toast.success('Generated 30 days of sample data');
+              }}
+            >
+              <Wand2 className="w-3.5 h-3.5" />
+              Generate 30 Days
+            </Button>
+            {demoCheckIns.size > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10"
+                onClick={() => {
+                  clearDemoData();
+                  toast.success('Cleared all demo data');
+                }}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Clear Demo
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Flare Status Badge */}
