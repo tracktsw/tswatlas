@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useUserData } from '@/contexts/UserDataContext';
 import { useDemoMode } from '@/contexts/DemoModeContext';
-import { analyzeFlareState, FlareAnalysis, BaselineConfidence } from '@/utils/flareStateEngine';
+import { analyzeFlareState, FlareAnalysis, BaselineConfidence, FlareState } from '@/utils/flareStateEngine';
 
 /**
  * Hook to get the current flare state analysis for the logged-in user.
@@ -23,7 +23,7 @@ export function useFlareState(): FlareAnalysis & { isLoading: boolean } {
         flareThreshold: null,
         flareEpisodes: [],
         dailyFlareStates: [],
-        currentState: 'stable' as const,
+        currentState: 'stable' as FlareState,
         isInActiveFlare: false,
         currentFlareDuration: null,
       };
@@ -39,6 +39,9 @@ export function useFlareState(): FlareAnalysis & { isLoading: boolean } {
         name: s.symptom,
         severity: s.severity,
       })),
+      pain_score: c.painScore,
+      sleep_score: c.sleepScore,
+      mood: c.mood,
     }));
     
     return analyzeFlareState(checkInData);
@@ -53,18 +56,20 @@ export function useFlareState(): FlareAnalysis & { isLoading: boolean } {
 /**
  * Get a human-readable label for a flare state
  */
-export function getFlareStateLabel(state: FlareAnalysis['currentState']): string {
+export function getFlareStateLabel(state: FlareState): string {
   switch (state) {
     case 'stable':
       return 'Stable';
-    case 'pre_flare':
-      return 'Pre-flare';
+    case 'unstable':
+      return 'Unstable';
+    case 'early_flare':
+      return 'Early Flare';
     case 'active_flare':
-      return 'Active flare';
+      return 'Active Flare';
     case 'peak_flare':
-      return 'Peak flare';
-    case 'resolving_flare':
-      return 'Resolving';
+      return 'Peak Flare';
+    case 'recovering':
+      return 'Recovering';
     default:
       return 'Unknown';
   }
@@ -89,17 +94,19 @@ export function getConfidenceLabel(confidence: BaselineConfidence): string {
 /**
  * Get a color class for a flare state (using semantic tokens)
  */
-export function getFlareStateColor(state: FlareAnalysis['currentState']): string {
+export function getFlareStateColor(state: FlareState): string {
   switch (state) {
     case 'stable':
       return 'text-green-600 dark:text-green-400';
-    case 'pre_flare':
+    case 'unstable':
       return 'text-yellow-600 dark:text-yellow-400';
+    case 'early_flare':
+      return 'text-orange-500 dark:text-orange-400';
     case 'active_flare':
       return 'text-orange-600 dark:text-orange-400';
     case 'peak_flare':
       return 'text-red-600 dark:text-red-400';
-    case 'resolving_flare':
+    case 'recovering':
       return 'text-blue-600 dark:text-blue-400';
     default:
       return 'text-muted-foreground';
