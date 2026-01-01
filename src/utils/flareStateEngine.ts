@@ -1,26 +1,45 @@
 /**
- * Flare State Engine (Trend-Based, 4-State System)
+ * Flare State Engine (Skin-Severity Only)
  * 
- * States: Stable, Early Flare, Active Flare, Recovering
+ * States: Stable, Stable-Severe, Active Flare, Recovering
  * 
  * Key principles:
- * - Single bad days NEVER trigger flares
- * - Based on RECENT trends, not lifetime data
- * - Recovery OVERRIDES historic severity
- * - Never show "Active flare" if last 3-5 days show improvement
+ * - Flare state is determined ONLY by skin severity over time
+ * - Pain, symptoms, sleep, mood are for contextual insights only
+ * - Skin severity: GREEN (good) → YELLOW → ORANGE → RED (worst)
  */
 
 export type FlareState = 
   | 'stable' 
-  | 'stable_severe' // persistently high but NOT worsening
-  | 'early_flare'   // worsening trend starting (2 check-ins)
-  | 'active_flare'  // confirmed flare (3+ check-ins worsening)
-  | 'recovering';   // improving after flare
+  | 'stable_severe'  // RED skin, no change for ≥5-7 days
+  | 'early_flare'    // worsening trend starting (2 days)
+  | 'active_flare'   // RED + worsening sustained ≥3 days
+  | 'recovering';    // improving from RED to ORANGE or better, sustained ≥3 days
 
 export type BaselineConfidence = 'early' | 'provisional' | 'mature';
 
-// Core symptoms that matter for flare detection
-const CORE_SYMPTOMS = ['itching', 'burning', 'redness', 'itch', 'burn', 'red'];
+/**
+ * Skin severity levels (derived from skinFeeling 1-5)
+ * skinFeeling: 1 = worst, 5 = best
+ * We convert to severity: 0 = GREEN (best), 1 = YELLOW, 2 = ORANGE, 3 = RED (worst)
+ */
+export type SkinSeverityLevel = 'green' | 'yellow' | 'orange' | 'red';
+
+export function getSkinSeverityFromFeeling(skinFeeling: number): number {
+  // skinFeeling: 1 = worst (RED), 5 = best (GREEN)
+  // severity: 0 = GREEN, 1 = YELLOW, 2 = ORANGE, 3 = RED
+  if (skinFeeling >= 4) return 0; // GREEN (4-5)
+  if (skinFeeling === 3) return 1; // YELLOW
+  if (skinFeeling === 2) return 2; // ORANGE
+  return 3; // RED (skinFeeling = 1)
+}
+
+export function getSkinSeverityLabel(severity: number): SkinSeverityLevel {
+  if (severity === 0) return 'green';
+  if (severity === 1) return 'yellow';
+  if (severity === 2) return 'orange';
+  return 'red';
+}
 
 export interface DailyBurden {
   date: string;
@@ -71,86 +90,67 @@ interface CheckInData {
   mood?: number;
 }
 
-interface DailyMetrics {
+interface DailySkinMetrics {
   date: string;
-  avgSeverity: number;         // average symptom severity (1-3)
-  maxSeverity: number;         // max symptom severity
-  painScore: number;           // 0-10
-  skinIntensity: number;       // 0-5 (higher = worse)
-  skinFeeling: number;         // 1-5 (higher = better)
-  mood: number;                // 1-5 (higher = better)
-  hasCoreSymptomModerateOrSevere: boolean;
+  skinSeverity: number;      // 0 = GREEN, 1 = YELLOW, 2 = ORANGE, 3 = RED
+  skinFeeling: number;       // original 1-5 value (for context)
   checkInCount: number;
+  // Contextual data (not used for flare detection)
+  avgSymptomSeverity: number;
+  painScore: number;
+  mood: number;
 }
 
 /**
- * Calculate metrics for a single day from check-ins
+ * Calculate skin metrics for a single day from check-ins
+ * Uses WORST skin reading of the day
  */
-function calculateDailyMetrics(dayCheckIns: CheckInData[]): DailyMetrics {
-  let totalSeverity = 0;
+function calculateDailySkinMetrics(dayCheckIns: CheckInData[]): DailySkinMetrics {
+  let worstSkinFeeling = 5; // Start with best
+  let totalSymptomSeverity = 0;
   let symptomCount = 0;
-  let maxSeverity = 0;
   let maxPain = 0;
-  let maxSkinIntensity = 0;
-  let minSkinFeeling = 5;
-  let avgMood = 3;
-  let hasCoreSymptom = false;
-  
   let moodSum = 0;
   let moodCount = 0;
   
   for (const checkIn of dayCheckIns) {
-    // Skin metrics
-    const skinIntensity = checkIn.skinIntensity ?? (5 - checkIn.skinFeeling);
-    maxSkinIntensity = Math.max(maxSkinIntensity, skinIntensity);
-    minSkinFeeling = Math.min(minSkinFeeling, checkIn.skinFeeling);
+    // Get worst skin feeling of the day
+    worstSkinFeeling = Math.min(worstSkinFeeling, checkIn.skinFeeling);
     
-    // Pain
+    // Contextual: pain
     const pain = checkIn.pain_score ?? 0;
     maxPain = Math.max(maxPain, pain);
     
-    // Mood
+    // Contextual: mood
     if (checkIn.mood !== undefined && checkIn.mood !== null) {
       moodSum += checkIn.mood;
       moodCount++;
     }
     
-    // Symptoms
+    // Contextual: symptoms
     const symptoms = checkIn.symptomsExperienced ?? [];
     for (const symptom of symptoms) {
-      totalSeverity += symptom.severity;
+      totalSymptomSeverity += symptom.severity;
       symptomCount++;
-      maxSeverity = Math.max(maxSeverity, symptom.severity);
-      
-      // Check for core symptoms at moderate (2) or severe (3)
-      const isCore = CORE_SYMPTOMS.some(c => 
-        symptom.name.toLowerCase().includes(c)
-      );
-      if (isCore && symptom.severity >= 2) {
-        hasCoreSymptom = true;
-      }
     }
   }
   
-  avgMood = moodCount > 0 ? moodSum / moodCount : 3;
-  
   return {
     date: dayCheckIns[0].created_at.split('T')[0],
-    avgSeverity: symptomCount > 0 ? totalSeverity / symptomCount : 0,
-    maxSeverity,
-    painScore: maxPain,
-    skinIntensity: maxSkinIntensity,
-    skinFeeling: minSkinFeeling,
-    mood: avgMood,
-    hasCoreSymptomModerateOrSevere: hasCoreSymptom,
+    skinSeverity: getSkinSeverityFromFeeling(worstSkinFeeling),
+    skinFeeling: worstSkinFeeling,
     checkInCount: dayCheckIns.length,
+    // Contextual data
+    avgSymptomSeverity: symptomCount > 0 ? totalSymptomSeverity / symptomCount : 0,
+    painScore: maxPain,
+    mood: moodCount > 0 ? moodSum / moodCount : 3,
   };
 }
 
 /**
- * Group check-ins by date and calculate daily metrics
+ * Group check-ins by date and calculate daily skin metrics
  */
-function calculateAllDailyMetrics(checkIns: CheckInData[]): DailyMetrics[] {
+function calculateAllDailySkinMetrics(checkIns: CheckInData[]): DailySkinMetrics[] {
   const byDate = new Map<string, CheckInData[]>();
   
   for (const checkIn of checkIns) {
@@ -161,27 +161,26 @@ function calculateAllDailyMetrics(checkIns: CheckInData[]): DailyMetrics[] {
     byDate.get(date)!.push(checkIn);
   }
   
-  const metrics: DailyMetrics[] = [];
+  const metrics: DailySkinMetrics[] = [];
   for (const [, dayCheckIns] of byDate) {
-    metrics.push(calculateDailyMetrics(dayCheckIns));
+    metrics.push(calculateDailySkinMetrics(dayCheckIns));
   }
   
   return metrics.sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /**
- * Check if severity is worsening across consecutive days
- * Returns the count of consecutive worsening days from the end
+ * Count consecutive days where skin is worsening (severity increasing)
  */
-function getConsecutiveWorseningCount(metrics: DailyMetrics[], field: 'avgSeverity' | 'painScore'): number {
+function getConsecutiveSkinWorseningDays(metrics: DailySkinMetrics[]): number {
   if (metrics.length < 2) return 0;
   
   let count = 0;
   for (let i = metrics.length - 1; i > 0; i--) {
-    const current = metrics[i][field];
-    const previous = metrics[i - 1][field];
+    const today = metrics[i].skinSeverity;
+    const yesterday = metrics[i - 1].skinSeverity;
     
-    if (current > previous) {
+    if (today > yesterday) {
       count++;
     } else {
       break;
@@ -192,24 +191,17 @@ function getConsecutiveWorseningCount(metrics: DailyMetrics[], field: 'avgSeveri
 }
 
 /**
- * Check if there's an improving trend (for recovery detection)
- * Returns count of consecutive improving days from the end
+ * Count consecutive days where skin is improving (severity decreasing)
  */
-function getConsecutiveImprovingCount(metrics: DailyMetrics[]): number {
+function getConsecutiveSkinImprovingDays(metrics: DailySkinMetrics[]): number {
   if (metrics.length < 2) return 0;
   
   let count = 0;
   for (let i = metrics.length - 1; i > 0; i--) {
-    const current = metrics[i];
-    const previous = metrics[i - 1];
+    const today = metrics[i].skinSeverity;
+    const yesterday = metrics[i - 1].skinSeverity;
     
-    // Improvement: severity decreasing OR pain decreasing OR skin feeling improving
-    const severityImproving = current.avgSeverity < previous.avgSeverity;
-    const painImproving = current.painScore < previous.painScore;
-    const skinImproving = current.skinFeeling > previous.skinFeeling;
-    const moodImproving = current.mood > previous.mood;
-    
-    if (severityImproving || painImproving || skinImproving || moodImproving) {
+    if (today < yesterday) {
       count++;
     } else {
       break;
@@ -220,232 +212,155 @@ function getConsecutiveImprovingCount(metrics: DailyMetrics[]): number {
 }
 
 /**
- * Check if recent days have core symptoms at moderate/severe level
+ * Count consecutive days with stable skin (no change in severity)
  */
-function hasCoreSymptomOnMostDays(metrics: DailyMetrics[], lookbackDays: number = 3): boolean {
-  const recent = metrics.slice(-lookbackDays);
-  if (recent.length === 0) return false;
+function getConsecutiveSkinStableDays(metrics: DailySkinMetrics[]): number {
+  if (metrics.length < 2) return 0;
   
-  const daysWithCoreSymptom = recent.filter(m => m.hasCoreSymptomModerateOrSevere).length;
-  return daysWithCoreSymptom >= Math.ceil(recent.length / 2); // "most days" = more than half
-}
-
-/**
- * Check if average severity trend is worsening (not flat)
- */
-function isSeverityTrendWorsening(metrics: DailyMetrics[], lookbackDays: number = 5): boolean {
-  const recent = metrics.slice(-lookbackDays);
-  if (recent.length < 2) return false;
-  
-  // Compare first half average to second half average
-  const midpoint = Math.floor(recent.length / 2);
-  const firstHalf = recent.slice(0, midpoint);
-  const secondHalf = recent.slice(midpoint);
-  
-  const firstAvg = firstHalf.reduce((s, m) => s + m.avgSeverity, 0) / firstHalf.length;
-  const secondAvg = secondHalf.reduce((s, m) => s + m.avgSeverity, 0) / secondHalf.length;
-  
-  return secondAvg > firstAvg + 0.1; // Not flat, actually worsening
-}
-
-/**
- * Get the RECENT trend direction based on the last few days only
- * This is more useful than comparing first-half vs second-half for detecting current state
- */
-function getRecentTrendDirection(
-  metrics: DailyMetrics[], 
-  field: 'avgSeverity' | 'painScore' | 'skinIntensity',
-  lookback: number = 3
-): 'worsening' | 'stable' | 'improving' {
-  if (metrics.length < lookback) return 'stable';
-  
-  const recentDays = metrics.slice(-lookback);
-  let worseningCount = 0;
-  let improvingCount = 0;
-  
-  for (let i = 1; i < recentDays.length; i++) {
-    const prev = recentDays[i - 1][field];
-    const curr = recentDays[i][field];
-    if (prev === null || curr === null) continue;
+  let count = 1; // Current day counts
+  for (let i = metrics.length - 1; i > 0; i--) {
+    const today = metrics[i].skinSeverity;
+    const yesterday = metrics[i - 1].skinSeverity;
     
-    if (curr > prev + 0.5) worseningCount++;
-    else if (curr < prev - 0.5) improvingCount++;
+    if (today === yesterday) {
+      count++;
+    } else {
+      break;
+    }
   }
   
-  // Need clear majority to determine trend
-  if (worseningCount >= lookback - 1) return 'worsening';
-  if (improvingCount >= lookback - 1) return 'improving';
-  return 'stable';
+  return count;
 }
 
 /**
- * Check if user is in STABLE-SEVERE state
- * TRUE if:
- * - Persistently high severity (pain ≥5 OR avg severity ≥2 OR skin intensity ≥3) for ≥7 days
- * - Recent trend (last 3 days) is NOT worsening (stable or improving)
- * This represents their current baseline, not an active flare
+ * Check if skin is currently RED (severity = 3)
  */
-function shouldBeStableSevere(metrics: DailyMetrics[]): boolean {
-  if (metrics.length < 7) return false; // Need at least 7 days of data
-  
-  const last7Days = metrics.slice(-7);
-  
-  // Check for persistently high severity
-  const daysWithHighSeverity = last7Days.filter(m => 
-    (m.painScore !== null && m.painScore >= 5) || 
-    m.avgSeverity >= 2 || 
-    (m.skinIntensity !== null && m.skinIntensity >= 3)
-  ).length;
-  
-  // Need at least 5 of 7 days with high severity to be "persistently high"
-  if (daysWithHighSeverity < 5) return false;
-  
-  // Check RECENT trend direction (last 3 days) - key distinction from active flare
-  // If currently worsening, it's a flare, not stable-severe
-  const recentPainTrend = getRecentTrendDirection(metrics, 'painScore', 3);
-  const recentSeverityTrend = getRecentTrendDirection(metrics, 'avgSeverity', 3);
-  
-  // If BOTH pain AND severity are actively worsening in recent days, it's a flare
-  if (recentPainTrend === 'worsening' && recentSeverityTrend === 'worsening') return false;
-  
-  // Check for consecutive worsening - but only if it's still active
-  const severityWorseningCount = getConsecutiveWorseningCount(metrics, 'avgSeverity');
-  const painWorseningCount = getConsecutiveWorseningCount(metrics, 'painScore');
-  
-  // If there's active consecutive worsening (3+ days), it's a flare
-  if (severityWorseningCount >= 3 || painWorseningCount >= 3) return false;
-  
-  return true;
+function isCurrentSkinRed(metrics: DailySkinMetrics[]): boolean {
+  if (metrics.length === 0) return false;
+  return metrics[metrics.length - 1].skinSeverity === 3;
 }
 
 /**
- * Check if user should be in STABLE state (exit flare completely)
- * ALL must be true:
- * - No worsening trend for ≥5 days
- * - Pain scores remain low (≤3)
- * - Skin feeling is stable or improving
- * - No new severe symptom spikes
+ * Check if skin was RED recently (within last N days)
  */
-function shouldBeStable(metrics: DailyMetrics[]): boolean {
-  if (metrics.length < 5) return true; // Not enough data, default to stable
-  
-  const last5Days = metrics.slice(-5);
-  
-  // No worsening trend for ≥5 days
-  const worseningCount = getConsecutiveWorseningCount(metrics, 'avgSeverity');
-  if (worseningCount >= 2) return false;
-  
-  // Pain scores remain low (≤3)
-  const allPainLow = last5Days.every(m => m.painScore <= 3);
-  if (!allPainLow) return false;
-  
-  // Skin feeling stable or improving (check last few days aren't getting worse)
-  const skinWorsening = last5Days.some((m, i) => {
-    if (i === 0) return false;
-    return m.skinFeeling < last5Days[i - 1].skinFeeling;
-  });
-  // Allow some fluctuation, but not consistent worsening
-  const skinConsistentlyWorsening = getConsecutiveWorseningCount(
-    last5Days.map(m => ({ ...m, avgSeverity: 5 - m.skinFeeling, painScore: 0 })), 
-    'avgSeverity'
-  ) >= 2;
-  if (skinConsistentlyWorsening) return false;
-  
-  // No severe symptom spikes
-  const hasSevereSpike = last5Days.some(m => m.maxSeverity >= 3);
-  if (hasSevereSpike) return false;
-  
-  return true;
+function wasSkinRedRecently(metrics: DailySkinMetrics[], lookbackDays: number = 5): boolean {
+  const recent = metrics.slice(-lookbackDays);
+  return recent.some(m => m.skinSeverity === 3);
 }
 
 /**
- * Check if user should be RECOVERING
- * ANY of these conditions:
- * - Severity trend improves for ≥2 consecutive check-ins
- * - Pain scores decrease or remain low
- * - Skin feeling improves
- * - Mood stabilises or improves
+ * ACTIVE FLARE: skin worsens to RED and worsening sustained ≥3 days
  */
-function shouldBeRecovering(metrics: DailyMetrics[], wasInFlare: boolean): boolean {
-  if (!wasInFlare) return false; // Can only recover if was in flare
-  if (metrics.length < 2) return false;
+function shouldBeActiveFlare(metrics: DailySkinMetrics[]): boolean {
+  if (metrics.length < 3) return false;
   
-  const improvingCount = getConsecutiveImprovingCount(metrics);
-  if (improvingCount >= 2) return true;
+  // Must currently be RED
+  if (!isCurrentSkinRed(metrics)) return false;
   
+  // Check for sustained worsening (≥3 consecutive days of worsening)
+  const worseningDays = getConsecutiveSkinWorseningDays(metrics);
+  if (worseningDays >= 3) return true;
+  
+  // Also consider: if at RED and came from lower severity in last few days
   const last3Days = metrics.slice(-3);
-  if (last3Days.length < 2) return false;
-  
-  // Pain decreasing or low
-  const painDecreasing = last3Days[last3Days.length - 1].painScore < last3Days[0].painScore;
-  const painLow = last3Days.every(m => m.painScore <= 3);
-  if (painDecreasing || painLow) return true;
-  
-  // Skin feeling improving (any improvement in last 3 days)
-  const skinImproving = last3Days[last3Days.length - 1].skinFeeling > last3Days[0].skinFeeling;
-  if (skinImproving) return true;
-  
-  // Mood stabilising or improving
-  const moodImproving = last3Days[last3Days.length - 1].mood >= last3Days[0].mood;
-  if (moodImproving && last3Days[last3Days.length - 1].mood >= 3) return true;
+  if (last3Days.length >= 3) {
+    const hadLowerSeverity = last3Days.slice(0, -1).some(m => m.skinSeverity < 3);
+    const currentlyRed = last3Days[last3Days.length - 1].skinSeverity === 3;
+    const stillWorsening = last3Days[last3Days.length - 1].skinSeverity >= last3Days[0].skinSeverity;
+    
+    if (hadLowerSeverity && currentlyRed && stillWorsening && worseningDays >= 2) {
+      return true;
+    }
+  }
   
   return false;
 }
 
 /**
- * Check if user should be in ACTIVE FLARE
- * ALL must be true:
- * - Symptom severity worsening across ≥3 consecutive check-ins OR pain increases ≥3
- * - AND average severity trend is worsening (not flat)
- * - AND core symptom (itching, burning, redness) is Moderate or Severe on most days
- * 
- * IMPORTANT: Never if last 3-5 days show improvement!
+ * STABLE-SEVERE: skin remains RED with no improvement or worsening for ≥5-7 days
  */
-function shouldBeActiveFlare(metrics: DailyMetrics[]): boolean {
+function shouldBeStableSevere(metrics: DailySkinMetrics[]): boolean {
+  if (metrics.length < 5) return false;
+  
+  // Must currently be RED
+  if (!isCurrentSkinRed(metrics)) return false;
+  
+  // Check if actively worsening - if so, it's active flare, not stable-severe
+  const worseningDays = getConsecutiveSkinWorseningDays(metrics);
+  if (worseningDays >= 2) return false;
+  
+  // Check if actively improving - if so, it's recovering
+  const improvingDays = getConsecutiveSkinImprovingDays(metrics);
+  if (improvingDays >= 2) return false;
+  
+  // Count how many of last 5-7 days have been RED
+  const lookbackDays = Math.min(7, metrics.length);
+  const recentMetrics = metrics.slice(-lookbackDays);
+  const redDays = recentMetrics.filter(m => m.skinSeverity === 3).length;
+  
+  // At least 5 out of 7 days (or 5 out of available days) should be RED
+  return redDays >= 5;
+}
+
+/**
+ * RECOVERING: skin improves from RED to ORANGE or better, sustained ≥3 days
+ */
+function shouldBeRecovering(metrics: DailySkinMetrics[]): boolean {
   if (metrics.length < 3) return false;
   
-  // FIRST: Check if last 3-5 days show improvement - if so, NEVER active flare
-  const improvingCount = getConsecutiveImprovingCount(metrics);
-  if (improvingCount >= 2) return false;
+  // Current skin should NOT be RED (must have improved)
+  const currentSeverity = metrics[metrics.length - 1].skinSeverity;
+  if (currentSeverity === 3) return false; // Still RED, not recovering
   
-  // Check worsening trends
-  const severityWorseningCount = getConsecutiveWorseningCount(metrics, 'avgSeverity');
-  const painWorseningCount = getConsecutiveWorseningCount(metrics, 'painScore');
+  // Must have been RED recently (within last 5 days)
+  if (!wasSkinRedRecently(metrics, 5)) return false;
   
-  const hasWorseningTrend = severityWorseningCount >= 3 || painWorseningCount >= 3;
-  if (!hasWorseningTrend) return false;
+  // Check for sustained improvement (≥3 consecutive days of improving OR stable-at-lower-level)
+  const improvingDays = getConsecutiveSkinImprovingDays(metrics);
+  if (improvingDays >= 2) return true;
   
-  // Check severity trend is actually worsening (not flat)
-  if (!isSeverityTrendWorsening(metrics)) return false;
+  // Or: was RED, now ORANGE or better for at least 2 days
+  const last3Days = metrics.slice(-3);
+  const hadRed = metrics.slice(-5, -2).some(m => m.skinSeverity === 3);
+  const nowBetter = last3Days.every(m => m.skinSeverity < 3);
   
-  // Check for core symptoms on most days
-  if (!hasCoreSymptomOnMostDays(metrics)) return false;
+  if (hadRed && nowBetter) return true;
+  
+  return false;
+}
+
+/**
+ * STABLE: skin is GREEN or YELLOW with no recent worsening
+ */
+function shouldBeStable(metrics: DailySkinMetrics[]): boolean {
+  if (metrics.length === 0) return true;
+  
+  const currentSeverity = metrics[metrics.length - 1].skinSeverity;
+  
+  // GREEN (0) or YELLOW (1) = potentially stable
+  if (currentSeverity > 1) return false; // ORANGE or RED
+  
+  // Check for recent worsening trend
+  const worseningDays = getConsecutiveSkinWorseningDays(metrics);
+  if (worseningDays >= 2) return false;
   
   return true;
 }
 
 /**
- * Check if user is in EARLY FLARE (worsening starting, 2 check-ins)
+ * EARLY FLARE: skin starting to worsen (2 days of worsening, not yet 3)
  */
-function shouldBeEarlyFlare(metrics: DailyMetrics[]): boolean {
+function shouldBeEarlyFlare(metrics: DailySkinMetrics[]): boolean {
   if (metrics.length < 2) return false;
   
-  // Check if improving - if so, not a flare
-  const improvingCount = getConsecutiveImprovingCount(metrics);
-  if (improvingCount >= 2) return false;
+  const worseningDays = getConsecutiveSkinWorseningDays(metrics);
   
-  const severityWorseningCount = getConsecutiveWorseningCount(metrics, 'avgSeverity');
-  const painWorseningCount = getConsecutiveWorseningCount(metrics, 'painScore');
-  
-  // 2 consecutive worsening but not yet 3
-  const hasEarlyWorsening = (severityWorseningCount === 2 || painWorseningCount === 2) &&
-                            severityWorseningCount < 3 && painWorseningCount < 3;
-  
-  return hasEarlyWorsening && hasCoreSymptomOnMostDays(metrics, 2);
+  // Exactly 2 days of worsening (not yet 3)
+  return worseningDays === 2;
 }
 
 /**
- * Determine baseline confidence
+ * Determine baseline confidence based on data amount
  */
 export function getBaselineConfidence(checkInCount: number): BaselineConfidence {
   if (checkInCount < 7) return 'early';
@@ -454,14 +369,14 @@ export function getBaselineConfidence(checkInCount: number): BaselineConfidence 
 }
 
 /**
- * Main flare analysis function
+ * Main flare analysis function - uses ONLY skin severity
  */
 export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
   if (checkIns.length === 0) {
     return createEmptyAnalysis();
   }
   
-  const allMetrics = calculateAllDailyMetrics(checkIns);
+  const allMetrics = calculateAllDailySkinMetrics(checkIns);
   const confidence = getBaselineConfidence(checkIns.length);
   
   // Build daily flare states
@@ -470,7 +385,6 @@ export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
   
   // Track flare episode
   let currentFlareStartIdx: number | null = null;
-  let wasInFlare = false;
   
   for (let i = 0; i < allMetrics.length; i++) {
     const metricsUpToNow = allMetrics.slice(0, i + 1);
@@ -480,97 +394,102 @@ export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
     let isInFlareEpisode = false;
     let explanation: string | undefined;
     
-    // Calculate burden score for compatibility
-    const burdenScore = metrics.avgSeverity + (metrics.skinIntensity / 5) * 3;
+    // Calculate burden score for compatibility (skin-based)
+    const burdenScore = metrics.skinSeverity;
     
     if (confidence === 'early') {
       flareState = 'stable';
       explanation = 'Building baseline — need more data.';
     } else {
-      // Determine state based on trend analysis
+      // Determine state based on skin severity only
+      // Priority order matters!
       
-      // Priority 1: Check if should be STABLE (exit flare)
-      if (shouldBeStable(metricsUpToNow)) {
-        flareState = 'stable';
-        wasInFlare = false;
-        if (currentFlareStartIdx !== null) {
-          // End the flare episode
-          flareEpisodes.push({
-            startDate: allMetrics[currentFlareStartIdx].date,
-            endDate: allMetrics[i > 0 ? i - 1 : i].date,
-            peakDate: allMetrics[currentFlareStartIdx].date, // Simplified
-            durationDays: i - currentFlareStartIdx,
-            peakBurdenScore: burdenScore,
-            isActive: false,
-            isPaused: false,
-          });
-          currentFlareStartIdx = null;
-        }
-        explanation = 'Symptoms stable — no active flare.';
-      }
-      // Priority 2: Check if RECOVERING (overrides active flare if improving)
-      else if (shouldBeRecovering(metricsUpToNow, wasInFlare)) {
+      // Priority 1: RECOVERING (if improving from RED)
+      if (shouldBeRecovering(metricsUpToNow)) {
         flareState = 'recovering';
         isInFlareEpisode = false;
-        explanation = 'Recovering from flare — symptoms improving.';
-        // If we were in a flare, mark it as ended
         if (currentFlareStartIdx !== null) {
           flareEpisodes.push({
             startDate: allMetrics[currentFlareStartIdx].date,
             endDate: allMetrics[i > 0 ? i - 1 : i].date,
             peakDate: allMetrics[currentFlareStartIdx].date,
             durationDays: i - currentFlareStartIdx,
-            peakBurdenScore: burdenScore,
+            peakBurdenScore: 3,
             isActive: false,
             isPaused: false,
           });
           currentFlareStartIdx = null;
         }
+        explanation = 'Recovering — skin improving from RED.';
       }
-      // Priority 3: Check if STABLE-SEVERE (high but NOT actively worsening)
-      // This must come BEFORE active_flare check — if symptoms are high but stable/improving, it's stable-severe
+      // Priority 2: STABLE (GREEN or YELLOW, no worsening)
+      else if (shouldBeStable(metricsUpToNow)) {
+        flareState = 'stable';
+        isInFlareEpisode = false;
+        if (currentFlareStartIdx !== null) {
+          flareEpisodes.push({
+            startDate: allMetrics[currentFlareStartIdx].date,
+            endDate: allMetrics[i > 0 ? i - 1 : i].date,
+            peakDate: allMetrics[currentFlareStartIdx].date,
+            durationDays: i - currentFlareStartIdx,
+            peakBurdenScore: 3,
+            isActive: false,
+            isPaused: false,
+          });
+          currentFlareStartIdx = null;
+        }
+        explanation = 'Stable — skin is GREEN or YELLOW.';
+      }
+      // Priority 3: STABLE-SEVERE (RED but not changing for 5+ days)
       else if (shouldBeStableSevere(metricsUpToNow)) {
         flareState = 'stable_severe';
         isInFlareEpisode = false;
-        // If we were in a flare but now stable-severe, end the episode
         if (currentFlareStartIdx !== null) {
           flareEpisodes.push({
             startDate: allMetrics[currentFlareStartIdx].date,
             endDate: allMetrics[i > 0 ? i - 1 : i].date,
             peakDate: allMetrics[currentFlareStartIdx].date,
             durationDays: i - currentFlareStartIdx,
-            peakBurdenScore: burdenScore,
+            peakBurdenScore: 3,
             isActive: false,
             isPaused: false,
           });
           currentFlareStartIdx = null;
         }
-        explanation = 'Symptoms are severe but consistent — this reflects your current baseline, not an active flare.';
+        explanation = 'Stable – Severe — skin has been RED but consistent for 5+ days.';
       }
-      // Priority 4: Check if ACTIVE FLARE
+      // Priority 4: ACTIVE FLARE (RED + worsening ≥3 days)
       else if (shouldBeActiveFlare(metricsUpToNow)) {
         flareState = 'active_flare';
         isInFlareEpisode = true;
-        wasInFlare = true;
         if (currentFlareStartIdx === null) {
-          currentFlareStartIdx = Math.max(0, i - 2); // Started ~3 days ago
+          currentFlareStartIdx = Math.max(0, i - 2);
         }
-        explanation = 'Active flare — sustained symptom worsening detected.';
+        explanation = 'Active Flare — skin has worsened to RED.';
       }
-      // Priority 5: Check if EARLY FLARE
+      // Priority 5: EARLY FLARE (worsening 2 days)
       else if (shouldBeEarlyFlare(metricsUpToNow)) {
         flareState = 'early_flare';
         isInFlareEpisode = true;
-        wasInFlare = true;
         if (currentFlareStartIdx === null) {
           currentFlareStartIdx = Math.max(0, i - 1);
         }
-        explanation = 'Early flare signs — monitoring trend.';
+        explanation = 'Early Flare — skin starting to worsen.';
       }
-      // Default: STABLE
+      // Default: based on current skin level
       else {
-        flareState = 'stable';
-        explanation = 'Symptoms stable — no concerns.';
+        const currentSeverity = metrics.skinSeverity;
+        if (currentSeverity <= 1) {
+          flareState = 'stable';
+          explanation = 'Stable — skin is in good condition.';
+        } else if (currentSeverity === 2) {
+          flareState = 'stable';
+          explanation = 'Stable — skin is ORANGE, monitoring.';
+        } else {
+          // RED but doesn't meet other criteria yet
+          flareState = 'early_flare';
+          explanation = 'Monitoring — skin is RED.';
+        }
       }
     }
     
@@ -591,7 +510,7 @@ export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
       endDate: null,
       peakDate: allMetrics[currentFlareStartIdx].date,
       durationDays: allMetrics.length - currentFlareStartIdx,
-      peakBurdenScore: allMetrics[allMetrics.length - 1].avgSeverity,
+      peakBurdenScore: 3,
       isActive: true,
       isPaused: false,
     });
@@ -607,9 +526,9 @@ export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
   // Convert to legacy DailyBurden format
   const dailyBurdens: DailyBurden[] = allMetrics.map(m => ({
     date: m.date,
-    score: m.avgSeverity + (m.skinIntensity / 5) * 3,
-    skinIntensity: m.skinIntensity,
-    symptomScore: m.avgSeverity * 3,
+    score: m.skinSeverity,
+    skinIntensity: m.skinSeverity,
+    symptomScore: m.avgSymptomSeverity * 3,
   }));
   
   // Calculate baseline for display
@@ -646,18 +565,17 @@ function createEmptyAnalysis(): FlareAnalysis {
 
 // Legacy exports for compatibility
 export function calculateDailyBurdens(checkIns: CheckInData[]): DailyBurden[] {
-  const metrics = calculateAllDailyMetrics(checkIns);
+  const metrics = calculateAllDailySkinMetrics(checkIns);
   return metrics.map(m => ({
     date: m.date,
-    score: m.avgSeverity + (m.skinIntensity / 5) * 3,
-    skinIntensity: m.skinIntensity,
-    symptomScore: m.avgSeverity * 3,
+    score: m.skinSeverity,
+    skinIntensity: m.skinSeverity,
+    symptomScore: m.avgSymptomSeverity * 3,
   }));
 }
 
 export function calculateDailyBurdenScore(checkIn: CheckInData): number {
-  const metrics = calculateDailyMetrics([checkIn]);
-  return metrics.avgSeverity + (metrics.skinIntensity / 5) * 3;
+  return getSkinSeverityFromFeeling(checkIn.skinFeeling);
 }
 
 export function calculateRollingAverage3(
