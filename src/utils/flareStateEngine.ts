@@ -12,6 +12,7 @@
 
 export type FlareState = 
   | 'stable' 
+  | 'stable_severe' // persistently high but NOT worsening
   | 'early_flare'   // worsening trend starting (2 check-ins)
   | 'active_flare'  // confirmed flare (3+ check-ins worsening)
   | 'recovering';   // improving after flare
@@ -248,6 +249,39 @@ function isSeverityTrendWorsening(metrics: DailyMetrics[], lookbackDays: number 
 }
 
 /**
+ * Check if user is in STABLE-SEVERE state
+ * TRUE if:
+ * - Persistently high severity (pain ≥5 OR avg severity ≥2 OR skin intensity ≥3) for ≥7 days
+ * - NO upward trend (not worsening)
+ * This represents their current baseline, not an active flare
+ */
+function shouldBeStableSevere(metrics: DailyMetrics[]): boolean {
+  if (metrics.length < 7) return false; // Need at least 7 days of data
+  
+  const last7Days = metrics.slice(-7);
+  
+  // Check for persistently high severity
+  const daysWithHighSeverity = last7Days.filter(m => 
+    m.painScore >= 5 || m.avgSeverity >= 2 || m.skinIntensity >= 3
+  ).length;
+  
+  // Need at least 5 of 7 days with high severity to be "persistently high"
+  if (daysWithHighSeverity < 5) return false;
+  
+  // Check NO upward trend (not worsening) - key distinction from active flare
+  const severityWorseningCount = getConsecutiveWorseningCount(metrics, 'avgSeverity');
+  const painWorseningCount = getConsecutiveWorseningCount(metrics, 'painScore');
+  
+  // If there's active worsening, it's a flare, not stable-severe
+  if (severityWorseningCount >= 2 || painWorseningCount >= 2) return false;
+  
+  // Check that severity trend is NOT worsening
+  if (isSeverityTrendWorsening(metrics, 7)) return false;
+  
+  return true;
+}
+
+/**
  * Check if user should be in STABLE state (exit flare completely)
  * ALL must be true:
  * - No worsening trend for ≥5 days
@@ -475,6 +509,11 @@ export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
           currentFlareStartIdx = Math.max(0, i - 1);
         }
         explanation = 'Early flare signs — monitoring trend.';
+      }
+      // Priority 5: Check if STABLE-SEVERE (high but not worsening)
+      else if (shouldBeStableSevere(metricsUpToNow)) {
+        flareState = 'stable_severe';
+        explanation = 'Symptoms are severe but consistent — this reflects your current baseline, not an active flare.';
       }
       // Default: STABLE
       else {

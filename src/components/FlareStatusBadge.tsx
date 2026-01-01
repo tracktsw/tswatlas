@@ -1,4 +1,4 @@
-import { Flame, TrendingUp, TrendingDown, Activity, BookOpen } from 'lucide-react';
+import { Flame, TrendingUp, TrendingDown, Activity, BookOpen, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFlareState, getFlareStateLabel, getConfidenceLabel } from '@/hooks/useFlareState';
 import { FlareState, BaselineConfidence } from '@/utils/flareStateEngine';
@@ -17,6 +17,13 @@ const stateConfig: Record<FlareState, {
     iconColor: 'text-primary',
     ringColor: 'ring-primary/30',
     description: 'Your symptoms are at baseline',
+  },
+  stable_severe: {
+    icon: AlertTriangle,
+    gradient: 'bg-gradient-to-br from-amber-500/20 to-amber-100',
+    iconColor: 'text-amber-600',
+    ringColor: 'ring-amber-500/30',
+    description: 'Your symptoms are severe but consistent. This reflects your current baseline, not an active flare.',
   },
   early_flare: {
     icon: Activity,
