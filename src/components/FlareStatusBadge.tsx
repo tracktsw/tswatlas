@@ -124,11 +124,6 @@ export function FlareStatusBadge({ className }: FlareStatusBadgeProps) {
             <p className="font-display font-bold text-lg text-foreground">
               {label}
             </p>
-            {isInActiveFlare && currentFlareDuration && currentFlareDuration > 1 && (
-              <span className="text-muted-foreground font-normal text-sm">
-                · Day {currentFlareDuration}
-              </span>
-            )}
             {baselineConfidence === 'provisional' && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-muted/50 text-muted-foreground">
                 {confidenceLabel}
