@@ -1,16 +1,21 @@
 import { useMemo } from 'react';
 import { useUserData } from '@/contexts/UserDataContext';
+import { useDemoMode } from '@/contexts/DemoModeContext';
 import { analyzeFlareState, FlareAnalysis, BaselineConfidence } from '@/utils/flareStateEngine';
 
 /**
  * Hook to get the current flare state analysis for the logged-in user.
- * Computes flare detection from check-in data.
+ * Computes flare detection from check-in data (including demo data if active).
  */
 export function useFlareState(): FlareAnalysis & { isLoading: boolean } {
   const { checkIns, isLoading } = useUserData();
+  const { getEffectiveCheckIns } = useDemoMode();
+  
+  // Use effective check-ins which includes demo data when demo mode is active
+  const effectiveCheckIns = useMemo(() => getEffectiveCheckIns(checkIns), [checkIns, getEffectiveCheckIns]);
   
   const analysis = useMemo(() => {
-    if (checkIns.length === 0) {
+    if (effectiveCheckIns.length === 0) {
       return {
         dailyBurdens: [],
         baselineBurdenScore: null,
@@ -25,7 +30,7 @@ export function useFlareState(): FlareAnalysis & { isLoading: boolean } {
     }
     
     // Transform check-ins to the format expected by the engine
-    const checkInData = checkIns.map(c => ({
+    const checkInData = effectiveCheckIns.map(c => ({
       id: c.id,
       created_at: c.timestamp,
       skinIntensity: c.skinIntensity,
@@ -37,7 +42,7 @@ export function useFlareState(): FlareAnalysis & { isLoading: boolean } {
     }));
     
     return analyzeFlareState(checkInData);
-  }, [checkIns]);
+  }, [effectiveCheckIns]);
   
   return {
     ...analysis,
