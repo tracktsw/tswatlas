@@ -494,9 +494,14 @@ export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
           flareState = 'stable';
           explanation = 'Stable — skin is ORANGE, monitoring.';
         } else {
-          // RED but doesn't meet active_flare or stable_severe criteria yet
-          flareState = 'stable_severe';
-          explanation = 'Monitoring — skin is RED, tracking for changes.';
+          // RED but doesn't meet stable_severe criteria yet (< 5 days)
+          // This is early-stage active flare
+          flareState = 'active_flare';
+          isInFlareEpisode = true;
+          if (currentFlareStartIdx === null) {
+            currentFlareStartIdx = i;
+          }
+          explanation = 'Active Flare — skin is RED.';
         }
       }
     }
