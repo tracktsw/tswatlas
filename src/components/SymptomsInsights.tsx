@@ -565,10 +565,10 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                       {/* Severity line chart */}
                       <div className="flex">
                         {/* Y-axis */}
-                        <div className="flex flex-col justify-between h-16 pr-2 text-right">
-                          <span className="text-[9px] text-muted-foreground leading-none">Sev</span>
-                          <span className="text-[9px] text-muted-foreground leading-none">Mod</span>
-                          <span className="text-[9px] text-muted-foreground leading-none">Mild</span>
+                        <div className="flex flex-col justify-between h-32 pr-2 text-right">
+                          <span className="text-[10px] text-muted-foreground leading-none">Severe</span>
+                          <span className="text-[10px] text-muted-foreground leading-none">Moderate</span>
+                          <span className="text-[10px] text-muted-foreground leading-none">Mild</span>
                         </div>
                         
                         {/* Chart area */}
@@ -582,7 +582,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                           
                           {/* SVG lines for trends */}
                           <svg 
-                            className="w-full h-16 relative z-10"
+                            className="w-full h-32 relative z-10"
                             preserveAspectRatio="none"
                             viewBox={`0 -10 ${weeklySeverityTrend.length * 100} 120`}
                           >
