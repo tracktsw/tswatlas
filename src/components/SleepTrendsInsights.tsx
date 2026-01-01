@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Moon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CheckIn } from '@/contexts/UserDataContext';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths, isSameMonth } from 'date-fns';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, ReferenceArea, Tooltip, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceArea, ReferenceLine, Tooltip } from 'recharts';
 import { DailyFlareState } from '@/utils/flareStateEngine';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -261,7 +261,7 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
             {/* Chart */}
             <div className="h-44 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   {flarePeriods.map((period, idx) => (
                     <ReferenceArea
                       key={idx}
@@ -314,23 +314,17 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
                       );
                     }}
                   />
-                  <Bar
+                  <ReferenceLine y={3} stroke="hsl(var(--border))" strokeDasharray="3 3" />
+                  <Line
+                    type="monotone"
                     dataKey="sleepScore"
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={24}
-                  >
-                    {chartData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`}
-                        fill={entry.isFlaring 
-                          ? 'hsl(var(--muted-foreground))' 
-                          : 'hsl(239 84% 67%)'
-                        }
-                        fillOpacity={entry.isFlaring ? 0.5 : 0.8}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
+                    stroke="hsl(239 84% 67%)"
+                    strokeWidth={2}
+                    dot={{ fill: 'hsl(239 84% 67%)', strokeWidth: 0, r: 3 }}
+                    activeDot={{ r: 5, fill: 'hsl(239 84% 67%)' }}
+                    connectNulls
+                  />
+                </LineChart>
               </ResponsiveContainer>
             </div>
 
