@@ -193,7 +193,7 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
       
       <div className="glass-card p-5 space-y-4">
         {/* Chart */}
-        <div className="h-40 w-full">
+        <div className="h-44 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               {/* Flare period background shading - subtle */}
@@ -221,20 +221,31 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
               <YAxis 
                 domain={[0, 5]}
                 ticks={[1, 2, 3, 4, 5]}
-                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                tickFormatter={(value) => {
+                  const labels: Record<number, string> = {
+                    1: '😫',
+                    2: '😩',
+                    3: '😐',
+                    4: '🙂',
+                    5: '😴',
+                  };
+                  return labels[value] || '';
+                }}
+                tick={{ fontSize: 14 }}
                 axisLine={{ stroke: 'hsl(var(--border))' }}
                 tickLine={false}
-                width={30}
+                width={28}
               />
               <Tooltip 
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   const data = payload[0].payload;
                   const label = sleepLabels[Math.round(data.sleepScore) - 1] || '';
+                  const emoji = ['😫', '😩', '😐', '🙂', '😴'][Math.round(data.sleepScore) - 1] || '';
                   return (
                     <div className="bg-background/95 backdrop-blur-sm border border-border rounded-lg px-3 py-2 shadow-lg">
                       <p className="text-xs text-muted-foreground">{format(new Date(data.date), 'MMM d, yyyy')}</p>
-                      <p className="text-sm font-medium text-foreground">Sleep: {label}</p>
+                      <p className="text-sm font-medium text-foreground">{emoji} {label}</p>
                     </div>
                   );
                 }}
