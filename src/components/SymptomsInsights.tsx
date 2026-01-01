@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Activity, Lock, ChevronDown, TrendingUp } from 'lucide-react';
 import { CheckIn } from '@/contexts/UserDataContext';
-import { format, subDays, startOfDay, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, differenceInDays } from 'date-fns';
+import { format, subDays, startOfDay, eachDayOfInterval, eachWeekOfInterval, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
@@ -130,45 +130,44 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
   }, [filteredCheckIns]);
 
   // Severity trend chart data - compute independently for each time bucket
+  // CRITICAL: This must be computed from raw check-ins, NOT reused from symptomStats
   const severityTrendData = useMemo(() => {
     const now = startOfDay(new Date());
     
-    // Determine date range for severity trend based on tab
+    // Determine date range and granularity based on tab
+    // Last 7 days = 7 daily buckets
+    // Last 30 days = 30 daily buckets
+    // All time = weekly buckets (Sunday-Saturday)
     let startDate: Date;
     let rangeCheckIns: CheckIn[];
+    let granularity: 'daily' | 'weekly';
     
     if (timeRange === 'all') {
       rangeCheckIns = checkIns;
-      if (checkIns.length === 0) return { data: [], granularity: 'daily' as const, symptoms: [] };
+      granularity = 'weekly'; // All time ALWAYS uses weekly
+      if (checkIns.length === 0) {
+        return { data: [], granularity, symptoms: [], insufficientData: true };
+      }
       const oldest = checkIns.reduce((min, c) => {
         const d = new Date(c.timestamp);
         return d < min ? d : min;
       }, new Date());
-      startDate = startOfDay(oldest);
+      startDate = startOfWeek(oldest, { weekStartsOn: 0 }); // Start from week boundary
     } else {
+      granularity = 'daily';
       const daysBack = timeRange === '7' ? 6 : 29;
       startDate = subDays(now, daysBack);
-      rangeCheckIns = checkIns.filter(c => new Date(c.timestamp) >= startDate);
+      rangeCheckIns = checkIns.filter(c => {
+        const checkInDate = startOfDay(new Date(c.timestamp));
+        return checkInDate >= startDate && checkInDate <= now;
+      });
     }
 
-    // Count unique days with severity data
-    const daysWithSeverity = new Set<string>();
-    rangeCheckIns.forEach(c => {
-      const symptoms = c.symptomsExperienced || [];
-      if (symptoms.some(s => s.severity !== undefined)) {
-        daysWithSeverity.add(format(new Date(c.timestamp), 'yyyy-MM-dd'));
-      }
-    });
-
-    if (daysWithSeverity.size < 3) {
-      return { data: [], granularity: 'daily' as const, symptoms: [], insufficientData: true };
-    }
-
-    // Get all symptoms with severity data in this range
+    // Get all symptoms with severity data in this range (sorted by frequency)
     const symptomCounts: Record<string, number> = {};
     rangeCheckIns.forEach(c => {
       (c.symptomsExperienced || []).forEach(entry => {
-        if (entry.severity !== undefined) {
+        if (entry.severity !== undefined && entry.severity >= 1 && entry.severity <= 3) {
           symptomCounts[entry.symptom] = (symptomCounts[entry.symptom] || 0) + 1;
         }
       });
@@ -178,50 +177,33 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
       .sort((a, b) => b[1] - a[1])
       .map(([symptom]) => symptom);
 
-    // Determine granularity based on timeRange and total days
-    const totalDays = differenceInDays(now, startDate) + 1;
-    let granularity: 'daily' | 'weekly' | 'monthly';
-    
-    if (timeRange === '7' || timeRange === '30') {
-      granularity = 'daily';
-    } else {
-      // All time - auto-aggregate
-      if (totalDays <= 60) {
-        granularity = 'daily';
-      } else if (totalDays <= 365) {
-        granularity = 'weekly';
-      } else {
-        granularity = 'monthly';
-      }
+    if (allSymptoms.length === 0) {
+      return { data: [], granularity, symptoms: [], insufficientData: true };
     }
 
     // Build buckets based on granularity
     let buckets: { start: Date; end: Date; label: string }[] = [];
     
     if (granularity === 'daily') {
+      // Create exactly 7 or 30 daily buckets
       const days = eachDayOfInterval({ start: startDate, end: now });
       buckets = days.map(day => ({
         start: startOfDay(day),
         end: new Date(startOfDay(day).getTime() + 24 * 60 * 60 * 1000 - 1),
         label: format(day, 'MMM d')
       }));
-    } else if (granularity === 'weekly') {
+    } else {
+      // Weekly buckets for "All time" - Sunday to Saturday
       const weeks = eachWeekOfInterval({ start: startDate, end: now }, { weekStartsOn: 0 });
       buckets = weeks.map(weekStart => ({
         start: startOfWeek(weekStart, { weekStartsOn: 0 }),
         end: endOfWeek(weekStart, { weekStartsOn: 0 }),
         label: format(weekStart, 'MMM d')
       }));
-    } else {
-      const months = eachMonthOfInterval({ start: startDate, end: now });
-      buckets = months.map(monthStart => ({
-        start: startOfMonth(monthStart),
-        end: endOfMonth(monthStart),
-        label: format(monthStart, 'MMM yyyy')
-      }));
     }
 
     // Calculate average severity per symptom per bucket
+    // Each bucket produces exactly ONE point per symptom (the average)
     const data = buckets.map(bucket => {
       const bucketCheckIns = rangeCheckIns.filter(c => {
         const d = new Date(c.timestamp);
@@ -233,27 +215,41 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
         date: bucket.start
       };
 
+      // For each symptom, compute the AVERAGE severity in this bucket
       allSymptoms.forEach(symptom => {
         const severities: number[] = [];
         bucketCheckIns.forEach(c => {
           (c.symptomsExperienced || []).forEach(entry => {
-            if (entry.symptom === symptom && entry.severity !== undefined) {
+            if (entry.symptom === symptom && entry.severity !== undefined && entry.severity >= 1 && entry.severity <= 3) {
               severities.push(entry.severity);
             }
           });
         });
 
         if (severities.length > 0) {
+          // Average severity for this symptom in this bucket
           result[symptom] = severities.reduce((a, b) => a + b, 0) / severities.length;
         } else {
-          result[symptom] = null; // Gap - no data for this symptom in this bucket
+          // No data for this symptom in this bucket - use null for gap
+          result[symptom] = null;
         }
       });
 
       return result;
     });
 
-    return { data, granularity, symptoms: allSymptoms };
+    // Count buckets that have ANY severity data (for insufficient data check)
+    let bucketsWithData = 0;
+    data.forEach(bucket => {
+      const hasAnyData = allSymptoms.some(s => bucket[s] !== null);
+      if (hasAnyData) bucketsWithData++;
+    });
+
+    if (bucketsWithData < 3) {
+      return { data: [], granularity, symptoms: allSymptoms, insufficientData: true };
+    }
+
+    return { data, granularity, symptoms: allSymptoms, insufficientData: false };
   }, [checkIns, timeRange]);
 
   // Get top 3 symptoms for default visibility
@@ -653,9 +649,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                         <p className="text-[10px] text-muted-foreground/70 mt-2 text-center italic">
                           {severityTrendData.granularity === 'daily' 
                             ? 'Daily average severity per symptom (Mild=1, Mod=2, Severe=3)'
-                            : severityTrendData.granularity === 'weekly'
-                            ? 'Weekly average severity per symptom (Mild=1, Mod=2, Severe=3)'
-                            : 'Monthly average severity per symptom (Mild=1, Mod=2, Severe=3)'
+                            : 'Weekly average severity per symptom (Mild=1, Mod=2, Severe=3)'
                           }
                         </p>
                       </>
