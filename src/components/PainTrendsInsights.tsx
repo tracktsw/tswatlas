@@ -182,7 +182,7 @@ const PainTrendsInsights = ({ checkIns, dailyFlareStates }: PainTrendsInsightsPr
         {/* Chart */}
         <div className="h-48 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               {/* Flare period background shading */}
               {flarePeriods.map((period, idx) => (
                 <ReferenceArea
