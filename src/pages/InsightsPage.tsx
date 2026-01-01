@@ -52,7 +52,7 @@ const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
 
 const InsightsPage = () => {
   const { checkIns: realCheckIns, photos } = useUserData();
-  const { isDemoMode, isAdmin, getEffectiveCheckIns } = useDemoMode();
+  const { isDemoMode, isAdmin, getEffectiveCheckIns, demoCheckIns } = useDemoMode();
   const { isPremium, isLoading: isSubscriptionLoading } = useSubscription();
   const { baselineConfidence, dailyFlareStates } = useFlareState();
   const [calendarMonth, setCalendarMonth] = useState(new Date());
@@ -638,21 +638,37 @@ const InsightsPage = () => {
                       ? Math.round(sleepScores.reduce((sum, c) => sum + (c.sleepScore || 0), 0) / sleepScores.length)
                       : null;
                     
+                    // Check if this date has demo data
+                    const dateStr = format(date, 'yyyy-MM-dd');
+                    const hasDemoData = isDemoMode && isAdmin && demoCheckIns.has(dateStr);
+                    
+                    // In demo mode, calendar dates are always clickable for editing
+                    const isClickable = hasData || (isDemoMode && isAdmin);
+                    
                     return (
                       <button
                         key={date.toISOString()}
-                        onClick={() => hasData && setSelectedDate(date)}
-                        disabled={!hasData}
+                        onClick={() => {
+                          if (isDemoMode && isAdmin) {
+                            // In demo mode, clicking opens demo editor
+                            setCalendarOpen(false);
+                            setDemoEditDate(date);
+                          } else if (hasData) {
+                            setSelectedDate(date);
+                          }
+                        }}
+                        disabled={!isClickable}
                         className={cn(
                           'aspect-square rounded-xl flex flex-col items-center justify-center text-xs transition-all duration-300 relative p-0.5',
-                          hasData ? 'hover:bg-coral/20 hover:shadow-warm-sm cursor-pointer' : 'cursor-default',
+                          isClickable ? 'hover:bg-coral/20 hover:shadow-warm-sm cursor-pointer' : 'cursor-default',
                           isToday && 'ring-2 ring-coral',
-                          hasData && 'bg-gradient-to-br from-primary/10 to-sage-light/30'
+                          hasData && 'bg-gradient-to-br from-primary/10 to-sage-light/30',
+                          hasDemoData && 'ring-2 ring-amber-500/50'
                         )}
                       >
                         <span className={cn(
                           'font-semibold text-[11px]',
-                          hasData ? 'text-foreground' : 'text-muted-foreground'
+                          hasData || (isDemoMode && isAdmin) ? 'text-foreground' : 'text-muted-foreground'
                         )}>
                           {format(date, 'd')}
                         </span>
@@ -685,6 +701,10 @@ const InsightsPage = () => {
                           >
                             {avgPain}
                           </span>
+                        )}
+                        {/* Demo mode indicator */}
+                        {hasDemoData && (
+                          <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-500" />
                         )}
                       </button>
                     );

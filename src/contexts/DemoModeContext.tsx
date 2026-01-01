@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckIn } from '@/contexts/UserDataContext';
+import { CheckIn, SymptomEntry } from '@/contexts/UserDataContext';
 
 // Admin email that can access demo mode
 const DEMO_ADMIN_EMAIL = 'haroon_7860@live.co.uk';
 
+// Full demo check-in with all fields
 interface DemoCheckIn extends Omit<CheckIn, 'id'> {
   id: string;
   isDemo: true;
@@ -18,6 +19,7 @@ interface DemoModeContextType {
   setDemoCheckIn: (dateStr: string, checkIn: Partial<Omit<CheckIn, 'id' | 'timestamp'>>) => void;
   getDemoCheckInsForDate: (dateStr: string) => DemoCheckIn | undefined;
   clearDemoData: () => void;
+  deleteDemoCheckIn: (dateStr: string) => void;
   getEffectiveCheckIns: (realCheckIns: CheckIn[]) => CheckIn[];
 }
 
@@ -95,6 +97,16 @@ export const DemoModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   }, [isDemoMode, isAdmin]);
 
+  const deleteDemoCheckIn = useCallback((dateStr: string) => {
+    if (!isDemoMode || !isAdmin) return;
+    
+    setDemoCheckIns(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(dateStr);
+      return newMap;
+    });
+  }, [isDemoMode, isAdmin]);
+
   const getDemoCheckInsForDate = useCallback((dateStr: string): DemoCheckIn | undefined => {
     return demoCheckIns.get(dateStr);
   }, [demoCheckIns]);
@@ -128,6 +140,11 @@ export const DemoModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         treatments: demoCheckIn.treatments,
         mood: demoCheckIn.mood,
         skinFeeling: demoCheckIn.skinFeeling,
+        skinIntensity: demoCheckIn.skinIntensity,
+        painScore: demoCheckIn.painScore,
+        sleepScore: demoCheckIn.sleepScore,
+        symptomsExperienced: demoCheckIn.symptomsExperienced,
+        triggers: demoCheckIn.triggers,
         notes: demoCheckIn.notes,
       });
       processedDates.add(dateStr);
@@ -156,6 +173,7 @@ export const DemoModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setDemoCheckIn,
       getDemoCheckInsForDate,
       clearDemoData,
+      deleteDemoCheckIn,
       getEffectiveCheckIns,
     }}>
       {children}
