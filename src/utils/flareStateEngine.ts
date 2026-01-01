@@ -10,9 +10,8 @@
  */
 
 export type FlareState = 
-  | 'stable' 
+  | 'stable'         // GREEN or YELLOW, no recent worsening
   | 'stable_severe'  // RED skin, no change for ≥5-7 days
-  | 'early_flare'    // worsening trend starting (2 days)
   | 'active_flare'   // RED + worsening sustained ≥3 days
   | 'recovering';    // improving from RED to ORANGE or better, sustained ≥3 days
 
@@ -347,17 +346,6 @@ function shouldBeStable(metrics: DailySkinMetrics[]): boolean {
   return true;
 }
 
-/**
- * EARLY FLARE: skin starting to worsen (2 days of worsening, not yet 3)
- */
-function shouldBeEarlyFlare(metrics: DailySkinMetrics[]): boolean {
-  if (metrics.length < 2) return false;
-  
-  const worseningDays = getConsecutiveSkinWorseningDays(metrics);
-  
-  // Exactly 2 days of worsening (not yet 3)
-  return worseningDays === 2;
-}
 
 /**
  * Determine baseline confidence based on data amount
@@ -467,15 +455,6 @@ export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
         }
         explanation = 'Active Flare — skin has worsened to RED.';
       }
-      // Priority 5: EARLY FLARE (worsening 2 days)
-      else if (shouldBeEarlyFlare(metricsUpToNow)) {
-        flareState = 'early_flare';
-        isInFlareEpisode = true;
-        if (currentFlareStartIdx === null) {
-          currentFlareStartIdx = Math.max(0, i - 1);
-        }
-        explanation = 'Early Flare — skin starting to worsen.';
-      }
       // Default: based on current skin level
       else {
         const currentSeverity = metrics.skinSeverity;
@@ -486,9 +465,10 @@ export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
           flareState = 'stable';
           explanation = 'Stable — skin is ORANGE, monitoring.';
         } else {
-          // RED but doesn't meet other criteria yet
-          flareState = 'early_flare';
-          explanation = 'Monitoring — skin is RED.';
+          // RED but doesn't meet active_flare or stable_severe criteria yet
+          // Could be early in the process - show as stable_severe since it's RED
+          flareState = 'stable_severe';
+          explanation = 'Monitoring — skin is RED, tracking for changes.';
         }
       }
     }

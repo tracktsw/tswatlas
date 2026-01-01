@@ -1,7 +1,7 @@
-import { Flame, TrendingUp, TrendingDown, Activity, BookOpen, AlertTriangle } from 'lucide-react';
+import { Flame, TrendingUp, TrendingDown, BookOpen, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFlareState, getFlareStateLabel, getConfidenceLabel } from '@/hooks/useFlareState';
-import { FlareState, BaselineConfidence } from '@/utils/flareStateEngine';
+import { FlareState } from '@/utils/flareStateEngine';
 import { PlantIllustration } from '@/components/illustrations';
 
 const stateConfig: Record<FlareState, {
@@ -24,13 +24,6 @@ const stateConfig: Record<FlareState, {
     iconColor: 'text-amber-600',
     ringColor: 'ring-amber-500/30',
     description: 'Your symptoms are severe but consistent. This reflects your current baseline, not an active flare.',
-  },
-  early_flare: {
-    icon: Activity,
-    gradient: 'bg-gradient-to-br from-orange-400/20 to-amber-100',
-    iconColor: 'text-orange-500',
-    ringColor: 'ring-orange-400/30',
-    description: 'Worsening trend starting — monitoring',
   },
   active_flare: {
     icon: Flame,
@@ -141,9 +134,9 @@ export function FlareStatusBadge({ className }: FlareStatusBadgeProps) {
         </div>
       </div>
       {/* Tooltip explanation for flares */}
-      {(currentState === 'early_flare' || currentState === 'active_flare') && (
+      {currentState === 'active_flare' && (
         <p className="mt-3 text-xs text-muted-foreground/80 italic border-t border-border/50 pt-3">
-          A flare is detected based on sustained symptom worsening over multiple days — not a single bad day.
+          A flare is detected based on sustained skin worsening over multiple days — not a single bad day.
         </p>
       )}
     </div>
