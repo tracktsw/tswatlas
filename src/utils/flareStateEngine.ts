@@ -10,9 +10,10 @@
  */
 
 export type FlareState = 
-  | 'stable'         // GREEN or YELLOW, no recent worsening
+  | 'stable'         // GREEN or YELLOW, no sustained worsening
   | 'stable_severe'  // RED skin, no change for ≥5-7 days
-  | 'active_flare'   // RED + worsening sustained ≥3 days
+  | 'early_flare'    // worsening ≥2 days, severity ≤ ORANGE (not yet RED)
+  | 'active_flare'   // RED + worsening/persistence ≥3 days
   | 'recovering';    // improving from RED to ORANGE or better, sustained ≥3 days
 
 export type BaselineConfidence = 'early' | 'provisional' | 'mature';
@@ -346,6 +347,25 @@ function shouldBeStable(metrics: DailySkinMetrics[]): boolean {
   return true;
 }
 
+/**
+ * EARLY FLARE: skin severity increases by ≥1 level, worsening sustained ≥2 days, severity ≤ ORANGE
+ */
+function shouldBeEarlyFlare(metrics: DailySkinMetrics[]): boolean {
+  if (metrics.length < 2) return false;
+  
+  const currentSeverity = metrics[metrics.length - 1].skinSeverity;
+  
+  // Must NOT be RED (severity 3) - that would be active flare territory
+  if (currentSeverity >= 3) return false;
+  
+  // Check for sustained worsening (≥2 consecutive days)
+  const worseningDays = getConsecutiveSkinWorseningDays(metrics);
+  if (worseningDays < 2) return false;
+  
+  // Verify severity increased by at least 1 level during this worsening period
+  // (this is implicit in worseningDays >= 2, since each worsening day means severity increased)
+  return true;
+}
 
 /**
  * Determine baseline confidence based on data amount
@@ -446,14 +466,23 @@ export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
         }
         explanation = 'Stable – Severe — skin has been RED but consistent for 5+ days.';
       }
-      // Priority 4: ACTIVE FLARE (RED + worsening ≥3 days)
+      // Priority 4: ACTIVE FLARE (RED + worsening/persistence ≥3 days)
       else if (shouldBeActiveFlare(metricsUpToNow)) {
         flareState = 'active_flare';
         isInFlareEpisode = true;
         if (currentFlareStartIdx === null) {
           currentFlareStartIdx = Math.max(0, i - 2);
         }
-        explanation = 'Active Flare — skin has worsened to RED.';
+        explanation = 'Active Flare — skin has reached RED.';
+      }
+      // Priority 5: EARLY FLARE (worsening ≥2 days, not yet RED)
+      else if (shouldBeEarlyFlare(metricsUpToNow)) {
+        flareState = 'early_flare';
+        isInFlareEpisode = true;
+        if (currentFlareStartIdx === null) {
+          currentFlareStartIdx = Math.max(0, i - 1);
+        }
+        explanation = 'Early Flare — skin is worsening.';
       }
       // Default: based on current skin level
       else {
@@ -466,7 +495,6 @@ export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
           explanation = 'Stable — skin is ORANGE, monitoring.';
         } else {
           // RED but doesn't meet active_flare or stable_severe criteria yet
-          // Could be early in the process - show as stable_severe since it's RED
           flareState = 'stable_severe';
           explanation = 'Monitoring — skin is RED, tracking for changes.';
         }

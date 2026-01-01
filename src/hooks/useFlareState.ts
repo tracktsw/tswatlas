@@ -62,6 +62,8 @@ export function getFlareStateLabel(state: FlareState): string {
       return 'Stable';
     case 'stable_severe':
       return 'Stable – Severe';
+    case 'early_flare':
+      return 'Early Flare';
     case 'active_flare':
       return 'Active Flare';
     case 'recovering':
@@ -96,6 +98,8 @@ export function getFlareStateColor(state: FlareState): string {
       return 'text-green-600 dark:text-green-400';
     case 'stable_severe':
       return 'text-amber-600 dark:text-amber-400';
+    case 'early_flare':
+      return 'text-orange-500 dark:text-orange-400';
     case 'active_flare':
       return 'text-orange-600 dark:text-orange-400';
     case 'recovering':
