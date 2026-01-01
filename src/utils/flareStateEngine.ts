@@ -17,6 +17,12 @@ const SYMPTOM_WEIGHTS: Record<string, number> = {
   insomnia: 3,
 };
 
+// Absolute thresholds for flare detection when relative detection fails
+// (e.g., when user starts tracking during a flare)
+const ABSOLUTE_SKIN_INTENSITY_FLARE = 3; // skinIntensity >= 3 is flare territory
+const ABSOLUTE_BURDEN_FLARE = 6; // burden score >= 6 is significant regardless of baseline
+const HIGH_BASELINE_THRESHOLD = 5; // if baseline itself is >= 5, user likely started during flare
+
 export type FlareState = 
   | 'stable' 
   | 'pre_flare' 
@@ -478,6 +484,41 @@ export function assignDailyFlareStates(
 }
 
 /**
+ * Check if the current day qualifies as a flare using absolute thresholds
+ * Used when relative detection fails (e.g., high baseline)
+ */
+function checkAbsoluteFlareState(burden: DailyBurden): FlareState {
+  // Peak flare: very high skin intensity with significant symptoms
+  if (burden.skinIntensity >= 4 && burden.symptomScore >= 3) {
+    return 'peak_flare';
+  }
+  
+  // Active flare: high skin intensity OR high overall burden
+  if (burden.skinIntensity >= ABSOLUTE_SKIN_INTENSITY_FLARE || burden.score >= ABSOLUTE_BURDEN_FLARE) {
+    return 'active_flare';
+  }
+  
+  return 'stable';
+}
+
+/**
+ * Determine if baseline is "high" indicating user likely started tracking during a flare
+ */
+function isHighBaseline(baselineBurdenScore: number | null, dailyBurdens: DailyBurden[]): boolean {
+  if (baselineBurdenScore !== null && baselineBurdenScore >= HIGH_BASELINE_THRESHOLD) {
+    return true;
+  }
+  
+  // Also check if most days have high skin intensity
+  if (dailyBurdens.length >= 5) {
+    const highIntensityDays = dailyBurdens.filter(b => b.skinIntensity >= ABSOLUTE_SKIN_INTENSITY_FLARE).length;
+    return highIntensityDays / dailyBurdens.length >= 0.7; // 70%+ days are high intensity
+  }
+  
+  return false;
+}
+
+/**
  * Main analysis function - computes complete flare analysis from check-ins
  */
 export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
@@ -485,6 +526,9 @@ export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
   const confidence = getBaselineConfidence(dailyBurdens.length);
   const baselineBurdenScore = calculateBaselineBurdenScore(dailyBurdens, confidence);
   const flareThreshold = calculateFlareThreshold(baselineBurdenScore, confidence);
+  
+  // Detect if user started tracking during a flare (high baseline scenario)
+  const hasHighBaseline = isHighBaseline(baselineBurdenScore, dailyBurdens);
   
   const flareEpisodes = flareThreshold !== null
     ? detectFlareEpisodes(dailyBurdens, flareThreshold, confidence)
@@ -498,12 +542,30 @@ export function analyzeFlareState(checkIns: CheckInData[]): FlareAnalysis {
     confidence
   );
   
-  const currentState = dailyFlareStates.length > 0
+  // Determine current state with high baseline fallback
+  let currentState: FlareState = dailyFlareStates.length > 0
     ? dailyFlareStates[dailyFlareStates.length - 1].flareState
     : 'stable';
   
+  // If relative detection says "stable" but we have a high baseline,
+  // use absolute thresholds on the most recent day
+  if (currentState === 'stable' && hasHighBaseline && dailyBurdens.length > 0) {
+    const mostRecentBurden = dailyBurdens[dailyBurdens.length - 1];
+    currentState = checkAbsoluteFlareState(mostRecentBurden);
+  }
+  
+  // Also check absolute thresholds during early phase when relative detection isn't available
+  if (confidence === 'early' && dailyBurdens.length > 0) {
+    const mostRecentBurden = dailyBurdens[dailyBurdens.length - 1];
+    const absoluteState = checkAbsoluteFlareState(mostRecentBurden);
+    if (absoluteState !== 'stable') {
+      currentState = absoluteState;
+    }
+  }
+  
   const activeFlare = flareEpisodes.find(ep => ep.isActive);
-  const isInActiveFlare = !!activeFlare;
+  // Consider it an active flare if either episode detection found one OR absolute thresholds triggered
+  const isInActiveFlare = !!activeFlare || (currentState === 'active_flare' || currentState === 'peak_flare');
   const currentFlareDuration = activeFlare?.durationDays ?? null;
   
   return {
