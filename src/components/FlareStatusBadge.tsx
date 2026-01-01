@@ -69,7 +69,7 @@ export function FlareStatusBadge({ className }: FlareStatusBadgeProps) {
   
   // Early phase: show learning state
   if (baselineConfidence === 'early') {
-    const checkInsNeeded = 7 - dailyBurdens.length;
+    const daysNeeded = 7 - dailyBurdens.length;
     return (
       <div 
         className={cn(
@@ -86,7 +86,7 @@ export function FlareStatusBadge({ className }: FlareStatusBadgeProps) {
               Learning your baseline
             </p>
             <p className="text-muted-foreground">
-              {checkInsNeeded} more check-in{checkInsNeeded !== 1 ? 's' : ''} needed for flare detection
+              {dailyBurdens.length} of 7 days logged · {daysNeeded} more day{daysNeeded !== 1 ? 's' : ''} needed
             </p>
           </div>
         </div>
