@@ -40,22 +40,13 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     
     if (checkInsWithTriggers.length === 0) return [];
 
-    // Group check-ins by date to count unique days per trigger
-    const checkInsByDate = new Map<string, CheckIn[]>();
-    checkInsWithTriggers.forEach(checkIn => {
-      const date = checkIn.timestamp.split('T')[0];
-      if (!checkInsByDate.has(date)) {
-        checkInsByDate.set(date, []);
-      }
-      checkInsByDate.get(date)!.push(checkIn);
-    });
+    // Calculate BASELINE intensity across ALL check-ins (not just those with triggers)
+    const allIntensities = checkIns.map(c => c.skinIntensity ?? (5 - c.skinFeeling));
+    const baselineIntensity = allIntensities.reduce((a, b) => a + b, 0) / allIntensities.length;
 
     // Build stats: for each trigger, calculate unique days and intensity metrics
     const stats: Record<string, { 
       uniqueDays: Set<string>;
-      highIntensityDays: Set<string>;
-      totalSymptomSeverity: number;
-      totalSymptoms: number;
       totalIntensity: number;
       totalCount: number;
     }> = {};
@@ -63,12 +54,9 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     checkInsWithTriggers.forEach(checkIn => {
       const date = checkIn.timestamp.split('T')[0];
       const triggers = checkIn.triggers || [];
-      const symptoms = checkIn.symptomsExperienced || [];
-      const totalSeverity = symptoms.reduce((sum, s) => sum + s.severity, 0);
       
       // Use skin_intensity if available, otherwise convert from skinFeeling (1-5 → 4-0)
       const intensity = checkIn.skinIntensity ?? (5 - checkIn.skinFeeling);
-      const isHighIntensityDay = intensity >= 3; // Active (3) or High-intensity (4)
 
       triggers.forEach(triggerId => {
         // Handle food:xxx format
@@ -77,9 +65,6 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
         if (!stats[normalizedId]) {
           stats[normalizedId] = {
             uniqueDays: new Set(),
-            highIntensityDays: new Set(),
-            totalSymptomSeverity: 0,
-            totalSymptoms: 0,
             totalIntensity: 0,
             totalCount: 0,
           };
@@ -87,48 +72,45 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
         
         stats[normalizedId].uniqueDays.add(date);
         stats[normalizedId].totalCount++;
-        stats[normalizedId].totalSymptomSeverity += totalSeverity;
-        stats[normalizedId].totalSymptoms += symptoms.length;
         stats[normalizedId].totalIntensity += intensity;
-        
-        if (isHighIntensityDay) {
-          stats[normalizedId].highIntensityDays.add(date);
-        }
       });
     });
 
-    // Filter and calculate impact scores
-    // Requirements: 5+ unique days AND non-zero high-intensity rate
+    // Filter and calculate impact scores using COMPARATIVE analysis
+    // Requirements: 3+ unique days AND trigger days must be WORSE than baseline
     return Object.entries(stats)
       .filter(([_, data]) => {
         const uniqueDayCount = data.uniqueDays.size;
-        const highIntensityRate = data.highIntensityDays.size / uniqueDayCount;
-        return uniqueDayCount >= 5 && highIntensityRate > 0;
+        const triggerDayIntensity = data.totalIntensity / data.totalCount;
+        const impactDelta = triggerDayIntensity - baselineIntensity;
+        
+        // Only show triggers where intensity is notably worse than baseline (>0.3 threshold)
+        return uniqueDayCount >= 3 && impactDelta > 0.3;
       })
       .map(([id, data]) => {
         const uniqueDayCount = data.uniqueDays.size;
-        const highIntensityRate = data.highIntensityDays.size / uniqueDayCount;
-        const avgSymptomSeverity = data.totalSymptoms > 0 
-          ? data.totalSymptomSeverity / data.totalSymptoms 
-          : 0;
-        const avgIntensity = data.totalIntensity / data.totalCount;
+        const triggerDayIntensity = data.totalIntensity / data.totalCount;
+        const impactDelta = triggerDayIntensity - baselineIntensity;
         
-        // Impact score: weighted combination of high intensity day rate and avg symptom severity
-        const impactScore = (highIntensityRate * 70) + (avgSymptomSeverity * 10) + (avgIntensity * 4);
+        // Impact score based on how much WORSE trigger days are compared to baseline
+        const impactScore = impactDelta * 25; // Scale for display
+        
+        // Percentage worse than baseline
+        const percentWorse = Math.round((impactDelta / Math.max(baselineIntensity, 0.5)) * 100);
 
         // Get label for trigger
-        let label = triggersList.find(t => t.id === id)?.label || id;
+        const label = triggersList.find(t => t.id === id)?.label || id;
         
-        // Determine confidence level for this specific trigger
-        const isHighConfidence = uniqueDayCount >= 10 && highIntensityRate >= 0.4;
+        // High confidence if 7+ days and significant impact
+        const isHighConfidence = uniqueDayCount >= 7 && impactDelta > 0.5;
         
         return {
           id,
           label,
           uniqueDays: uniqueDayCount,
-          highIntensityRate: Math.round(highIntensityRate * 100),
-          avgIntensity: Math.round(avgIntensity * 10) / 10,
-          impactScore: Math.round(impactScore),
+          percentWorse,
+          avgIntensity: Math.round(triggerDayIntensity * 10) / 10,
+          impactScore: Math.round(impactScore * 10) / 10,
           isHighConfidence,
         };
       })
@@ -195,9 +177,9 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
       </h3>
       <div className="glass-card p-5 space-y-4">
         <p className="text-xs text-muted-foreground">
-          Triggers associated with higher-intensity days
+          Triggers correlated with worse-than-average skin days
         </p>
-        {triggerStats.map(({ id, label, uniqueDays, highIntensityRate, impactScore, isHighConfidence }, index) => {
+        {triggerStats.map(({ id, label, uniqueDays, percentWorse, impactScore, isHighConfidence }, index) => {
           const barWidth = (impactScore / maxImpact) * 100;
           
           return (
@@ -215,7 +197,7 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
                 </span>
                 <span className="text-xs text-muted-foreground font-medium">
                   {isHighConfidence 
-                    ? `${highIntensityRate}% high-intensity days`
+                    ? `${percentWorse}% worse than avg`
                     : 'Early pattern'
                   }
                   <span className="text-muted-foreground/60 ml-1">({uniqueDays} days)</span>
