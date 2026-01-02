@@ -40,7 +40,8 @@ export function ReminderBanner({ reminderType, onDismiss, onSnooze }: ReminderBa
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3 }}
-          className="fixed top-0 left-0 right-0 z-50 p-3 safe-area-top"
+          className="fixed left-0 right-0 z-50 p-3"
+          style={{ top: 'var(--safe-top)' }}
         >
           <div className="max-w-lg mx-auto">
             <div className="bg-primary text-primary-foreground rounded-2xl shadow-lg p-4">
