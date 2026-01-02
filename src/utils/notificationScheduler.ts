@@ -15,6 +15,23 @@ function parseTime(timeStr: string): { hour: number; minute: number } {
 }
 
 /**
+ * Calculate the next fire date for a given hour and minute.
+ * If the time has already passed today, schedule for tomorrow.
+ */
+function getNextFireDate(hour: number, minute: number): Date {
+  const now = new Date();
+  const fireDate = new Date();
+  fireDate.setHours(hour, minute, 0, 0);
+
+  // If the time has already passed today, schedule for tomorrow
+  if (fireDate <= now) {
+    fireDate.setDate(fireDate.getDate() + 1);
+  }
+
+  return fireDate;
+}
+
+/**
  * Schedule check-in reminder notifications.
  * Call this when reminder settings change.
  */
@@ -24,7 +41,7 @@ export async function scheduleCheckInReminders(
   enabled: boolean
 ): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
-    console.log('Not a native platform, skipping notification scheduling');
+    console.log('[NOTIFICATIONS] Not a native platform, skipping notification scheduling');
     return false;
   }
 
@@ -36,16 +53,25 @@ export async function scheduleCheckInReminders(
         { id: EVENING_NOTIFICATION_ID },
       ],
     });
+    console.log('[NOTIFICATIONS] Cancelled existing reminders');
 
     if (!enabled) {
-      console.log('Reminders disabled, cancelled all notifications');
+      console.log('[NOTIFICATIONS] Reminders disabled, not scheduling new ones');
       return true;
     }
 
     const morning = parseTime(morningTime);
     const evening = parseTime(eveningTime);
 
-    // Schedule morning notification
+    // Calculate next fire dates
+    const morningFireDate = getNextFireDate(morning.hour, morning.minute);
+    const eveningFireDate = getNextFireDate(evening.hour, evening.minute);
+
+    console.log('[NOTIFICATIONS] Scheduling notifications:');
+    console.log(`  Morning: ${morningTime} -> Next fire: ${morningFireDate.toLocaleString()}`);
+    console.log(`  Evening: ${eveningTime} -> Next fire: ${eveningFireDate.toLocaleString()}`);
+
+    // Schedule with 'at' and 'every: day' for reliable daily scheduling
     await LocalNotifications.schedule({
       notifications: [
         {
@@ -53,11 +79,8 @@ export async function scheduleCheckInReminders(
           title: 'Good morning! ☀️',
           body: 'Time for your morning check-in. How are you feeling today?',
           schedule: {
-            on: {
-              hour: morning.hour,
-              minute: morning.minute,
-            },
-            repeats: true,
+            at: morningFireDate,
+            every: 'day',
             allowWhileIdle: true,
           },
           sound: 'default',
@@ -72,11 +95,8 @@ export async function scheduleCheckInReminders(
           title: 'Evening check-in 🌙',
           body: 'How was your skin today? Take a moment to log your progress.',
           schedule: {
-            on: {
-              hour: evening.hour,
-              minute: evening.minute,
-            },
-            repeats: true,
+            at: eveningFireDate,
+            every: 'day',
             allowWhileIdle: true,
           },
           sound: 'default',
@@ -89,10 +109,10 @@ export async function scheduleCheckInReminders(
       ],
     });
 
-    console.log(`Scheduled notifications: morning at ${morningTime}, evening at ${eveningTime}`);
+    console.log('[NOTIFICATIONS] Successfully scheduled daily reminders');
     return true;
   } catch (error) {
-    console.error('Error scheduling notifications:', error);
+    console.error('[NOTIFICATIONS] Error scheduling notifications:', error);
     return false;
   }
 }
