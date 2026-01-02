@@ -217,10 +217,12 @@ const FullscreenViewer = ({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Header - uses iOS-specific margin to clear Dynamic Island */}
+      {/* Header - uses safe-area + extra offset to guarantee clearing Dynamic Island */}
       <div 
         className="flex items-center justify-between px-4 py-3 bg-black/50 backdrop-blur-sm"
-        style={{ marginTop: 'var(--ios-header-extra)' }}
+        style={{ 
+          marginTop: 'calc(max(env(safe-area-inset-top, 44px), constant(safe-area-inset-top, 44px)) + var(--ios-header-extra, 16px))' 
+        }}
       >
         <div className="flex items-center gap-1">
           <span className="text-sm text-white/80">
