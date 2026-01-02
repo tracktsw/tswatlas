@@ -191,6 +191,11 @@
     background-attachment: fixed;
   }
   
+  /* iOS: Disable fixed background to prevent keyboard scroll issues */
+  html.ios body {
+    background-attachment: scroll;
+  }
+  
   html {
     scroll-behavior: smooth;
   }
