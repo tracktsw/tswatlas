@@ -51,11 +51,11 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
   };
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col h-full">
       {/* Chat Messages */}
       <ScrollArea className="flex-1 px-4" ref={scrollRef}>
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center min-h-[50vh] py-8 text-center">
+          <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
               <Sparkles className="w-8 h-8 text-primary" />
             </div>

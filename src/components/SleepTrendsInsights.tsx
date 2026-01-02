@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Moon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CheckIn } from '@/contexts/UserDataContext';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths, isSameMonth } from 'date-fns';
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceArea, ReferenceLine, Tooltip } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, ReferenceArea, Tooltip, Cell } from 'recharts';
 import { DailyFlareState } from '@/utils/flareStateEngine';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -95,8 +95,9 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
     sleepData.forEach(entry => {
       const flareState = flareStateByDate.get(entry.date);
       const isFlaring = flareState?.isInFlareEpisode || 
-        flareState?.flareState === 'active_flare' ||
-        flareState?.flareState === 'early_flare';
+        flareState?.flareState === 'active_flare' || 
+        flareState?.flareState === 'peak_flare';
+
       if (isFlaring) {
         if (!currentPeriod) {
           currentPeriod = { start: entry.date, end: entry.date };
@@ -134,8 +135,9 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
     sleepData.forEach(entry => {
       const flareState = flareStateByDate.get(entry.date);
       const isFlaring = flareState?.isInFlareEpisode || 
-        flareState?.flareState === 'active_flare' ||
-        flareState?.flareState === 'early_flare';
+        flareState?.flareState === 'active_flare' || 
+        flareState?.flareState === 'peak_flare';
+
       if (isFlaring) {
         flareSleepScores.push(entry.sleepScore);
       } else {
@@ -170,8 +172,8 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
     return sleepData.map(entry => {
       const flareState = flareStateByDate.get(entry.date);
       const isFlaring = flareState?.isInFlareEpisode || 
-        flareState?.flareState === 'active_flare' ||
-        flareState?.flareState === 'early_flare';
+        flareState?.flareState === 'active_flare' || 
+        flareState?.flareState === 'peak_flare';
       
       return {
         date: entry.date,
@@ -259,7 +261,7 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
             {/* Chart */}
             <div className="h-44 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   {flarePeriods.map((period, idx) => (
                     <ReferenceArea
                       key={idx}
@@ -312,17 +314,23 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
                       );
                     }}
                   />
-                  <ReferenceLine y={3} stroke="hsl(var(--border))" strokeDasharray="3 3" />
-                  <Line
-                    type="monotone"
+                  <Bar
                     dataKey="sleepScore"
-                    stroke="hsl(239 84% 67%)"
-                    strokeWidth={2}
-                    dot={{ fill: 'hsl(239 84% 67%)', strokeWidth: 0, r: 3 }}
-                    activeDot={{ r: 5, fill: 'hsl(239 84% 67%)' }}
-                    connectNulls
-                  />
-                </LineChart>
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={24}
+                  >
+                    {chartData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`}
+                        fill={entry.isFlaring 
+                          ? 'hsl(var(--muted-foreground))' 
+                          : 'hsl(239 84% 67%)'
+                        }
+                        fillOpacity={entry.isFlaring ? 0.5 : 0.8}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </div>
 

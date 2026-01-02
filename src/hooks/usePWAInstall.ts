@@ -11,17 +11,9 @@ export function usePWAInstall() {
   const [platform, setPlatform] = useState<Platform>('other');
   const [isInstalled, setIsInstalled] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
-  const [isNativeApp, setIsNativeApp] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
-    // Detect if running in Capacitor native app
-    const isCapacitor = !!(window as any).Capacitor?.isNativePlatform?.();
-    if (isCapacitor) {
-      setIsNativeApp(true);
-      return; // No need to check other conditions for native app
-    }
-
     // Check if dismissed for this session only
     const dismissed = sessionStorage.getItem('pwa-install-dismissed-session');
     if (dismissed === 'true') {
@@ -79,7 +71,7 @@ export function usePWAInstall() {
     }
   };
 
-  const shouldShowPrompt = !isNativeApp && !isInstalled && !isDismissed && (platform === 'ios' || platform === 'android');
+  const shouldShowPrompt = !isInstalled && !isDismissed && (platform === 'ios' || platform === 'android');
 
   return {
     platform,
