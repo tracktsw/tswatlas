@@ -37,7 +37,7 @@ const Layout = () => {
       <main className={cn(
         "flex-1",
         !hideBottomNav && "pb-20",
-        // On iOS when keyboard is open, prevent this container from scrolling to stop page jump
+        // On iOS when keyboard is open OR text input is focused, prevent this container from scrolling to stop page jump
         isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto"
       )}>
         <Outlet />
