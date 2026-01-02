@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Safe area and iOS-specific offsets */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --ios-header-extra: 16px;
+}
+
+/* iOS-only: push header down significantly to clear Dynamic Island */
+@supports (-webkit-touch-callout: none) {
+  :root {
+    --ios-header-extra: 72px;
+  }
+}
+
 @layer base {
   :root {
     /* 

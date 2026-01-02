@@ -211,15 +211,16 @@ const FullscreenViewer = ({
       ref={containerRef}
       className="fixed inset-0 z-50 bg-black flex flex-col"
       style={{ 
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
+        paddingTop: 'var(--safe-top)',
+        paddingBottom: 'var(--safe-bottom)',
       }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Header - significantly lower on iOS for reliable tap target */}
+      {/* Header - uses iOS-specific margin to clear Dynamic Island */}
       <div 
-        className="flex items-center justify-between px-4 pb-3 pt-14 bg-black/50 backdrop-blur-sm"
+        className="flex items-center justify-between px-4 py-3 bg-black/50 backdrop-blur-sm"
+        style={{ marginTop: 'var(--ios-header-extra)' }}
       >
         <div className="flex items-center gap-1">
           <span className="text-sm text-white/80">
