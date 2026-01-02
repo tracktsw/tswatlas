@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { useIOSKeyboard } from '@/hooks/useIOSKeyboard';
 import type { ChatMessage } from '@/hooks/useAICoach';
 
 interface CoachChatProps {
@@ -24,7 +25,9 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { keyboardHeight, isIOS } = useIOSKeyboard();
 
+  // Scroll to bottom when messages change or keyboard opens/closes
   useEffect(() => {
     const root = scrollRef.current;
     const viewport = root?.querySelector(
@@ -37,7 +40,7 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
     requestAnimationFrame(() => {
       viewport.scrollTop = viewport.scrollHeight;
     });
-  }, [messages, isLoading]);
+  }, [messages, isLoading, keyboardHeight]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,8 +121,11 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
         )}
       </ScrollArea>
 
-      {/* Input Area */}
-      <div className="border-t border-border p-4 bg-background">
+      {/* Input Area - add padding for iOS keyboard */}
+      <div 
+        className="border-t border-border p-4 bg-background"
+        style={isIOS && keyboardHeight > 0 ? { paddingBottom: `calc(1rem + ${keyboardHeight}px)` } : undefined}
+      >
         {messages.length > 0 && (
           <div className="flex justify-end mb-2">
             <Button
@@ -139,12 +145,6 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            onFocus={(e) => {
-              // Delay to let iOS keyboard settle, then scroll input into view
-              setTimeout(() => {
-                e.target.scrollIntoView({ behavior: 'instant', block: 'end' });
-              }, 100);
-            }}
             placeholder="Ask about your TSW journey..."
             className="min-h-[44px] max-h-32 resize-none"
             rows={1}
