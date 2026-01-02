@@ -24,7 +24,10 @@ const Layout = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background flex flex-col" style={{ paddingTop: 'var(--safe-top)' }}>
+    <div 
+      className="h-[100dvh] bg-background flex flex-col overflow-hidden" 
+      style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
+    >
       {/* Reminder banner - shows when due and user hasn't checked in */}
       {!isLoading && shouldShowReminder && reminderType && (
         <ReminderBanner
@@ -35,7 +38,7 @@ const Layout = () => {
       )}
       
       <main className={cn(
-        "flex-1",
+        "flex-1 min-h-0 overscroll-contain",
         !hideBottomNav && "pb-20",
         // On iOS when keyboard is open OR text input is focused, prevent this container from scrolling to stop page jump
         isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto"

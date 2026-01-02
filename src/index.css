@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* App shell - prevent body scrolling, content scrolls inside main */
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  overscroll-behavior: none;
+}
+
 /* Safe area and iOS-specific offsets */
 :root {
   --safe-top: env(safe-area-inset-top, 0px);
