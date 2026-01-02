@@ -21,7 +21,7 @@ const Layout = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background flex flex-col safe-area-inset-top">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Reminder banner - shows when due and user hasn't checked in */}
       {!isLoading && shouldShowReminder && reminderType && (
         <ReminderBanner
@@ -31,7 +31,7 @@ const Layout = () => {
         />
       )}
       
-      <main className={hideBottomNav ? "flex-1 overflow-y-auto" : "flex-1 pb-24 overflow-y-auto"}>
+      <main className={hideBottomNav ? "flex-1 overflow-y-auto" : "flex-1 pb-20 overflow-y-auto"}>
         <Outlet />
       </main>
       {!hideBottomNav && <BottomNav />}
