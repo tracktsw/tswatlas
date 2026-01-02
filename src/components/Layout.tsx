@@ -86,7 +86,7 @@ const Layout = () => {
         />
       )}
       
-      <main className={hideBottomNav ? "flex-1 overflow-y-auto" : "flex-1 pb-20 overflow-y-auto"}>
+      <main className={hideBottomNav ? "flex-1 flex flex-col overflow-hidden" : "flex-1 flex flex-col pb-20 overflow-hidden"}>
         <Outlet />
       </main>
       {!hideBottomNav && <BottomNav />}
