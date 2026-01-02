@@ -4,10 +4,18 @@
 
 /* Safe area and iOS-specific offsets */
 :root {
-  --safe-top: max(env(safe-area-inset-top, 0px), constant(safe-area-inset-top, 0px));
-  --safe-bottom: max(env(safe-area-inset-bottom, 0px), constant(safe-area-inset-bottom, 0px));
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
   --ios-header-extra: 16px;
   --ios-dialog-header-extra: 0px;
+}
+
+/* Legacy iOS fallback using constant() */
+@supports (padding-top: constant(safe-area-inset-top)) {
+  :root {
+    --safe-top: constant(safe-area-inset-top);
+    --safe-bottom: constant(safe-area-inset-bottom);
+  }
 }
 
 /* iOS-only: push header down significantly to clear Dynamic Island */
@@ -473,5 +481,22 @@
   
   .safe-area-inset-top {
     padding-top: env(safe-area-inset-top, 0px);
+  }
+  
+  /* Safe area utilities using CSS variables */
+  .safe-area-top {
+    padding-top: var(--safe-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: var(--safe-bottom);
+  }
+  
+  .safe-area-top-offset {
+    top: var(--safe-top);
+  }
+  
+  .safe-area-bottom-offset {
+    bottom: var(--safe-bottom);
   }
 }
