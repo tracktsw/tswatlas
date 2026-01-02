@@ -26,10 +26,18 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    const root = scrollRef.current;
+    const viewport = root?.querySelector(
+      '[data-radix-scroll-area-viewport]'
+    ) as HTMLElement | null;
+
+    if (!viewport) return;
+
+    // Ensure we scroll after the DOM has painted (important on iOS)
+    requestAnimationFrame(() => {
+      viewport.scrollTop = viewport.scrollHeight;
+    });
+  }, [messages, isLoading]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
