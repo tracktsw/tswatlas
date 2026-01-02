@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { UserDataProvider } from "@/contexts/UserDataContext";
 import { LayoutProvider } from "@/contexts/LayoutContext";
 import { DemoModeProvider } from "@/contexts/DemoModeContext";
+import { IOSKeyboardProvider } from "@/contexts/IOSKeyboardContext";
 import AuthGuard from "@/components/AuthGuard";
 import Layout from "@/components/Layout";
 import HomePage from "@/pages/HomePage";
@@ -29,47 +30,49 @@ const queryClient = new QueryClient();
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
     <QueryClientProvider client={queryClient}>
-      <LayoutProvider>
-      <UserDataProvider>
-        <DemoModeProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <AppUpdateBanner />
-            <PWAInstallPrompt />
-            <BrowserRouter>
-              <Routes>
-              {/* Public routes */}
-                <Route path="/auth" element={<AuthPage />} />
-                <Route path="/reset-password" element={<ResetPasswordPage />} />
-                
-                {/* Protected routes - require authentication */}
-                <Route
-                  path="/"
-                  element={
-                    <AuthGuard>
-                      <Layout />
-                    </AuthGuard>
-                  }
-                >
-                  <Route index element={<HomePage />} />
-                  <Route path="photos" element={<PhotoDiaryPage />} />
-                  <Route path="check-in" element={<CheckInPage />} />
-                  <Route path="insights" element={<InsightsPage />} />
-                  <Route path="community" element={<CommunityPage />} />
-                  <Route path="journal" element={<JournalPage />} />
-                  <Route path="coach" element={<CoachPage />} />
-                  <Route path="settings" element={<SettingsPage />} />
-                  <Route path="admin" element={<AdminPage />} />
-                </Route>
-                
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </DemoModeProvider>
-      </UserDataProvider>
-      </LayoutProvider>
+      <IOSKeyboardProvider>
+        <LayoutProvider>
+          <UserDataProvider>
+            <DemoModeProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <AppUpdateBanner />
+                <PWAInstallPrompt />
+                <BrowserRouter>
+                  <Routes>
+                    {/* Public routes */}
+                    <Route path="/auth" element={<AuthPage />} />
+                    <Route path="/reset-password" element={<ResetPasswordPage />} />
+                    
+                    {/* Protected routes - require authentication */}
+                    <Route
+                      path="/"
+                      element={
+                        <AuthGuard>
+                          <Layout />
+                        </AuthGuard>
+                      }
+                    >
+                      <Route index element={<HomePage />} />
+                      <Route path="photos" element={<PhotoDiaryPage />} />
+                      <Route path="check-in" element={<CheckInPage />} />
+                      <Route path="insights" element={<InsightsPage />} />
+                      <Route path="community" element={<CommunityPage />} />
+                      <Route path="journal" element={<JournalPage />} />
+                      <Route path="coach" element={<CoachPage />} />
+                      <Route path="settings" element={<SettingsPage />} />
+                      <Route path="admin" element={<AdminPage />} />
+                    </Route>
+                    
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+              </TooltipProvider>
+            </DemoModeProvider>
+          </UserDataProvider>
+        </LayoutProvider>
+      </IOSKeyboardProvider>
     </QueryClientProvider>
   </ThemeProvider>
 );

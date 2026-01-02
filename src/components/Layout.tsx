@@ -4,10 +4,13 @@ import { ReminderBanner } from './ReminderBanner';
 import { useCheckInReminder } from '@/hooks/useCheckInReminder';
 import { useUserData } from '@/contexts/UserDataContext';
 import { useLayout } from '@/contexts/LayoutContext';
+import { useIOSKeyboardContext } from '@/contexts/IOSKeyboardContext';
+import { cn } from '@/lib/utils';
 
 const Layout = () => {
   const { hideBottomNav } = useLayout();
   const { reminderSettings, checkIns, userId, isLoading } = useUserData();
+  const { isKeyboardOpen, isIOS } = useIOSKeyboardContext();
 
   const {
     shouldShowReminder,
@@ -31,7 +34,12 @@ const Layout = () => {
         />
       )}
       
-      <main className={hideBottomNav ? "flex-1 overflow-y-auto" : "flex-1 pb-20 overflow-y-auto"}>
+      <main className={cn(
+        "flex-1",
+        !hideBottomNav && "pb-20",
+        // On iOS when keyboard is open, prevent this container from scrolling to stop page jump
+        isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto"
+      )}>
         <Outlet />
       </main>
       {!hideBottomNav && <BottomNav />}

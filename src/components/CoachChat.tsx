@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { useIOSKeyboard } from '@/hooks/useIOSKeyboard';
+import { useIOSKeyboardContext } from '@/contexts/IOSKeyboardContext';
 import type { ChatMessage } from '@/hooks/useAICoach';
 
 interface CoachChatProps {
@@ -25,7 +25,7 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { keyboardHeight, isIOS } = useIOSKeyboard();
+  const { keyboardHeight } = useIOSKeyboardContext();
 
   // Scroll to bottom when messages change or keyboard opens/closes
   useEffect(() => {
@@ -121,11 +121,8 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
         )}
       </ScrollArea>
 
-      {/* Input Area - add padding for iOS keyboard */}
-      <div 
-        className="border-t border-border p-4 bg-background"
-        style={isIOS && keyboardHeight > 0 ? { paddingBottom: `calc(1rem + ${keyboardHeight}px)` } : undefined}
-      >
+      {/* Input Area */}
+      <div className="border-t border-border p-4 bg-background">
         {messages.length > 0 && (
           <div className="flex justify-end mb-2">
             <Button
