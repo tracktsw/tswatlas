@@ -152,7 +152,7 @@ const HomePage = () => {
     <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
       {/* Sync indicator */}
       {isSyncing && (
-        <div className="fixed top-4 right-4 bg-sage/10 text-sage text-xs px-3 py-1.5 rounded-full flex items-center gap-2 z-50">
+        <div className="fixed top-[calc(env(safe-area-inset-top,0px)+1rem)] right-4 bg-sage/10 text-sage text-xs px-3 py-1.5 rounded-full flex items-center gap-2 z-50">
           <Loader2 className="w-3 h-3 animate-spin" />
           Syncing...
         </div>
@@ -163,7 +163,7 @@ const HomePage = () => {
       <div className="decorative-blob w-48 h-48 bg-healing/15 bottom-40 -left-20 fixed" />
       
       {/* Subtle leaf motif */}
-      <LeafIllustration variant="branch" className="w-20 h-16 fixed top-20 right-2 opacity-20 pointer-events-none" />
+      <LeafIllustration variant="branch" className="w-20 h-16 fixed top-[calc(env(safe-area-inset-top,0px)+5rem)] right-2 opacity-20 pointer-events-none" />
       
       {/* Header */}
       <div className="flex items-center justify-between animate-fade-in">
