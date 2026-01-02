@@ -217,10 +217,9 @@ const FullscreenViewer = ({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Header - extra top padding below safe area for iOS */}
+      {/* Header - significantly lower on iOS for reliable tap target */}
       <div 
-        className="flex items-center justify-between px-4 pb-3 bg-black/50 backdrop-blur-sm"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 16px)' }}
+        className="flex items-center justify-between px-4 pb-3 pt-14 bg-black/50 backdrop-blur-sm"
       >
         <div className="flex items-center gap-1">
           <span className="text-sm text-white/80">
@@ -232,9 +231,9 @@ const FullscreenViewer = ({
         </div>
         <button
           onClick={onClose}
-          className="p-2 rounded-full hover:bg-white/10 transition-colors"
+          className="p-3 rounded-full hover:bg-white/10 transition-colors min-w-11 min-h-11 flex items-center justify-center"
         >
-          <X className="w-5 h-5 text-white" />
+          <X className="w-6 h-6 text-white" />
         </button>
       </div>
 
