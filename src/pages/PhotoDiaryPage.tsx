@@ -1037,8 +1037,11 @@ const PhotoDiaryPage = () => {
         <DialogContentFullscreen className="bg-muted/95">
           {viewingPhoto && (
             <>
-              {/* Sticky Header */}
-              <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-muted/95 backdrop-blur-sm border-b border-border/50">
+              {/* Sticky Header - uses iOS-specific offset to clear Dynamic Island */}
+              <div 
+                className="sticky top-0 z-10 flex items-center justify-between px-4 pb-3 bg-muted/95 backdrop-blur-sm border-b border-border/50"
+                style={{ paddingTop: 'calc(var(--ios-dialog-header-extra, 0px) + 12px)' }}
+              >
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-semibold bg-primary/10 text-primary px-3 py-1 rounded-full">
                     {bodyParts.find(b => b.value === viewingPhoto.bodyPart)?.label}
@@ -1050,7 +1053,7 @@ const PhotoDiaryPage = () => {
                     )}
                   </div>
                 </div>
-                <DialogClose className="rounded-full p-2 hover:bg-muted transition-colors">
+                <DialogClose className="rounded-full p-3 hover:bg-muted transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
                   <X className="h-5 w-5" />
                   <span className="sr-only">Close</span>
                 </DialogClose>

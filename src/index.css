@@ -7,12 +7,14 @@
   --safe-top: max(env(safe-area-inset-top, 0px), constant(safe-area-inset-top, 0px));
   --safe-bottom: max(env(safe-area-inset-bottom, 0px), constant(safe-area-inset-bottom, 0px));
   --ios-header-extra: 16px;
+  --ios-dialog-header-extra: 0px;
 }
 
 /* iOS-only: push header down significantly to clear Dynamic Island */
 @supports (-webkit-touch-callout: none) {
   :root {
     --ios-header-extra: 56px;
+    --ios-dialog-header-extra: 88px;
   }
 }
 

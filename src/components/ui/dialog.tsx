@@ -72,6 +72,10 @@ const DialogContentFullscreen = React.forwardRef<
         "h-[100dvh] max-h-[100dvh] overflow-hidden",
         className,
       )}
+      style={{
+        paddingTop: 'var(--safe-top)',
+        paddingBottom: 'var(--safe-bottom)',
+      }}
       {...props}
     >
       {children}
