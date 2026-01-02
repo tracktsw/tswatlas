@@ -86,7 +86,7 @@ const SettingsPage = () => {
   };
 
   return (
-    <div className="px-4 py-6 space-y-6 max-w-lg mx-auto">
+    <div className="px-4 pb-6 pt-6 safe-area-inset-top space-y-6 max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link 
