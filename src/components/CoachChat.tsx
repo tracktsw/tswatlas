@@ -139,6 +139,12 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            onFocus={(e) => {
+              // Delay to let iOS keyboard settle, then scroll input into view
+              setTimeout(() => {
+                e.target.scrollIntoView({ behavior: 'instant', block: 'end' });
+              }, 100);
+            }}
             placeholder="Ask about your TSW journey..."
             className="min-h-[44px] max-h-32 resize-none"
             rows={1}
