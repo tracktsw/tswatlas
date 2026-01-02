@@ -122,7 +122,7 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="border-t border-border p-4 bg-background">
+      <div className="border-t border-border p-4 pb-6 bg-background shrink-0">
         {messages.length > 0 && (
           <div className="flex justify-end mb-2">
             <Button
