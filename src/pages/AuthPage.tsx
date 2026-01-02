@@ -139,7 +139,10 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden" style={{ paddingTop: 'var(--safe-top)' }}>
+    <div 
+      className="h-[100dvh] flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden" 
+      style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
+    >
       {/* Decorative background elements */}
       <div className="decorative-blob w-64 h-64 bg-coral/40 -top-20 -right-20 fixed" />
       <div className="decorative-blob w-80 h-80 bg-sage/30 -bottom-32 -left-32 fixed" />
