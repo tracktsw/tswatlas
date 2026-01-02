@@ -210,15 +210,11 @@ const FullscreenViewer = ({
     <div 
       ref={containerRef}
       className="fixed inset-0 z-50 bg-black flex flex-col"
-      style={{ 
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-      }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-black/50 backdrop-blur-sm">
+      {/* Header - extra top padding for iOS safe area */}
+      <div className="flex items-center justify-between px-4 pt-12 pb-3 bg-black/50 backdrop-blur-sm">
         <div className="flex items-center gap-1">
           <span className="text-sm text-white/80">
             {format(parseLocalDateTime(photo.timestamp) || new Date(photo.timestamp), 'MMM d, yyyy')}
