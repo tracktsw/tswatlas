@@ -210,6 +210,10 @@ const FullscreenViewer = ({
     <div 
       ref={containerRef}
       className="fixed inset-0 z-50 bg-black flex flex-col"
+      style={{ 
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
