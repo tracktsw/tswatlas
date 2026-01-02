@@ -9,7 +9,7 @@ const CoachPage = () => {
 
   return (
     <PaywallGuard feature="AI Coach">
-    <div className="flex flex-col h-[calc(100vh-8rem)] relative">
+    <div className="flex flex-col flex-1 min-h-0 relative">
       {/* Decorative elements */}
       <div className="decorative-blob w-32 h-32 bg-coral/20 -top-10 -right-10 fixed" />
       <div className="decorative-blob w-40 h-40 bg-primary/15 bottom-40 -left-16 fixed" />
