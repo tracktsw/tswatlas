@@ -97,7 +97,7 @@ const JournalPage = () => {
         </div>
         <Dialog open={isWriting} onOpenChange={setIsWriting}>
           <DialogTrigger asChild>
-            <Button variant="warm" className="gap-2">
+            <Button variant="default" className="gap-2">
               <Plus className="w-4 h-4" />
               Write
             </Button>
@@ -136,7 +136,7 @@ const JournalPage = () => {
                   className="resize-none rounded-xl border-2"
                 />
               </div>
-              <Button onClick={handleSave} variant="warm" className="w-full h-11 gap-2">
+              <Button onClick={handleSave} variant="default" className="w-full h-11 gap-2">
                 <Save className="w-4 h-4" />
                 Save Entry
               </Button>
@@ -202,7 +202,7 @@ const JournalPage = () => {
                     className="resize-none rounded-xl border-2"
                   />
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSaveEdit} variant="warm" className="gap-1.5 rounded-xl">
+                    <Button size="sm" onClick={handleSaveEdit} variant="default" className="gap-1.5 rounded-xl">
                       <Save className="w-3.5 h-3.5" />
                       Save
                     </Button>
