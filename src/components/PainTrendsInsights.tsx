@@ -86,9 +86,8 @@ const PainTrendsInsights = ({ checkIns, dailyFlareStates }: PainTrendsInsightsPr
     painData.forEach(entry => {
       const flareState = flareStateByDate.get(entry.date);
       const isFlaring = flareState?.isInFlareEpisode || 
-        flareState?.flareState === 'active_flare' || 
-        flareState?.flareState === 'peak_flare';
-
+        flareState?.flareState === 'active_flare' ||
+        flareState?.flareState === 'early_flare';
       if (isFlaring) {
         if (!currentPeriod) {
           currentPeriod = { start: entry.date, end: entry.date };
@@ -126,9 +125,8 @@ const PainTrendsInsights = ({ checkIns, dailyFlareStates }: PainTrendsInsightsPr
     painData.forEach(entry => {
       const flareState = flareStateByDate.get(entry.date);
       const isFlaring = flareState?.isInFlareEpisode || 
-        flareState?.flareState === 'active_flare' || 
-        flareState?.flareState === 'peak_flare';
-
+        flareState?.flareState === 'active_flare' ||
+        flareState?.flareState === 'early_flare';
       if (isFlaring) {
         flarePainScores.push(entry.painScore);
       } else {

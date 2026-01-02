@@ -1,7 +1,7 @@
-import { Flame, TrendingUp, TrendingDown, Activity, BookOpen } from 'lucide-react';
+import { Flame, TrendingUp, TrendingDown, Activity, BookOpen, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFlareState, getFlareStateLabel, getConfidenceLabel } from '@/hooks/useFlareState';
-import { FlareState, BaselineConfidence } from '@/utils/flareStateEngine';
+import { FlareState } from '@/utils/flareStateEngine';
 import { PlantIllustration } from '@/components/illustrations';
 
 const stateConfig: Record<FlareState, {
@@ -16,35 +16,35 @@ const stateConfig: Record<FlareState, {
     gradient: 'bg-gradient-to-br from-primary/20 to-sage-light',
     iconColor: 'text-primary',
     ringColor: 'ring-primary/30',
-    description: 'Your symptoms are at baseline',
+    description: 'Your skin is at baseline',
   },
-  pre_flare: {
+  stable_severe: {
+    icon: AlertTriangle,
+    gradient: 'bg-gradient-to-br from-amber-500/20 to-amber-100',
+    iconColor: 'text-amber-600',
+    ringColor: 'ring-amber-500/30',
+    description: 'Your skin is severe but consistent. This reflects your current baseline, not an active flare.',
+  },
+  early_flare: {
     icon: Activity,
-    gradient: 'bg-gradient-to-br from-yellow-500/20 to-amber-100',
-    iconColor: 'text-yellow-600',
-    ringColor: 'ring-yellow-500/30',
-    description: 'Symptoms are rising',
+    gradient: 'bg-gradient-to-br from-orange-400/20 to-amber-100',
+    iconColor: 'text-orange-500',
+    ringColor: 'ring-orange-400/30',
+    description: 'Skin is worsening — monitoring trend',
   },
   active_flare: {
     icon: Flame,
     gradient: 'bg-gradient-to-br from-orange-500/20 to-amber-100',
     iconColor: 'text-orange-600',
     ringColor: 'ring-orange-500/30',
-    description: 'Active flare detected',
+    description: 'Active flare — skin at RED with sustained severity',
   },
-  peak_flare: {
-    icon: Flame,
-    gradient: 'bg-gradient-to-br from-red-500/20 to-coral-light',
-    iconColor: 'text-red-600',
-    ringColor: 'ring-red-500/30',
-    description: 'Peak flare activity',
-  },
-  resolving_flare: {
+  recovering: {
     icon: TrendingDown,
     gradient: 'bg-gradient-to-br from-blue-500/20 to-sky-100',
     iconColor: 'text-blue-600',
     ringColor: 'ring-blue-500/30',
-    description: 'Flare is resolving',
+    description: 'Recovering from flare',
   },
 };
 
@@ -59,7 +59,8 @@ export function FlareStatusBadge({ className }: FlareStatusBadgeProps) {
     currentFlareDuration, 
     isLoading, 
     dailyBurdens,
-    baselineConfidence 
+    baselineConfidence,
+    dailyFlareStates,
   } = useFlareState();
   
   // Need at least some data to show anything
@@ -69,7 +70,7 @@ export function FlareStatusBadge({ className }: FlareStatusBadgeProps) {
   
   // Early phase: show learning state
   if (baselineConfidence === 'early') {
-    const checkInsNeeded = 7 - dailyBurdens.length;
+    const daysNeeded = 7 - dailyBurdens.length;
     return (
       <div 
         className={cn(
@@ -86,7 +87,7 @@ export function FlareStatusBadge({ className }: FlareStatusBadgeProps) {
               Learning your baseline
             </p>
             <p className="text-muted-foreground">
-              {checkInsNeeded} more check-in{checkInsNeeded !== 1 ? 's' : ''} needed for flare detection
+              {dailyBurdens.length} of 7 days logged · {daysNeeded} more day{daysNeeded !== 1 ? 's' : ''} needed
             </p>
           </div>
         </div>
@@ -118,27 +119,21 @@ export function FlareStatusBadge({ className }: FlareStatusBadgeProps) {
         )}>
           <Icon className={cn('w-7 h-7', config.iconColor)} />
         </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <p className="font-display font-bold text-lg text-foreground">
-              {label}
-            </p>
-            {isInActiveFlare && currentFlareDuration && currentFlareDuration > 1 && (
-              <span className="text-muted-foreground font-normal text-sm">
-                · Day {currentFlareDuration}
-              </span>
-            )}
-            {baselineConfidence === 'provisional' && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-muted/50 text-muted-foreground">
-                {confidenceLabel}
-              </span>
-            )}
-          </div>
+        <div className="flex-1">
+          <p className="font-display font-bold text-lg text-foreground">
+            {label}
+          </p>
           <p className="text-muted-foreground">
             {config.description}
           </p>
         </div>
       </div>
+      {/* Tooltip explanation for flares */}
+      {(currentState === 'early_flare' || currentState === 'active_flare') && (
+        <p className="mt-3 text-xs text-muted-foreground/80 italic border-t border-border/50 pt-3">
+          Flare detection is based on sustained skin worsening over multiple days — not a single bad day.
+        </p>
+      )}
     </div>
   );
 }
