@@ -15,7 +15,7 @@ const BottomNav = () => {
   const location = useLocation();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 safe-area-inset-bottom">
       <div className="bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg">
         <div className="flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto">
           {navItems.map(({ path, icon: Icon, label }) => {
