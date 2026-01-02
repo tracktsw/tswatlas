@@ -23,7 +23,7 @@ const DebugOverlay = () => {
   }, []);
 
   return (
-    <div className="fixed top-0 left-0 z-[9999] bg-black/80 text-white text-[10px] p-2 font-mono max-w-[200px]">
+    <div className="fixed top-[env(safe-area-inset-top,0px)] left-0 z-[9999] bg-black/80 text-white text-[10px] p-2 font-mono max-w-[200px]">
       <div className="font-bold text-yellow-400">BUILD: 2026-01-02 15:00</div>
       <div className="mt-1 space-y-0.5">
         <div>innerH: {viewportInfo.innerHeight}px</div>
@@ -55,7 +55,7 @@ const Layout = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col pt-[env(safe-area-inset-top,0px)]">
       {/* DEBUG OVERLAY - REMOVE AFTER FIXING iOS */}
       <DebugOverlay />
       
