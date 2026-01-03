@@ -25,7 +25,7 @@ const SettingsPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentVersion, isChecking, checkForUpdate, performUpdate, updateAvailable } = useAppUpdate();
-  const { isNative, permissionStatus, checkPermission, requestPermission, scheduleTestNotification } = useLocalNotifications();
+  const { isNative, permissionStatus, isRequestingPermission, checkPermission, requestPermission, scheduleTestNotification } = useLocalNotifications();
   
   // Get next reminder time for display
   const { nextReminderTime } = useCheckInReminder({
@@ -57,37 +57,64 @@ const SettingsPage = () => {
     }
   }, [searchParams, refreshSubscription]);
 
-  // Check notification permission status when reminders are enabled (user has expanded section)
-  useEffect(() => {
-    if (isNative && reminderSettings.enabled) {
-      checkPermission();
-    }
-  }, [isNative, reminderSettings.enabled, checkPermission]);
   const handleToggleReminders = async (enabled: boolean) => {
     try {
-      // If enabling on native, request permission first
-      if (enabled && isNative && !permissionStatus.granted) {
-        const granted = await requestPermission();
-        if (!granted) {
-          toast.error('Please enable notifications in your device settings');
-          return;
+      // If disabling, just disable
+      if (!enabled) {
+        await updateReminderSettings({ ...reminderSettings, enabled: false });
+        if (isNative) {
+          await scheduleCheckInReminders(
+            reminderSettings.morningTime,
+            reminderSettings.eveningTime,
+            false
+          );
         }
+        toast.success('Reminders disabled');
+        return;
       }
 
-      await updateReminderSettings({ ...reminderSettings, enabled });
+      // If enabling on native, check permission status first (without requesting)
+      if (isNative) {
+        const status = await checkPermission();
+        
+        if (status.denied) {
+          toast.error('Notifications are disabled. Please enable them in your device Settings.');
+          return;
+        }
+        
+        if (status.prompt) {
+          // Don't enable yet - user needs to tap "Enable Notifications" button
+          toast.info('Tap "Enable Notifications" below to allow push notifications first.');
+          return;
+        }
+        
+        // status.granted - proceed to enable
+      }
+
+      await updateReminderSettings({ ...reminderSettings, enabled: true });
       
-      // Schedule/cancel native notifications
+      // Schedule native notifications
       if (isNative) {
         await scheduleCheckInReminders(
           reminderSettings.morningTime,
           reminderSettings.eveningTime,
-          enabled
+          true
         );
       }
       
-      toast.success(enabled ? 'Reminders enabled' : 'Reminders disabled');
+      toast.success('Reminders enabled');
     } catch (error) {
       toast.error('Failed to update settings');
+    }
+  };
+
+  // Handler for the explicit "Enable Notifications" button - the ONLY place requestPermission is called
+  const handleEnableNotifications = async () => {
+    const granted = await requestPermission();
+    if (granted) {
+      toast.success('Notifications enabled! You can now turn on reminders.');
+    } else if (permissionStatus.denied) {
+      toast.error('Notifications denied. Please enable them in your device Settings.');
     }
   };
 
@@ -236,15 +263,25 @@ const SettingsPage = () => {
                   <span className="text-sm">
                     Push notifications: {permissionStatus.granted ? (
                       <span className="text-green-600 dark:text-green-400">Enabled</span>
+                    ) : permissionStatus.denied ? (
+                      <span className="text-red-600 dark:text-red-400">Denied</span>
                     ) : (
-                      <span className="text-amber-600 dark:text-amber-400">Disabled</span>
+                      <span className="text-amber-600 dark:text-amber-400">Not enabled</span>
                     )}
                   </span>
                 </div>
-                {!permissionStatus.granted && (
-                  <Button variant="outline" size="sm" onClick={requestPermission}>
-                    Enable
+                {permissionStatus.prompt && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleEnableNotifications}
+                    disabled={isRequestingPermission}
+                  >
+                    {isRequestingPermission ? 'Enabling...' : 'Enable Notifications'}
                   </Button>
+                )}
+                {permissionStatus.denied && (
+                  <span className="text-xs text-muted-foreground">Open device Settings</span>
                 )}
               </div>
             )}
