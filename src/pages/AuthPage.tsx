@@ -224,7 +224,7 @@ const AuthPage = () => {
             </div>
           )}
 
-          <Button type="submit" variant="warm" className="w-full h-12 text-base" disabled={loading}>
+          <Button type="submit" variant="default" className="w-full h-12 text-base" disabled={loading}>
             {getButtonText()}
           </Button>
 
