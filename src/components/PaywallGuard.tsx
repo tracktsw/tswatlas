@@ -11,8 +11,6 @@ interface PaywallGuardProps {
   showBlurred?: boolean;
 }
 
-const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
-
 const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false }: PaywallGuardProps) => {
   const { isPremium, isLoading } = useSubscription();
   const [isUpgrading, setIsUpgrading] = useState(false);
@@ -32,11 +30,26 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
         return;
       }
 
-      // Redirect to Stripe Payment Link with prefilled email
-      const paymentUrl = `${STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(session.user.email)}`;
-      console.log('[PaywallGuard] Redirecting to Payment Link...');
-      window.location.assign(paymentUrl);
-      // Note: isUpgrading stays true as we're navigating away
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error || data?.error) {
+        console.error('[PaywallGuard] Checkout error:', error || data?.error);
+        toast.error('Failed to start checkout');
+        setIsUpgrading(false);
+        return;
+      }
+
+      if (data?.url) {
+        console.log('[PaywallGuard] Redirecting to Stripe checkout...');
+        window.location.assign(data.url);
+      } else {
+        toast.error('Failed to start checkout');
+        setIsUpgrading(false);
+      }
     } catch (err) {
       console.error('[PaywallGuard] Checkout error:', err);
       toast.error('Failed to start checkout');

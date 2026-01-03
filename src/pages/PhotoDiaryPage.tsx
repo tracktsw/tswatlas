@@ -223,8 +223,6 @@ const PhotoDiaryPage = () => {
   const uploadProgress = Math.min(Math.max(photosUploadedToday / FREE_DAILY_PHOTO_LIMIT, 0), 1);
   const isLimitReached = !isPremium && uploadProgress >= 1;
 
-  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
-
   const handleUpgrade = async () => {
     if (isUpgrading) return;
     setIsUpgrading(true);
@@ -239,11 +237,26 @@ const PhotoDiaryPage = () => {
         return;
       }
 
-      // Redirect to Stripe Payment Link with prefilled email
-      const paymentUrl = `${STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(session.user.email)}`;
-      console.log('[Upgrade] Redirecting to Payment Link...');
-      window.location.assign(paymentUrl);
-      // Note: isUpgrading stays true as we're navigating away
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error || data?.error) {
+        console.error('[Upgrade] Checkout error:', error || data?.error);
+        toast.error('Failed to start checkout');
+        setIsUpgrading(false);
+        return;
+      }
+
+      if (data?.url) {
+        console.log('[Upgrade] Redirecting to Stripe checkout...');
+        window.location.assign(data.url);
+      } else {
+        toast.error('Failed to start checkout');
+        setIsUpgrading(false);
+      }
     } catch (err) {
       console.error('[Upgrade] Checkout error:', err);
       toast.error('Failed to start checkout');
