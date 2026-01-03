@@ -462,12 +462,12 @@ const InsightsPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Start free trial
+                    Start 14-day free trial
                   </>
                 )}
               </Button>
               <p className="text-xs text-muted-foreground mt-1.5">
-                30 days free · £5.99/month after · Cancel anytime
+                14 days free · £5.99/month after · Cancel anytime
               </p>
             </motion.div>
           </div>
