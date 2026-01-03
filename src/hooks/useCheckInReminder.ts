@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-const DEBUG_REMINDERS = true;
+const DEBUG_REMINDERS = false;
 
 function log(...args: unknown[]) {
   if (DEBUG_REMINDERS) {
@@ -301,7 +301,6 @@ export function useCheckInReminder({
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        log('App became visible, re-evaluating reminder');
         hasEvaluated.current = false; // Allow re-evaluation
         loadReminderState().then(() => {
           evaluateReminder();
@@ -309,20 +308,10 @@ export function useCheckInReminder({
       }
     };
 
-    const handleFocus = () => {
-      log('Window focused, re-evaluating reminder');
-      hasEvaluated.current = false;
-      loadReminderState().then(() => {
-        evaluateReminder();
-      });
-    };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
     };
   }, [loadReminderState, evaluateReminder]);
 
