@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications, ScheduleOn } from '@capacitor/local-notifications';
+
+const PERMISSION_REQUESTED_KEY = 'notif_permission_requested_v1';
 
 export interface NotificationPermissionStatus {
   granted: boolean;
@@ -14,9 +16,11 @@ export function useLocalNotifications() {
     denied: false,
     prompt: true,
   });
+  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
+  const requestingRef = useRef(false);
   const isNative = Capacitor.isNativePlatform();
 
-  // Check current permission status
+  // Check current permission status (safe to call anytime - does not show prompt)
   const checkPermission = useCallback(async (): Promise<NotificationPermissionStatus> => {
     if (!isNative) {
       return { granted: false, denied: false, prompt: false };
@@ -37,13 +41,20 @@ export function useLocalNotifications() {
     }
   }, [isNative]);
 
-  // Request permission - only call this from user-initiated actions
+  // Request permission - ONLY call from explicit user action (button tap)
+  // This function has guards to ensure requestPermissions() is only ever called once
   const requestPermission = useCallback(async (): Promise<boolean> => {
     if (!isNative) {
       return false;
     }
 
-    // First check current status to avoid duplicate prompts
+    // Guard: prevent multiple concurrent calls
+    if (requestingRef.current) {
+      console.log('[Notifications] Already requesting permission, skipping');
+      return false;
+    }
+
+    // First check current status without showing a prompt
     const currentStatus = await checkPermission();
     
     // If already granted, return true without requesting again
@@ -57,9 +68,25 @@ export function useLocalNotifications() {
       return false;
     }
 
-    // Only request if status is "prompt" (never requested before)
+    // Guard: check if we've already requested once in this app install
+    const hasRequestedBefore = localStorage.getItem(PERMISSION_REQUESTED_KEY) === '1';
+    if (hasRequestedBefore) {
+      console.log('[Notifications] Permission already requested before, skipping');
+      // Re-check status in case user changed it in Settings
+      await checkPermission();
+      return permissionStatus.granted;
+    }
+
+    // Only request if status is "prompt" and we haven't requested before
     try {
+      requestingRef.current = true;
+      setIsRequestingPermission(true);
+      
       const result = await LocalNotifications.requestPermissions();
+      
+      // Mark that we've requested (persist across app restarts)
+      localStorage.setItem(PERMISSION_REQUESTED_KEY, '1');
+      
       const granted = result.display === 'granted';
       setPermissionStatus({
         granted,
@@ -70,8 +97,11 @@ export function useLocalNotifications() {
     } catch (error) {
       console.error('Error requesting notification permissions:', error);
       return false;
+    } finally {
+      requestingRef.current = false;
+      setIsRequestingPermission(false);
     }
-  }, [isNative, checkPermission]);
+  }, [isNative, checkPermission, permissionStatus.granted]);
 
   // Schedule a daily repeating notification
   const scheduleReminder = useCallback(async (
@@ -203,6 +233,7 @@ export function useLocalNotifications() {
   return {
     isNative,
     permissionStatus,
+    isRequestingPermission,
     checkPermission,
     requestPermission,
     scheduleReminder,
