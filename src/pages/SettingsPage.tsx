@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock, Mail, Eye } from 'lucide-react';
+import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock, Mail, Eye, Smartphone } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { useUserData } from '@/contexts/UserDataContext';
@@ -13,7 +13,10 @@ import SubscriptionCard from '@/components/SubscriptionCard';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAppUpdate } from '@/hooks/useAppUpdate';
 import { useCheckInReminder } from '@/hooks/useCheckInReminder';
+import { useLocalNotifications } from '@/hooks/useLocalNotifications';
+import { scheduleCheckInReminders } from '@/utils/notificationScheduler';
 import { format } from 'date-fns';
+
 const SettingsPage = () => {
   const { reminderSettings, updateReminderSettings, photos, checkIns, journalEntries, isLoading, isSyncing, userId } = useUserData();
   const { isAdmin, refreshSubscription } = useSubscription();
@@ -22,6 +25,7 @@ const SettingsPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentVersion, isChecking, checkForUpdate, performUpdate, updateAvailable } = useAppUpdate();
+  const { isNative, permissionStatus, requestPermission, scheduleTestNotification } = useLocalNotifications();
   
   // Get next reminder time for display
   const { nextReminderTime } = useCheckInReminder({
@@ -56,7 +60,26 @@ const SettingsPage = () => {
 
   const handleToggleReminders = async (enabled: boolean) => {
     try {
+      // If enabling on native, request permission first
+      if (enabled && isNative && !permissionStatus.granted) {
+        const granted = await requestPermission();
+        if (!granted) {
+          toast.error('Please enable notifications in your device settings');
+          return;
+        }
+      }
+
       await updateReminderSettings({ ...reminderSettings, enabled });
+      
+      // Schedule/cancel native notifications
+      if (isNative) {
+        await scheduleCheckInReminders(
+          reminderSettings.morningTime,
+          reminderSettings.eveningTime,
+          enabled
+        );
+      }
+      
       toast.success(enabled ? 'Reminders enabled' : 'Reminders disabled');
     } catch (error) {
       toast.error('Failed to update settings');
@@ -66,6 +89,11 @@ const SettingsPage = () => {
   const handleMorningTimeChange = async (time: string) => {
     try {
       await updateReminderSettings({ ...reminderSettings, morningTime: time });
+      
+      // Reschedule native notifications
+      if (isNative && reminderSettings.enabled) {
+        await scheduleCheckInReminders(time, reminderSettings.eveningTime, true);
+      }
     } catch (error) {
       toast.error('Failed to update settings');
     }
@@ -74,8 +102,22 @@ const SettingsPage = () => {
   const handleEveningTimeChange = async (time: string) => {
     try {
       await updateReminderSettings({ ...reminderSettings, eveningTime: time });
+      
+      // Reschedule native notifications
+      if (isNative && reminderSettings.enabled) {
+        await scheduleCheckInReminders(reminderSettings.morningTime, time, true);
+      }
     } catch (error) {
       toast.error('Failed to update settings');
+    }
+  };
+
+  const handleTestNotification = async () => {
+    const success = await scheduleTestNotification();
+    if (success) {
+      toast.success('Test notification scheduled! It will appear in 5 seconds.');
+    } else {
+      toast.error('Failed to schedule test notification');
     }
   };
 
@@ -181,8 +223,44 @@ const SettingsPage = () => {
               </div>
             )}
             
+            {/* Native notification status */}
+            {isNative && (
+              <div className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Smartphone className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    Push notifications: {permissionStatus.granted ? (
+                      <span className="text-green-600 dark:text-green-400">Enabled</span>
+                    ) : (
+                      <span className="text-amber-600 dark:text-amber-400">Disabled</span>
+                    )}
+                  </span>
+                </div>
+                {!permissionStatus.granted && (
+                  <Button variant="outline" size="sm" onClick={requestPermission}>
+                    Enable
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Test notification button - only on native */}
+            {isNative && permissionStatus.granted && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleTestNotification}
+                className="w-full"
+              >
+                <Bell className="w-4 h-4 mr-2" />
+                Send Test Notification
+              </Button>
+            )}
+            
             <p className="text-xs text-muted-foreground">
-              Reminders appear when you open the app after the scheduled time.
+              {isNative 
+                ? 'You\'ll receive push notifications at your scheduled times.'
+                : 'Reminders appear when you open the app after the scheduled time.'}
             </p>
           </div>
         )}

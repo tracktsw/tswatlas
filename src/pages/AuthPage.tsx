@@ -17,23 +17,13 @@ const AuthPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Check if already logged in
+  // Check if already logged in - single check, no subscription
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (session?.user) {
-          navigate('/');
-        }
-      }
-    );
-
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         navigate('/');
       }
     });
-
-    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -143,13 +133,15 @@ const AuthPage = () => {
       className="h-[100dvh] flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden" 
       style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
     >
-      {/* Decorative background elements */}
-      <div className="decorative-blob w-64 h-64 bg-coral/40 -top-20 -right-20 fixed" />
-      <div className="decorative-blob w-80 h-80 bg-sage/30 -bottom-32 -left-32 fixed" />
-      <div className="decorative-blob w-48 h-48 bg-honey/20 top-1/3 right-0 fixed" />
+      {/* Decorative background - simplified for mobile performance */}
+      <div className="hidden sm:block">
+        <div className="decorative-blob w-64 h-64 bg-coral/40 -top-20 -right-20 fixed" />
+        <div className="decorative-blob w-80 h-80 bg-sage/30 -bottom-32 -left-32 fixed" />
+        <div className="decorative-blob w-48 h-48 bg-honey/20 top-1/3 right-0 fixed" />
+      </div>
       
-      {/* Dot pattern overlay */}
-      <div className="fixed inset-0 decorative-dots opacity-30 pointer-events-none" />
+      {/* Dot pattern overlay - hidden on mobile */}
+      <div className="hidden sm:block fixed inset-0 decorative-dots opacity-30 pointer-events-none" />
       
       <div className="w-full max-w-sm space-y-8 relative z-10">
         {/* Header */}
@@ -232,7 +224,7 @@ const AuthPage = () => {
             </div>
           )}
 
-          <Button type="submit" variant="warm" className="w-full h-12 text-base" disabled={loading}>
+          <Button type="submit" variant="default" className="w-full h-12 text-base" disabled={loading}>
             {getButtonText()}
           </Button>
 

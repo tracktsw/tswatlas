@@ -751,7 +751,7 @@ const PhotoDiaryPage = () => {
             className="w-full gap-2"
           >
             <Crown className="w-4 h-4" />
-            {isUpgrading ? 'Loading...' : 'Start 30-day free trial'}
+            {isUpgrading ? 'Loading...' : 'Start 14-day free trial'}
           </Button>
           <p className="text-xs text-center text-muted-foreground">
             £5.99/month after · Cancel anytime
@@ -778,7 +778,7 @@ const PhotoDiaryPage = () => {
             <div className="space-y-2">
               <Button onClick={handleUpgrade} disabled={isUpgrading} variant="gold" className="w-full gap-2">
                 <Crown className="w-4 h-4" />
-                {isUpgrading ? 'Loading...' : 'Start 30-day free trial'}
+                {isUpgrading ? 'Loading...' : 'Start 14-day free trial'}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
                 £5.99/month after · Cancel anytime
@@ -826,7 +826,7 @@ const PhotoDiaryPage = () => {
                 variant="gold"
               >
                 <Crown className="w-4 h-4" />
-                {isUpgrading ? 'Loading...' : 'Start 30-day free trial'}
+                {isUpgrading ? 'Loading...' : 'Start 14-day free trial'}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
                 £5.99/month after · Cancel anytime
@@ -874,7 +874,7 @@ const PhotoDiaryPage = () => {
               disabled={isUpgrading}
             >
               <Crown className="w-5 h-5" />
-              {isUpgrading ? 'Loading...' : 'Start 30-day free trial'}
+              {isUpgrading ? 'Loading...' : 'Start 14-day free trial'}
             </Button>
             <p className="text-xs text-center text-muted-foreground">
               £5.99/month after · Cancel anytime
@@ -943,7 +943,7 @@ const PhotoDiaryPage = () => {
                 <Button variant="outline" className="flex-1 h-11" onClick={handleCancelPending}>
                   Back
                 </Button>
-                <Button variant="warm" className="flex-1 h-11" onClick={handleConfirmUpload} disabled={singleUpload.isUploading}>
+                <Button variant="default" className="flex-1 h-11" onClick={handleConfirmUpload} disabled={singleUpload.isUploading}>
                   {singleUpload.isUploading ? 'Uploading...' : 'Upload Photo'}
                 </Button>
               </div>
@@ -977,7 +977,7 @@ const PhotoDiaryPage = () => {
               <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleCameraCapture} className="hidden" />
               <input type="file" accept="image/*,image/heic,image/heif,.heic,.heif" ref={galleryInputRef} onChange={handleGallerySelect} className="hidden" />
               <div className="grid grid-cols-2 gap-3">
-                <Button variant="warm" className="h-11 gap-2" onClick={() => cameraInputRef.current?.click()} disabled={singleUpload.isUploading}>
+                <Button variant="default" className="h-11 gap-2" onClick={() => cameraInputRef.current?.click()} disabled={singleUpload.isUploading}>
                   <Camera className="w-5 h-5" />Take Photo
                 </Button>
                 <Button variant="outline" className="h-11 gap-2" onClick={() => galleryInputRef.current?.click()} disabled={singleUpload.isUploading}>

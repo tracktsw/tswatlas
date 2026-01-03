@@ -1,5 +1,4 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { lazy, Suspense } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -22,8 +21,10 @@ import AuthPage from "@/pages/AuthPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import AdminPage from "@/pages/AdminPage";
 import NotFound from "@/pages/NotFound";
-import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
-import { AppUpdateBanner } from "@/components/AppUpdateBanner";
+
+// Lazy load non-critical components
+const PWAInstallPrompt = lazy(() => import("@/components/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
+const AppUpdateBanner = lazy(() => import("@/components/AppUpdateBanner").then(m => ({ default: m.AppUpdateBanner })));
 
 const queryClient = new QueryClient();
 
@@ -32,45 +33,45 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <IOSKeyboardProvider>
         <LayoutProvider>
-          <UserDataProvider>
-            <DemoModeProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <AppUpdateBanner />
-                <PWAInstallPrompt />
-                <BrowserRouter>
-                  <Routes>
-                    {/* Public routes */}
-                    <Route path="/auth" element={<AuthPage />} />
-                    <Route path="/reset-password" element={<ResetPasswordPage />} />
-                    
-                    {/* Protected routes - require authentication */}
-                    <Route
-                      path="/"
-                      element={
-                        <AuthGuard>
+          <TooltipProvider>
+            <BrowserRouter>
+              <Routes>
+                {/* Public routes - no UserDataProvider */}
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                
+                {/* Protected routes - require authentication */}
+                <Route
+                  path="/"
+                  element={
+                    <AuthGuard>
+                      <UserDataProvider>
+                        <DemoModeProvider>
+                          <Suspense fallback={null}>
+                            <AppUpdateBanner />
+                            <PWAInstallPrompt />
+                          </Suspense>
                           <Layout />
-                        </AuthGuard>
-                      }
-                    >
-                      <Route index element={<HomePage />} />
-                      <Route path="photos" element={<PhotoDiaryPage />} />
-                      <Route path="check-in" element={<CheckInPage />} />
-                      <Route path="insights" element={<InsightsPage />} />
-                      <Route path="community" element={<CommunityPage />} />
-                      <Route path="journal" element={<JournalPage />} />
-                      <Route path="coach" element={<CoachPage />} />
-                      <Route path="settings" element={<SettingsPage />} />
-                      <Route path="admin" element={<AdminPage />} />
-                    </Route>
-                    
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </BrowserRouter>
-              </TooltipProvider>
-            </DemoModeProvider>
-          </UserDataProvider>
+                        </DemoModeProvider>
+                      </UserDataProvider>
+                    </AuthGuard>
+                  }
+                >
+                  <Route index element={<HomePage />} />
+                  <Route path="photos" element={<PhotoDiaryPage />} />
+                  <Route path="check-in" element={<CheckInPage />} />
+                  <Route path="insights" element={<InsightsPage />} />
+                  <Route path="community" element={<CommunityPage />} />
+                  <Route path="journal" element={<JournalPage />} />
+                  <Route path="coach" element={<CoachPage />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                  <Route path="admin" element={<AdminPage />} />
+                </Route>
+                
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
         </LayoutProvider>
       </IOSKeyboardProvider>
     </QueryClientProvider>
