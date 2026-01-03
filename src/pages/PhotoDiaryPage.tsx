@@ -943,7 +943,7 @@ const PhotoDiaryPage = () => {
                 <Button variant="outline" className="flex-1 h-11" onClick={handleCancelPending}>
                   Back
                 </Button>
-                <Button variant="warm" className="flex-1 h-11" onClick={handleConfirmUpload} disabled={singleUpload.isUploading}>
+                <Button variant="default" className="flex-1 h-11" onClick={handleConfirmUpload} disabled={singleUpload.isUploading}>
                   {singleUpload.isUploading ? 'Uploading...' : 'Upload Photo'}
                 </Button>
               </div>
