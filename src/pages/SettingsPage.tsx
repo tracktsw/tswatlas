@@ -25,7 +25,7 @@ const SettingsPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentVersion, isChecking, checkForUpdate, performUpdate, updateAvailable } = useAppUpdate();
-  const { isNative, permissionStatus, requestPermission, scheduleTestNotification } = useLocalNotifications();
+  const { isNative, permissionStatus, checkPermission, requestPermission, scheduleTestNotification } = useLocalNotifications();
   
   // Get next reminder time for display
   const { nextReminderTime } = useCheckInReminder({
@@ -57,7 +57,12 @@ const SettingsPage = () => {
     }
   }, [searchParams, refreshSubscription]);
 
-
+  // Check notification permission status when reminders are enabled (user has expanded section)
+  useEffect(() => {
+    if (isNative && reminderSettings.enabled) {
+      checkPermission();
+    }
+  }, [isNative, reminderSettings.enabled, checkPermission]);
   const handleToggleReminders = async (enabled: boolean) => {
     try {
       // If enabling on native, request permission first

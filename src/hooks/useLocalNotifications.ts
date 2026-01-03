@@ -37,12 +37,27 @@ export function useLocalNotifications() {
     }
   }, [isNative]);
 
-  // Request permission
+  // Request permission - only call this from user-initiated actions
   const requestPermission = useCallback(async (): Promise<boolean> => {
     if (!isNative) {
       return false;
     }
 
+    // First check current status to avoid duplicate prompts
+    const currentStatus = await checkPermission();
+    
+    // If already granted, return true without requesting again
+    if (currentStatus.granted) {
+      return true;
+    }
+    
+    // If already denied, return false without requesting again
+    // (iOS won't show the prompt again anyway, user must go to Settings)
+    if (currentStatus.denied) {
+      return false;
+    }
+
+    // Only request if status is "prompt" (never requested before)
     try {
       const result = await LocalNotifications.requestPermissions();
       const granted = result.display === 'granted';
@@ -56,7 +71,7 @@ export function useLocalNotifications() {
       console.error('Error requesting notification permissions:', error);
       return false;
     }
-  }, [isNative]);
+  }, [isNative, checkPermission]);
 
   // Schedule a daily repeating notification
   const scheduleReminder = useCallback(async (
@@ -181,12 +196,9 @@ export function useLocalNotifications() {
     }
   }, [isNative]);
 
-  // Check permission on mount
-  useEffect(() => {
-    if (isNative) {
-      checkPermission();
-    }
-  }, [isNative, checkPermission]);
+  // Note: We intentionally do NOT check permission on mount to avoid
+  // triggering iOS permission dialogs unexpectedly. Permission should
+  // only be checked/requested via explicit user action.
 
   return {
     isNative,
