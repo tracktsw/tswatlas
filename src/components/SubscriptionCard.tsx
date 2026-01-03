@@ -21,8 +21,6 @@ const getPlatform = (): string => {
   return isStandalone ? 'Desktop-PWA' : 'Desktop-Browser';
 };
 
-const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
-
 const SubscriptionCard = () => {
   const { isPremium, isAdmin, isLoading, subscriptionEnd, refreshSubscription } = useSubscription();
   
@@ -53,11 +51,36 @@ const SubscriptionCard = () => {
         return;
       }
 
-      // Redirect to Stripe Payment Link with prefilled email
-      const paymentUrl = `${STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(session.user.email)}`;
-      console.log('[UPGRADE] Redirecting to Payment Link...');
-      window.location.assign(paymentUrl);
-      // Note: isCheckoutLoading stays true as we're navigating away
+      console.log('[UPGRADE] Invoking create-checkout function...');
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) {
+        console.error('[UPGRADE] CheckoutError - Function error:', error);
+        toast.error('Checkout couldn\'t start. Please try again.');
+        setIsCheckoutLoading(false);
+        return;
+      }
+
+      if (data?.error) {
+        console.error('[UPGRADE] CheckoutError - API error:', data.error);
+        toast.error('Checkout couldn\'t start. Please try again.');
+        setIsCheckoutLoading(false);
+        return;
+      }
+
+      if (data?.url) {
+        console.log('[UPGRADE] Redirecting to Stripe checkout...');
+        window.location.assign(data.url);
+        // Note: isCheckoutLoading stays true as we're navigating away
+      } else {
+        console.error('[UPGRADE] CheckoutError - No URL in response');
+        toast.error('Checkout couldn\'t start. Please try again.');
+        setIsCheckoutLoading(false);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       console.error('[UPGRADE] CheckoutError - Exception:', errorMessage);
