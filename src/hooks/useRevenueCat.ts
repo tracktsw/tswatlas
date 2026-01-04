@@ -166,7 +166,20 @@ export const useRevenueCat = () => {
       console.log('[RevenueCat] Starting purchase with package:', monthly.identifier);
       const purchaseResult = await Purchases.purchasePackage({ aPackage: monthly as any });
       
-      console.log('[RevenueCat] Purchase successful:', purchaseResult);
+      // Detailed logging of purchase result
+      console.log('[RevenueCat] Purchase result:', JSON.stringify(purchaseResult, null, 2));
+      console.log('[RevenueCat] Customer Info:', JSON.stringify(purchaseResult?.customerInfo, null, 2));
+      console.log('[RevenueCat] Active entitlements:', JSON.stringify(purchaseResult?.customerInfo?.entitlements?.active, null, 2));
+      
+      // Check if premium is active immediately after purchase
+      const isPremiumActive = purchaseResult?.customerInfo?.entitlements?.active?.['premium'] !== undefined;
+      console.log('[RevenueCat] Premium active after purchase:', isPremiumActive);
+      
+      // Force sync with RevenueCat servers
+      console.log('[RevenueCat] Forcing sync with servers...');
+      await Purchases.syncPurchases();
+      console.log('[RevenueCat] Sync complete');
+      
       setIsLoading(false);
       return { success: true };
       
