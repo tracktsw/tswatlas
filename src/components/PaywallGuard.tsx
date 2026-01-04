@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { useSubscription } from '@/hooks/useSubscription';
-import { Lock, Sparkles, Crown, Loader2 } from 'lucide-react';
+import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
+import { Lock, Sparkles, Crown, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -14,14 +15,31 @@ interface PaywallGuardProps {
 const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
 
 const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false }: PaywallGuardProps) => {
-  const { isPremium, isLoading } = useSubscription();
+  const { isPremium, isLoading, refreshSubscription } = useSubscription();
+  const { isIOSNative, isLoading: isRevenueCatLoading, purchaseMonthly, restorePurchases, getPriceString } = useRevenueCatContext();
   const [isUpgrading, setIsUpgrading] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const handleUpgrade = async () => {
     if (isUpgrading) return;
     setIsUpgrading(true);
 
     try {
+      // iOS Native: Use RevenueCat IAP
+      if (isIOSNative) {
+        console.log('[PaywallGuard] iOS Native - using RevenueCat');
+        const success = await purchaseMonthly();
+        
+        if (success) {
+          console.log('[PaywallGuard] RevenueCat purchase completed, refreshing subscription...');
+          toast.success('Purchase successful! Activating your subscription...');
+          await refreshSubscription();
+        }
+        setIsUpgrading(false);
+        return;
+      }
+
+      // Web: Use Stripe Payment Link
       console.log('[PaywallGuard] Starting checkout...');
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -44,6 +62,31 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
     }
   };
 
+  const handleRestore = async () => {
+    if (isRestoring) return;
+    
+    setIsRestoring(true);
+    console.log('[PaywallGuard] Starting restore purchases...');
+    
+    try {
+      const success = await restorePurchases();
+      
+      if (success) {
+        console.log('[PaywallGuard] Restore successful, refreshing subscription...');
+        toast.success('Purchases restored! Activating your subscription...');
+        await refreshSubscription();
+      } else {
+        console.log('[PaywallGuard] No purchases to restore');
+        toast.info('No previous purchases found');
+      }
+    } catch (err) {
+      console.error('[PaywallGuard] Restore error:', err);
+      toast.error('Failed to restore purchases');
+    }
+    
+    setIsRestoring(false);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -55,6 +98,10 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   if (isPremium) {
     return <>{children}</>;
   }
+
+  // Get price string - from RevenueCat on iOS, fallback for web
+  const priceString = isIOSNative ? getPriceString() : '£5.99';
+  const isButtonLoading = isUpgrading || isRevenueCatLoading;
 
   // Show blurred content with overlay
   if (showBlurred) {
@@ -72,11 +119,11 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
             <p className="text-sm text-muted-foreground mb-4">
               {feature} is available with Premium.
             </p>
-            <Button onClick={handleUpgrade} disabled={isUpgrading} variant="gold" className="gap-2">
-              {isUpgrading ? (
+            <Button onClick={handleUpgrade} disabled={isButtonLoading} variant="gold" className="gap-2">
+              {isButtonLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Loading...
+                  {isIOSNative ? 'Processing...' : 'Loading...'}
                 </>
               ) : (
                 <>
@@ -86,8 +133,30 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
               )}
             </Button>
             <p className="text-xs text-muted-foreground mt-2">
-              £5.99/month after · Cancel anytime
+              {priceString}/month after · Cancel anytime
             </p>
+            {/* Restore purchases - iOS only */}
+            {isIOSNative && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2 gap-2 text-muted-foreground"
+                onClick={handleRestore}
+                disabled={isRestoring}
+              >
+                {isRestoring ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Restoring...
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-3 h-3" />
+                    Restore purchases
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -107,11 +176,11 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
         Get full access to all features including Photo Diary, full Insights, Community, Journal, and AI Coach.
       </p>
       <div className="space-y-3 w-full max-w-xs">
-        <Button onClick={handleUpgrade} disabled={isUpgrading} variant="gold" className="w-full gap-2" size="lg">
-          {isUpgrading ? (
+        <Button onClick={handleUpgrade} disabled={isButtonLoading} variant="gold" className="w-full gap-2" size="lg">
+          {isButtonLoading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Loading...
+              {isIOSNative ? 'Processing...' : 'Loading...'}
             </>
           ) : (
             <>
@@ -121,8 +190,30 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
           )}
         </Button>
         <p className="text-xs text-muted-foreground">
-          £5.99/month after · Cancel anytime
+          {priceString}/month after · Cancel anytime
         </p>
+        {/* Restore purchases - iOS only */}
+        {isIOSNative && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-2 text-muted-foreground"
+            onClick={handleRestore}
+            disabled={isRestoring}
+          >
+            {isRestoring ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Restoring...
+              </>
+            ) : (
+              <>
+                <RotateCcw className="w-3 h-3" />
+                Restore purchases
+              </>
+            )}
+          </Button>
+        )}
       </div>
     </div>
   );
