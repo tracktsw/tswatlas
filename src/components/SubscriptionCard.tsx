@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Crown, Loader2, RefreshCw, RotateCcw } from 'lucide-react';
+import { Crown, Loader2, RefreshCw, RotateCcw, Bug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
@@ -8,10 +8,11 @@ import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import { Capacitor } from '@capacitor/core';
 
+// STRIPE IS COMPLETELY DISABLED ON iOS - This link is ONLY for web
 const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
 
 const SubscriptionCard = () => {
-  const { isPremium, isAdmin, isLoading, subscriptionEnd, refreshSubscription } = useSubscription();
+  const { isPremium: isPremiumFromBackend, isAdmin, isLoading: isBackendLoading, subscriptionEnd, refreshSubscription } = useSubscription();
   const {
     isLoading: isRevenueCatLoading,
     purchaseMonthly,
@@ -19,146 +20,140 @@ const SubscriptionCard = () => {
     getPriceString,
     offeringsStatus,
     offeringsError,
-    platformLabel,
+    isPremiumFromRC,
+    getDebugInfo,
+    retryInitialization,
   } = useRevenueCatContext();
-  // Double-click protection: track in-flight requests
+  
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
-  const [nativeStatusMessage, setNativeStatusMessage] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
 
+  // CRITICAL: Runtime platform check
   const isNativeIOS = useMemo(
     () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios',
     []
   );
 
+  // On iOS: isPremium comes from RevenueCat (single source of truth)
+  // On Web: isPremium comes from backend (Stripe)
+  const isPremium = isNativeIOS ? isPremiumFromRC : isPremiumFromBackend;
+  const isLoading = isNativeIOS ? isRevenueCatLoading : isBackendLoading;
+  
   const isOfferingsReady = isNativeIOS ? offeringsStatus === 'ready' : true;
 
   const handleUpgrade = async () => {
-    // Guard against double-clicks
-    if (isCheckoutLoading) {
-      console.log('[UPGRADE] Blocked - request already in flight');
-      return;
-    }
+    if (isCheckoutLoading) return;
 
-    // CRITICAL: Check platform FIRST before any purchase logic
-    console.log('[UPGRADE] Platform check (BEFORE purchase logic):', {
-      isNativeIOS,
-      isNativePlatform: Capacitor.isNativePlatform(),
-      platform: Capacitor.getPlatform(),
-      contextPlatformLabel: platformLabel,
-      offeringsStatus,
-    });
+    const debugInfo = getDebugInfo();
+    console.log('[SubscriptionCard] handleUpgrade:', debugInfo);
 
-    setNativeStatusMessage(null);
+    setStatusMessage(null);
 
-    // iOS native must NEVER fall back to Stripe
-    if (isNativeIOS && !isOfferingsReady) {
-      const msg = offeringsError || 'Loading subscription options… please wait.';
-      setNativeStatusMessage(msg);
-      toast.error(msg);
-      return;
-    }
-
-    setIsCheckoutLoading(true);
-
-    try {
-      // iOS Native: Use RevenueCat IAP - Stripe must NEVER open on iOS
-      if (isNativeIOS) {
-        console.log('[UPGRADE] iOS Native detected - using RevenueCat (Stripe blocked)');
-        setNativeStatusMessage('Purchase started…');
-
-        const result = await purchaseMonthly();
-
-        if (result.success) {
-          console.log('[UPGRADE] RevenueCat purchase completed, refreshing subscription...');
-          setNativeStatusMessage('Purchase successful! Refreshing…');
-          toast.success('Purchase successful! Activating your subscription...');
-          await refreshSubscription();
-          setNativeStatusMessage('Subscription active (or pending refresh).');
-        } else if (result.error) {
-          // Show error to user
-          console.error('[UPGRADE] RevenueCat error:', result.error, 'code:', result.errorCode);
-          setNativeStatusMessage(`Purchase failed: ${result.error}`);
-          toast.error(result.error);
-        } else {
-          console.log('[UPGRADE] RevenueCat purchase cancelled by user');
-          setNativeStatusMessage('Purchase cancelled.');
-        }
-        setIsCheckoutLoading(false);
+    // iOS NATIVE PATH - STRIPE IS COMPLETELY BLOCKED
+    if (isNativeIOS) {
+      if (!isOfferingsReady) {
+        const msg = offeringsError || 'Loading subscription options…';
+        setStatusMessage(msg);
+        toast.error(msg);
         return;
       }
 
-      // Web: Use Stripe Payment Link
-      console.log('[UPGRADE] Web - using Stripe Payment Link');
+      setIsCheckoutLoading(true);
+      setStatusMessage('Opening App Store…');
+
+      try {
+        const result = await purchaseMonthly();
+        console.log('[SubscriptionCard] Purchase result:', result);
+
+        if (result.success) {
+          setStatusMessage('Purchase successful!');
+          toast.success('Purchase successful!');
+          await refreshSubscription();
+        } else if (result.error) {
+          setStatusMessage(`Error: ${result.error}`);
+          toast.error(result.error);
+        } else {
+          setStatusMessage('Cancelled');
+        }
+      } catch (err: any) {
+        console.error('[SubscriptionCard] Purchase error:', err);
+        setStatusMessage(`Error: ${err.message}`);
+        toast.error(err.message || 'Purchase failed');
+      }
+
+      setIsCheckoutLoading(false);
+      return;
+    }
+
+    // WEB PATH - Stripe
+    setIsCheckoutLoading(true);
+    console.log('[SubscriptionCard] Web - using Stripe');
+
+    try {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.user?.email) {
-        console.error('[UPGRADE] CheckoutError - No auth session or email');
         toast.error('Please sign in to subscribe');
         setIsCheckoutLoading(false);
         return;
       }
 
-      // Redirect to Stripe Payment Link with prefilled email
       const paymentUrl = `${STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(session.user.email)}`;
-      console.log('[UPGRADE] Redirecting to Payment Link...');
       window.location.assign(paymentUrl);
-      // Note: isCheckoutLoading stays true as we're navigating away
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      console.error('[UPGRADE] CheckoutError - Exception:', errorMessage);
+      console.error('[SubscriptionCard] Stripe error:', err);
       toast.error('Checkout couldn\'t start. Please try again.');
       setIsCheckoutLoading(false);
     }
   };
 
   const handleRestore = async () => {
-    if (isRestoring) return;
+    if (isRestoring || !isNativeIOS) return;
     
     setIsRestoring(true);
-    console.log('[RESTORE] Starting restore purchases...');
+    setStatusMessage('Restoring…');
     
     try {
-      const success = await restorePurchases();
+      const result = await restorePurchases();
       
-      if (success) {
-        console.log('[RESTORE] Restore successful, refreshing subscription...');
-        toast.success('Purchases restored! Activating your subscription...');
+      if (result.isPremiumNow) {
+        toast.success('Purchases restored!');
         await refreshSubscription();
       } else {
-        console.log('[RESTORE] No purchases to restore');
         toast.info('No previous purchases found');
       }
-    } catch (err) {
-      console.error('[RESTORE] Error:', err);
+      setStatusMessage(null);
+    } catch (err: any) {
+      console.error('[SubscriptionCard] Restore error:', err);
       toast.error('Failed to restore purchases');
+      setStatusMessage(null);
     }
     
     setIsRestoring(false);
   };
 
+  const handleRetryOfferings = async () => {
+    setStatusMessage('Retrying…');
+    await retryInitialization();
+    setStatusMessage(null);
+  };
+
   const handleManageSubscription = async () => {
-    // Guard against double-clicks
-    if (isPortalLoading) {
-      console.log('[PORTAL] Blocked - request already in flight');
-      return;
-    }
+    if (isPortalLoading) return;
 
     setIsPortalLoading(true);
 
     try {
-      console.log('[PORTAL] PortalStart - Getting session...');
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        console.error('[PORTAL] PortalError - No auth session');
         toast.error('Please sign in');
         setIsPortalLoading(false);
         return;
       }
-
-      console.log('[PORTAL] PortalStart - Invoking customer-portal function...', { userId: session.user.id });
 
       const { data, error } = await supabase.functions.invoke('customer-portal', {
         headers: {
@@ -166,49 +161,41 @@ const SubscriptionCard = () => {
         },
       });
 
-      console.log('[PORTAL] PortalResponse', { 
-        status: error ? 'error' : 'success',
-        hasUrl: !!data?.url,
-        error: error?.message || data?.error || null
-      });
-
-      if (error) {
-        console.error('[PORTAL] PortalError - Function error:', error);
-        toast.error('Failed to open subscription portal. Please try again.');
-        setIsPortalLoading(false);
-        return;
-      }
-
-      if (data?.error) {
-        // Check for specific "no customer" error
-        if (data.error.includes('No Stripe customer') || data.error === 'no_customer') {
-          console.log('[PORTAL] PortalError - No Stripe customer found');
-          toast.error('No active subscription found. Please upgrade first.');
+      if (error || data?.error) {
+        if (data?.error?.includes('No Stripe customer')) {
+          toast.error('No active subscription found.');
         } else {
-          console.error('[PORTAL] PortalError - API error:', data.error);
-          toast.error('Failed to open subscription portal. Please try again.');
+          toast.error('Failed to open subscription portal.');
         }
         setIsPortalLoading(false);
         return;
       }
 
       if (data?.url) {
-        console.log('[PORTAL] PortalRedirect', { url: data.url.substring(0, 50) + '...' });
-        // Use window.location.assign for same-tab navigation (iOS/PWA compatible)
         window.location.assign(data.url);
-        // Note: isPortalLoading stays true as we're navigating away
       } else {
-        console.error('[PORTAL] PortalError - No URL in response');
-        toast.error('Failed to open subscription portal. Please try again.');
+        toast.error('Failed to open subscription portal.');
         setIsPortalLoading(false);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      console.error('[PORTAL] PortalError - Exception:', errorMessage);
-      toast.error('Failed to open subscription portal. Please try again.');
+      console.error('[SubscriptionCard] Portal error:', err);
+      toast.error('Failed to open subscription portal.');
       setIsPortalLoading(false);
     }
   };
+
+  // Debug panel
+  const debugPanel = isNativeIOS && showDebug && (
+    <div className="mt-3 p-3 bg-muted/50 rounded-lg text-left text-xs font-mono space-y-1">
+      <div className="font-bold text-foreground mb-2">RevenueCat Debug</div>
+      {Object.entries(getDebugInfo()).map(([key, value]) => (
+        <div key={key} className="flex justify-between gap-2">
+          <span className="text-muted-foreground truncate">{key}:</span>
+          <span className="text-foreground truncate">{String(value)}</span>
+        </div>
+      ))}
+    </div>
+  );
 
   if (isLoading) {
     return (
@@ -221,7 +208,8 @@ const SubscriptionCard = () => {
     );
   }
 
-  if (isPremium) {
+  // Premium active
+  if (isPremium || isAdmin) {
     return (
       <div className="glass-card p-4 border-2 border-primary/30">
         <div className="flex items-start gap-3">
@@ -244,7 +232,7 @@ const SubscriptionCard = () => {
                   ? `Renews on ${format(parseISO(subscriptionEnd), 'MMMM d, yyyy')}`
                   : 'You have full access to all features.'}
             </p>
-            {/* Show Manage Subscription only for web users (Stripe) */}
+            {/* Web users: Manage via Stripe portal */}
             {!isAdmin && !isNativeIOS && (
               <Button 
                 variant="outline" 
@@ -259,11 +247,11 @@ const SubscriptionCard = () => {
                     Opening...
                   </>
                 ) : (
-                  <>Manage Subscription</>
+                  'Manage Subscription'
                 )}
               </Button>
             )}
-            {/* iOS users manage via App Store */}
+            {/* iOS users: Manage via App Store */}
             {!isAdmin && isNativeIOS && (
               <p className="text-xs text-muted-foreground mt-3">
                 Manage your subscription in the App Store
@@ -278,14 +266,31 @@ const SubscriptionCard = () => {
             <RefreshCw className="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
+
+        {/* Debug toggle for premium users */}
+        {isNativeIOS && (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2 gap-1 text-muted-foreground text-xs"
+              onClick={() => setShowDebug(!showDebug)}
+            >
+              <Bug className="w-3 h-3" />
+              {showDebug ? 'Hide' : 'Show'} Debug
+            </Button>
+            {debugPanel}
+          </>
+        )}
       </div>
     );
   }
 
-  // Get price string - from RevenueCat on iOS, fallback for web
+  // Not premium - show upgrade UI
   const priceString = isNativeIOS ? getPriceString() : '£5.99';
   const isButtonLoading = isCheckoutLoading || isRevenueCatLoading;
   const isSubscribeDisabled = isButtonLoading || (isNativeIOS && !isOfferingsReady);
+
   return (
     <div className="glass-card p-4 bg-gradient-to-br from-primary/5 to-accent/5">
       <div className="flex items-start gap-3">
@@ -297,6 +302,8 @@ const SubscriptionCard = () => {
           <p className="text-sm text-muted-foreground mt-1">
             Unlock Photo Diary, full Insights, Community, Journal, and AI Coach.
           </p>
+          
+          {/* Subscribe button */}
           <Button 
             size="sm" 
             variant="gold"
@@ -307,31 +314,44 @@ const SubscriptionCard = () => {
             {isButtonLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                {isNativeIOS ? 'Processing…' : 'Starting checkout...'}
+                Processing…
+              </>
+            ) : isNativeIOS && !isOfferingsReady ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading…
               </>
             ) : (
               <>
                 <Crown className="w-4 h-4" />
-                {isNativeIOS && !isOfferingsReady ? 'Loading subscription…' : 'Start 14-day free trial'}
+                Start 14-day free trial
               </>
             )}
           </Button>
+          
           <p className="text-xs text-muted-foreground mt-2">
             {priceString}/month after · Cancel anytime
           </p>
 
-          {isNativeIOS && (
-            <div className="mt-2 text-xs text-muted-foreground space-y-1">
-              <div>Platform: iOS native</div>
-              <div>
-                Offerings: {offeringsStatus}
-                {offeringsError ? ` — ${offeringsError}` : ''}
-              </div>
-              {nativeStatusMessage ? <div>Status: {nativeStatusMessage}</div> : null}
-            </div>
+          {/* iOS: Retry if offerings failed */}
+          {isNativeIOS && offeringsStatus === 'error' && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 gap-2"
+              onClick={handleRetryOfferings}
+            >
+              <RefreshCw className="w-3 h-3" />
+              Retry
+            </Button>
           )}
 
-          {/* Restore purchases button - iOS only */}
+          {/* Status message */}
+          {statusMessage && (
+            <p className="text-xs text-muted-foreground mt-2">{statusMessage}</p>
+          )}
+
+          {/* iOS: Restore purchases */}
           {isNativeIOS && (
             <Button
               variant="ghost"
@@ -343,7 +363,7 @@ const SubscriptionCard = () => {
               {isRestoring ? (
                 <>
                   <Loader2 className="w-3 h-3 animate-spin" />
-                  Restoring...
+                  Restoring…
                 </>
               ) : (
                 <>
@@ -353,6 +373,21 @@ const SubscriptionCard = () => {
               )}
             </Button>
           )}
+
+          {/* Debug toggle */}
+          {isNativeIOS && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-1 gap-1 text-muted-foreground text-xs"
+              onClick={() => setShowDebug(!showDebug)}
+            >
+              <Bug className="w-3 h-3" />
+              {showDebug ? 'Hide' : 'Show'} Debug
+            </Button>
+          )}
+
+          {debugPanel}
         </div>
       </div>
     </div>
