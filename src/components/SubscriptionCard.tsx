@@ -42,14 +42,18 @@ const SubscriptionCard = () => {
       // iOS Native: Use RevenueCat IAP - Stripe must NEVER open on iOS
       if (isNativeIOS) {
         console.log('[UPGRADE] iOS Native detected - using RevenueCat (Stripe blocked)');
-        const success = await purchaseMonthly();
+        const result = await purchaseMonthly();
         
-        if (success) {
+        if (result.success) {
           console.log('[UPGRADE] RevenueCat purchase completed, refreshing subscription...');
           toast.success('Purchase successful! Activating your subscription...');
           await refreshSubscription();
+        } else if (result.error) {
+          // Show error to user
+          console.error('[UPGRADE] RevenueCat error:', result.error, 'code:', result.errorCode);
+          toast.error(result.error);
         } else {
-          console.log('[UPGRADE] RevenueCat purchase cancelled or failed');
+          console.log('[UPGRADE] RevenueCat purchase cancelled by user');
         }
         setIsCheckoutLoading(false);
         return;

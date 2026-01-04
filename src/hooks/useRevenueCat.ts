@@ -100,53 +100,81 @@ export const useRevenueCat = () => {
     }
   }, []);
 
-  // Purchase monthly package
-  const purchaseMonthly = useCallback(async (): Promise<boolean> => {
+  // Purchase monthly package - returns structured result for better error handling
+  const purchaseMonthly = useCallback(async (): Promise<{ success: boolean; error?: string; errorCode?: number }> => {
     if (!isIOSNative) {
       console.log('[RevenueCat] Purchase skipped - not iOS native');
-      return false;
-    }
-
-    if (!monthlyPackage) {
-      console.error('[RevenueCat] No monthly package available');
-      // Try to fetch offerings first
-      await fetchOfferings();
-      if (!monthlyPackage) {
-        return false;
-      }
+      return { success: false, error: 'Not iOS native' };
     }
 
     setIsLoading(true);
+    
     try {
-      console.log('[RevenueCat] Starting purchase...');
-      const { Purchases } = await import('@revenuecat/purchases-capacitor');
+      const { Purchases, PACKAGE_TYPE } = await import('@revenuecat/purchases-capacitor');
       
-      const purchaseResult = await Purchases.purchasePackage({ 
-        aPackage: monthlyPackage as any 
-      });
+      // Fetch offerings fresh - don't rely on potentially stale state
+      console.log('[RevenueCat] Fetching offerings for purchase...');
+      const offerings = await Purchases.getOfferings();
+      console.log('[RevenueCat] Offerings result:', JSON.stringify(offerings, null, 2));
       
-      console.log('[RevenueCat] Purchase completed:', purchaseResult);
+      const defaultOffering = offerings?.current ?? offerings?.all?.['default'];
       
-      // Check if premium entitlement is now active
-      const customerInfo = purchaseResult.customerInfo;
-      const isPremiumActive = customerInfo?.entitlements?.active?.['premium'] !== undefined;
-      
-      console.log('[RevenueCat] Premium entitlement active:', isPremiumActive);
-      
-      setIsLoading(false);
-      return true; // Purchase initiated - backend will verify
-    } catch (error: any) {
-      console.error('[RevenueCat] Purchase error:', error);
-      
-      // Check if user cancelled
-      if (error.code === 1 || error.message?.includes('cancelled') || error.message?.includes('canceled')) {
-        console.log('[RevenueCat] Purchase cancelled by user');
+      if (!defaultOffering || !defaultOffering.availablePackages?.length) {
+        console.error('[RevenueCat] No offerings available');
+        setIsLoading(false);
+        return { 
+          success: false, 
+          error: 'Unable to load subscription. Please try again later.',
+          errorCode: 23 
+        };
       }
       
+      // Find monthly package
+      const monthly = defaultOffering.monthly ?? defaultOffering.availablePackages?.find(
+        (pkg: any) => pkg.packageType === PACKAGE_TYPE.MONTHLY
+      );
+      
+      if (!monthly) {
+        console.error('[RevenueCat] No monthly package in offerings');
+        setIsLoading(false);
+        return { success: false, error: 'Monthly subscription not available.' };
+      }
+      
+      // Attempt purchase
+      console.log('[RevenueCat] Starting purchase with package:', monthly.identifier);
+      const purchaseResult = await Purchases.purchasePackage({ aPackage: monthly as any });
+      
+      console.log('[RevenueCat] Purchase successful:', purchaseResult);
       setIsLoading(false);
-      return false;
+      return { success: true };
+      
+    } catch (error: any) {
+      console.error('[RevenueCat] Purchase error:', error);
+      console.error('[RevenueCat] Error code:', error.code);
+      console.error('[RevenueCat] Error message:', error.message);
+      setIsLoading(false);
+      
+      // User cancelled
+      if (error.code === 1 || error.message?.includes('cancel')) {
+        return { success: false }; // No error message for cancellation
+      }
+      
+      // Configuration error (code 23 - products not fetched)
+      if (error.code === 23) {
+        return { 
+          success: false, 
+          error: 'Unable to connect to App Store. The subscription may not be ready yet.',
+          errorCode: 23
+        };
+      }
+      
+      return { 
+        success: false, 
+        error: 'Purchase failed. Please try again.',
+        errorCode: error.code 
+      };
     }
-  }, [monthlyPackage, fetchOfferings]);
+  }, []);
 
   // Restore purchases
   const restorePurchases = useCallback(async (): Promise<boolean> => {
