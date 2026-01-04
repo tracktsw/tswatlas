@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Heart, TrendingUp, TrendingDown, Lock, ChevronDown, Sparkles, Moon, AlertTriangle, FlaskConical } from 'lucide-react';
+import { Heart, TrendingUp, TrendingDown, Lock, ChevronDown, CheckCircle2, Moon, AlertTriangle, FlaskConical } from 'lucide-react';
 import { CheckIn } from '@/contexts/UserDataContext';
 import { format, eachWeekOfInterval, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -430,7 +430,7 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
                   {helpfulFactors.length > 0 && (
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2 mb-2">
-                        <Sparkles className="w-3.5 h-3.5 text-green-600" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
                         <span className="text-xs font-medium text-foreground">Correlated with improvement</span>
                       </div>
                       <div className="flex flex-wrap gap-2">
