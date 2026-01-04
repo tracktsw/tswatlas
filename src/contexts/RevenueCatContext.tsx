@@ -6,7 +6,7 @@ interface RevenueCatContextType {
   isIOSNative: boolean;
   isInitialized: boolean;
   isLoading: boolean;
-  purchaseMonthly: () => Promise<boolean>;
+  purchaseMonthly: () => Promise<{ success: boolean; error?: string; errorCode?: number }>;
   restorePurchases: () => Promise<boolean>;
   getPriceString: () => string;
 }
@@ -21,7 +21,7 @@ export const useRevenueCatContext = () => {
       isIOSNative,
       isInitialized: false,
       isLoading: false,
-      purchaseMonthly: async () => false,
+      purchaseMonthly: async () => ({ success: false, error: 'Not initialized', errorCode: undefined }),
       restorePurchases: async () => false,
       getPriceString: () => '£5.99',
     };
