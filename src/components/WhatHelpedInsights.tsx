@@ -203,9 +203,16 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
       const baselinePresence = baselineWeekData.filter(w => w.triggersLogged.has(triggerId)).length / baselineWeekData.length;
 
       if (baselinePresence > 0.3 && improvementPresence < baselinePresence * 0.5) {
-        const triggerLabel = triggerId.startsWith('food:') 
-          ? `Food: ${triggerId.slice(5).charAt(0).toUpperCase() + triggerId.slice(6)}`
-          : triggersList.find(t => t.id === triggerId)?.label || triggerId;
+        // Format trigger label: check triggersList first, then format underscores
+        let triggerLabel = triggersList.find(t => t.id === triggerId)?.label;
+        if (!triggerLabel) {
+          if (triggerId.startsWith('food:')) {
+            triggerLabel = `Food: ${triggerId.slice(5).split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}`;
+          } else {
+            // Convert snake_case to Title Case
+            triggerLabel = triggerId.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          }
+        }
 
         results.push({
           id: triggerId,
