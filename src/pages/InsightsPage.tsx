@@ -367,47 +367,14 @@ const InsightsPage = () => {
           "space-y-6 transition-all duration-500",
           !isPremium && !isSubscriptionLoading && "blur-[6px] pointer-events-none select-none"
         )}>
-          {/* Treatment Effectiveness */}
-          {treatmentStats.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-coral/20">
-                  <Heart className="w-4 h-4 text-coral" />
-                </div>
-                What's Helping You
-              </h3>
-              <div className="glass-card p-5 space-y-4">
-                {treatmentStats.slice(0, 4).map(({ id, label, count, effectiveness }, index) => (
-                  <div 
-                    key={id} 
-                    className="space-y-2"
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold text-foreground">{label}</span>
-                      <span className="text-xs text-muted-foreground font-medium">
-                        {effectiveness}% good days ({count} uses)
-                      </span>
-                    </div>
-                    <div className="h-3 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-700"
-                        style={{ width: `${effectiveness}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* What's Helping - Unified Component */}
+          <WhatHelpedInsights checkIns={checkIns} />
 
           {/* Trigger Patterns */}
           <TriggerPatternsInsights checkIns={checkIns} baselineConfidence={baselineConfidence} />
 
           {/* Symptoms Insights */}
           <SymptomsInsights checkIns={checkIns} />
-
-          {/* What Helped Correlation Analysis */}
-          <WhatHelpedInsights checkIns={checkIns} />
 
           {/* Sleep Trends */}
           <SleepTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
