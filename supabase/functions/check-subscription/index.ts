@@ -52,13 +52,33 @@ const checkRevenueCat = async (userId: string): Promise<{ subscribed: boolean; s
     }
 
     const data = await response.json();
+    
+    // Log full subscriber object for debugging
+    logStep("Full RevenueCat subscriber data", { 
+      subscriber: JSON.stringify(data.subscriber, null, 2)
+    });
+    
     logStep("RevenueCat response received", { 
       hasSubscriber: !!data.subscriber,
-      entitlements: Object.keys(data.subscriber?.entitlements || {})
+      entitlements: Object.keys(data.subscriber?.entitlements || {}),
+      subscriptions: Object.keys(data.subscriber?.subscriptions || {}),
+      nonSubscriptions: Object.keys(data.subscriber?.non_subscriptions || {})
     });
 
-    // Check for "premium" entitlement
+    // Check for "premium" entitlement (case-sensitive check)
     const premiumEntitlement = data.subscriber?.entitlements?.premium;
+    
+    // Log detailed entitlement info
+    logStep("Premium entitlement details", {
+      exists: !!premiumEntitlement,
+      is_active: premiumEntitlement?.is_active,
+      expires_date: premiumEntitlement?.expires_date,
+      product_identifier: premiumEntitlement?.product_identifier,
+      purchase_date: premiumEntitlement?.purchase_date,
+      grace_period_expires_date: premiumEntitlement?.grace_period_expires_date,
+      unsubscribe_detected_at: premiumEntitlement?.unsubscribe_detected_at,
+      billing_issue_detected_at: premiumEntitlement?.billing_issue_detected_at,
+    });
     
     if (premiumEntitlement?.is_active) {
       logStep("RevenueCat premium entitlement active", { 
@@ -70,7 +90,9 @@ const checkRevenueCat = async (userId: string): Promise<{ subscribed: boolean; s
       };
     }
 
-    logStep("No active RevenueCat premium entitlement");
+    logStep("No active RevenueCat premium entitlement", {
+      reason: premiumEntitlement ? "is_active is false" : "entitlement not found"
+    });
     return { subscribed: false, subscription_end: null };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
