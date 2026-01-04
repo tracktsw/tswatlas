@@ -123,7 +123,10 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
       const isRecent = new Date(checkIn.timestamp) >= recentCutoff;
 
       triggers.forEach(triggerId => {
-        const normalizedId = triggerId.startsWith('food:') ? 'food' : triggerId;
+        // Normalize food triggers for consistent matching (e.g., "food:Nuts" -> "food:nuts")
+        const normalizedId = triggerId.startsWith('food:') 
+          ? `food:${triggerId.slice(5).toLowerCase().trim()}`
+          : triggerId;
         
         if (!stats[normalizedId]) {
           stats[normalizedId] = {
@@ -158,11 +161,27 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     const activePatterns: TriggerStat[] = [];
     const resolvedTriggers: ResolvedTrigger[] = [];
 
+    // Helper to generate label for triggers, including specific food items
+    const getLabel = (triggerId: string): string => {
+      if (triggerId.startsWith('food:')) {
+        const foodName = triggerId.slice(5).trim();
+        if (!foodName) return 'Food (general)';
+        // Capitalize first letter of each word
+        return `Food: ${foodName.split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ')}`;
+      }
+      if (triggerId === 'food') {
+        return 'Food (general)';
+      }
+      return triggersList.find(t => t.id === triggerId)?.label || triggerId;
+    };
+
     Object.entries(stats).forEach(([id, data]) => {
       const uniqueDayCount = data.uniqueDays.size;
       const triggerDayIntensity = data.totalIntensity / data.totalCount;
       const impactDelta = triggerDayIntensity - overallBaseline;
-      const label = triggersList.find(t => t.id === id)?.label || id;
+      const label = getLabel(id);
       
       // Calculate period-specific impacts
       const recentImpact = data.recentCount > 0 
