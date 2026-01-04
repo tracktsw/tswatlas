@@ -71,27 +71,47 @@ const checkRevenueCat = async (userId: string): Promise<{ subscribed: boolean; s
     // Log detailed entitlement info
     logStep("Premium entitlement details", {
       exists: !!premiumEntitlement,
-      is_active: premiumEntitlement?.is_active,
       expires_date: premiumEntitlement?.expires_date,
       product_identifier: premiumEntitlement?.product_identifier,
       purchase_date: premiumEntitlement?.purchase_date,
       grace_period_expires_date: premiumEntitlement?.grace_period_expires_date,
-      unsubscribe_detected_at: premiumEntitlement?.unsubscribe_detected_at,
-      billing_issue_detected_at: premiumEntitlement?.billing_issue_detected_at,
     });
     
-    if (premiumEntitlement?.is_active) {
-      logStep("RevenueCat premium entitlement active", { 
-        expires_date: premiumEntitlement.expires_date 
+    // RevenueCat REST API doesn't have is_active field - we need to check expires_date ourselves
+    // An entitlement is active if it exists and expires_date is in the future (or null for lifetime)
+    if (premiumEntitlement) {
+      const expiresDate = premiumEntitlement.expires_date;
+      const now = new Date();
+      
+      // Check if subscription is active:
+      // - No expires_date means lifetime/never expires
+      // - expires_date in the future means active
+      // - Also check grace_period_expires_date for billing issues
+      const isActive = !expiresDate || new Date(expiresDate) > now;
+      const inGracePeriod = premiumEntitlement.grace_period_expires_date && 
+        new Date(premiumEntitlement.grace_period_expires_date) > now;
+      
+      logStep("Premium entitlement status check", {
+        expiresDate,
+        now: now.toISOString(),
+        isActive,
+        inGracePeriod,
       });
-      return {
-        subscribed: true,
-        subscription_end: premiumEntitlement.expires_date || null,
-      };
+      
+      if (isActive || inGracePeriod) {
+        logStep("RevenueCat premium entitlement active", { 
+          expires_date: expiresDate,
+          reason: inGracePeriod ? 'grace_period' : 'not_expired'
+        });
+        return {
+          subscribed: true,
+          subscription_end: expiresDate || null,
+        };
+      }
     }
 
     logStep("No active RevenueCat premium entitlement", {
-      reason: premiumEntitlement ? "is_active is false" : "entitlement not found"
+      reason: premiumEntitlement ? "subscription expired" : "entitlement not found"
     });
     return { subscribed: false, subscription_end: null };
   } catch (error) {
