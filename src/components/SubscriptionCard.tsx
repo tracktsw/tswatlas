@@ -6,6 +6,7 @@ import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
+import { Capacitor } from '@capacitor/core';
 
 const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
 
@@ -24,6 +25,13 @@ const SubscriptionCard = () => {
       console.log('[UPGRADE] Blocked - request already in flight');
       return;
     }
+
+    // Debug platform detection
+    console.log('[UPGRADE] Platform detection:', {
+      isIOSNative,
+      isNativePlatform: Capacitor.isNativePlatform(),
+      platform: Capacitor.getPlatform()
+    });
 
     setIsCheckoutLoading(true);
 
