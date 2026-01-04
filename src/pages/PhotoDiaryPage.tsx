@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
-import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown, X, ImagePlus, CalendarIcon, ArrowUpDown, ArrowDown, ArrowUp } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown, X, ImagePlus, CalendarIcon, ArrowUpDown, ArrowDown, ArrowUp, Loader2, RotateCcw, RefreshCw } from 'lucide-react';
 import { useUserData, BodyPart, Photo } from '@/contexts/UserDataContext';
 import { useVirtualizedPhotos, VirtualPhoto, SortOrder } from '@/hooks/useVirtualizedPhotos';
 import { VirtualizedPhotoGrid } from '@/components/VirtualizedPhotoGrid';
@@ -16,6 +17,7 @@ import { format, isToday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { parseLocalDateTime } from '@/utils/localDateTime';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
 import { useBatchUpload } from '@/hooks/useBatchUpload';
 import { useSingleUpload } from '@/hooks/useSingleUpload';
 import { extractExifDateWithSource } from '@/utils/exifExtractor';
@@ -108,7 +110,30 @@ const FREE_DAILY_PHOTO_LIMIT = 2;
 
 const PhotoDiaryPage = () => {
   const { addPhoto, deletePhoto, photos: contextPhotos, isLoading: contextLoading, refreshPhotos } = useUserData();
-  const { isPremium } = useSubscription();
+  const { isPremium: isPremiumFromBackend, isLoading: isBackendLoading, refreshSubscription } = useSubscription();
+  const {
+    isLoading: isRevenueCatLoading,
+    purchaseMonthly,
+    restorePurchases,
+    isPremiumFromRC,
+    offeringsStatus,
+    offeringsError,
+    getPriceString,
+    retryInitialization,
+  } = useRevenueCatContext();
+  
+  // Platform detection
+  const isNativeIOS = useMemo(
+    () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios',
+    []
+  );
+
+  // On iOS: isPremium comes from RevenueCat (single source of truth)
+  // On Web: isPremium comes from backend (Stripe)
+  const isPremium = isNativeIOS ? isPremiumFromRC : isPremiumFromBackend;
+  const isSubscriptionLoading = isNativeIOS ? isRevenueCatLoading : isBackendLoading;
+  const isOfferingsReady = isNativeIOS ? offeringsStatus === 'ready' : true;
+
   const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | 'all'>('all');
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
   const [isCapturing, setIsCapturing] = useState(false);
@@ -120,6 +145,7 @@ const PhotoDiaryPage = () => {
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [showComparePaywall, setShowComparePaywall] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState<VirtualPhoto | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   
@@ -229,6 +255,33 @@ const PhotoDiaryPage = () => {
     if (isUpgrading) return;
     setIsUpgrading(true);
     
+    // iOS NATIVE PATH - STRIPE IS COMPLETELY BLOCKED
+    if (isNativeIOS) {
+      if (!isOfferingsReady) {
+        const msg = offeringsError || 'Loading subscription options…';
+        toast.error(msg);
+        setIsUpgrading(false);
+        return;
+      }
+
+      try {
+        const result = await purchaseMonthly();
+        if (result.success) {
+          toast.success('Purchase successful!');
+          setShowUpgradePrompt(false);
+          setShowComparePaywall(false);
+          await refreshSubscription();
+        } else if (result.error) {
+          toast.error(result.error);
+        }
+      } catch (err: any) {
+        toast.error(err.message || 'Purchase failed');
+      }
+      setIsUpgrading(false);
+      return;
+    }
+
+    // WEB PATH - Use Stripe
     try {
       console.log('[Upgrade] Starting checkout...');
       const { data: { session } } = await supabase.auth.getSession();
@@ -239,16 +292,39 @@ const PhotoDiaryPage = () => {
         return;
       }
 
-      // Redirect to Stripe Payment Link with prefilled email
       const paymentUrl = `${STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(session.user.email)}`;
       console.log('[Upgrade] Redirecting to Payment Link...');
       window.location.assign(paymentUrl);
-      // Note: isUpgrading stays true as we're navigating away
     } catch (err) {
       console.error('[Upgrade] Checkout error:', err);
       toast.error('Failed to start checkout');
       setIsUpgrading(false);
     }
+  };
+
+  const handleRestore = async () => {
+    if (isRestoring || !isNativeIOS) return;
+    setIsRestoring(true);
+    
+    try {
+      const result = await restorePurchases();
+      if (result.isPremiumNow) {
+        toast.success('Purchases restored! Premium activated.');
+        setShowUpgradePrompt(false);
+        setShowComparePaywall(false);
+        await refreshSubscription();
+      } else {
+        toast.info('No previous purchases found');
+      }
+    } catch (err: any) {
+      toast.error('Failed to restore purchases');
+    }
+    
+    setIsRestoring(false);
+  };
+
+  const handleRetryOfferings = async () => {
+    await retryInitialization();
   };
 
   const handleAddPhotoClick = () => {
@@ -776,13 +852,68 @@ const PhotoDiaryPage = () => {
               <p className="text-sm text-muted-foreground">Your limit resets tomorrow</p>
             </div>
             <div className="space-y-2">
-              <Button onClick={handleUpgrade} disabled={isUpgrading} variant="gold" className="w-full gap-2">
-                <Crown className="w-4 h-4" />
-                {isUpgrading ? 'Loading...' : 'Start 14-day free trial'}
+              <Button 
+                onClick={handleUpgrade} 
+                disabled={isUpgrading || (isNativeIOS && !isOfferingsReady)} 
+                variant="gold" 
+                className="w-full gap-2"
+              >
+                {isUpgrading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Processing…
+                  </>
+                ) : isNativeIOS && !isOfferingsReady ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading…
+                  </>
+                ) : (
+                  <>
+                    <Crown className="w-4 h-4" />
+                    Start 14-day free trial
+                  </>
+                )}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                £5.99/month after · Cancel anytime
+                {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
               </p>
+
+              {/* iOS: Retry button if offerings failed */}
+              {isNativeIOS && offeringsStatus === 'error' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2"
+                  onClick={handleRetryOfferings}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Retry loading
+                </Button>
+              )}
+
+              {/* iOS: Restore purchases */}
+              {isNativeIOS && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 text-muted-foreground"
+                  onClick={handleRestore}
+                  disabled={isRestoring}
+                >
+                  {isRestoring ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Restoring…
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="w-3 h-3" />
+                      Restore purchases
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
             <Button variant="ghost" onClick={() => setShowUpgradePrompt(false)} className="w-full">
               Maybe Later
@@ -821,16 +952,66 @@ const PhotoDiaryPage = () => {
             <div className="space-y-2">
               <Button 
                 onClick={handleUpgrade} 
-                disabled={isUpgrading}
+                disabled={isUpgrading || (isNativeIOS && !isOfferingsReady)}
                 className="w-full gap-2"
                 variant="gold"
               >
-                <Crown className="w-4 h-4" />
-                {isUpgrading ? 'Loading...' : 'Start 14-day free trial'}
+                {isUpgrading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Processing…
+                  </>
+                ) : isNativeIOS && !isOfferingsReady ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading…
+                  </>
+                ) : (
+                  <>
+                    <Crown className="w-4 h-4" />
+                    Start 14-day free trial
+                  </>
+                )}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                £5.99/month after · Cancel anytime
+                {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
               </p>
+
+              {/* iOS: Retry button if offerings failed */}
+              {isNativeIOS && offeringsStatus === 'error' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2"
+                  onClick={handleRetryOfferings}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Retry loading
+                </Button>
+              )}
+
+              {/* iOS: Restore purchases */}
+              {isNativeIOS && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 text-muted-foreground"
+                  onClick={handleRestore}
+                  disabled={isRestoring}
+                >
+                  {isRestoring ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Restoring…
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="w-3 h-3" />
+                      Restore purchases
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
             <Button 
               variant="ghost" 
