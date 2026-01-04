@@ -105,11 +105,11 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
 
       // Collect treatments used
       const treatmentsUsed = new Set<string>();
-      weekCheckIns.forEach(c => c.treatments.forEach(t => treatmentsUsed.add(t)));
+      weekCheckIns.forEach(c => (c.treatments || []).forEach(t => treatmentsUsed.add(t)));
 
       // Collect triggers logged
       const triggersLogged = new Set<string>();
-      weekCheckIns.forEach(c => c.triggers.forEach(t => triggersLogged.add(t)));
+      weekCheckIns.forEach(c => (c.triggers || []).forEach(t => triggersLogged.add(t)));
 
       // Average sleep
       const sleepScores = weekCheckIns.filter(c => c.sleepScore != null);
