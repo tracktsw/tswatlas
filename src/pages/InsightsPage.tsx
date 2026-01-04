@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles, Eye, Pencil, Crown, Loader2, Flame, Activity, CalendarDays, Moon, Wand2, Trash2 } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles, Eye, Pencil, Crown, Loader2, Flame, Activity, CalendarDays, Moon, Wand2, Trash2, RotateCcw, RefreshCw } from 'lucide-react';
 import { useUserData, BodyPart, CheckIn } from '@/contexts/UserDataContext';
 import { useDemoMode } from '@/contexts/DemoModeContext';
 import { format, subDays, startOfDay, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isSameMonth, addMonths, subMonths, getDay, setMonth, setYear } from 'date-fns';
@@ -10,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
 import { PlantIllustration, SparkleIllustration, SunIllustration } from '@/components/illustrations';
 import DemoEditModal from '@/components/DemoEditModal';
 import SymptomsInsights from '@/components/SymptomsInsights';
@@ -54,18 +56,66 @@ const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
 const InsightsPage = () => {
   const { checkIns: realCheckIns, photos } = useUserData();
   const { isDemoMode, isAdmin, getEffectiveCheckIns, demoCheckIns, generateSampleData, clearDemoData } = useDemoMode();
-  const { isPremium, isLoading: isSubscriptionLoading } = useSubscription();
+  const { isPremium: isPremiumFromBackend, isLoading: isBackendLoading, refreshSubscription } = useSubscription();
+  const {
+    isLoading: isRevenueCatLoading,
+    purchaseMonthly,
+    restorePurchases,
+    isPremiumFromRC,
+    offeringsStatus,
+    offeringsError,
+    getPriceString,
+    retryInitialization,
+  } = useRevenueCatContext();
   const { baselineConfidence, dailyFlareStates } = useFlareState();
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [demoEditDate, setDemoEditDate] = useState<Date | null>(null);
   const [isUpgrading, setIsUpgrading] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  // Platform detection
+  const isNativeIOS = useMemo(
+    () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios',
+    []
+  );
+
+  // On iOS: isPremium comes from RevenueCat (single source of truth)
+  // On Web: isPremium comes from backend (Stripe)
+  const isPremium = isNativeIOS ? isPremiumFromRC : isPremiumFromBackend;
+  const isSubscriptionLoading = isNativeIOS ? isRevenueCatLoading : isBackendLoading;
+  const isOfferingsReady = isNativeIOS ? offeringsStatus === 'ready' : true;
 
   const handleUpgrade = async () => {
     if (isUpgrading) return;
     setIsUpgrading(true);
 
+    // iOS NATIVE PATH - STRIPE IS COMPLETELY BLOCKED
+    if (isNativeIOS) {
+      if (!isOfferingsReady) {
+        const msg = offeringsError || 'Loading subscription options…';
+        toast.error(msg);
+        setIsUpgrading(false);
+        return;
+      }
+
+      try {
+        const result = await purchaseMonthly();
+        if (result.success) {
+          toast.success('Purchase successful!');
+          await refreshSubscription();
+        } else if (result.error) {
+          toast.error(result.error);
+        }
+      } catch (err: any) {
+        toast.error(err.message || 'Purchase failed');
+      }
+      setIsUpgrading(false);
+      return;
+    }
+
+    // WEB PATH - Use Stripe
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -75,14 +125,35 @@ const InsightsPage = () => {
         return;
       }
 
-      // Redirect to Stripe Payment Link with prefilled email
       const paymentUrl = `${STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(session.user.email)}`;
       window.location.assign(paymentUrl);
-      // Note: isUpgrading stays true as we're navigating away
     } catch (err) {
       toast.error('Failed to start checkout');
       setIsUpgrading(false);
     }
+  };
+
+  const handleRestore = async () => {
+    if (isRestoring || !isNativeIOS) return;
+    setIsRestoring(true);
+    
+    try {
+      const result = await restorePurchases();
+      if (result.isPremiumNow) {
+        toast.success('Purchases restored! Premium activated.');
+        await refreshSubscription();
+      } else {
+        toast.info('No previous purchases found');
+      }
+    } catch (err: any) {
+      toast.error('Failed to restore purchases');
+    }
+    
+    setIsRestoring(false);
+  };
+
+  const handleRetryOfferings = async () => {
+    await retryInitialization();
   };
   
   // Use effective check-ins (real + demo overrides when in demo mode)
@@ -418,9 +489,10 @@ const InsightsPage = () => {
                 </li>
               </ul>
 
+              {/* Subscribe Button */}
               <Button 
                 onClick={handleUpgrade} 
-                disabled={isUpgrading} 
+                disabled={isUpgrading || (isNativeIOS && !isOfferingsReady)} 
                 variant="gold" 
                 className="w-full gap-2" 
                 size="default"
@@ -428,7 +500,12 @@ const InsightsPage = () => {
                 {isUpgrading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Loading...
+                    Processing…
+                  </>
+                ) : isNativeIOS && !isOfferingsReady ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading…
                   </>
                 ) : (
                   <>
@@ -438,8 +515,44 @@ const InsightsPage = () => {
                 )}
               </Button>
               <p className="text-xs text-muted-foreground mt-1.5">
-                14 days free · £5.99/month after · Cancel anytime
+                14 days free · {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
               </p>
+
+              {/* iOS: Retry button if offerings failed */}
+              {isNativeIOS && offeringsStatus === 'error' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-2 gap-2"
+                  onClick={handleRetryOfferings}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Retry loading
+                </Button>
+              )}
+
+              {/* iOS: Restore purchases */}
+              {isNativeIOS && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 gap-2 text-muted-foreground"
+                  onClick={handleRestore}
+                  disabled={isRestoring}
+                >
+                  {isRestoring ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Restoring…
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="w-3 h-3" />
+                      Restore purchases
+                    </>
+                  )}
+                </Button>
+              )}
             </motion.div>
           </div>
         )}
