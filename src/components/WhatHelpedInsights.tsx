@@ -1,10 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Lightbulb, TrendingUp, TrendingDown, Lock, ChevronDown, Sparkles, Moon, AlertTriangle } from 'lucide-react';
+import { Heart, TrendingUp, TrendingDown, Lock, ChevronDown, Sparkles, Moon, AlertTriangle, FlaskConical } from 'lucide-react';
 import { CheckIn } from '@/contexts/UserDataContext';
-import { format, subDays, startOfDay, eachWeekOfInterval, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
+import { format, eachWeekOfInterval, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
@@ -54,7 +52,34 @@ const triggersList = [
 ];
 
 const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+
+  // Simple treatment effectiveness stats (primary view)
+  const treatmentStats = useMemo(() => {
+    const stats: Record<string, { count: number; goodDays: number }> = {};
+    
+    checkIns.forEach(checkIn => {
+      (checkIn.treatments || []).forEach(t => {
+        if (!stats[t]) {
+          stats[t] = { count: 0, goodDays: 0 };
+        }
+        stats[t].count++;
+        if (checkIn.skinFeeling >= 4) {
+          stats[t].goodDays++;
+        }
+      });
+    });
+    
+    return Object.entries(stats)
+      .filter(([_, data]) => data.count > 0)
+      .map(([id, data]) => ({
+        id,
+        label: treatments.find(t => t.id === id)?.label || id,
+        count: data.count,
+        effectiveness: data.count > 0 ? Math.round((data.goodDays / data.count) * 100) : 0,
+      }))
+      .sort((a, b) => b.effectiveness - a.effectiveness);
+  }, [checkIns]);
 
   // Get total unique days logged for gating
   const totalUniqueDaysLogged = useMemo(() => {
@@ -67,7 +92,7 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
 
   const insightsUnlocked = totalUniqueDaysLogged >= INSIGHTS_UNLOCK_THRESHOLD;
 
-  // Calculate weekly averages for skin feeling and symptom severity
+  // Calculate weekly averages for correlation analysis
   const weeklyData = useMemo(() => {
     if (checkIns.length === 0) return [];
 
@@ -92,7 +117,6 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
 
       const avgSkin = weekCheckIns.reduce((sum, c) => sum + c.skinFeeling, 0) / weekCheckIns.length;
       
-      // Calculate average symptom severity
       let totalSeverity = 0;
       let symptomCount = 0;
       weekCheckIns.forEach(c => {
@@ -103,15 +127,12 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
       });
       const avgSymptomSeverity = symptomCount > 0 ? totalSeverity / symptomCount : 0;
 
-      // Collect treatments used
       const treatmentsUsed = new Set<string>();
       weekCheckIns.forEach(c => (c.treatments || []).forEach(t => treatmentsUsed.add(t)));
 
-      // Collect triggers logged
       const triggersLogged = new Set<string>();
       weekCheckIns.forEach(c => (c.triggers || []).forEach(t => triggersLogged.add(t)));
 
-      // Average sleep
       const sleepScores = weekCheckIns.filter(c => c.sleepScore != null);
       const avgSleep = sleepScores.length > 0 
         ? sleepScores.reduce((sum, c) => sum + (c.sleepScore || 0), 0) / sleepScores.length
@@ -130,7 +151,7 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
     }).filter((w): w is NonNullable<typeof w> => w !== null);
   }, [checkIns]);
 
-  // Find improvement periods (where skin improved by 0.5+ over 2+ consecutive weeks)
+  // Find improvement periods
   const improvementPeriods = useMemo((): ImprovementPeriod[] => {
     if (weeklyData.length < 3) return [];
 
@@ -138,12 +159,11 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
     
     for (let i = 2; i < weeklyData.length; i++) {
       const current = weeklyData[i];
-      const previous = weeklyData[i - 2]; // Compare to 2 weeks ago
+      const previous = weeklyData[i - 2];
       
       const skinImprovement = current.avgSkin - previous.avgSkin;
       const symptomImprovement = previous.avgSymptomSeverity - current.avgSymptomSeverity;
       
-      // Significant improvement: skin up by 0.5+ OR symptoms down by 0.3+
       if (skinImprovement >= 0.5 || symptomImprovement >= 0.3) {
         periods.push({
           startWeek: previous.weekLabel,
@@ -157,13 +177,12 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
     return periods;
   }, [weeklyData]);
 
-  // Analyze what was different during improvement periods
+  // Analyze correlations during improvement periods
   const correlationAnalysis = useMemo((): CorrelationResult[] => {
     if (improvementPeriods.length === 0 || weeklyData.length < 4) return [];
 
     const results: CorrelationResult[] = [];
     
-    // Split weeks into improvement periods vs baseline
     const improvementWeeks = new Set<string>();
     improvementPeriods.forEach(period => {
       weeklyData.forEach(week => {
@@ -210,7 +229,6 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
       const improvementPresence = improvementWeekData.filter(w => w.triggersLogged.has(triggerId)).length / improvementWeekData.length;
       const baselinePresence = baselineWeekData.filter(w => w.triggersLogged.has(triggerId)).length / baselineWeekData.length;
 
-      // Trigger was present in baseline but absent during improvement
       if (baselinePresence > 0.3 && improvementPresence < baselinePresence * 0.5) {
         const triggerLabel = triggerId.startsWith('food:') 
           ? `Food: ${triggerId.slice(5).charAt(0).toUpperCase() + triggerId.slice(6)}`
@@ -249,7 +267,6 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
       }
     }
 
-    // Sort by correlation ratio
     return results.sort((a, b) => b.correlationRatio - a.correlationRatio);
   }, [improvementPeriods, weeklyData]);
 
@@ -258,173 +275,202 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
 
   if (checkIns.length === 0) return null;
 
+  const hasAdvancedInsights = insightsUnlocked && (improvementPeriods.length > 0 || totalUniqueDaysLogged >= INSIGHTS_UNLOCK_THRESHOLD);
+
   return (
-    <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.35s' }}>
+    <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
       <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
-        <div className="p-1.5 rounded-lg bg-amber-500/20">
-          <Lightbulb className="w-4 h-4 text-amber-500" />
+        <div className="p-1.5 rounded-lg bg-coral/20">
+          <Heart className="w-4 h-4 text-coral" />
         </div>
-        What Helped
+        What's Helping You
       </h3>
 
       <div className="glass-card p-5 space-y-4">
-        {!insightsUnlocked ? (
-          /* Locked state */
-          <div className="text-center py-6 space-y-4">
-            <div className="flex justify-center">
-              <div className="p-3 rounded-full bg-muted/50">
-                <Lock className="w-6 h-6 text-muted-foreground" />
+        {/* Primary View: Simple Treatment Effectiveness */}
+        {treatmentStats.length > 0 ? (
+          <div className="space-y-4">
+            {treatmentStats.slice(0, 4).map(({ id, label, count, effectiveness }) => (
+              <div key={id} className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-foreground">{label}</span>
+                  <span className="text-xs text-muted-foreground font-medium">
+                    {effectiveness}% good days ({count} uses)
+                  </span>
+                </div>
+                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-700"
+                    style={{ width: `${effectiveness}%` }}
+                  />
+                </div>
               </div>
-            </div>
-            <div className="space-y-2">
-              <p className="font-medium text-foreground">Correlation analysis unlocks after 30 days</p>
-              <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                We need more data to identify what's helping your skin improve.
-              </p>
-            </div>
-            <div className="space-y-2 max-w-xs mx-auto">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Progress</span>
-                <span className="font-medium">{totalUniqueDaysLogged} / {INSIGHTS_UNLOCK_THRESHOLD} days</span>
-              </div>
-              <Progress value={(totalUniqueDaysLogged / INSIGHTS_UNLOCK_THRESHOLD) * 100} className="h-2" />
-            </div>
-          </div>
-        ) : improvementPeriods.length === 0 ? (
-          /* No improvement periods detected */
-          <div className="text-center py-6 space-y-3">
-            <div className="flex justify-center">
-              <div className="p-3 rounded-full bg-muted/50">
-                <TrendingUp className="w-6 h-6 text-muted-foreground" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="font-medium text-foreground">No significant improvement periods detected yet</p>
-              <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                We're looking for weeks where your skin got noticeably better. Keep logging to help us find patterns!
-              </p>
-            </div>
+            ))}
           </div>
         ) : (
-          <>
-            {/* Improvement periods summary */}
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                We found <span className="font-semibold text-foreground">{improvementPeriods.length}</span> improvement period{improvementPeriods.length > 1 ? 's' : ''} in your data.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {improvementPeriods.slice(0, 3).map((period, i) => (
-                  <span 
-                    key={i}
-                    className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-600 font-medium"
-                  >
-                    {period.startWeek} → {period.endWeek}
-                    {period.skinImprovement > 0 && (
-                      <TrendingUp className="w-3 h-3 inline ml-1" />
-                    )}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Helpful factors */}
-            {helpfulFactors.length > 0 && (
-              <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-                <CollapsibleTrigger asChild>
-                  <button className="flex items-center justify-between w-full py-2 px-3 rounded-lg bg-green-500/10 hover:bg-green-500/15 transition-colors">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-3.5 h-3.5 text-green-600" />
-                      <span className="text-xs font-medium text-foreground">
-                        {helpfulFactors.length} factor{helpfulFactors.length > 1 ? 's' : ''} correlated with improvement
-                      </span>
-                    </div>
-                    <ChevronDown className={cn(
-                      'w-4 h-4 text-muted-foreground transition-transform duration-200',
-                      isOpen && 'rotate-180'
-                    )} />
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-3 space-y-3">
-                  {helpfulFactors.map((factor, i) => (
-                    <div key={factor.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {factor.type === 'sleep' ? (
-                          <Moon className="w-4 h-4 text-indigo-500" />
-                        ) : (
-                          <div className="w-2 h-2 rounded-full bg-green-500" />
-                        )}
-                        <span className="text-sm font-medium">{factor.label}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-green-600 font-semibold">
-                          {factor.correlationRatio.toFixed(1)}x more during improvement
-                        </span>
-                        <span className={cn(
-                          'text-[10px] px-1.5 py-0.5 rounded-full',
-                          factor.confidence === 'high' ? 'bg-green-500/20 text-green-600' :
-                          factor.confidence === 'medium' ? 'bg-amber-500/20 text-amber-600' :
-                          'bg-muted text-muted-foreground'
-                        )}>
-                          {factor.confidence}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </CollapsibleContent>
-              </Collapsible>
-            )}
-
-            {/* Triggers to avoid */}
-            {triggersToAvoid.length > 0 && (
-              <div className="pt-3 border-t border-border/50 space-y-3">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                  <span className="text-xs font-medium text-foreground">Triggers absent during improvement</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {triggersToAvoid.map(trigger => (
-                    <span 
-                      key={trigger.id}
-                      className="text-xs px-2 py-1 rounded-full bg-amber-500/10 text-amber-600 font-medium"
-                    >
-                      {trigger.label}
-                      <TrendingDown className="w-3 h-3 inline ml-1" />
-                    </span>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  These triggers were logged less often when your skin was improving.
-                </p>
-              </div>
-            )}
-
-            {/* Summary */}
-            {(helpfulFactors.length > 0 || triggersToAvoid.length > 0) && (
-              <div className="pt-3 border-t border-border/50">
-                <p className="text-xs text-muted-foreground italic">
-                  💡 Based on your data, 
-                  {helpfulFactors.length > 0 && (
-                    <> <span className="font-medium text-foreground">{helpfulFactors[0].label}</span></>
-                  )}
-                  {helpfulFactors.length > 0 && triggersToAvoid.length > 0 && ' combined with avoiding '}
-                  {triggersToAvoid.length > 0 && (
-                    <><span className="font-medium text-foreground">{triggersToAvoid[0].label}</span></>
-                  )}
-                  {' may have contributed to your improvement.'}
-                </p>
-              </div>
-            )}
-
-            {helpfulFactors.length === 0 && triggersToAvoid.length === 0 && (
-              <div className="text-center py-4">
-                <p className="text-sm text-muted-foreground">
-                  We detected improvement periods but couldn't find strong correlations with specific treatments or triggers.
-                  Keep logging consistently to help us find patterns!
-                </p>
-              </div>
-            )}
-          </>
+          <div className="text-center py-4">
+            <p className="text-sm text-muted-foreground">
+              Log treatments during check-ins to see what's helping you.
+            </p>
+          </div>
         )}
+
+        {/* Advanced Correlation Analysis Section */}
+        <div className="pt-4 border-t border-border/50">
+          <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
+            <CollapsibleTrigger asChild>
+              <button className="flex items-center justify-between w-full py-2 px-3 rounded-lg bg-amber-500/10 hover:bg-amber-500/15 transition-colors">
+                <div className="flex items-center gap-2">
+                  <FlaskConical className="w-3.5 h-3.5 text-amber-600" />
+                  <span className="text-xs font-medium text-foreground">
+                    Advanced: Improvement Period Analysis
+                  </span>
+                </div>
+                <ChevronDown className={cn(
+                  'w-4 h-4 text-muted-foreground transition-transform duration-200',
+                  isAdvancedOpen && 'rotate-180'
+                )} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4 space-y-4">
+              {!insightsUnlocked ? (
+                /* Locked state */
+                <div className="text-center py-4 space-y-3">
+                  <div className="flex justify-center">
+                    <div className="p-2.5 rounded-full bg-muted/50">
+                      <Lock className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-sm font-medium text-foreground">Unlocks after 30 days of data</p>
+                    <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+                      We need more data to identify improvement patterns.
+                    </p>
+                  </div>
+                  <div className="space-y-2 max-w-xs mx-auto">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Progress</span>
+                      <span className="font-medium">{totalUniqueDaysLogged} / {INSIGHTS_UNLOCK_THRESHOLD} days</span>
+                    </div>
+                    <Progress value={(totalUniqueDaysLogged / INSIGHTS_UNLOCK_THRESHOLD) * 100} className="h-2" />
+                  </div>
+                </div>
+              ) : improvementPeriods.length === 0 ? (
+                /* No improvement periods detected */
+                <div className="text-center py-4 space-y-2">
+                  <div className="flex justify-center">
+                    <div className="p-2.5 rounded-full bg-muted/50">
+                      <TrendingUp className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium text-foreground">No improvement periods detected yet</p>
+                  <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+                    We're looking for weeks where your skin got noticeably better.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Improvement periods summary */}
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      Found <span className="font-semibold text-foreground">{improvementPeriods.length}</span> improvement period{improvementPeriods.length > 1 ? 's' : ''}:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {improvementPeriods.slice(0, 3).map((period, i) => (
+                        <span 
+                          key={i}
+                          className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-600 font-medium"
+                        >
+                          {period.startWeek} → {period.endWeek}
+                          <TrendingUp className="w-3 h-3 inline ml-1" />
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Helpful factors */}
+                  {helpfulFactors.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-3.5 h-3.5 text-green-600" />
+                        <span className="text-xs font-medium text-foreground">Correlated with improvement</span>
+                      </div>
+                      {helpfulFactors.map((factor) => (
+                        <div key={factor.id} className="flex items-center justify-between py-1">
+                          <div className="flex items-center gap-2">
+                            {factor.type === 'sleep' ? (
+                              <Moon className="w-4 h-4 text-indigo-500" />
+                            ) : (
+                              <div className="w-2 h-2 rounded-full bg-green-500" />
+                            )}
+                            <span className="text-sm font-medium">{factor.label}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-green-600 font-semibold">
+                              {factor.correlationRatio.toFixed(1)}x more
+                            </span>
+                            <span className={cn(
+                              'text-[10px] px-1.5 py-0.5 rounded-full',
+                              factor.confidence === 'high' ? 'bg-green-500/20 text-green-600' :
+                              factor.confidence === 'medium' ? 'bg-amber-500/20 text-amber-600' :
+                              'bg-muted text-muted-foreground'
+                            )}>
+                              {factor.confidence}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Triggers to avoid */}
+                  {triggersToAvoid.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-border/30">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                        <span className="text-xs font-medium text-foreground">Triggers absent during improvement</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {triggersToAvoid.map(trigger => (
+                          <span 
+                            key={trigger.id}
+                            className="text-xs px-2 py-1 rounded-full bg-amber-500/10 text-amber-600 font-medium"
+                          >
+                            {trigger.label}
+                            <TrendingDown className="w-3 h-3 inline ml-1" />
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Summary */}
+                  {(helpfulFactors.length > 0 || triggersToAvoid.length > 0) && (
+                    <div className="pt-2 border-t border-border/30">
+                      <p className="text-xs text-muted-foreground italic">
+                        💡 Based on your data, 
+                        {helpfulFactors.length > 0 && (
+                          <> <span className="font-medium text-foreground">{helpfulFactors[0].label}</span></>
+                        )}
+                        {helpfulFactors.length > 0 && triggersToAvoid.length > 0 && ' combined with avoiding '}
+                        {triggersToAvoid.length > 0 && (
+                          <><span className="font-medium text-foreground">{triggersToAvoid[0].label}</span></>
+                        )}
+                        {' may have contributed to your improvement.'}
+                      </p>
+                    </div>
+                  )}
+
+                  {helpfulFactors.length === 0 && triggersToAvoid.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      Improvement periods found but no strong correlations detected yet.
+                    </p>
+                  )}
+                </>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
       </div>
     </div>
   );
