@@ -54,33 +54,6 @@ const triggersList = [
 const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
-  // Simple treatment effectiveness stats (primary view)
-  const treatmentStats = useMemo(() => {
-    const stats: Record<string, { count: number; goodDays: number }> = {};
-    
-    checkIns.forEach(checkIn => {
-      (checkIn.treatments || []).forEach(t => {
-        if (!stats[t]) {
-          stats[t] = { count: 0, goodDays: 0 };
-        }
-        stats[t].count++;
-        if (checkIn.skinFeeling >= 4) {
-          stats[t].goodDays++;
-        }
-      });
-    });
-    
-    return Object.entries(stats)
-      .filter(([_, data]) => data.count > 0)
-      .map(([id, data]) => ({
-        id,
-        label: treatments.find(t => t.id === id)?.label || id,
-        count: data.count,
-        effectiveness: data.count > 0 ? Math.round((data.goodDays / data.count) * 100) : 0,
-      }))
-      .sort((a, b) => b.effectiveness - a.effectiveness);
-  }, [checkIns]);
-
   // Get total unique days logged for gating
   const totalUniqueDaysLogged = useMemo(() => {
     const uniqueDays = new Set<string>();
@@ -273,6 +246,56 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
   const helpfulFactors = correlationAnalysis.filter(c => c.type === 'treatment' || c.type === 'sleep');
   const triggersToAvoid = correlationAnalysis.filter(c => c.type === 'trigger_absent');
 
+  // Unified treatment effectiveness with correlation scoring
+  const treatmentStats = useMemo(() => {
+    // Step 1: Calculate basic effectiveness (% good days)
+    const basicStats: Record<string, { count: number; goodDays: number }> = {};
+    
+    checkIns.forEach(checkIn => {
+      (checkIn.treatments || []).forEach(t => {
+        if (!basicStats[t]) {
+          basicStats[t] = { count: 0, goodDays: 0 };
+        }
+        basicStats[t].count++;
+        if (checkIn.skinFeeling >= 4) {
+          basicStats[t].goodDays++;
+        }
+      });
+    });
+
+    // Step 2: Get correlation ratios for treatments
+    const correlationMap = new Map<string, number>();
+    correlationAnalysis
+      .filter(c => c.type === 'treatment')
+      .forEach(c => correlationMap.set(c.id, c.correlationRatio));
+
+    // Find max correlation for normalization
+    const maxCorrelation = Math.max(...Array.from(correlationMap.values()), 1);
+    
+    // Step 3: Build unified stats with combined score
+    return Object.entries(basicStats)
+      .filter(([_, data]) => data.count > 0)
+      .map(([id, data]) => {
+        const effectiveness = data.count > 0 ? (data.goodDays / data.count) * 100 : 0;
+        const correlationRatio = correlationMap.get(id) || 0;
+        // Normalize correlation to 0-100 scale for combining
+        const normalizedCorrelation = correlationRatio > 0 ? (correlationRatio / maxCorrelation) * 100 : 0;
+        // Combined score: 60% effectiveness + 40% correlation
+        const combinedScore = (effectiveness * 0.6) + (normalizedCorrelation * 0.4);
+        
+        return {
+          id,
+          label: treatments.find(t => t.id === id)?.label || id,
+          count: data.count,
+          effectiveness: Math.round(effectiveness),
+          correlationRatio,
+          hasHighCorrelation: correlationRatio >= 1.5,
+          combinedScore,
+        };
+      })
+      .sort((a, b) => b.combinedScore - a.combinedScore);
+  }, [checkIns, correlationAnalysis]);
+
   if (checkIns.length === 0) return null;
 
   const hasAdvancedInsights = insightsUnlocked && (improvementPeriods.length > 0 || totalUniqueDaysLogged >= INSIGHTS_UNLOCK_THRESHOLD);
@@ -290,10 +313,18 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
         {/* Primary View: Simple Treatment Effectiveness */}
         {treatmentStats.length > 0 ? (
           <div className="space-y-4">
-            {treatmentStats.slice(0, 4).map(({ id, label, count, effectiveness }) => (
+            {treatmentStats.slice(0, 4).map(({ id, label, count, effectiveness, hasHighCorrelation, correlationRatio }) => (
               <div key={id} className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold text-foreground">{label}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-foreground">{label}</span>
+                    {hasHighCorrelation && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-600 font-medium flex items-center gap-0.5">
+                        <TrendingUp className="w-2.5 h-2.5" />
+                        {correlationRatio.toFixed(1)}x
+                      </span>
+                    )}
+                  </div>
                   <span className="text-xs text-muted-foreground font-medium">
                     {effectiveness}% good days ({count} uses)
                   </span>
