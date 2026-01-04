@@ -16,9 +16,9 @@ const RevenueCatContext = createContext<RevenueCatContextType | null>(null);
 export const useRevenueCatContext = () => {
   const context = useContext(RevenueCatContext);
   if (!context) {
-    // Return a default context for non-iOS platforms
+    // Return a default context - use actual platform detection
     return {
-      isIOSNative: false,
+      isIOSNative,
       isInitialized: false,
       isLoading: false,
       purchaseMonthly: async () => false,
