@@ -22,20 +22,25 @@ interface RevenueCatOffering {
   monthly?: PurchasesPackage;
 }
 
-// Platform detection
-export const isIOSNative = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+// Platform detection (runtime)
+export const getIsNativeIOS = () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+
+// Backwards-compatible constant (do not rely on this for routing logic)
+export const isIOSNative = getIsNativeIOS();
 
 const REVENUECAT_IOS_KEY = 'appl_rgvRTJPduIhlItjWllSWcPCuwkn';
 
 export const useRevenueCat = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [offeringsStatus, setOfferingsStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [offeringsError, setOfferingsError] = useState<string | null>(null);
   const [currentOffering, setCurrentOffering] = useState<RevenueCatOffering | null>(null);
   const [monthlyPackage, setMonthlyPackage] = useState<PurchasesPackage | null>(null);
 
   // Initialize RevenueCat - call after user login
   const initialize = useCallback(async (userId: string) => {
-    if (!isIOSNative) {
+    if (!getIsNativeIOS()) {
       console.log('[RevenueCat] Skipping init - not iOS native');
       return;
     }
@@ -47,62 +52,79 @@ export const useRevenueCat = () => {
 
     try {
       console.log('[RevenueCat] Initializing...');
+      setOfferingsError(null);
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
-      
+
       await Purchases.configure({ apiKey: REVENUECAT_IOS_KEY });
       console.log('[RevenueCat] Configured with API key');
-      
+
       // Log in with user ID for cross-platform tracking
       await Purchases.logIn({ appUserID: userId });
       console.log('[RevenueCat] Logged in user:', userId);
-      
+
       setIsInitialized(true);
-      
+
       // Fetch offerings on init
       await fetchOfferings();
-    } catch (error) {
+    } catch (error: any) {
       console.error('[RevenueCat] Initialization error:', error);
+      setOfferingsStatus('error');
+      setOfferingsError(error?.message ?? 'Failed to initialize purchases');
     }
   }, [isInitialized]);
 
   // Fetch offerings
   const fetchOfferings = useCallback(async () => {
-    if (!isIOSNative) return null;
+    if (!getIsNativeIOS()) return null;
+
+    setOfferingsStatus('loading');
+    setOfferingsError(null);
 
     try {
       console.log('[RevenueCat] Fetching offerings...');
       const { Purchases, PACKAGE_TYPE } = await import('@revenuecat/purchases-capacitor');
-      
+
       const offerings = await Purchases.getOfferings();
       console.log('[RevenueCat] Offerings received:', offerings);
-      
+
       // Get default offering (current offering or 'default' from all)
       const defaultOffering = offerings?.current ?? offerings?.all?.['default'];
-      
-      if (defaultOffering) {
-        setCurrentOffering(defaultOffering as RevenueCatOffering);
-        
-        // Find monthly package - prefer the monthly shortcut, fallback to searching availablePackages
-        const monthly = defaultOffering.monthly ?? defaultOffering.availablePackages?.find(
-          (pkg: any) => pkg.packageType === PACKAGE_TYPE.MONTHLY
-        );
-        
-        if (monthly) {
-          setMonthlyPackage(monthly as PurchasesPackage);
-          console.log('[RevenueCat] Monthly package found:', monthly.product?.priceString);
-        }
+
+      if (!defaultOffering) {
+        setOfferingsStatus('error');
+        setOfferingsError('No subscription offering found.');
+        return null;
       }
-      
+
+      setCurrentOffering(defaultOffering as RevenueCatOffering);
+
+      // Find monthly package - prefer the monthly shortcut, fallback to searching availablePackages
+      const monthly = defaultOffering.monthly ?? defaultOffering.availablePackages?.find(
+        (pkg: any) => pkg.packageType === PACKAGE_TYPE.MONTHLY
+      );
+
+      if (!monthly) {
+        setOfferingsStatus('error');
+        setOfferingsError('Monthly subscription package not found.');
+        return defaultOffering;
+      }
+
+      setMonthlyPackage(monthly as PurchasesPackage);
+      console.log('[RevenueCat] Monthly package found:', monthly.product?.priceString);
+
+      setOfferingsStatus('ready');
       return defaultOffering;
-    } catch (error) {
+    } catch (error: any) {
       console.error('[RevenueCat] Error fetching offerings:', error);
+      setOfferingsStatus('error');
+      setOfferingsError(error?.message ?? 'Failed to load subscription options.');
       return null;
     }
   }, []);
 
   // Purchase monthly package - returns structured result for better error handling
   const purchaseMonthly = useCallback(async (): Promise<{ success: boolean; error?: string; errorCode?: number }> => {
-    if (!isIOSNative) {
+    if (!getIsNativeIOS()) {
       console.log('[RevenueCat] Purchase skipped - not iOS native');
       return { success: false, error: 'Not iOS native' };
     }
@@ -213,9 +235,11 @@ export const useRevenueCat = () => {
   }, [monthlyPackage]);
 
   return {
-    isIOSNative,
+    isIOSNative: getIsNativeIOS(),
     isInitialized,
     isLoading,
+    offeringsStatus,
+    offeringsError,
     currentOffering,
     monthlyPackage,
     initialize,
