@@ -16,6 +16,7 @@ import SymptomsInsights from '@/components/SymptomsInsights';
 import TriggerPatternsInsights from '@/components/TriggerPatternsInsights';
 import SleepTrendsInsights from '@/components/SleepTrendsInsights';
 import PainTrendsInsights from '@/components/PainTrendsInsights';
+import WhatHelpedInsights from '@/components/WhatHelpedInsights';
 import { FlareStatusBadge } from '@/components/FlareStatusBadge';
 import { severityColors, severityLabels } from '@/constants/severityColors';
 import { supabase } from '@/integrations/supabase/client';
@@ -404,6 +405,9 @@ const InsightsPage = () => {
 
           {/* Symptoms Insights */}
           <SymptomsInsights checkIns={checkIns} />
+
+          {/* What Helped Correlation Analysis */}
+          <WhatHelpedInsights checkIns={checkIns} />
 
           {/* Sleep Trends */}
           <SleepTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
