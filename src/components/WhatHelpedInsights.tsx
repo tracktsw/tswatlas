@@ -426,38 +426,30 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
                     </div>
                   </div>
 
-                  {/* Helpful factors */}
+                  {/* Helpful factors - limit to top 3 */}
                   {helpfulFactors.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 mb-2">
                         <Sparkles className="w-3.5 h-3.5 text-green-600" />
                         <span className="text-xs font-medium text-foreground">Correlated with improvement</span>
                       </div>
-                      {helpfulFactors.map((factor) => (
-                        <div key={factor.id} className="flex items-center justify-between py-1">
-                          <div className="flex items-center gap-2">
-                            {factor.type === 'sleep' ? (
-                              <Moon className="w-4 h-4 text-indigo-500" />
-                            ) : (
-                              <div className="w-2 h-2 rounded-full bg-green-500" />
+                      <div className="flex flex-wrap gap-2">
+                        {helpfulFactors.slice(0, 3).map((factor) => (
+                          <span 
+                            key={factor.id}
+                            className={cn(
+                              "text-xs px-2.5 py-1.5 rounded-full font-medium flex items-center gap-1.5",
+                              factor.type === 'sleep' 
+                                ? "bg-indigo-500/10 text-indigo-600" 
+                                : "bg-green-500/10 text-green-600"
                             )}
-                            <span className="text-sm font-medium">{factor.label}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-green-600 font-semibold">
-                              {factor.correlationRatio.toFixed(1)}x more
-                            </span>
-                            <span className={cn(
-                              'text-[10px] px-1.5 py-0.5 rounded-full',
-                              factor.confidence === 'high' ? 'bg-green-500/20 text-green-600' :
-                              factor.confidence === 'medium' ? 'bg-amber-500/20 text-amber-600' :
-                              'bg-muted text-muted-foreground'
-                            )}>
-                              {factor.confidence}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                          >
+                            {factor.type === 'sleep' && <Moon className="w-3 h-3" />}
+                            {factor.label}
+                            <span className="opacity-70">({factor.correlationRatio.toFixed(1)}x)</span>
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
 
