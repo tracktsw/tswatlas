@@ -26,25 +26,27 @@ const SubscriptionCard = () => {
       return;
     }
 
-    // Debug platform detection
-    console.log('[UPGRADE] Platform detection:', {
-      isIOSNative,
+    // CRITICAL: Check platform FIRST before any purchase logic
+    const isNativeIOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+    
+    console.log('[UPGRADE] Platform check (BEFORE purchase logic):', {
+      isNativeIOS,
       isNativePlatform: Capacitor.isNativePlatform(),
-      platform: Capacitor.getPlatform()
+      platform: Capacitor.getPlatform(),
+      contextIsIOSNative: isIOSNative
     });
 
     setIsCheckoutLoading(true);
 
     try {
-      // iOS Native: Use RevenueCat IAP
-      if (isIOSNative) {
-        console.log('[UPGRADE] iOS Native - using RevenueCat');
+      // iOS Native: Use RevenueCat IAP - Stripe must NEVER open on iOS
+      if (isNativeIOS) {
+        console.log('[UPGRADE] iOS Native detected - using RevenueCat (Stripe blocked)');
         const success = await purchaseMonthly();
         
         if (success) {
           console.log('[UPGRADE] RevenueCat purchase completed, refreshing subscription...');
           toast.success('Purchase successful! Activating your subscription...');
-          // Refresh subscription status from backend
           await refreshSubscription();
         } else {
           console.log('[UPGRADE] RevenueCat purchase cancelled or failed');
