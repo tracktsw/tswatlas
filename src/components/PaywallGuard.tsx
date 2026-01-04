@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
@@ -17,40 +17,71 @@ const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
 
 const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false }: PaywallGuardProps) => {
   const { isPremium, isLoading, refreshSubscription } = useSubscription();
-  const { isLoading: isRevenueCatLoading, purchaseMonthly, restorePurchases, getPriceString } = useRevenueCatContext();
+  const {
+    isLoading: isRevenueCatLoading,
+    purchaseMonthly,
+    restorePurchases,
+    getPriceString,
+    offeringsStatus,
+    offeringsError,
+    platformLabel,
+  } = useRevenueCatContext();
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [nativeStatusMessage, setNativeStatusMessage] = useState<string | null>(null);
 
   // Check platform at runtime - CRITICAL for correct IAP routing
-  const isNativeIOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+  const isNativeIOS = useMemo(
+    () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios',
+    []
+  );
+  const isOfferingsReady = isNativeIOS ? offeringsStatus === 'ready' : true;
 
   const handleUpgrade = async () => {
     if (isUpgrading) return;
-    
+
     console.log('[PaywallGuard] Platform check:', {
       isNativeIOS,
       isNativePlatform: Capacitor.isNativePlatform(),
-      platform: Capacitor.getPlatform()
+      platform: Capacitor.getPlatform(),
+      contextPlatformLabel: platformLabel,
+      offeringsStatus,
     });
-    
+
+    setNativeStatusMessage(null);
+
+    // iOS native must NEVER fall back to Stripe
+    if (isNativeIOS && !isOfferingsReady) {
+      const msg = offeringsError || 'Loading subscription options… please wait.';
+      setNativeStatusMessage(msg);
+      toast.error(msg);
+      return;
+    }
+
     setIsUpgrading(true);
 
     try {
       // iOS Native: Use RevenueCat IAP - Stripe must NEVER open
       if (isNativeIOS) {
         console.log('[PaywallGuard] iOS Native - using RevenueCat');
+        setNativeStatusMessage('Purchase started…');
+
         const result = await purchaseMonthly();
-        
+
         if (result.success) {
           console.log('[PaywallGuard] RevenueCat purchase completed, refreshing subscription...');
+          setNativeStatusMessage('Purchase successful! Refreshing…');
           toast.success('Purchase successful! Activating your subscription...');
           await refreshSubscription();
+          setNativeStatusMessage('Subscription active (or pending refresh).');
         } else if (result.error) {
           console.error('[PaywallGuard] RevenueCat error:', result.error, 'code:', result.errorCode);
+          setNativeStatusMessage(`Purchase failed: ${result.error}`);
           toast.error(result.error);
+        } else {
+          setNativeStatusMessage('Purchase cancelled.');
         }
-        // No toast for user cancellation (when error is undefined but success is false)
-        
+
         setIsUpgrading(false);
         return;
       }
@@ -118,7 +149,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   // Get price string - from RevenueCat on iOS, fallback for web
   const priceString = isNativeIOS ? getPriceString() : '£5.99';
   const isButtonLoading = isUpgrading || isRevenueCatLoading;
-
+  const isSubscribeDisabled = isButtonLoading || (isNativeIOS && !isOfferingsReady);
   // Show blurred content with overlay
   if (showBlurred) {
     return (
@@ -135,22 +166,34 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
             <p className="text-sm text-muted-foreground mb-4">
               {feature} is available with Premium.
             </p>
-            <Button onClick={handleUpgrade} disabled={isButtonLoading} variant="gold" className="gap-2">
+            <Button onClick={handleUpgrade} disabled={isSubscribeDisabled} variant="gold" className="gap-2">
               {isButtonLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {isNativeIOS ? 'Processing...' : 'Loading...'}
+                  {isNativeIOS ? 'Processing…' : 'Loading...'}
                 </>
               ) : (
                 <>
                   <Crown className="w-4 h-4" />
-                  Start 14-day free trial
+                  {isNativeIOS && !isOfferingsReady ? 'Loading subscription…' : 'Start 14-day free trial'}
                 </>
               )}
             </Button>
             <p className="text-xs text-muted-foreground mt-2">
               {priceString}/month after · Cancel anytime
             </p>
+
+            {isNativeIOS && (
+              <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                <div>Platform: iOS native</div>
+                <div>
+                  Offerings: {offeringsStatus}
+                  {offeringsError ? ` — ${offeringsError}` : ''}
+                </div>
+                {nativeStatusMessage ? <div>Status: {nativeStatusMessage}</div> : null}
+              </div>
+            )}
+
             {/* Restore purchases - iOS only */}
             {isNativeIOS && (
               <Button
@@ -192,22 +235,34 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
         Get full access to all features including Photo Diary, full Insights, Community, Journal, and AI Coach.
       </p>
       <div className="space-y-3 w-full max-w-xs">
-        <Button onClick={handleUpgrade} disabled={isButtonLoading} variant="gold" className="w-full gap-2" size="lg">
+        <Button onClick={handleUpgrade} disabled={isSubscribeDisabled} variant="gold" className="w-full gap-2" size="lg">
           {isButtonLoading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              {isNativeIOS ? 'Processing...' : 'Loading...'}
+              {isNativeIOS ? 'Processing…' : 'Loading...'}
             </>
           ) : (
             <>
               <Crown className="w-4 h-4" />
-              Start 14-day free trial
+              {isNativeIOS && !isOfferingsReady ? 'Loading subscription…' : 'Start 14-day free trial'}
             </>
           )}
         </Button>
         <p className="text-xs text-muted-foreground">
           {priceString}/month after · Cancel anytime
         </p>
+
+        {isNativeIOS && (
+          <div className="text-xs text-muted-foreground space-y-1">
+            <div>Platform: iOS native</div>
+            <div>
+              Offerings: {offeringsStatus}
+              {offeringsError ? ` — ${offeringsError}` : ''}
+            </div>
+            {nativeStatusMessage ? <div>Status: {nativeStatusMessage}</div> : null}
+          </div>
+        )}
+
         {/* Restore purchases - iOS only */}
         {isNativeIOS && (
           <Button

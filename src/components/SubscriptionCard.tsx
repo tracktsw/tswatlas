@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Crown, Loader2, RefreshCw, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -12,12 +12,27 @@ const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
 
 const SubscriptionCard = () => {
   const { isPremium, isAdmin, isLoading, subscriptionEnd, refreshSubscription } = useSubscription();
-  const { isIOSNative, isLoading: isRevenueCatLoading, purchaseMonthly, restorePurchases, getPriceString } = useRevenueCatContext();
-  
+  const {
+    isLoading: isRevenueCatLoading,
+    purchaseMonthly,
+    restorePurchases,
+    getPriceString,
+    offeringsStatus,
+    offeringsError,
+    platformLabel,
+  } = useRevenueCatContext();
   // Double-click protection: track in-flight requests
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [nativeStatusMessage, setNativeStatusMessage] = useState<string | null>(null);
+
+  const isNativeIOS = useMemo(
+    () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios',
+    []
+  );
+
+  const isOfferingsReady = isNativeIOS ? offeringsStatus === 'ready' : true;
 
   const handleUpgrade = async () => {
     // Guard against double-clicks
@@ -27,14 +42,23 @@ const SubscriptionCard = () => {
     }
 
     // CRITICAL: Check platform FIRST before any purchase logic
-    const isNativeIOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
-    
     console.log('[UPGRADE] Platform check (BEFORE purchase logic):', {
       isNativeIOS,
       isNativePlatform: Capacitor.isNativePlatform(),
       platform: Capacitor.getPlatform(),
-      contextIsIOSNative: isIOSNative
+      contextPlatformLabel: platformLabel,
+      offeringsStatus,
     });
+
+    setNativeStatusMessage(null);
+
+    // iOS native must NEVER fall back to Stripe
+    if (isNativeIOS && !isOfferingsReady) {
+      const msg = offeringsError || 'Loading subscription options… please wait.';
+      setNativeStatusMessage(msg);
+      toast.error(msg);
+      return;
+    }
 
     setIsCheckoutLoading(true);
 
@@ -42,18 +66,24 @@ const SubscriptionCard = () => {
       // iOS Native: Use RevenueCat IAP - Stripe must NEVER open on iOS
       if (isNativeIOS) {
         console.log('[UPGRADE] iOS Native detected - using RevenueCat (Stripe blocked)');
+        setNativeStatusMessage('Purchase started…');
+
         const result = await purchaseMonthly();
-        
+
         if (result.success) {
           console.log('[UPGRADE] RevenueCat purchase completed, refreshing subscription...');
+          setNativeStatusMessage('Purchase successful! Refreshing…');
           toast.success('Purchase successful! Activating your subscription...');
           await refreshSubscription();
+          setNativeStatusMessage('Subscription active (or pending refresh).');
         } else if (result.error) {
           // Show error to user
           console.error('[UPGRADE] RevenueCat error:', result.error, 'code:', result.errorCode);
+          setNativeStatusMessage(`Purchase failed: ${result.error}`);
           toast.error(result.error);
         } else {
           console.log('[UPGRADE] RevenueCat purchase cancelled by user');
+          setNativeStatusMessage('Purchase cancelled.');
         }
         setIsCheckoutLoading(false);
         return;
@@ -215,7 +245,7 @@ const SubscriptionCard = () => {
                   : 'You have full access to all features.'}
             </p>
             {/* Show Manage Subscription only for web users (Stripe) */}
-            {!isAdmin && !isIOSNative && (
+            {!isAdmin && !isNativeIOS && (
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -229,14 +259,12 @@ const SubscriptionCard = () => {
                     Opening...
                   </>
                 ) : (
-                  <>
-                    Manage Subscription
-                  </>
+                  <>Manage Subscription</>
                 )}
               </Button>
             )}
             {/* iOS users manage via App Store */}
-            {!isAdmin && isIOSNative && (
+            {!isAdmin && isNativeIOS && (
               <p className="text-xs text-muted-foreground mt-3">
                 Manage your subscription in the App Store
               </p>
@@ -255,9 +283,9 @@ const SubscriptionCard = () => {
   }
 
   // Get price string - from RevenueCat on iOS, fallback for web
-  const priceString = isIOSNative ? getPriceString() : '£5.99';
+  const priceString = isNativeIOS ? getPriceString() : '£5.99';
   const isButtonLoading = isCheckoutLoading || isRevenueCatLoading;
-
+  const isSubscribeDisabled = isButtonLoading || (isNativeIOS && !isOfferingsReady);
   return (
     <div className="glass-card p-4 bg-gradient-to-br from-primary/5 to-accent/5">
       <div className="flex items-start gap-3">
@@ -274,26 +302,37 @@ const SubscriptionCard = () => {
             variant="gold"
             className="mt-3 gap-2"
             onClick={handleUpgrade}
-            disabled={isButtonLoading}
+            disabled={isSubscribeDisabled}
           >
             {isButtonLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                {isIOSNative ? 'Processing...' : 'Starting checkout...'}
+                {isNativeIOS ? 'Processing…' : 'Starting checkout...'}
               </>
             ) : (
               <>
                 <Crown className="w-4 h-4" />
-                Start 14-day free trial
+                {isNativeIOS && !isOfferingsReady ? 'Loading subscription…' : 'Start 14-day free trial'}
               </>
             )}
           </Button>
           <p className="text-xs text-muted-foreground mt-2">
             {priceString}/month after · Cancel anytime
           </p>
-          
+
+          {isNativeIOS && (
+            <div className="mt-2 text-xs text-muted-foreground space-y-1">
+              <div>Platform: iOS native</div>
+              <div>
+                Offerings: {offeringsStatus}
+                {offeringsError ? ` — ${offeringsError}` : ''}
+              </div>
+              {nativeStatusMessage ? <div>Status: {nativeStatusMessage}</div> : null}
+            </div>
+          )}
+
           {/* Restore purchases button - iOS only */}
-          {isIOSNative && (
+          {isNativeIOS && (
             <Button
               variant="ghost"
               size="sm"
