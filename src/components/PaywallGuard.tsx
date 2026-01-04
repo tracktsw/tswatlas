@@ -1,4 +1,5 @@
 import { ReactNode, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
 import { Lock, Sparkles, Crown, Loader2, RotateCcw } from 'lucide-react';
@@ -16,25 +17,40 @@ const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
 
 const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false }: PaywallGuardProps) => {
   const { isPremium, isLoading, refreshSubscription } = useSubscription();
-  const { isIOSNative, isLoading: isRevenueCatLoading, purchaseMonthly, restorePurchases, getPriceString } = useRevenueCatContext();
+  const { isLoading: isRevenueCatLoading, purchaseMonthly, restorePurchases, getPriceString } = useRevenueCatContext();
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
 
+  // Check platform at runtime - CRITICAL for correct IAP routing
+  const isNativeIOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+
   const handleUpgrade = async () => {
     if (isUpgrading) return;
+    
+    console.log('[PaywallGuard] Platform check:', {
+      isNativeIOS,
+      isNativePlatform: Capacitor.isNativePlatform(),
+      platform: Capacitor.getPlatform()
+    });
+    
     setIsUpgrading(true);
 
     try {
-      // iOS Native: Use RevenueCat IAP
-      if (isIOSNative) {
+      // iOS Native: Use RevenueCat IAP - Stripe must NEVER open
+      if (isNativeIOS) {
         console.log('[PaywallGuard] iOS Native - using RevenueCat');
-        const success = await purchaseMonthly();
+        const result = await purchaseMonthly();
         
-        if (success) {
+        if (result.success) {
           console.log('[PaywallGuard] RevenueCat purchase completed, refreshing subscription...');
           toast.success('Purchase successful! Activating your subscription...');
           await refreshSubscription();
+        } else if (result.error) {
+          console.error('[PaywallGuard] RevenueCat error:', result.error, 'code:', result.errorCode);
+          toast.error(result.error);
         }
+        // No toast for user cancellation (when error is undefined but success is false)
+        
         setIsUpgrading(false);
         return;
       }
@@ -100,7 +116,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   }
 
   // Get price string - from RevenueCat on iOS, fallback for web
-  const priceString = isIOSNative ? getPriceString() : '£5.99';
+  const priceString = isNativeIOS ? getPriceString() : '£5.99';
   const isButtonLoading = isUpgrading || isRevenueCatLoading;
 
   // Show blurred content with overlay
@@ -123,7 +139,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
               {isButtonLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {isIOSNative ? 'Processing...' : 'Loading...'}
+                  {isNativeIOS ? 'Processing...' : 'Loading...'}
                 </>
               ) : (
                 <>
@@ -136,7 +152,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
               {priceString}/month after · Cancel anytime
             </p>
             {/* Restore purchases - iOS only */}
-            {isIOSNative && (
+            {isNativeIOS && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -180,7 +196,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
           {isButtonLoading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              {isIOSNative ? 'Processing...' : 'Loading...'}
+              {isNativeIOS ? 'Processing...' : 'Loading...'}
             </>
           ) : (
             <>
@@ -193,7 +209,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
           {priceString}/month after · Cancel anytime
         </p>
         {/* Restore purchases - iOS only */}
-        {isIOSNative && (
+        {isNativeIOS && (
           <Button
             variant="ghost"
             size="sm"
