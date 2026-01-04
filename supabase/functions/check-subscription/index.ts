@@ -24,6 +24,61 @@ const toIsoFromStripeSeconds = (value: unknown): string | null => {
   }
 };
 
+// Check RevenueCat subscription status
+const checkRevenueCat = async (userId: string): Promise<{ subscribed: boolean; subscription_end: string | null }> => {
+  const rcSecretKey = Deno.env.get("REVENUECAT_SECRET_KEY");
+  
+  if (!rcSecretKey) {
+    logStep("RevenueCat secret key not configured, skipping");
+    return { subscribed: false, subscription_end: null };
+  }
+
+  try {
+    logStep("Checking RevenueCat subscription", { userId });
+    
+    const response = await fetch(
+      `https://api.revenuecat.com/v1/subscribers/${userId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${rcSecretKey}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      logStep("RevenueCat API error", { status: response.status });
+      return { subscribed: false, subscription_end: null };
+    }
+
+    const data = await response.json();
+    logStep("RevenueCat response received", { 
+      hasSubscriber: !!data.subscriber,
+      entitlements: Object.keys(data.subscriber?.entitlements || {})
+    });
+
+    // Check for "premium" entitlement
+    const premiumEntitlement = data.subscriber?.entitlements?.premium;
+    
+    if (premiumEntitlement?.is_active) {
+      logStep("RevenueCat premium entitlement active", { 
+        expires_date: premiumEntitlement.expires_date 
+      });
+      return {
+        subscribed: true,
+        subscription_end: premiumEntitlement.expires_date || null,
+      };
+    }
+
+    logStep("No active RevenueCat premium entitlement");
+    return { subscribed: false, subscription_end: null };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logStep("RevenueCat check error", { error: errorMessage });
+    return { subscribed: false, subscription_end: null };
+  }
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -73,6 +128,21 @@ serve(async (req) => {
       });
     }
 
+    // Check RevenueCat subscription first (for iOS IAP users)
+    const revenueCatResult = await checkRevenueCat(user.id);
+    if (revenueCatResult.subscribed) {
+      logStep("User has active RevenueCat subscription");
+      return new Response(JSON.stringify({
+        subscribed: true,
+        isAdmin: false,
+        subscription_end: revenueCatResult.subscription_end,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
+    // Check Stripe subscription (for web users)
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
 
@@ -118,12 +188,12 @@ serve(async (req) => {
       subscriptionEnd = toIsoFromStripeSeconds(subscription.current_period_end) 
         ?? toIsoFromStripeSeconds(subscription.items?.data?.[0]?.current_period_end);
       
-      logStep("Active subscription found", { 
+      logStep("Active Stripe subscription found", { 
         subscriptionId: subscription.id, 
         endDate: subscriptionEnd 
       });
     } else {
-      logStep("No active subscription found");
+      logStep("No active Stripe subscription found");
     }
 
     return new Response(JSON.stringify({

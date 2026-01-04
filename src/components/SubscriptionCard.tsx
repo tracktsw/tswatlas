@@ -1,34 +1,22 @@
 import { useState } from 'react';
-import { Crown, Loader2, RefreshCw } from 'lucide-react';
+import { Crown, Loader2, RefreshCw, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
-
-// Platform detection for logging
-const getPlatform = (): string => {
-  const ua = navigator.userAgent;
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
-    || (navigator as any).standalone === true;
-  
-  if (/iPad|iPhone|iPod/.test(ua)) {
-    return isStandalone ? 'iOS-PWA' : 'iOS-Safari';
-  }
-  if (/Android/.test(ua)) {
-    return isStandalone ? 'Android-PWA' : 'Android-Browser';
-  }
-  return isStandalone ? 'Desktop-PWA' : 'Desktop-Browser';
-};
 
 const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
 
 const SubscriptionCard = () => {
   const { isPremium, isAdmin, isLoading, subscriptionEnd, refreshSubscription } = useSubscription();
+  const { isIOSNative, isLoading: isRevenueCatLoading, purchaseMonthly, restorePurchases, getPriceString } = useRevenueCatContext();
   
   // Double-click protection: track in-flight requests
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const handleUpgrade = async () => {
     // Guard against double-clicks
@@ -37,13 +25,28 @@ const SubscriptionCard = () => {
       return;
     }
 
-    const platform = getPlatform();
-    console.log('[UPGRADE] UpgradeClick', { platform, timestamp: new Date().toISOString() });
-
     setIsCheckoutLoading(true);
 
     try {
-      console.log('[UPGRADE] CheckoutStart - Getting session...');
+      // iOS Native: Use RevenueCat IAP
+      if (isIOSNative) {
+        console.log('[UPGRADE] iOS Native - using RevenueCat');
+        const success = await purchaseMonthly();
+        
+        if (success) {
+          console.log('[UPGRADE] RevenueCat purchase completed, refreshing subscription...');
+          toast.success('Purchase successful! Activating your subscription...');
+          // Refresh subscription status from backend
+          await refreshSubscription();
+        } else {
+          console.log('[UPGRADE] RevenueCat purchase cancelled or failed');
+        }
+        setIsCheckoutLoading(false);
+        return;
+      }
+
+      // Web: Use Stripe Payment Link
+      console.log('[UPGRADE] Web - using Stripe Payment Link');
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.user?.email) {
@@ -66,15 +69,37 @@ const SubscriptionCard = () => {
     }
   };
 
+  const handleRestore = async () => {
+    if (isRestoring) return;
+    
+    setIsRestoring(true);
+    console.log('[RESTORE] Starting restore purchases...');
+    
+    try {
+      const success = await restorePurchases();
+      
+      if (success) {
+        console.log('[RESTORE] Restore successful, refreshing subscription...');
+        toast.success('Purchases restored! Activating your subscription...');
+        await refreshSubscription();
+      } else {
+        console.log('[RESTORE] No purchases to restore');
+        toast.info('No previous purchases found');
+      }
+    } catch (err) {
+      console.error('[RESTORE] Error:', err);
+      toast.error('Failed to restore purchases');
+    }
+    
+    setIsRestoring(false);
+  };
+
   const handleManageSubscription = async () => {
     // Guard against double-clicks
     if (isPortalLoading) {
       console.log('[PORTAL] Blocked - request already in flight');
       return;
     }
-
-    const platform = getPlatform();
-    console.log('[PORTAL] PortalClick', { platform, timestamp: new Date().toISOString() });
 
     setIsPortalLoading(true);
 
@@ -175,7 +200,8 @@ const SubscriptionCard = () => {
                   ? `Renews on ${format(parseISO(subscriptionEnd), 'MMMM d, yyyy')}`
                   : 'You have full access to all features.'}
             </p>
-            {!isAdmin && (
+            {/* Show Manage Subscription only for web users (Stripe) */}
+            {!isAdmin && !isIOSNative && (
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -195,6 +221,12 @@ const SubscriptionCard = () => {
                 )}
               </Button>
             )}
+            {/* iOS users manage via App Store */}
+            {!isAdmin && isIOSNative && (
+              <p className="text-xs text-muted-foreground mt-3">
+                Manage your subscription in the App Store
+              </p>
+            )}
           </div>
           <button 
             onClick={refreshSubscription}
@@ -207,6 +239,10 @@ const SubscriptionCard = () => {
       </div>
     );
   }
+
+  // Get price string - from RevenueCat on iOS, fallback for web
+  const priceString = isIOSNative ? getPriceString() : '£5.99';
+  const isButtonLoading = isCheckoutLoading || isRevenueCatLoading;
 
   return (
     <div className="glass-card p-4 bg-gradient-to-br from-primary/5 to-accent/5">
@@ -224,12 +260,12 @@ const SubscriptionCard = () => {
             variant="gold"
             className="mt-3 gap-2"
             onClick={handleUpgrade}
-            disabled={isCheckoutLoading}
+            disabled={isButtonLoading}
           >
-            {isCheckoutLoading ? (
+            {isButtonLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Starting checkout...
+                {isIOSNative ? 'Processing...' : 'Starting checkout...'}
               </>
             ) : (
               <>
@@ -239,8 +275,31 @@ const SubscriptionCard = () => {
             )}
           </Button>
           <p className="text-xs text-muted-foreground mt-2">
-            £5.99/month after · Cancel anytime
+            {priceString}/month after · Cancel anytime
           </p>
+          
+          {/* Restore purchases button - iOS only */}
+          {isIOSNative && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2 gap-2 text-muted-foreground"
+              onClick={handleRestore}
+              disabled={isRestoring}
+            >
+              {isRestoring ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Restoring...
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="w-3 h-3" />
+                  Restore purchases
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </div>

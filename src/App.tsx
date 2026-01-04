@@ -7,6 +7,7 @@ import { UserDataProvider } from "@/contexts/UserDataContext";
 import { LayoutProvider } from "@/contexts/LayoutContext";
 import { DemoModeProvider } from "@/contexts/DemoModeContext";
 import { IOSKeyboardProvider } from "@/contexts/IOSKeyboardContext";
+import { RevenueCatProvider } from "@/contexts/RevenueCatContext";
 import AuthGuard from "@/components/AuthGuard";
 import Layout from "@/components/Layout";
 import HomePage from "@/pages/HomePage";
@@ -45,15 +46,17 @@ const App = () => (
                   path="/"
                   element={
                     <AuthGuard>
-                      <UserDataProvider>
-                        <DemoModeProvider>
-                          <Suspense fallback={null}>
-                            <AppUpdateBanner />
-                            <PWAInstallPrompt />
-                          </Suspense>
-                          <Layout />
-                        </DemoModeProvider>
-                      </UserDataProvider>
+                      <RevenueCatProvider>
+                        <UserDataProvider>
+                          <DemoModeProvider>
+                            <Suspense fallback={null}>
+                              <AppUpdateBanner />
+                              <PWAInstallPrompt />
+                            </Suspense>
+                            <Layout />
+                          </DemoModeProvider>
+                        </UserDataProvider>
+                      </RevenueCatProvider>
                     </AuthGuard>
                   }
                 >
