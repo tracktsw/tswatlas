@@ -133,6 +133,21 @@ export function IOSKeyboardProvider({ children }: { children: React.ReactNode })
     };
   }, [isIOS]);
 
+  // Safety net: if focus tracking gets stuck (common when closing modals on iOS),
+  // periodically re-check the actual activeElement.
+  useEffect(() => {
+    if (!isIOS || !isTextInputFocused) return;
+
+    const id = window.setInterval(() => {
+      const active = document.activeElement;
+      if (!isTextInputElement(active)) {
+        setIsTextInputFocused(false);
+      }
+    }, 250);
+
+    return () => window.clearInterval(id);
+  }, [isIOS, isTextInputFocused]);
+
   return (
     <IOSKeyboardContext.Provider value={{ keyboardHeight, isKeyboardOpen, isTextInputFocused, isIOS }}>
       {children}

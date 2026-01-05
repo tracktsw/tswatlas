@@ -10,20 +10,23 @@ const Sheet = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof SheetPrimitive.Root>
 >(({ onOpenChange, ...props }, ref) => {
-  const handleOpenChange = React.useCallback((open: boolean) => {
-    onOpenChange?.(open);
-    
-    // Ensure body scroll is restored when sheet closes on iOS
-    if (!open) {
-      requestAnimationFrame(() => {
-        document.body.style.overflow = '';
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.width = '';
-        document.body.style.pointerEvents = '';
-      });
-    }
-  }, [onOpenChange]);
+  const handleOpenChange = React.useCallback(
+    (open: boolean) => {
+      onOpenChange?.(open);
+
+      if (!open) {
+        (document.activeElement as HTMLElement | null)?.blur?.();
+        requestAnimationFrame(() => {
+          document.body.style.overflow = "";
+          document.body.style.position = "";
+          document.body.style.top = "";
+          document.body.style.width = "";
+          document.body.style.pointerEvents = "";
+        });
+      }
+    },
+    [onOpenChange],
+  );
 
   return <SheetPrimitive.Root onOpenChange={handleOpenChange} {...props} />;
 });

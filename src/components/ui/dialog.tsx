@@ -9,21 +9,27 @@ const Dialog = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>
 >(({ onOpenChange, ...props }, ref) => {
-  const handleOpenChange = React.useCallback((open: boolean) => {
-    onOpenChange?.(open);
-    
-    // Ensure body scroll is restored when dialog closes on iOS
-    if (!open) {
-      // Small delay to let Radix cleanup first
-      requestAnimationFrame(() => {
-        document.body.style.overflow = '';
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.width = '';
-        document.body.style.pointerEvents = '';
-      });
-    }
-  }, [onOpenChange]);
+  const handleOpenChange = React.useCallback(
+    (open: boolean) => {
+      onOpenChange?.(open);
+
+      // Ensure focus + scroll are restored when dialog closes on iOS
+      if (!open) {
+        // Force-blur any focused input (prevents "keyboard open" state getting stuck)
+        (document.activeElement as HTMLElement | null)?.blur?.();
+
+        // Small delay to let Radix cleanup first
+        requestAnimationFrame(() => {
+          document.body.style.overflow = "";
+          document.body.style.position = "";
+          document.body.style.top = "";
+          document.body.style.width = "";
+          document.body.style.pointerEvents = "";
+        });
+      }
+    },
+    [onOpenChange],
+  );
 
   return <DialogPrimitive.Root onOpenChange={handleOpenChange} {...props} />;
 });
