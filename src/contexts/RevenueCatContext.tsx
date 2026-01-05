@@ -107,24 +107,31 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
 
     // Handle auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[RevenueCatProvider] Auth state change:', event);
+      console.log('[RevenueCatProvider] Auth state change:', event, 'userId:', session?.user?.id);
       
       if (event === 'SIGNED_IN' && session?.user?.id) {
-        console.log('[RevenueCatProvider] User signed in, initializing RevenueCat');
+        console.log('[RevenueCatProvider] User signed in, initializing RevenueCat with user:', session.user.id);
         setCurrentUserId(session.user.id);
         setIsUserLoggedIn(true);
+        // Initialize RevenueCat with the new user's ID
+        // This will fetch entitlements and set premium status based on THIS user's subscription
         await revenueCat.initialize(session.user.id);
       } else if (event === 'SIGNED_OUT') {
-        console.log('[RevenueCatProvider] User signed out, logging out of RevenueCat');
+        console.log('[RevenueCatProvider] User signed out - CLEARING ALL SUBSCRIPTION STATE');
+        // CRITICAL: Clear local state FIRST
         setCurrentUserId(null);
         setIsUserLoggedIn(false);
-        // CRITICAL: Logout from RevenueCat to clear premium status
+        // CRITICAL: Logout from RevenueCat to clear premium status and reset to anonymous
+        // This ensures a new account on the same device does NOT inherit any subscription
         await revenueCat.logout();
       } else if (event === 'TOKEN_REFRESHED' && session?.user?.id) {
-        // Token refresh - just ensure we're still initialized with the same user
+        // Token refresh - ensure we're still initialized with the same user
         if (currentUserId !== session.user.id) {
           console.log('[RevenueCatProvider] User ID changed on token refresh, re-initializing');
+          // Different user - clear old state and initialize with new user
+          await revenueCat.logout();
           setCurrentUserId(session.user.id);
+          setIsUserLoggedIn(true);
           await revenueCat.initialize(session.user.id);
         }
       }

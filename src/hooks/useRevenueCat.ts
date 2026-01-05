@@ -70,6 +70,7 @@ export interface RevenueCatState {
 }
 
 export const useRevenueCat = () => {
+  // CRITICAL: All state defaults to false/null - premium is NEVER assumed
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [offeringsStatus, setOfferingsStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -77,7 +78,7 @@ export const useRevenueCat = () => {
   const [currentOffering, setCurrentOffering] = useState<RevenueCatOffering | null>(null);
   const [monthlyPackage, setMonthlyPackage] = useState<PurchasesPackage | null>(null);
   
-  // Single source of truth for premium status
+  // CRITICAL: Premium defaults to FALSE - must be explicitly confirmed from RevenueCat
   const [isPremiumFromRC, setIsPremiumFromRC] = useState(false);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [appUserId, setAppUserId] = useState<string | null>(null);
@@ -85,6 +86,7 @@ export const useRevenueCat = () => {
   
   // CRITICAL: Track the internal user ID we bound to RevenueCat
   // Premium access is ONLY valid when this matches the current logged-in user
+  // This ref is cleared on logout and set on login
   const boundUserIdRef = useRef<string | null>(null);
   const [boundUserId, setBoundUserId] = useState<string | null>(null);
 
@@ -231,34 +233,39 @@ export const useRevenueCat = () => {
   }, [isInitialized, refreshCustomerInfo]);
 
   // Logout from RevenueCat - MUST be called when user logs out
-  // CRITICAL: This clears premium status immediately
+  // CRITICAL: This clears premium status immediately and resets to anonymous state
   const logout = useCallback(async () => {
-    if (!getIsNativeIOS()) return;
+    console.log('[RevenueCat] Logout called - clearing all subscription state');
+    
+    // CRITICAL: Clear ALL local state FIRST before any async operations
+    // This ensures premium access is revoked immediately, even if RevenueCat calls fail
+    setIsPremiumFromRC(false);
+    setCustomerInfo(null);
+    setAppUserId(null);
+    boundUserIdRef.current = null;
+    setBoundUserId(null);
+    setIsInitialized(false);
+    setLastCustomerInfoRefresh(null);
+    setCurrentOffering(null);
+    setMonthlyPackage(null);
+    setOfferingsStatus('idle');
+    setOfferingsError(null);
+    
+    if (!getIsNativeIOS()) {
+      console.log('[RevenueCat] Not iOS native, state cleared');
+      return;
+    }
 
     try {
-      console.log('[RevenueCat] Logging out...');
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
       
+      // Log out from RevenueCat - this resets to anonymous user
       await Purchases.logOut();
+      console.log('[RevenueCat] Logged out from RevenueCat successfully');
       
-      // CRITICAL: Clear all premium state immediately
-      setIsPremiumFromRC(false);
-      setCustomerInfo(null);
-      setAppUserId(null);
-      boundUserIdRef.current = null;
-      setBoundUserId(null);
-      setIsInitialized(false);
-      setLastCustomerInfoRefresh(null);
-      
-      console.log('[RevenueCat] Logged out successfully, premium access revoked');
     } catch (error) {
-      console.error('[RevenueCat] Logout error:', error);
-      // Even on error, clear local state for security
-      setIsPremiumFromRC(false);
-      setCustomerInfo(null);
-      boundUserIdRef.current = null;
-      setBoundUserId(null);
-      setIsInitialized(false);
+      // Even on error, state is already cleared above
+      console.error('[RevenueCat] RevenueCat logout error (state already cleared):', error);
     }
   }, []);
 
