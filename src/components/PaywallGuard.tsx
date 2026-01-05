@@ -19,7 +19,7 @@ const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
 
 const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false }: PaywallGuardProps) => {
   const navigate = useNavigate();
-  const { isPremium: isPremiumFromBackend, isLoading: isBackendLoading, refreshSubscription } = useSubscription();
+  const { isPremium: isPremiumFromBackend, isAdmin, isLoading: isBackendLoading, refreshSubscription } = useSubscription();
   const {
     isLoading: isRevenueCatLoading,
     isInitialized,
@@ -47,10 +47,12 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
     []
   );
   
-  // On iOS: isPremium comes from RevenueCat (single source of truth)
-  // On Web: isPremium comes from backend (Stripe)
-  const isPremium = isNativeIOS ? isPremiumFromRC : isPremiumFromBackend;
-  const isLoading = isNativeIOS ? isRevenueCatLoading : isBackendLoading;
+  // Admin always gets premium access, regardless of platform
+  // On iOS: Check RevenueCat OR admin status
+  // On Web: Check backend (Stripe) OR admin status
+  const isPremium = isAdmin || (isNativeIOS ? isPremiumFromRC : isPremiumFromBackend);
+  // On iOS, also wait for backend to load (for admin check) before denying access
+  const isLoading = isNativeIOS ? (isRevenueCatLoading || isBackendLoading) : isBackendLoading;
   
   // CRITICAL: On iOS, offerings are only ready if user is logged in AND offerings loaded
   const isOfferingsReady = isNativeIOS ? (isUserLoggedIn && offeringsStatus === 'ready') : true;

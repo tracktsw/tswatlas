@@ -128,10 +128,13 @@ const PhotoDiaryPage = () => {
     []
   );
 
-  // On iOS: isPremium comes from RevenueCat (single source of truth)
-  // On Web: isPremium comes from backend (Stripe)
-  const isPremium = isNativeIOS ? isPremiumFromRC : isPremiumFromBackend;
-  const isSubscriptionLoading = isNativeIOS ? isRevenueCatLoading : isBackendLoading;
+  // Admin always gets premium access, regardless of platform
+  // On iOS: Check RevenueCat OR admin status
+  // On Web: Check backend (Stripe) OR admin status
+  const { isAdmin } = useSubscription();
+  const isPremium = isAdmin || (isNativeIOS ? isPremiumFromRC : isPremiumFromBackend);
+  // On iOS, also wait for backend to load (for admin check) before denying access
+  const isSubscriptionLoading = isNativeIOS ? (isRevenueCatLoading || isBackendLoading) : isBackendLoading;
   const isOfferingsReady = isNativeIOS ? offeringsStatus === 'ready' : true;
 
   const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | 'all'>('all');
