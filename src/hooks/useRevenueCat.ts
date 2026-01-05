@@ -163,6 +163,7 @@ export const useRevenueCat = () => {
 
   // Initialize RevenueCat - call ONLY after user login with their internal user ID
   // CRITICAL: Never allow anonymous IDs - always require explicit user ID
+  // CRITICAL: Each Supabase user ID = unique RevenueCat customer, NO aliasing allowed
   const initialize = useCallback(async (userId: string) => {
     if (!getIsNativeIOS()) {
       console.log('[RevenueCat] Skipping init - not iOS native');
@@ -181,13 +182,18 @@ export const useRevenueCat = () => {
       return;
     }
 
-    // If initialized with a different user, we need to logout first
-    if (isInitialized && boundUserIdRef.current && boundUserIdRef.current !== userId) {
-      console.log('[RevenueCat] Different user detected, logging out first...');
+    // If initialized with a different user, we need to FULLY reset first
+    if (isInitialized || boundUserIdRef.current) {
+      console.log('[RevenueCat] Previous user detected, performing FULL reset first...');
       try {
         const { Purchases } = await import('@revenuecat/purchases-capacitor');
         await Purchases.logOut();
-        // Clear state
+        try {
+          await Purchases.invalidateCustomerInfoCache();
+        } catch (e) {
+          // Cache invalidation is best-effort
+        }
+        // Clear all local state
         setIsPremiumFromRC(false);
         setCustomerInfo(null);
         setAppUserId(null);
@@ -195,12 +201,12 @@ export const useRevenueCat = () => {
         setBoundUserId(null);
         setIsInitialized(false);
       } catch (e) {
-        console.error('[RevenueCat] Error during logout:', e);
+        console.error('[RevenueCat] Error during reset:', e);
       }
     }
 
     try {
-      console.log('[RevenueCat] Initializing with user:', userId);
+      console.log('[RevenueCat] Initializing with NEW user:', userId);
       setOfferingsError(null);
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
 
@@ -212,27 +218,57 @@ export const useRevenueCat = () => {
       });
       console.log('[RevenueCat] Configured with API key and user ID:', userId);
 
-      // Store the bound user ID
+      // Store the bound user ID BEFORE fetching customer info
       boundUserIdRef.current = userId;
       setBoundUserId(userId);
       setIsInitialized(true);
       
-      // Fetch CustomerInfo to set initial premium status
-      await refreshCustomerInfo();
+      // Fetch CustomerInfo and VALIDATE it matches the expected user
+      const { Purchases: P } = await import('@revenuecat/purchases-capacitor');
+      const result = await P.getCustomerInfo();
+      const info = result?.customerInfo as CustomerInfo;
+      
+      console.log('[RevenueCat] CustomerInfo for user:', {
+        expectedUserId: userId,
+        actualOriginalAppUserId: info?.originalAppUserId,
+        activeEntitlements: Object.keys(info?.entitlements?.active || {}),
+      });
+      
+      // CRITICAL SECURITY: If originalAppUserId doesn't match, this user has NO premium
+      // This catches the case where RevenueCat aliased to a different customer
+      if (info?.originalAppUserId && info.originalAppUserId !== userId) {
+        console.warn('[RevenueCat] SECURITY: RevenueCat returned different originalAppUserId!', {
+          expected: userId,
+          actual: info.originalAppUserId,
+        });
+        // The subscription belongs to someone else - this user is NOT premium
+        setIsPremiumFromRC(false);
+        setCustomerInfo(null);
+      } else {
+        // User ID matches - check for premium normally
+        setCustomerInfo(info);
+        setLastCustomerInfoRefresh(new Date());
+        const isPremium = checkPremiumFromCustomerInfo(info, userId);
+        setIsPremiumFromRC(isPremium);
+      }
+      
+      // Get app user ID for debugging
+      const appUserIdResult = await P.getAppUserID();
+      setAppUserId(appUserIdResult?.appUserID || null);
 
-      // Fetch offerings on init
-      await fetchOfferings();
+      // Note: fetchOfferings will be called separately by the context after init
     } catch (error: any) {
       console.error('[RevenueCat] Initialization error:', error);
       setOfferingsStatus('error');
       setOfferingsError(error?.message ?? 'Failed to initialize purchases');
     }
-  }, [isInitialized, refreshCustomerInfo]);
+  }, [isInitialized, checkPremiumFromCustomerInfo]);
 
   // Logout from RevenueCat - MUST be called when user logs out
-  // CRITICAL: This clears premium status immediately and resets to anonymous state
+  // CRITICAL: This clears premium status immediately and FULLY resets RevenueCat identity
+  // This ensures a new account on the same device gets a FRESH RevenueCat customer, not an alias
   const logout = useCallback(async () => {
-    console.log('[RevenueCat] Logout called - clearing all subscription state');
+    console.log('[RevenueCat] Logout called - FULL RESET of all subscription state');
     
     // CRITICAL: Clear ALL local state FIRST before any async operations
     // This ensures premium access is revoked immediately, even if RevenueCat calls fail
@@ -256,9 +292,21 @@ export const useRevenueCat = () => {
     try {
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
       
-      // Log out from RevenueCat - this resets to anonymous user
+      // CRITICAL: Call logOut to fully reset RevenueCat identity
+      // This ensures the NEXT configure() call creates a FRESH customer, not an alias
+      // Without this, RevenueCat may alias the new user ID to the old customer
       await Purchases.logOut();
-      console.log('[RevenueCat] Logged out from RevenueCat successfully');
+      console.log('[RevenueCat] Logged out from RevenueCat - identity fully reset');
+      
+      // Double-check: invalidate customer info cache by getting fresh state
+      // This forces RevenueCat to not carry over any cached entitlements
+      try {
+        await Purchases.invalidateCustomerInfoCache();
+        console.log('[RevenueCat] Customer info cache invalidated');
+      } catch (cacheError) {
+        // Cache invalidation is best-effort
+        console.log('[RevenueCat] Cache invalidation skipped:', cacheError);
+      }
       
     } catch (error) {
       // Even on error, state is already cleared above

@@ -94,6 +94,8 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
         setCurrentUserId(session.user.id);
         setIsUserLoggedIn(true);
         await revenueCat.initialize(session.user.id);
+        // Fetch offerings after initialization
+        await revenueCat.fetchOfferings();
       } else {
         // CRITICAL: No user = no RevenueCat initialization
         // This prevents anonymous purchases
@@ -116,6 +118,8 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
         // Initialize RevenueCat with the new user's ID
         // This will fetch entitlements and set premium status based on THIS user's subscription
         await revenueCat.initialize(session.user.id);
+        // Fetch offerings after initialization
+        await revenueCat.fetchOfferings();
       } else if (event === 'SIGNED_OUT') {
         console.log('[RevenueCatProvider] User signed out - CLEARING ALL SUBSCRIPTION STATE');
         // CRITICAL: Clear local state FIRST
@@ -133,6 +137,7 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
           setCurrentUserId(session.user.id);
           setIsUserLoggedIn(true);
           await revenueCat.initialize(session.user.id);
+          await revenueCat.fetchOfferings();
         }
       }
     });
@@ -140,7 +145,7 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [revenueCat.initialize, revenueCat.logout]);
+  }, [revenueCat.initialize, revenueCat.logout, revenueCat.fetchOfferings]);
 
   const isNativeIOS = getIsNativeIOS();
 
