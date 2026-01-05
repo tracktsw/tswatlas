@@ -82,13 +82,15 @@ const SettingsPage = () => {
           return;
         }
         
+        // If prompt, still enable reminders so the "Enable Notifications" button becomes visible
+        // but don't schedule native notifications yet
         if (status.prompt) {
-          // Don't enable yet - user needs to tap "Enable Notifications" button
-          toast.info('Tap "Enable Notifications" below to allow push notifications first.');
+          await updateReminderSettings({ ...reminderSettings, enabled: true });
+          toast.info('Tap "Enable Notifications" below to receive push notifications.');
           return;
         }
         
-        // status.granted - proceed to enable
+        // status.granted - proceed to enable with notifications
       }
 
       await updateReminderSettings({ ...reminderSettings, enabled: true });
@@ -112,7 +114,15 @@ const SettingsPage = () => {
   const handleEnableNotifications = async () => {
     const granted = await requestPermission();
     if (granted) {
-      toast.success('Notifications enabled! You can now turn on reminders.');
+      // Schedule notifications now that permission is granted
+      if (reminderSettings.enabled) {
+        await scheduleCheckInReminders(
+          reminderSettings.morningTime,
+          reminderSettings.eveningTime,
+          true
+        );
+      }
+      toast.success('Notifications enabled!');
     } else if (permissionStatus.denied) {
       toast.error('Notifications denied. Please enable them in your device Settings.');
     }
