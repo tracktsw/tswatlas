@@ -4,7 +4,30 @@ import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const Dialog = DialogPrimitive.Root;
+// Custom Dialog wrapper that ensures body scroll is restored on iOS
+const Dialog = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>
+>(({ onOpenChange, ...props }, ref) => {
+  const handleOpenChange = React.useCallback((open: boolean) => {
+    onOpenChange?.(open);
+    
+    // Ensure body scroll is restored when dialog closes on iOS
+    if (!open) {
+      // Small delay to let Radix cleanup first
+      requestAnimationFrame(() => {
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.pointerEvents = '';
+      });
+    }
+  }, [onOpenChange]);
+
+  return <DialogPrimitive.Root onOpenChange={handleOpenChange} {...props} />;
+});
+Dialog.displayName = "Dialog";
 
 const DialogTrigger = DialogPrimitive.Trigger;
 
