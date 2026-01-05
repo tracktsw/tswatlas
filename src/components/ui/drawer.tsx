@@ -5,22 +5,31 @@ import { cn } from "@/lib/utils";
 
 // Custom Drawer wrapper that ensures body scroll is restored on iOS
 const Drawer = ({ shouldScaleBackground = true, onOpenChange, ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) => {
-  const handleOpenChange = React.useCallback((open: boolean) => {
-    onOpenChange?.(open);
-    
-    // Ensure body scroll is restored when drawer closes on iOS
-    if (!open) {
-      requestAnimationFrame(() => {
-        document.body.style.overflow = '';
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.width = '';
-        document.body.style.pointerEvents = '';
-      });
-    }
-  }, [onOpenChange]);
+  const handleOpenChange = React.useCallback(
+    (open: boolean) => {
+      onOpenChange?.(open);
 
-  return <DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} onOpenChange={handleOpenChange} {...props} />;
+      if (!open) {
+        (document.activeElement as HTMLElement | null)?.blur?.();
+        requestAnimationFrame(() => {
+          document.body.style.overflow = "";
+          document.body.style.position = "";
+          document.body.style.top = "";
+          document.body.style.width = "";
+          document.body.style.pointerEvents = "";
+        });
+      }
+    },
+    [onOpenChange],
+  );
+
+  return (
+    <DrawerPrimitive.Root
+      shouldScaleBackground={shouldScaleBackground}
+      onOpenChange={handleOpenChange}
+      {...props}
+    />
+  );
 };
 Drawer.displayName = "Drawer";
 
