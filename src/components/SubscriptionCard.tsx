@@ -22,7 +22,6 @@ const SubscriptionCard = () => {
     getPriceString,
     offeringsStatus,
     offeringsError,
-    isPremiumFromRC,
     isUserLoggedIn,
     boundUserId,
     getDebugInfo,
@@ -41,12 +40,9 @@ const SubscriptionCard = () => {
     []
   );
 
-  // Admin always gets premium access, regardless of platform
-  // On iOS: Check RevenueCat OR admin status
-  // On Web: Check backend (Stripe) OR admin status
-  const isPremium = isAdmin || (isNativeIOS ? isPremiumFromRC : isPremiumFromBackend);
-  // On iOS, also wait for backend to load (for admin check) before denying access
-  const isLoading = isNativeIOS ? (isRevenueCatLoading || isBackendLoading) : isBackendLoading;
+  // Premium is enforced by backend for ALL platforms.
+  const isPremium = isAdmin || isPremiumFromBackend;
+  const isLoading = isBackendLoading;
   
   // CRITICAL: On iOS, offerings are only ready if user is logged in AND offerings loaded
   const isOfferingsReady = isNativeIOS ? (isUserLoggedIn && offeringsStatus === 'ready') : true;
@@ -140,18 +136,21 @@ const SubscriptionCard = () => {
     
     try {
       const result = await restorePurchases();
-      
+
       if (result.isLinkedToOtherAccount) {
-        // CRITICAL: Subscription belongs to different account
         toast.error('This subscription is already linked to another account.');
         setStatusMessage('Linked to another account');
-      } else if (result.isPremiumNow) {
+        return;
+      }
+
+      // Always trust backend as the source of truth
+      const updated = await refreshSubscription();
+      if (updated.isPremium) {
         toast.success('Purchases restored!');
-        await refreshSubscription();
         setStatusMessage(null);
       } else {
-        toast.info('No previous purchases found');
-        setStatusMessage(null);
+        toast.error('This subscription is linked to another account.');
+        setStatusMessage('Linked to another account');
       }
     } catch (err: any) {
       console.error('[SubscriptionCard] Restore error:', err);

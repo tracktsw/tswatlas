@@ -29,7 +29,6 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
     getPriceString,
     offeringsStatus,
     offeringsError,
-    isPremiumFromRC,
     isUserLoggedIn,
     boundUserId,
     getDebugInfo,
@@ -47,12 +46,10 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
     []
   );
   
-  // Admin always gets premium access, regardless of platform
-  // On iOS: Check RevenueCat OR admin status
-  // On Web: Check backend (Stripe) OR admin status
-  const isPremium = isAdmin || (isNativeIOS ? isPremiumFromRC : isPremiumFromBackend);
-  // On iOS, also wait for backend to load (for admin check) before denying access
-  const isLoading = isNativeIOS ? (isRevenueCatLoading || isBackendLoading) : isBackendLoading;
+  // Premium is enforced by backend for ALL platforms.
+  // RevenueCat is used for purchasing/restoring only; the backend decides access.
+  const isPremium = isAdmin || isPremiumFromBackend;
+  const isLoading = isBackendLoading;
   
   // CRITICAL: On iOS, offerings are only ready if user is logged in AND offerings loaded
   const isOfferingsReady = isNativeIOS ? (isUserLoggedIn && offeringsStatus === 'ready') : true;
@@ -171,19 +168,21 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
     try {
       const result = await restorePurchases();
       console.log('[PaywallGuard] Restore result:', result);
-      
+
       if (result.isLinkedToOtherAccount) {
-        // CRITICAL: Subscription belongs to different account
         setStatusMessage('Subscription linked to another account');
         toast.error('This subscription is already linked to another account.');
-      } else if (result.isPremiumNow) {
+        return;
+      }
+
+      // Always trust backend as the source of truth
+      const updated = await refreshSubscription();
+      if (updated.isPremium) {
         setStatusMessage('Purchases restored!');
         toast.success('Purchases restored! Premium activated.');
-        // Also refresh backend
-        await refreshSubscription();
       } else {
-        setStatusMessage('No purchases found');
-        toast.info('No previous purchases found');
+        setStatusMessage('Subscription not available for this account');
+        toast.error('This subscription is linked to another account.');
       }
     } catch (err: any) {
       console.error('[PaywallGuard] Restore error:', err);
