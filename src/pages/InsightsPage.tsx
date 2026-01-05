@@ -61,7 +61,6 @@ const InsightsPage = () => {
     isLoading: isRevenueCatLoading,
     purchaseMonthly,
     restorePurchases,
-    isPremiumFromRC,
     offeringsStatus,
     offeringsError,
     getPriceString,
@@ -81,12 +80,9 @@ const InsightsPage = () => {
     []
   );
 
-  // Admin always gets premium access, regardless of platform
-  // On iOS: Check RevenueCat OR admin status
-  // On Web: Check backend (Stripe) OR admin status
-  const isPremium = isAdmin || (isNativeIOS ? isPremiumFromRC : isPremiumFromBackend);
-  // On iOS, also wait for backend to load (for admin check) before denying access
-  const isSubscriptionLoading = isNativeIOS ? (isRevenueCatLoading || isBackendLoading) : isBackendLoading;
+  // Premium is enforced by backend for ALL platforms.
+  const isPremium = isAdmin || isPremiumFromBackend;
+  const isSubscriptionLoading = isBackendLoading;
   const isOfferingsReady = isNativeIOS ? offeringsStatus === 'ready' : true;
 
   const handleUpgrade = async () => {
@@ -140,12 +136,12 @@ const InsightsPage = () => {
     setIsRestoring(true);
     
     try {
-      const result = await restorePurchases();
-      if (result.isPremiumNow) {
+      await restorePurchases();
+      const updated = await refreshSubscription();
+      if (updated.isPremium) {
         toast.success('Purchases restored! Premium activated.');
-        await refreshSubscription();
       } else {
-        toast.info('No previous purchases found');
+        toast.error('This subscription is linked to another account.');
       }
     } catch (err: any) {
       toast.error('Failed to restore purchases');

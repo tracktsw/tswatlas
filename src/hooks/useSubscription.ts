@@ -18,18 +18,19 @@ export const useSubscription = () => {
     error: null,
   });
 
-  const checkSubscription = useCallback(async () => {
+  const checkSubscription = useCallback(async (): Promise<SubscriptionState> => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        setState({
+        const next: SubscriptionState = {
           isPremium: false,
           isAdmin: false,
           isLoading: false,
           subscriptionEnd: null,
           error: null,
-        });
-        return;
+        };
+        setState(next);
+        return next;
       }
 
       const { data, error } = await supabase.functions.invoke('check-subscription', {
@@ -39,36 +40,49 @@ export const useSubscription = () => {
       });
 
       if (error) {
-        setState(prev => ({
-          ...prev,
+        const next: SubscriptionState = {
+          isPremium: false,
+          isAdmin: false,
           isLoading: false,
+          subscriptionEnd: null,
           error: error.message,
-        }));
-        return;
+        };
+        setState(next);
+        return next;
       }
 
       if (data?.error) {
-        setState(prev => ({
-          ...prev,
+        const next: SubscriptionState = {
+          isPremium: false,
+          isAdmin: false,
           isLoading: false,
+          subscriptionEnd: null,
           error: data.error,
-        }));
-        return;
+        };
+        setState(next);
+        return next;
       }
 
-      setState({
-        isPremium: data.subscribed || data.isAdmin,
-        isAdmin: data.isAdmin || false,
+      const next: SubscriptionState = {
+        isPremium: Boolean(data.subscribed || data.isAdmin),
+        isAdmin: Boolean(data.isAdmin),
         isLoading: false,
         subscriptionEnd: data.subscription_end || null,
         error: null,
-      });
+      };
+
+      setState(next);
+      return next;
     } catch {
-      setState(prev => ({
-        ...prev,
+      const next: SubscriptionState = {
+        isPremium: false,
+        isAdmin: false,
         isLoading: false,
+        subscriptionEnd: null,
         error: 'Failed to check subscription status',
-      }));
+      };
+      setState(next);
+      return next;
     }
   }, []);
 
@@ -101,9 +115,9 @@ export const useSubscription = () => {
     };
   }, [checkSubscription]);
 
-  const refreshSubscription = useCallback(() => {
+  const refreshSubscription = useCallback(async () => {
     setState(prev => ({ ...prev, isLoading: true }));
-    checkSubscription();
+    return checkSubscription();
   }, [checkSubscription]);
 
   return {
