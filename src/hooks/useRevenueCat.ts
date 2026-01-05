@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 
 // RevenueCat types (since we import dynamically)
@@ -65,6 +65,8 @@ export interface RevenueCatState {
   customerInfo: CustomerInfo | null;
   appUserId: string | null;
   lastCustomerInfoRefresh: Date | null;
+  // The internal user ID we initialized with - MUST match for premium access
+  boundUserId: string | null;
 }
 
 export const useRevenueCat = () => {
@@ -80,10 +82,28 @@ export const useRevenueCat = () => {
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [appUserId, setAppUserId] = useState<string | null>(null);
   const [lastCustomerInfoRefresh, setLastCustomerInfoRefresh] = useState<Date | null>(null);
+  
+  // CRITICAL: Track the internal user ID we bound to RevenueCat
+  // Premium access is ONLY valid when this matches the current logged-in user
+  const boundUserIdRef = useRef<string | null>(null);
+  const [boundUserId, setBoundUserId] = useState<string | null>(null);
 
   // Helper to check premium from CustomerInfo
-  const checkPremiumFromCustomerInfo = useCallback((info: CustomerInfo | null): boolean => {
+  // CRITICAL: Also validates that the subscription belongs to the bound user
+  const checkPremiumFromCustomerInfo = useCallback((info: CustomerInfo | null, expectedUserId?: string): boolean => {
     if (!info) return false;
+    
+    // SECURITY: Verify the originalAppUserId matches the user we initialized with
+    const originalAppUserId = info.originalAppUserId;
+    const userIdToCheck = expectedUserId || boundUserIdRef.current;
+    
+    if (userIdToCheck && originalAppUserId && originalAppUserId !== userIdToCheck) {
+      console.warn('[RevenueCat] SECURITY: Subscription belongs to different user!', {
+        expectedUserId: userIdToCheck,
+        originalAppUserId,
+      });
+      return false;
+    }
     
     // Check if the premium entitlement exists in active entitlements
     const premiumEntitlement = info.entitlements?.active?.[PREMIUM_ENTITLEMENT_ID];
@@ -94,6 +114,8 @@ export const useRevenueCat = () => {
       hasEntitlement: !!premiumEntitlement,
       isActive,
       allActiveEntitlements: Object.keys(info.entitlements?.active || {}),
+      boundUserId: userIdToCheck,
+      originalAppUserId,
     });
     
     return isActive;
@@ -115,7 +137,7 @@ export const useRevenueCat = () => {
       setCustomerInfo(info);
       setLastCustomerInfoRefresh(new Date());
       
-      // Update premium status
+      // Update premium status (with user validation)
       const isPremium = checkPremiumFromCustomerInfo(info);
       setIsPremiumFromRC(isPremium);
       
@@ -126,6 +148,7 @@ export const useRevenueCat = () => {
       console.log('[RevenueCat] State updated:', {
         isPremium,
         appUserId: appUserIdResult?.appUserID,
+        boundUserId: boundUserIdRef.current,
         refreshTime: new Date().toISOString(),
       });
       
@@ -136,17 +159,42 @@ export const useRevenueCat = () => {
     }
   }, [checkPremiumFromCustomerInfo]);
 
-  // Initialize RevenueCat - call after user login
+  // Initialize RevenueCat - call ONLY after user login with their internal user ID
+  // CRITICAL: Never allow anonymous IDs - always require explicit user ID
   const initialize = useCallback(async (userId: string) => {
     if (!getIsNativeIOS()) {
       console.log('[RevenueCat] Skipping init - not iOS native');
       return;
     }
 
-    if (isInitialized) {
-      console.log('[RevenueCat] Already initialized, refreshing CustomerInfo...');
+    if (!userId) {
+      console.error('[RevenueCat] SECURITY: Cannot initialize without user ID!');
+      return;
+    }
+
+    // If already initialized with the same user, just refresh
+    if (isInitialized && boundUserIdRef.current === userId) {
+      console.log('[RevenueCat] Already initialized with same user, refreshing CustomerInfo...');
       await refreshCustomerInfo();
       return;
+    }
+
+    // If initialized with a different user, we need to logout first
+    if (isInitialized && boundUserIdRef.current && boundUserIdRef.current !== userId) {
+      console.log('[RevenueCat] Different user detected, logging out first...');
+      try {
+        const { Purchases } = await import('@revenuecat/purchases-capacitor');
+        await Purchases.logOut();
+        // Clear state
+        setIsPremiumFromRC(false);
+        setCustomerInfo(null);
+        setAppUserId(null);
+        boundUserIdRef.current = null;
+        setBoundUserId(null);
+        setIsInitialized(false);
+      } catch (e) {
+        console.error('[RevenueCat] Error during logout:', e);
+      }
     }
 
     try {
@@ -157,14 +205,17 @@ export const useRevenueCat = () => {
       await Purchases.configure({ apiKey: REVENUECAT_IOS_KEY });
       console.log('[RevenueCat] Configured with API key');
 
-      // Log in with user ID for cross-platform tracking
-      // This ensures the same user ID is used across sessions
+      // Log in with user ID - this BINDS the subscription to this account
+      // CRITICAL: This creates a permanent association between this user ID and any purchases
       const loginResult = await Purchases.logIn({ appUserID: userId });
       console.log('[RevenueCat] Logged in:', {
         userId,
         created: loginResult?.created,
       });
 
+      // Store the bound user ID
+      boundUserIdRef.current = userId;
+      setBoundUserId(userId);
       setIsInitialized(true);
       
       // Fetch CustomerInfo to set initial premium status
@@ -178,6 +229,38 @@ export const useRevenueCat = () => {
       setOfferingsError(error?.message ?? 'Failed to initialize purchases');
     }
   }, [isInitialized, refreshCustomerInfo]);
+
+  // Logout from RevenueCat - MUST be called when user logs out
+  // CRITICAL: This clears premium status immediately
+  const logout = useCallback(async () => {
+    if (!getIsNativeIOS()) return;
+
+    try {
+      console.log('[RevenueCat] Logging out...');
+      const { Purchases } = await import('@revenuecat/purchases-capacitor');
+      
+      await Purchases.logOut();
+      
+      // CRITICAL: Clear all premium state immediately
+      setIsPremiumFromRC(false);
+      setCustomerInfo(null);
+      setAppUserId(null);
+      boundUserIdRef.current = null;
+      setBoundUserId(null);
+      setIsInitialized(false);
+      setLastCustomerInfoRefresh(null);
+      
+      console.log('[RevenueCat] Logged out successfully, premium access revoked');
+    } catch (error) {
+      console.error('[RevenueCat] Logout error:', error);
+      // Even on error, clear local state for security
+      setIsPremiumFromRC(false);
+      setCustomerInfo(null);
+      boundUserIdRef.current = null;
+      setBoundUserId(null);
+      setIsInitialized(false);
+    }
+  }, []);
 
   // Fetch offerings
   const fetchOfferings = useCallback(async () => {
@@ -235,6 +318,7 @@ export const useRevenueCat = () => {
   }, []);
 
   // Purchase monthly package
+  // CRITICAL: Requires user to be logged in first
   const purchaseMonthly = useCallback(async (): Promise<{ 
     success: boolean; 
     error?: string; 
@@ -244,6 +328,12 @@ export const useRevenueCat = () => {
     if (!getIsNativeIOS()) {
       console.log('[RevenueCat] Purchase skipped - not iOS native');
       return { success: false, error: 'Not iOS native', isPremiumNow: false };
+    }
+
+    // SECURITY: Must be logged in to purchase
+    if (!boundUserIdRef.current) {
+      console.error('[RevenueCat] SECURITY: Cannot purchase without being logged in!');
+      return { success: false, error: 'Please sign in first', isPremiumNow: false };
     }
 
     setIsLoading(true);
@@ -293,13 +383,14 @@ export const useRevenueCat = () => {
       setCustomerInfo(resultCustomerInfo);
       setLastCustomerInfoRefresh(new Date());
       
-      // Check premium status from returned CustomerInfo
-      const isPremiumNow = checkPremiumFromCustomerInfo(resultCustomerInfo);
+      // Check premium status from returned CustomerInfo (with user validation)
+      const isPremiumNow = checkPremiumFromCustomerInfo(resultCustomerInfo, boundUserIdRef.current || undefined);
       setIsPremiumFromRC(isPremiumNow);
       
       console.log('[RevenueCat] Post-purchase state:', {
         isPremiumNow,
         activeEntitlements: Object.keys(resultCustomerInfo?.entitlements?.active || {}),
+        boundUserId: boundUserIdRef.current,
       });
       
       // Force sync with RevenueCat servers (belt and suspenders)
@@ -341,15 +432,27 @@ export const useRevenueCat = () => {
   }, [checkPremiumFromCustomerInfo]);
 
   // Restore purchases
-  const restorePurchases = useCallback(async (): Promise<{ success: boolean; isPremiumNow: boolean; error?: string }> => {
+  // CRITICAL: Validates that restored subscription belongs to current user
+  const restorePurchases = useCallback(async (): Promise<{ 
+    success: boolean; 
+    isPremiumNow: boolean; 
+    error?: string;
+    isLinkedToOtherAccount?: boolean;
+  }> => {
     if (!getIsNativeIOS()) {
       console.log('[RevenueCat] Restore skipped - not iOS native');
       return { success: false, isPremiumNow: false, error: 'Not iOS native' };
     }
 
+    // SECURITY: Must be logged in to restore
+    if (!boundUserIdRef.current) {
+      console.error('[RevenueCat] SECURITY: Cannot restore without being logged in!');
+      return { success: false, isPremiumNow: false, error: 'Please sign in first' };
+    }
+
     setIsLoading(true);
     try {
-      console.log('[RevenueCat] Restoring purchases...');
+      console.log('[RevenueCat] Restoring purchases for user:', boundUserIdRef.current);
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
       
       const result = await Purchases.restorePurchases();
@@ -357,17 +460,37 @@ export const useRevenueCat = () => {
       
       console.log('[RevenueCat] Restore result:', JSON.stringify(restoredCustomerInfo, null, 2));
       
+      // CRITICAL SECURITY CHECK: Verify the restored subscription belongs to this user
+      const originalAppUserId = restoredCustomerInfo?.originalAppUserId;
+      const currentUserId = boundUserIdRef.current;
+      
+      if (originalAppUserId && originalAppUserId !== currentUserId) {
+        console.warn('[RevenueCat] SECURITY: Restored subscription belongs to different account!', {
+          currentUserId,
+          originalAppUserId,
+        });
+        setIsLoading(false);
+        return { 
+          success: false, 
+          isPremiumNow: false, 
+          error: 'This subscription is already linked to another account.',
+          isLinkedToOtherAccount: true,
+        };
+      }
+      
       // Update state with restored CustomerInfo
       setCustomerInfo(restoredCustomerInfo);
       setLastCustomerInfoRefresh(new Date());
       
-      // Check premium status
-      const isPremiumNow = checkPremiumFromCustomerInfo(restoredCustomerInfo);
+      // Check premium status (with user ID validation)
+      const isPremiumNow = checkPremiumFromCustomerInfo(restoredCustomerInfo, currentUserId);
       setIsPremiumFromRC(isPremiumNow);
       
       console.log('[RevenueCat] Post-restore state:', {
         isPremiumNow,
         activeEntitlements: Object.keys(restoredCustomerInfo?.entitlements?.active || {}),
+        originalAppUserId,
+        currentUserId,
       });
       
       setIsLoading(false);
@@ -398,6 +521,8 @@ export const useRevenueCat = () => {
     packagesCount: currentOffering?.availablePackages?.length ?? 0,
     isPremiumFromRC,
     appUserId,
+    boundUserId: boundUserIdRef.current,
+    originalAppUserId: customerInfo?.originalAppUserId,
     lastCustomerInfoRefresh: lastCustomerInfoRefresh?.toISOString() ?? null,
     activeEntitlements: Object.keys(customerInfo?.entitlements?.active || {}),
     premiumEntitlementId: PREMIUM_ENTITLEMENT_ID,
@@ -414,8 +539,10 @@ export const useRevenueCat = () => {
     isPremiumFromRC,
     customerInfo,
     appUserId,
+    boundUserId,
     lastCustomerInfoRefresh,
     initialize,
+    logout,
     fetchOfferings,
     purchaseMonthly,
     restorePurchases,

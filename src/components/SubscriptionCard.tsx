@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Crown, Loader2, RefreshCw, RotateCcw, Bug } from 'lucide-react';
+import { Crown, Loader2, RefreshCw, RotateCcw, Bug, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
@@ -7,11 +7,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import { Capacitor } from '@capacitor/core';
+import { useNavigate } from 'react-router-dom';
 
 // STRIPE IS COMPLETELY DISABLED ON iOS - This link is ONLY for web
 const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
 
 const SubscriptionCard = () => {
+  const navigate = useNavigate();
   const { isPremium: isPremiumFromBackend, isAdmin, isLoading: isBackendLoading, subscriptionEnd, refreshSubscription } = useSubscription();
   const {
     isLoading: isRevenueCatLoading,
@@ -21,6 +23,8 @@ const SubscriptionCard = () => {
     offeringsStatus,
     offeringsError,
     isPremiumFromRC,
+    isUserLoggedIn,
+    boundUserId,
     getDebugInfo,
     retryInitialization,
   } = useRevenueCatContext();
@@ -42,7 +46,8 @@ const SubscriptionCard = () => {
   const isPremium = isNativeIOS ? isPremiumFromRC : isPremiumFromBackend;
   const isLoading = isNativeIOS ? isRevenueCatLoading : isBackendLoading;
   
-  const isOfferingsReady = isNativeIOS ? offeringsStatus === 'ready' : true;
+  // CRITICAL: On iOS, offerings are only ready if user is logged in AND offerings loaded
+  const isOfferingsReady = isNativeIOS ? (isUserLoggedIn && offeringsStatus === 'ready') : true;
 
   const handleUpgrade = async () => {
     if (isCheckoutLoading) return;
@@ -54,6 +59,13 @@ const SubscriptionCard = () => {
 
     // iOS NATIVE PATH - STRIPE IS COMPLETELY BLOCKED
     if (isNativeIOS) {
+      // CRITICAL: Must be logged in to purchase
+      if (!isUserLoggedIn) {
+        toast.error('Please sign in to subscribe');
+        navigate('/auth');
+        return;
+      }
+
       if (!isOfferingsReady) {
         const msg = offeringsError || 'Loading subscription options…';
         setStatusMessage(msg);
@@ -97,6 +109,7 @@ const SubscriptionCard = () => {
       
       if (!session?.user?.email) {
         toast.error('Please sign in to subscribe');
+        navigate('/auth');
         setIsCheckoutLoading(false);
         return;
       }
@@ -113,19 +126,31 @@ const SubscriptionCard = () => {
   const handleRestore = async () => {
     if (isRestoring || !isNativeIOS) return;
     
+    // CRITICAL: Must be logged in to restore
+    if (!isUserLoggedIn) {
+      toast.error('Please sign in to restore purchases');
+      navigate('/auth');
+      return;
+    }
+    
     setIsRestoring(true);
     setStatusMessage('Restoring…');
     
     try {
       const result = await restorePurchases();
       
-      if (result.isPremiumNow) {
+      if (result.isLinkedToOtherAccount) {
+        // CRITICAL: Subscription belongs to different account
+        toast.error('This subscription is already linked to another account.');
+        setStatusMessage('Linked to another account');
+      } else if (result.isPremiumNow) {
         toast.success('Purchases restored!');
         await refreshSubscription();
+        setStatusMessage(null);
       } else {
         toast.info('No previous purchases found');
+        setStatusMessage(null);
       }
-      setStatusMessage(null);
     } catch (err: any) {
       console.error('[SubscriptionCard] Restore error:', err);
       toast.error('Failed to restore purchases');
@@ -136,6 +161,11 @@ const SubscriptionCard = () => {
   };
 
   const handleRetryOfferings = async () => {
+    if (!isUserLoggedIn) {
+      toast.error('Please sign in first');
+      navigate('/auth');
+      return;
+    }
     setStatusMessage('Retrying…');
     await retryInitialization();
     setStatusMessage(null);
@@ -303,38 +333,53 @@ const SubscriptionCard = () => {
             Unlock Photo Diary, full Insights, Community, Journal, and AI Coach.
           </p>
           
-          {/* Subscribe button */}
-          <Button 
-            size="sm" 
-            variant="gold"
-            className="mt-3 gap-2"
-            onClick={handleUpgrade}
-            disabled={isSubscribeDisabled}
-          >
-            {isButtonLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Processing…
-              </>
-            ) : isNativeIOS && !isOfferingsReady ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Loading…
-              </>
-            ) : (
-              <>
-                <Crown className="w-4 h-4" />
-                Start 14-day free trial
-              </>
-            )}
-          </Button>
-          
-          <p className="text-xs text-muted-foreground mt-2">
-            {priceString}/month after · Cancel anytime
-          </p>
+          {/* CRITICAL: Show sign in button if not logged in on iOS */}
+          {isNativeIOS && !isUserLoggedIn ? (
+            <Button 
+              size="sm" 
+              variant="gold"
+              className="mt-3 gap-2"
+              onClick={() => navigate('/auth')}
+            >
+              <LogIn className="w-4 h-4" />
+              Sign in to Subscribe
+            </Button>
+          ) : (
+            <>
+              {/* Subscribe button */}
+              <Button 
+                size="sm" 
+                variant="gold"
+                className="mt-3 gap-2"
+                onClick={handleUpgrade}
+                disabled={isSubscribeDisabled}
+              >
+                {isButtonLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Processing…
+                  </>
+                ) : isNativeIOS && !isOfferingsReady ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading…
+                  </>
+                ) : (
+                  <>
+                    <Crown className="w-4 h-4" />
+                    Start 14-day free trial
+                  </>
+                )}
+              </Button>
+              
+              <p className="text-xs text-muted-foreground mt-2">
+                {priceString}/month after · Cancel anytime
+              </p>
+            </>
+          )}
 
           {/* iOS: Retry if offerings failed */}
-          {isNativeIOS && offeringsStatus === 'error' && (
+          {isNativeIOS && isUserLoggedIn && offeringsStatus === 'error' && (
             <Button
               variant="outline"
               size="sm"
@@ -351,8 +396,8 @@ const SubscriptionCard = () => {
             <p className="text-xs text-muted-foreground mt-2">{statusMessage}</p>
           )}
 
-          {/* iOS: Restore purchases */}
-          {isNativeIOS && (
+          {/* iOS: Restore purchases - only if logged in */}
+          {isNativeIOS && isUserLoggedIn && (
             <Button
               variant="ghost"
               size="sm"
