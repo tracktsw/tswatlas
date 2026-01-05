@@ -52,17 +52,29 @@ const checkRevenueCat = async (userId: string): Promise<{ subscribed: boolean; s
     }
 
     const data = await response.json();
-    
+
+    // SECURITY: Enforce 1:1 mapping between app account (userId) and subscription owner.
+    // RevenueCat may return entitlements for aliased users (e.g. same device/Apple ID). We only
+    // grant access when the subscriber's original_app_user_id matches the authenticated user.
+    const originalAppUserId = data?.subscriber?.original_app_user_id as string | undefined;
+    if (originalAppUserId && originalAppUserId !== userId) {
+      logStep("SECURITY: RevenueCat subscription belongs to different user", {
+        userId,
+        originalAppUserId,
+      });
+      return { subscribed: false, subscription_end: null };
+    }
+
     // Log full subscriber object for debugging
-    logStep("Full RevenueCat subscriber data", { 
-      subscriber: JSON.stringify(data.subscriber, null, 2)
+    logStep("Full RevenueCat subscriber data", {
+      subscriber: JSON.stringify(data.subscriber, null, 2),
     });
-    
-    logStep("RevenueCat response received", { 
+
+    logStep("RevenueCat response received", {
       hasSubscriber: !!data.subscriber,
       entitlements: Object.keys(data.subscriber?.entitlements || {}),
       subscriptions: Object.keys(data.subscriber?.subscriptions || {}),
-      nonSubscriptions: Object.keys(data.subscriber?.non_subscriptions || {})
+      nonSubscriptions: Object.keys(data.subscriber?.non_subscriptions || {}),
     });
 
     // Check for "premium" entitlement (case-sensitive check)
