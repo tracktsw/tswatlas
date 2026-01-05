@@ -57,6 +57,17 @@ const checkRevenueCat = async (userId: string): Promise<{ subscribed: boolean; s
     // RevenueCat may return entitlements for aliased users (e.g. same device/Apple ID). We only
     // grant access when the subscriber's original_app_user_id matches the authenticated user.
     const originalAppUserId = data?.subscriber?.original_app_user_id as string | undefined;
+    
+    // CRITICAL: Reject subscriptions linked to anonymous RevenueCat IDs
+    // These are legacy purchases made before we enforced user binding at configure() time
+    if (originalAppUserId?.startsWith('$RCAnonymousID:')) {
+      logStep("SECURITY: Subscription linked to anonymous RevenueCat ID - not valid for any account", {
+        userId,
+        originalAppUserId,
+      });
+      return { subscribed: false, subscription_end: null };
+    }
+    
     if (originalAppUserId && originalAppUserId !== userId) {
       logStep("SECURITY: RevenueCat subscription belongs to different user", {
         userId,

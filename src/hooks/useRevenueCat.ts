@@ -204,16 +204,13 @@ export const useRevenueCat = () => {
       setOfferingsError(null);
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
 
-      await Purchases.configure({ apiKey: REVENUECAT_IOS_KEY });
-      console.log('[RevenueCat] Configured with API key');
-
-      // Log in with user ID - this BINDS the subscription to this account
-      // CRITICAL: This creates a permanent association between this user ID and any purchases
-      const loginResult = await Purchases.logIn({ appUserID: userId });
-      console.log('[RevenueCat] Logged in:', {
-        userId,
-        created: loginResult?.created,
+      // CRITICAL: Pass appUserID directly in configure() to prevent ANY anonymous ID creation
+      // This ensures the subscription is ALWAYS bound to the authenticated user from the start
+      await Purchases.configure({ 
+        apiKey: REVENUECAT_IOS_KEY,
+        appUserID: userId 
       });
+      console.log('[RevenueCat] Configured with API key and user ID:', userId);
 
       // Store the bound user ID
       boundUserIdRef.current = userId;
