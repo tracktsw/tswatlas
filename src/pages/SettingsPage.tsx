@@ -428,44 +428,18 @@ const SettingsPage = () => {
         </div>
       )}
 
-      {/* App Updates */}
-      <div className="glass-card p-4 space-y-4">
+      {/* App Version */}
+      <div className="glass-card p-4">
         <div className="flex items-start gap-3">
           <div className="p-2 rounded-full bg-primary/10">
             <RefreshCw className="w-5 h-5 text-primary" />
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-foreground">App Updates</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Current version: <span className="font-mono">{currentVersion}</span>
+            <h3 className="font-semibold text-foreground">Version</h3>
+            <p className="text-sm text-muted-foreground mt-1 font-mono">
+              {currentVersion}
             </p>
           </div>
-        </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleCheckForUpdates}
-            disabled={isChecking}
-            className="flex-1"
-          >
-            {isChecking ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Checking...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Check for Updates
-              </>
-            )}
-          </Button>
-          {updateAvailable && (
-            <Button size="sm" onClick={performUpdate} className="flex-1">
-              Update Now
-            </Button>
-          )}
         </div>
       </div>
 
