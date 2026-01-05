@@ -32,7 +32,7 @@ const SubscriptionCard = () => {
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [showDebug, setShowDebug] = useState(false);
+  
 
   // CRITICAL: Runtime platform check
   const isNativeIOS = useMemo(
@@ -215,18 +215,6 @@ const SubscriptionCard = () => {
     }
   };
 
-  // Debug panel
-  const debugPanel = isNativeIOS && showDebug && (
-    <div className="mt-3 p-3 bg-muted/50 rounded-lg text-left text-xs font-mono space-y-1">
-      <div className="font-bold text-foreground mb-2">RevenueCat Debug</div>
-      {Object.entries(getDebugInfo()).map(([key, value]) => (
-        <div key={key} className="flex justify-between gap-2">
-          <span className="text-muted-foreground truncate">{key}:</span>
-          <span className="text-foreground truncate">{String(value)}</span>
-        </div>
-      ))}
-    </div>
-  );
 
   if (isLoading) {
     return (
@@ -282,12 +270,6 @@ const SubscriptionCard = () => {
                 )}
               </Button>
             )}
-            {/* iOS users: Manage via App Store */}
-            {!isAdmin && isNativeIOS && (
-              <p className="text-xs text-muted-foreground mt-3">
-                Manage your subscription in the App Store
-              </p>
-            )}
           </div>
           <button 
             onClick={refreshSubscription}
@@ -298,21 +280,6 @@ const SubscriptionCard = () => {
           </button>
         </div>
 
-        {/* Debug toggle for premium users */}
-        {isNativeIOS && (
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-2 gap-1 text-muted-foreground text-xs"
-              onClick={() => setShowDebug(!showDebug)}
-            >
-              <Bug className="w-3 h-3" />
-              {showDebug ? 'Hide' : 'Show'} Debug
-            </Button>
-            {debugPanel}
-          </>
-        )}
       </div>
     );
   }
@@ -420,20 +387,6 @@ const SubscriptionCard = () => {
             </Button>
           )}
 
-          {/* Debug toggle */}
-          {isNativeIOS && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-1 gap-1 text-muted-foreground text-xs"
-              onClick={() => setShowDebug(!showDebug)}
-            >
-              <Bug className="w-3 h-3" />
-              {showDebug ? 'Hide' : 'Show'} Debug
-            </Button>
-          )}
-
-          {debugPanel}
         </div>
       </div>
     </div>
