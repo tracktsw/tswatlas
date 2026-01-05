@@ -12,10 +12,13 @@ interface RevenueCatContextType {
   // Single source of truth for premium on iOS
   isPremiumFromRC: boolean;
   appUserId: string | null;
+  boundUserId: string | null;
   lastCustomerInfoRefresh: Date | null;
+  // Whether user is logged in (required for purchases)
+  isUserLoggedIn: boolean;
   fetchOfferings: () => Promise<any>;
   purchaseMonthly: () => Promise<{ success: boolean; error?: string; errorCode?: number; isPremiumNow?: boolean }>;
-  restorePurchases: () => Promise<{ success: boolean; isPremiumNow: boolean; error?: string }>;
+  restorePurchases: () => Promise<{ success: boolean; isPremiumNow: boolean; error?: string; isLinkedToOtherAccount?: boolean }>;
   refreshCustomerInfo: () => Promise<boolean>;
   getPriceString: () => string;
   getDebugInfo: () => Record<string, unknown>;
@@ -37,10 +40,12 @@ export const useRevenueCatContext = () => {
       offeringsError: null,
       isPremiumFromRC: false,
       appUserId: null,
+      boundUserId: null,
       lastCustomerInfoRefresh: null,
+      isUserLoggedIn: false,
       fetchOfferings: async () => null,
       purchaseMonthly: async () => ({ success: false, error: 'Not initialized', errorCode: undefined, isPremiumNow: false }),
-      restorePurchases: async () => ({ success: false, isPremiumNow: false, error: 'Not initialized' }),
+      restorePurchases: async () => ({ success: false, isPremiumNow: false, error: 'Not initialized', isLinkedToOtherAccount: false }),
       refreshCustomerInfo: async () => false,
       getPriceString: () => '£5.99',
       getDebugInfo: () => ({ initialized: false }),
@@ -57,6 +62,7 @@ interface RevenueCatProviderProps {
 export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
   const revenueCat = useRevenueCat();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
 
   // Retry initialization - useful if initial load failed
   const retryInitialization = useCallback(async () => {
@@ -68,12 +74,13 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
     if (session?.user?.id) {
       await revenueCat.initialize(session.user.id);
     } else {
-      // No user - just fetch offerings for display
-      await revenueCat.fetchOfferings();
+      // CRITICAL: Do NOT fetch offerings without a user - this prevents anonymous purchases
+      console.log('[RevenueCatProvider] No user session, cannot initialize');
     }
   }, [revenueCat]);
 
-  // Initialize RevenueCat when user is authenticated (iOS only)
+  // Initialize RevenueCat ONLY when user is authenticated (iOS only)
+  // CRITICAL: Never initialize without a logged-in user
   useEffect(() => {
     if (!getIsNativeIOS()) {
       console.log('[RevenueCatProvider] Not iOS native, skipping initialization');
@@ -85,33 +92,48 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
       if (session?.user?.id) {
         console.log('[RevenueCatProvider] Initializing with user:', session.user.id);
         setCurrentUserId(session.user.id);
+        setIsUserLoggedIn(true);
         await revenueCat.initialize(session.user.id);
       } else {
-        // Still attempt to fetch offerings so the UI can show a clear status
-        console.log('[RevenueCatProvider] No user session yet; fetching offerings only');
-        await revenueCat.fetchOfferings();
+        // CRITICAL: No user = no RevenueCat initialization
+        // This prevents anonymous purchases
+        console.log('[RevenueCatProvider] No user session, RevenueCat not initialized');
+        setCurrentUserId(null);
+        setIsUserLoggedIn(false);
       }
     };
 
     initializeWithUser();
 
-    // Re-initialize on auth state changes
+    // Handle auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[RevenueCatProvider] Auth state change:', event);
+      
       if (event === 'SIGNED_IN' && session?.user?.id) {
         console.log('[RevenueCatProvider] User signed in, initializing RevenueCat');
         setCurrentUserId(session.user.id);
+        setIsUserLoggedIn(true);
         await revenueCat.initialize(session.user.id);
       } else if (event === 'SIGNED_OUT') {
-        console.log('[RevenueCatProvider] User signed out');
+        console.log('[RevenueCatProvider] User signed out, logging out of RevenueCat');
         setCurrentUserId(null);
-        // Note: RevenueCat SDK handles logout internally
+        setIsUserLoggedIn(false);
+        // CRITICAL: Logout from RevenueCat to clear premium status
+        await revenueCat.logout();
+      } else if (event === 'TOKEN_REFRESHED' && session?.user?.id) {
+        // Token refresh - just ensure we're still initialized with the same user
+        if (currentUserId !== session.user.id) {
+          console.log('[RevenueCatProvider] User ID changed on token refresh, re-initializing');
+          setCurrentUserId(session.user.id);
+          await revenueCat.initialize(session.user.id);
+        }
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [revenueCat.initialize, revenueCat.fetchOfferings]);
+  }, [revenueCat.initialize, revenueCat.logout]);
 
   const isNativeIOS = getIsNativeIOS();
 
@@ -124,7 +146,9 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
     offeringsError: revenueCat.offeringsError,
     isPremiumFromRC: revenueCat.isPremiumFromRC,
     appUserId: revenueCat.appUserId,
+    boundUserId: revenueCat.boundUserId,
     lastCustomerInfoRefresh: revenueCat.lastCustomerInfoRefresh,
+    isUserLoggedIn,
     fetchOfferings: revenueCat.fetchOfferings,
     purchaseMonthly: revenueCat.purchaseMonthly,
     restorePurchases: revenueCat.restorePurchases,
