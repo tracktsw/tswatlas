@@ -2,7 +2,7 @@ import { ReactNode, useMemo, useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
-import { Lock, Sparkles, Crown, Loader2, RotateCcw, RefreshCw, Bug, LogIn } from 'lucide-react';
+import { Lock, Sparkles, Crown, Loader2, RotateCcw, RefreshCw, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -31,14 +31,12 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
     offeringsError,
     isUserLoggedIn,
     boundUserId,
-    getDebugInfo,
     retryInitialization,
   } = useRevenueCatContext();
   
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [showDebug, setShowDebug] = useState(false);
 
   // CRITICAL: Check platform at runtime
   const isNativeIOS = useMemo(
@@ -66,9 +64,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   const handleUpgrade = async () => {
     if (isUpgrading) return;
 
-    const debugInfo = getDebugInfo();
-    console.log('[PaywallGuard] handleUpgrade called:', debugInfo);
-
+    console.log('[PaywallGuard] handleUpgrade called');
     setStatusMessage(null);
 
     // iOS NATIVE PATH - STRIPE IS COMPLETELY BLOCKED
@@ -223,18 +219,6 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   const isButtonLoading = isUpgrading || isRevenueCatLoading;
   const isSubscribeDisabled = isButtonLoading || (isNativeIOS && !isOfferingsReady);
 
-  // Debug panel (iOS only)
-  const debugPanel = isNativeIOS && showDebug && (
-    <div className="mt-4 p-3 bg-muted/50 rounded-lg text-left text-xs font-mono space-y-1">
-      <div className="font-bold text-foreground mb-2">RevenueCat Debug</div>
-      {Object.entries(getDebugInfo()).map(([key, value]) => (
-        <div key={key} className="flex justify-between">
-          <span className="text-muted-foreground">{key}:</span>
-          <span className="text-foreground">{String(value)}</span>
-        </div>
-      ))}
-    </div>
-  );
 
   // Blurred content overlay
   if (showBlurred) {
@@ -328,20 +312,6 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
               </Button>
             )}
 
-            {/* Debug toggle */}
-            {isNativeIOS && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-1 gap-1 text-muted-foreground text-xs"
-                onClick={() => setShowDebug(!showDebug)}
-              >
-                <Bug className="w-3 h-3" />
-                {showDebug ? 'Hide' : 'Show'} Debug
-              </Button>
-            )}
-
-            {debugPanel}
           </div>
         </div>
       </div>
@@ -437,20 +407,6 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
           </Button>
         )}
 
-        {/* Debug toggle */}
-        {isNativeIOS && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1 text-muted-foreground text-xs"
-            onClick={() => setShowDebug(!showDebug)}
-          >
-            <Bug className="w-3 h-3" />
-            {showDebug ? 'Hide' : 'Show'} Debug Info
-          </Button>
-        )}
-
-        {debugPanel}
       </div>
     </div>
   );
