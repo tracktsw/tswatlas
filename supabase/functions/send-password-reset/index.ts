@@ -56,9 +56,6 @@ const handler = async (req: Request): Promise<Response> => {
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
       email: email,
-      options: {
-        redirectTo: redirectTo,
-      },
     });
 
     if (error) {
@@ -73,8 +70,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    if (!data?.properties?.action_link) {
-      console.log("No action link returned from generateLink");
+    if (!data?.properties?.hashed_token) {
+      console.log("No hashed_token returned from generateLink");
       return new Response(
         JSON.stringify({ success: true }),
         {
@@ -84,7 +81,14 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const recoveryLink = data.properties.action_link;
+    // Construct the recovery URL that goes directly to our reset-password page
+    // The token_hash will be verified by Supabase when the user loads the page
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const tokenHash = data.properties.hashed_token;
+    
+    // Use Supabase's verify endpoint which will redirect to our app
+    const recoveryLink = `${supabaseUrl}/auth/v1/verify?token=${tokenHash}&type=recovery&redirect_to=${encodeURIComponent(redirectTo)}`;
+    
     console.log(`Recovery link generated successfully for ${email}`);
 
     // Send email via Resend
