@@ -22,12 +22,19 @@ import AuthPage from "@/pages/AuthPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import AdminPage from "@/pages/AdminPage";
 import NotFound from "@/pages/NotFound";
+import { useDeepLink } from "@/hooks/useDeepLink";
 
 // Lazy load non-critical components
 const PWAInstallPrompt = lazy(() => import("@/components/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
 const AppUpdateBanner = lazy(() => import("@/components/AppUpdateBanner").then(m => ({ default: m.AppUpdateBanner })));
 
 const queryClient = new QueryClient();
+
+// Component that initializes deep link handling inside BrowserRouter
+const DeepLinkHandler = ({ children }: { children: React.ReactNode }) => {
+  useDeepLink();
+  return <>{children}</>;
+};
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
@@ -36,9 +43,10 @@ const App = () => (
         <LayoutProvider>
           <TooltipProvider>
             <BrowserRouter>
-              <Routes>
-                {/* Public routes - no UserDataProvider */}
-                <Route path="/auth" element={<AuthPage />} />
+              <DeepLinkHandler>
+                <Routes>
+                  {/* Public routes - no UserDataProvider */}
+                  <Route path="/auth" element={<AuthPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
                 
                 {/* Protected routes - require authentication */}
@@ -73,6 +81,7 @@ const App = () => (
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </DeepLinkHandler>
             </BrowserRouter>
           </TooltipProvider>
         </LayoutProvider>

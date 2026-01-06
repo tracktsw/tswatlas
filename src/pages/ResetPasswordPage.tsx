@@ -19,7 +19,36 @@ const ResetPasswordPage = () => {
 
   useEffect(() => {
     const initSession = async () => {
-      // Parse tokens from BOTH hash and search params
+      // First, check sessionStorage for tokens from native deep link
+      const storedTokens = sessionStorage.getItem('resetTokens');
+      if (storedTokens) {
+        try {
+          const { access_token, refresh_token, type } = JSON.parse(storedTokens);
+          console.log('[ResetPassword] Found tokens in sessionStorage');
+          sessionStorage.removeItem('resetTokens'); // Clean up
+          
+          if (access_token && refresh_token && type === 'recovery') {
+            const { data, error } = await supabase.auth.setSession({
+              access_token,
+              refresh_token,
+            });
+            
+            if (error) {
+              console.log('[ResetPassword] Error setting session from storage:', error.message);
+              setHasSession(false);
+            } else if (data.session) {
+              console.log('[ResetPassword] Session set successfully from storage');
+              setHasSession(true);
+            }
+            return;
+          }
+        } catch (e) {
+          console.log('[ResetPassword] Error parsing stored tokens:', e);
+          sessionStorage.removeItem('resetTokens');
+        }
+      }
+      
+      // Parse tokens from BOTH hash and search params (for web flow)
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const searchParams = new URLSearchParams(window.location.search);
       
@@ -30,7 +59,7 @@ const ResetPasswordPage = () => {
       const errorParam = hashParams.get('error') || searchParams.get('error');
       const errorDesc = hashParams.get('error_description') || searchParams.get('error_description');
       
-      console.log('[ResetPassword] Params:', { 
+      console.log('[ResetPassword] URL Params:', { 
         hasAccessToken: !!accessToken, 
         hasRefreshToken: !!refreshToken,
         type, 
@@ -46,7 +75,7 @@ const ResetPasswordPage = () => {
 
       // If we have tokens and type=recovery, set the session
       if (accessToken && refreshToken && type === 'recovery') {
-        console.log('[ResetPassword] Setting session from tokens');
+        console.log('[ResetPassword] Setting session from URL tokens');
         const { data, error } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
