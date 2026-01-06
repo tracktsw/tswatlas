@@ -50,11 +50,15 @@ export const getIsNativeMobile = () => getIsNativeIOS() || getIsNativeAndroid();
 export const isIOSNative = getIsNativeIOS();
 
 const REVENUECAT_IOS_KEY = 'appl_rgvRTJPduIhlItjWllSWcPCuwkn';
-// TODO: Add your RevenueCat Android API key here once configured in RevenueCat dashboard
-const REVENUECAT_ANDROID_KEY = 'goog_YOUR_ANDROID_KEY_HERE';
+// Android RevenueCat API key
+const REVENUECAT_ANDROID_KEY = 'goog_lOjQDMFXvZCJiWwUKKXYfGBYdYJ';
 
 // CRITICAL: The entitlement identifier MUST match exactly what's in RevenueCat dashboard
 const PREMIUM_ENTITLEMENT_ID = 'premium';
+
+// Android-specific identifiers (DO NOT RENAME - must match RevenueCat dashboard)
+const ANDROID_OFFERING_ID = 'default2';
+const ANDROID_PACKAGE_ID = '$rc_monthly';
 
 export interface RevenueCatState {
   isIOSNative: boolean;
@@ -326,51 +330,103 @@ export const useRevenueCat = () => {
   const fetchOfferings = useCallback(async () => {
     if (!getIsNativeMobile()) return null;
 
+    const isAndroid = getIsNativeAndroid();
+    const platform = isAndroid ? 'android' : 'ios';
+    
     setOfferingsStatus('loading');
     setOfferingsError(null);
 
     try {
-      console.log('[RevenueCat] Fetching offerings...');
+      console.log(`[RevenueCat] [${platform}] Fetching offerings...`);
       const { Purchases, PACKAGE_TYPE } = await import('@revenuecat/purchases-capacitor');
 
       const offerings = await Purchases.getOfferings();
-      console.log('[RevenueCat] Offerings received:', JSON.stringify(offerings, null, 2));
+      
+      // Log all available offerings for debugging (Android-specific detailed logging)
+      if (isAndroid) {
+        const allOfferingIds = Object.keys(offerings?.all || {});
+        console.log(`[RevenueCat] [android] All offering IDs found:`, allOfferingIds);
+        console.log(`[RevenueCat] [android] Current offering ID:`, offerings?.current?.identifier);
+        console.log(`[RevenueCat] [android] Full offerings response:`, JSON.stringify(offerings, null, 2));
+      }
 
-      // Get default offering (current offering or 'default' from all)
-      const defaultOffering = offerings?.current ?? offerings?.all?.['default'];
+      // ANDROID: Explicitly select 'default2' offering
+      // iOS: Use current or 'default' offering (unchanged behavior)
+      let selectedOffering: any;
+      if (isAndroid) {
+        selectedOffering = offerings?.all?.[ANDROID_OFFERING_ID];
+        if (!selectedOffering) {
+          console.error(`[RevenueCat] [android] ERROR: Offering '${ANDROID_OFFERING_ID}' not found!`);
+          console.error(`[RevenueCat] [android] Available offerings:`, Object.keys(offerings?.all || {}));
+          setOfferingsStatus('error');
+          setOfferingsError(`Offering '${ANDROID_OFFERING_ID}' not found. Please contact support.`);
+          return null;
+        }
+        console.log(`[RevenueCat] [android] Selected offering '${ANDROID_OFFERING_ID}':`, selectedOffering?.identifier);
+      } else {
+        // iOS: unchanged logic
+        selectedOffering = offerings?.current ?? offerings?.all?.['default'];
+      }
 
-      if (!defaultOffering) {
-        console.error('[RevenueCat] No default offering found');
+      if (!selectedOffering) {
+        console.error(`[RevenueCat] [${platform}] No offering found`);
         setOfferingsStatus('error');
         setOfferingsError('No subscription offering found. Please try again later.');
         return null;
       }
 
-      setCurrentOffering(defaultOffering as RevenueCatOffering);
+      setCurrentOffering(selectedOffering as RevenueCatOffering);
 
-      // Find monthly package - prefer the monthly shortcut, fallback to searching availablePackages
-      const monthly = defaultOffering.monthly ?? defaultOffering.availablePackages?.find(
-        (pkg: any) => pkg.packageType === PACKAGE_TYPE.MONTHLY
-      );
+      // ANDROID: Find package by identifier '$rc_monthly' explicitly
+      // iOS: Use monthly shortcut or PACKAGE_TYPE.MONTHLY (unchanged behavior)
+      let monthly: any;
+      if (isAndroid) {
+        // Log all packages for debugging
+        const packageIds = selectedOffering.availablePackages?.map((p: any) => p.identifier) || [];
+        console.log(`[RevenueCat] [android] Available package IDs in '${ANDROID_OFFERING_ID}':`, packageIds);
+        
+        // Find $rc_monthly package explicitly
+        monthly = selectedOffering.availablePackages?.find(
+          (pkg: any) => pkg.identifier === ANDROID_PACKAGE_ID
+        );
+        
+        if (!monthly) {
+          console.error(`[RevenueCat] [android] ERROR: Package '${ANDROID_PACKAGE_ID}' not found in offering '${ANDROID_OFFERING_ID}'!`);
+          console.error(`[RevenueCat] [android] Available packages:`, packageIds);
+          setOfferingsStatus('error');
+          setOfferingsError(`Package '${ANDROID_PACKAGE_ID}' not found. Please contact support.`);
+          return selectedOffering;
+        }
+        console.log(`[RevenueCat] [android] Selected package '${ANDROID_PACKAGE_ID}':`, {
+          identifier: monthly.identifier,
+          productId: monthly.product?.identifier,
+          priceString: monthly.product?.priceString,
+        });
+      } else {
+        // iOS: unchanged logic
+        monthly = selectedOffering.monthly ?? selectedOffering.availablePackages?.find(
+          (pkg: any) => pkg.packageType === PACKAGE_TYPE.MONTHLY
+        );
+      }
 
       if (!monthly) {
-        console.error('[RevenueCat] No monthly package in offering');
+        console.error(`[RevenueCat] [${platform}] No monthly package in offering`);
         setOfferingsStatus('error');
         setOfferingsError('Monthly subscription package not found.');
-        return defaultOffering;
+        return selectedOffering;
       }
 
       setMonthlyPackage(monthly as PurchasesPackage);
-      console.log('[RevenueCat] Monthly package found:', {
+      console.log(`[RevenueCat] [${platform}] Monthly package ready:`, {
         identifier: monthly.identifier,
         price: monthly.product?.priceString,
         productId: monthly.product?.identifier,
       });
 
       setOfferingsStatus('ready');
-      return defaultOffering;
+      return selectedOffering;
     } catch (error: any) {
-      console.error('[RevenueCat] Error fetching offerings:', error);
+      console.error(`[RevenueCat] [${platform}] Error fetching offerings:`, error);
       setOfferingsStatus('error');
       setOfferingsError(error?.message ?? 'Failed to load subscription options.');
       return null;
@@ -379,6 +435,8 @@ export const useRevenueCat = () => {
 
   // Purchase monthly package
   // CRITICAL: Requires user to be logged in first
+  // ANDROID: Uses offering 'default2' and package '$rc_monthly' explicitly
+  // iOS: Uses current/default offering with monthly package (unchanged)
   const purchaseMonthly = useCallback(async (): Promise<{ 
     success: boolean; 
     error?: string; 
@@ -390,9 +448,14 @@ export const useRevenueCat = () => {
       return { success: false, error: 'Not native mobile', isPremiumNow: false };
     }
 
+    const isAndroid = getIsNativeAndroid();
+    const platform = isAndroid ? 'android' : 'ios';
+    
+    console.log(`[RevenueCat] [${platform}] Subscribe tapped`);
+
     // SECURITY: Must be logged in to purchase
     if (!boundUserIdRef.current) {
-      console.error('[RevenueCat] SECURITY: Cannot purchase without being logged in!');
+      console.error(`[RevenueCat] [${platform}] SECURITY: Cannot purchase without being logged in!`);
       return { success: false, error: 'Please sign in first', isPremiumNow: false };
     }
 
@@ -402,14 +465,39 @@ export const useRevenueCat = () => {
       const { Purchases, PACKAGE_TYPE } = await import('@revenuecat/purchases-capacitor');
       
       // Fetch offerings fresh - don't rely on potentially stale state
-      console.log('[RevenueCat] Fetching offerings for purchase...');
+      console.log(`[RevenueCat] [${platform}] Fetching offerings for purchase...`);
       const offerings = await Purchases.getOfferings();
-      console.log('[RevenueCat] Offerings result:', JSON.stringify(offerings, null, 2));
       
-      const defaultOffering = offerings?.current ?? offerings?.all?.['default'];
+      // Detailed logging for Android
+      if (isAndroid) {
+        const allOfferingIds = Object.keys(offerings?.all || {});
+        console.log(`[RevenueCat] [android] Purchase flow - offerings found:`, allOfferingIds);
+      }
       
-      if (!defaultOffering || !defaultOffering.availablePackages?.length) {
-        console.error('[RevenueCat] No offerings available');
+      // ANDROID: Explicitly select 'default2' offering
+      // iOS: Use current or 'default' offering (unchanged behavior)
+      let selectedOffering: any;
+      if (isAndroid) {
+        selectedOffering = offerings?.all?.[ANDROID_OFFERING_ID];
+        if (!selectedOffering) {
+          console.error(`[RevenueCat] [android] ERROR: Offering '${ANDROID_OFFERING_ID}' not found during purchase!`);
+          console.error(`[RevenueCat] [android] Available offerings:`, Object.keys(offerings?.all || {}));
+          setIsLoading(false);
+          return { 
+            success: false, 
+            error: `Offering '${ANDROID_OFFERING_ID}' not found. Please contact support.`,
+            errorCode: 23,
+            isPremiumNow: false,
+          };
+        }
+        console.log(`[RevenueCat] [android] Using offering '${ANDROID_OFFERING_ID}' for purchase`);
+      } else {
+        // iOS: unchanged logic
+        selectedOffering = offerings?.current ?? offerings?.all?.['default'];
+      }
+      
+      if (!selectedOffering || !selectedOffering.availablePackages?.length) {
+        console.error(`[RevenueCat] [${platform}] No offerings available`);
         setIsLoading(false);
         return { 
           success: false, 
@@ -419,23 +507,45 @@ export const useRevenueCat = () => {
         };
       }
       
-      // Find monthly package
-      const monthly = defaultOffering.monthly ?? defaultOffering.availablePackages?.find(
-        (pkg: any) => pkg.packageType === PACKAGE_TYPE.MONTHLY
-      );
+      // ANDROID: Find package by identifier '$rc_monthly' explicitly
+      // iOS: Use monthly shortcut or PACKAGE_TYPE.MONTHLY (unchanged behavior)
+      let monthly: any;
+      if (isAndroid) {
+        const packageIds = selectedOffering.availablePackages?.map((p: any) => p.identifier) || [];
+        console.log(`[RevenueCat] [android] Packages in offering:`, packageIds);
+        
+        monthly = selectedOffering.availablePackages?.find(
+          (pkg: any) => pkg.identifier === ANDROID_PACKAGE_ID
+        );
+        
+        if (!monthly) {
+          console.error(`[RevenueCat] [android] ERROR: Package '${ANDROID_PACKAGE_ID}' not found during purchase!`);
+          setIsLoading(false);
+          return { success: false, error: `Package '${ANDROID_PACKAGE_ID}' not found.`, isPremiumNow: false };
+        }
+        console.log(`[RevenueCat] [android] Selected package for purchase:`, {
+          identifier: monthly.identifier,
+          productId: monthly.product?.identifier,
+        });
+      } else {
+        // iOS: unchanged logic
+        monthly = selectedOffering.monthly ?? selectedOffering.availablePackages?.find(
+          (pkg: any) => pkg.packageType === PACKAGE_TYPE.MONTHLY
+        );
+      }
       
       if (!monthly) {
-        console.error('[RevenueCat] No monthly package in offerings');
+        console.error(`[RevenueCat] [${platform}] No monthly package in offerings`);
         setIsLoading(false);
         return { success: false, error: 'Monthly subscription not available.', isPremiumNow: false };
       }
       
-      // Attempt purchase
-      console.log('[RevenueCat] Starting purchase with package:', monthly.identifier);
+      // Attempt purchase using the Package object (NOT raw product IDs)
+      console.log(`[RevenueCat] [${platform}] Purchase started with package:`, monthly.identifier);
       const purchaseResult = await Purchases.purchasePackage({ aPackage: monthly as any });
       
       // Detailed logging of purchase result
-      console.log('[RevenueCat] Purchase result:', JSON.stringify(purchaseResult, null, 2));
+      console.log(`[RevenueCat] [${platform}] Purchase success! Result:`, JSON.stringify(purchaseResult, null, 2));
       
       const resultCustomerInfo = purchaseResult?.customerInfo as CustomerInfo;
       
@@ -443,38 +553,40 @@ export const useRevenueCat = () => {
       setCustomerInfo(resultCustomerInfo);
       setLastCustomerInfoRefresh(new Date());
       
-      // Check premium status from returned CustomerInfo (with user validation)
+      // Check premium status - verify entitlement 'premium' is active
       const isPremiumNow = checkPremiumFromCustomerInfo(resultCustomerInfo, boundUserIdRef.current || undefined);
       setIsPremiumFromRC(isPremiumNow);
       
-      console.log('[RevenueCat] Post-purchase state:', {
+      console.log(`[RevenueCat] [${platform}] Post-purchase entitlement check:`, {
+        entitlementId: PREMIUM_ENTITLEMENT_ID,
         isPremiumNow,
         activeEntitlements: Object.keys(resultCustomerInfo?.entitlements?.active || {}),
         boundUserId: boundUserIdRef.current,
       });
       
-      // Force sync with RevenueCat servers (belt and suspenders)
-      console.log('[RevenueCat] Forcing sync with servers...');
+      // Force sync with RevenueCat servers
+      console.log(`[RevenueCat] [${platform}] Forcing sync with servers...`);
       await Purchases.syncPurchases();
-      console.log('[RevenueCat] Sync complete');
+      console.log(`[RevenueCat] [${platform}] Sync complete`);
       
       setIsLoading(false);
       return { success: true, isPremiumNow };
       
     } catch (error: any) {
-      console.error('[RevenueCat] Purchase error:', error);
-      console.error('[RevenueCat] Error code:', error.code);
-      console.error('[RevenueCat] Error message:', error.message);
+      console.error(`[RevenueCat] [${platform}] Purchase error:`, error);
+      console.error(`[RevenueCat] [${platform}] Error code:`, error.code);
+      console.error(`[RevenueCat] [${platform}] Error message:`, error.message);
       setIsLoading(false);
       
       // User cancelled (code 1)
       if (error.code === 1 || error.message?.includes('cancel')) {
+        console.log(`[RevenueCat] [${platform}] Purchase cancelled by user`);
         return { success: false, isPremiumNow: false }; // No error message for cancellation
       }
       
       // Configuration error (code 23 - products not fetched)
       if (error.code === 23) {
-        const storeName = getIsNativeIOS() ? 'App Store' : 'Google Play';
+        const storeName = isAndroid ? 'Google Play' : 'App Store';
         return { 
           success: false, 
           error: `Unable to connect to ${storeName}. Please try again.`,
@@ -494,6 +606,7 @@ export const useRevenueCat = () => {
 
   // Restore purchases
   // CRITICAL: Validates that restored subscription belongs to current user
+  // ANDROID: Refreshes customer info and checks entitlement 'premium'
   const restorePurchases = useCallback(async (): Promise<{ 
     success: boolean; 
     isPremiumNow: boolean; 
@@ -505,28 +618,31 @@ export const useRevenueCat = () => {
       return { success: false, isPremiumNow: false, error: 'Not native mobile' };
     }
 
+    const isAndroid = getIsNativeAndroid();
+    const platform = isAndroid ? 'android' : 'ios';
+
     // SECURITY: Must be logged in to restore
     if (!boundUserIdRef.current) {
-      console.error('[RevenueCat] SECURITY: Cannot restore without being logged in!');
+      console.error(`[RevenueCat] [${platform}] SECURITY: Cannot restore without being logged in!`);
       return { success: false, isPremiumNow: false, error: 'Please sign in first' };
     }
 
     setIsLoading(true);
     try {
-      console.log('[RevenueCat] Restoring purchases for user:', boundUserIdRef.current);
+      console.log(`[RevenueCat] [${platform}] Restoring purchases for user:`, boundUserIdRef.current);
       const { Purchases } = await import('@revenuecat/purchases-capacitor');
       
       const result = await Purchases.restorePurchases();
       const restoredCustomerInfo = result?.customerInfo as CustomerInfo;
       
-      console.log('[RevenueCat] Restore result:', JSON.stringify(restoredCustomerInfo, null, 2));
+      console.log(`[RevenueCat] [${platform}] Restore result:`, JSON.stringify(restoredCustomerInfo, null, 2));
       
       // CRITICAL SECURITY CHECK: Verify the restored subscription belongs to this user
       const originalAppUserId = restoredCustomerInfo?.originalAppUserId;
       const currentUserId = boundUserIdRef.current;
       
       if (originalAppUserId && originalAppUserId !== currentUserId) {
-        console.warn('[RevenueCat] SECURITY: Restored subscription belongs to different account!', {
+        console.warn(`[RevenueCat] [${platform}] SECURITY: Restored subscription belongs to different account!`, {
           currentUserId,
           originalAppUserId,
         });
@@ -543,11 +659,12 @@ export const useRevenueCat = () => {
       setCustomerInfo(restoredCustomerInfo);
       setLastCustomerInfoRefresh(new Date());
       
-      // Check premium status (with user ID validation)
+      // Check premium status - verify entitlement 'premium' is active
       const isPremiumNow = checkPremiumFromCustomerInfo(restoredCustomerInfo, currentUserId);
       setIsPremiumFromRC(isPremiumNow);
       
-      console.log('[RevenueCat] Post-restore state:', {
+      console.log(`[RevenueCat] [${platform}] Post-restore entitlement check:`, {
+        entitlementId: PREMIUM_ENTITLEMENT_ID,
         isPremiumNow,
         activeEntitlements: Object.keys(restoredCustomerInfo?.entitlements?.active || {}),
         originalAppUserId,
@@ -557,7 +674,7 @@ export const useRevenueCat = () => {
       setIsLoading(false);
       return { success: true, isPremiumNow };
     } catch (error: any) {
-      console.error('[RevenueCat] Restore error:', error);
+      console.error(`[RevenueCat] [${platform}] Restore error:`, error);
       setIsLoading(false);
       return { success: false, isPremiumNow: false, error: error.message || 'Restore failed' };
     }
