@@ -1,9 +1,11 @@
 import { createContext, useContext, useEffect, ReactNode, useState, useCallback } from 'react';
-import { useRevenueCat, getIsNativeIOS } from '@/hooks/useRevenueCat';
+import { useRevenueCat, getIsNativeIOS, getIsNativeAndroid, getIsNativeMobile } from '@/hooks/useRevenueCat';
 import { supabase } from '@/integrations/supabase/client';
 
 interface RevenueCatContextType {
   isIOSNative: boolean;
+  isAndroidNative: boolean;
+  isNativeMobile: boolean;
   platformLabel: string;
   isInitialized: boolean;
   isLoading: boolean;
@@ -33,7 +35,9 @@ export const useRevenueCatContext = () => {
     // Return a default context - use actual platform detection
     return {
       isIOSNative: getIsNativeIOS(),
-      platformLabel: getIsNativeIOS() ? 'ios_native' : 'web_or_other',
+      isAndroidNative: getIsNativeAndroid(),
+      isNativeMobile: getIsNativeMobile(),
+      platformLabel: getIsNativeIOS() ? 'ios_native' : getIsNativeAndroid() ? 'android_native' : 'web',
       isInitialized: false,
       isLoading: false,
       offeringsStatus: 'idle' as const,
@@ -66,7 +70,7 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
 
   // Retry initialization - useful if initial load failed
   const retryInitialization = useCallback(async () => {
-    if (!getIsNativeIOS()) return;
+    if (!getIsNativeMobile()) return;
 
     console.log('[RevenueCatProvider] Retrying initialization...');
 
@@ -81,11 +85,11 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
     }
   }, [revenueCat]);
 
-  // Initialize RevenueCat ONLY when user is authenticated (iOS only)
+  // Initialize RevenueCat ONLY when user is authenticated (iOS and Android)
   // CRITICAL: Never initialize without a logged-in user
   useEffect(() => {
-    if (!getIsNativeIOS()) {
-      console.log('[RevenueCatProvider] Not iOS native, skipping initialization');
+    if (!getIsNativeMobile()) {
+      console.log('[RevenueCatProvider] Not native mobile, skipping initialization');
       return;
     }
 
@@ -150,10 +154,14 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
   }, [revenueCat.initialize, revenueCat.logout, revenueCat.fetchOfferings]);
 
   const isNativeIOS = getIsNativeIOS();
+  const isNativeAndroid = getIsNativeAndroid();
+  const isNativeMobile = getIsNativeMobile();
 
   const value: RevenueCatContextType = {
     isIOSNative: isNativeIOS,
-    platformLabel: isNativeIOS ? 'ios_native' : 'web_or_other',
+    isAndroidNative: isNativeAndroid,
+    isNativeMobile: isNativeMobile,
+    platformLabel: isNativeIOS ? 'ios_native' : isNativeAndroid ? 'android_native' : 'web',
     isInitialized: revenueCat.isInitialized,
     isLoading: revenueCat.isLoading,
     offeringsStatus: revenueCat.offeringsStatus,
