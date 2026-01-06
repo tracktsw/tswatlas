@@ -17,18 +17,49 @@ const ResetPasswordPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if there's a valid recovery session
+    // Set up auth state listener to catch the recovery session
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log('[ResetPassword] Auth event:', event);
+        if (event === 'PASSWORD_RECOVERY' || (session && event === 'SIGNED_IN')) {
+          setHasSession(true);
+        } else if (event === 'SIGNED_OUT') {
+          setHasSession(false);
+        }
+      }
+    );
+
+    // Check for existing session (in case tokens are in URL hash)
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setHasSession(!!session);
+      // Small delay to allow Supabase to process URL hash tokens
+      await new Promise(resolve => setTimeout(resolve, 100));
       
-      if (!session) {
-        // No session means the recovery link is invalid or expired
-        toast.error('Invalid or expired reset link. Please request a new one.');
+      const { data: { session }, error } = await supabase.auth.getSession();
+      console.log('[ResetPassword] Session check:', { session: !!session, error });
+      
+      if (session) {
+        setHasSession(true);
+      } else {
+        // Check if there are hash params that indicate a recovery attempt
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const hasRecoveryParams = hashParams.has('access_token') || hashParams.has('error');
+        
+        if (hasRecoveryParams && hashParams.has('error')) {
+          const errorDesc = hashParams.get('error_description');
+          toast.error(errorDesc || 'Invalid or expired reset link. Please request a new one.');
+          setHasSession(false);
+        } else if (!hasRecoveryParams) {
+          // No session and no recovery params - invalid access
+          toast.error('Invalid or expired reset link. Please request a new one.');
+          setHasSession(false);
+        }
+        // If has recovery params but no session yet, wait for onAuthStateChange
       }
     };
     
     checkSession();
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
