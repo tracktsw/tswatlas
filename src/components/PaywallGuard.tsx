@@ -44,13 +44,20 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
     []
   );
   
+  const isNativeAndroid = useMemo(
+    () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android',
+    []
+  );
+  
+  const isNativeMobile = isNativeIOS || isNativeAndroid;
+  
   // Premium is enforced by backend for ALL platforms.
   // RevenueCat is used for purchasing/restoring only; the backend decides access.
   const isPremium = isAdmin || isPremiumFromBackend;
   const isLoading = isBackendLoading;
   
-  // CRITICAL: On iOS, offerings are only ready if user is logged in AND offerings loaded
-  const isOfferingsReady = isNativeIOS ? (isUserLoggedIn && offeringsStatus === 'ready') : true;
+  // CRITICAL: On native mobile, offerings are only ready if user is logged in AND offerings loaded
+  const isOfferingsReady = isNativeMobile ? (isUserLoggedIn && offeringsStatus === 'ready') : true;
 
   // Auto-hide paywall when premium becomes active
   useEffect(() => {
@@ -67,8 +74,8 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
     console.log('[PaywallGuard] handleUpgrade called');
     setStatusMessage(null);
 
-    // iOS NATIVE PATH - STRIPE IS COMPLETELY BLOCKED
-    if (isNativeIOS) {
+    // NATIVE MOBILE PATH (iOS or Android) - STRIPE IS COMPLETELY BLOCKED
+    if (isNativeMobile) {
       // CRITICAL: Must be logged in to purchase
       if (!isUserLoggedIn) {
         toast.error('Please sign in to subscribe');
@@ -85,7 +92,8 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
       }
 
       setIsUpgrading(true);
-      setStatusMessage('Opening App Store…');
+      const storeName = isNativeIOS ? 'App Store' : 'Google Play';
+      setStatusMessage(`Opening ${storeName}…`);
 
       try {
         const result = await purchaseMonthly();
@@ -148,7 +156,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   };
 
   const handleRestore = async () => {
-    if (isRestoring || !isNativeIOS) return;
+    if (isRestoring || !isNativeMobile) return;
     
     // CRITICAL: Must be logged in to restore
     if (!isUserLoggedIn) {
@@ -215,7 +223,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   }
 
   // Get price string
-  const priceString = isNativeIOS ? getPriceString() : '£5.99';
+  const priceString = isNativeMobile ? getPriceString() : '£5.99';
   const isButtonLoading = isUpgrading || isRevenueCatLoading;
 
 
@@ -238,13 +246,13 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
             
             <Button
               onClick={async () => {
-                // Keep original button label; choose behavior based on iOS state
-                if (isNativeIOS && !isUserLoggedIn) {
+                // Keep original button label; choose behavior based on native mobile state
+                if (isNativeMobile && !isUserLoggedIn) {
                   toast.error('Please sign in to subscribe');
                   navigate('/auth');
                   return;
                 }
-                if (isNativeIOS && !isOfferingsReady) {
+                if (isNativeMobile && !isOfferingsReady) {
                   await handleRetryOfferings();
                   return;
                 }
@@ -277,8 +285,8 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
               <p className="text-xs text-muted-foreground mt-2">{statusMessage}</p>
             )}
 
-            {/* iOS: Restore purchases - only if logged in */}
-            {isNativeIOS && isUserLoggedIn && (
+            {/* Native mobile: Restore purchases - only if logged in */}
+            {isNativeMobile && isUserLoggedIn && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -322,13 +330,13 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
         <div className="space-y-3 w-full max-w-xs">
           <Button
             onClick={async () => {
-              // Keep original button label; choose behavior based on iOS state
-              if (isNativeIOS && !isUserLoggedIn) {
+              // Keep original button label; choose behavior based on native mobile state
+              if (isNativeMobile && !isUserLoggedIn) {
                 toast.error('Please sign in to subscribe');
                 navigate('/auth');
                 return;
               }
-              if (isNativeIOS && !isOfferingsReady) {
+              if (isNativeMobile && !isOfferingsReady) {
                 await handleRetryOfferings();
                 return;
               }
@@ -361,8 +369,8 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
           <p className="text-sm text-muted-foreground">{statusMessage}</p>
         )}
 
-        {/* iOS: Restore purchases - only if logged in */}
-        {isNativeIOS && isUserLoggedIn && (
+        {/* Native mobile: Restore purchases - only if logged in */}
+        {isNativeMobile && isUserLoggedIn && (
           <Button
             variant="ghost"
             size="sm"
