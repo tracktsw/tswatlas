@@ -10,6 +10,14 @@ const MIN_PAIN_ENTRIES = 5;
 const MIN_TRIGGER_OCCURRENCES = 2;
 const MIN_DAYS_FOR_TRIGGER_ANALYSIS = 3;
 
+// Format trigger names: snake_case -> Title Case
+const formatTrigger = (trigger: string): string => {
+  return trigger
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 interface PainTrendsInsightsProps {
   checkIns: CheckIn[];
   dailyFlareStates: DailyFlareState[];
@@ -383,7 +391,7 @@ const PainTrendsInsights = ({ checkIns, dailyFlareStates }: PainTrendsInsightsPr
                           <p className="text-sm font-medium text-foreground">Pain: {data.painScore}/10</p>
                           {triggers.length > 0 && (
                             <p className="text-xs text-muted-foreground mt-1">
-                              Triggers: {triggers.slice(0, 3).join(', ')}{triggers.length > 3 ? ` +${triggers.length - 3}` : ''}
+                              Triggers: {triggers.slice(0, 3).map(formatTrigger).join(', ')}{triggers.length > 3 ? ` +${triggers.length - 3}` : ''}
                             </p>
                           )}
                         </div>
@@ -421,7 +429,7 @@ const PainTrendsInsights = ({ checkIns, dailyFlareStates }: PainTrendsInsightsPr
                 <div className="space-y-1.5">
                   {triggerCorrelations.map((corr) => (
                     <div key={corr.trigger} className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground truncate max-w-[140px]">{corr.trigger}</span>
+                      <span className="text-muted-foreground truncate max-w-[140px]">{formatTrigger(corr.trigger)}</span>
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
                           <div 
@@ -438,7 +446,7 @@ const PainTrendsInsights = ({ checkIns, dailyFlareStates }: PainTrendsInsightsPr
                 </div>
                 {triggerCorrelations[0] && triggerCorrelations[0].difference > 0.5 && (
                   <p className="text-xs text-muted-foreground italic">
-                    On days with {triggerCorrelations[0].trigger}, pain averaged {triggerCorrelations[0].difference.toFixed(1)} points higher
+                    On days with {formatTrigger(triggerCorrelations[0].trigger)}, pain averaged {triggerCorrelations[0].difference.toFixed(1)} points higher
                   </p>
                 )}
               </div>
