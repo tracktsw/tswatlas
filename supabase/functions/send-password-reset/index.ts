@@ -22,7 +22,10 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, redirectTo }: PasswordResetRequest = await req.json();
+    const { email }: PasswordResetRequest = await req.json();
+
+    // Always send users to the production web reset page (same UX as website users)
+    const redirectTo = "https://tracktsw.app/reset-password";
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

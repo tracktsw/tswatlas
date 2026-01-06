@@ -34,8 +34,8 @@ const AuthPage = () => {
       if (mode === 'forgot') {
         console.log('[RESET] Calling send-password-reset edge function...');
         
-        // Always use web URL - native app users will reset on web and return to app
-        const redirectTo = `${window.location.origin}/reset-password`;
+        // Always send users to the production web reset page (same UX as website users)
+        const redirectTo = `https://tracktsw.app/reset-password`;
         
         const { data, error } = await supabase.functions.invoke('send-password-reset', {
           body: { 
