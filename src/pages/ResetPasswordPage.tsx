@@ -17,11 +17,15 @@ const ResetPasswordPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up auth state listener to catch the recovery session
+    // Set up auth state listener FIRST to catch the recovery session
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('[ResetPassword] Auth event:', event);
-        if (event === 'PASSWORD_RECOVERY' || (session && event === 'SIGNED_IN')) {
+        console.log('[ResetPassword] Auth event:', event, 'hasSession:', !!session);
+        if (event === 'PASSWORD_RECOVERY') {
+          console.log('[ResetPassword] PASSWORD_RECOVERY event received');
+          setHasSession(true);
+        } else if (event === 'SIGNED_IN' && session) {
+          console.log('[ResetPassword] SIGNED_IN with session');
           setHasSession(true);
         } else if (event === 'SIGNED_OUT') {
           setHasSession(false);
@@ -29,35 +33,66 @@ const ResetPasswordPage = () => {
       }
     );
 
-    // Check for existing session (in case tokens are in URL hash)
+    // Check for existing session
     const checkSession = async () => {
-      // Small delay to allow Supabase to process URL hash tokens
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Check URL hash for tokens (Supabase appends them after redirect)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+      const type = hashParams.get('type');
+      const errorParam = hashParams.get('error');
+      const errorDesc = hashParams.get('error_description');
       
-      const { data: { session }, error } = await supabase.auth.getSession();
-      console.log('[ResetPassword] Session check:', { session: !!session, error });
+      console.log('[ResetPassword] Hash params:', { 
+        hasAccessToken: !!accessToken, 
+        type, 
+        error: errorParam 
+      });
+
+      // Handle error in URL
+      if (errorParam) {
+        console.log('[ResetPassword] Error in URL:', errorDesc);
+        toast.error(errorDesc || 'Invalid or expired reset link. Please request a new one.');
+        setHasSession(false);
+        return;
+      }
+
+      // If we have tokens in the URL, set the session manually
+      if (accessToken && refreshToken && type === 'recovery') {
+        console.log('[ResetPassword] Setting session from URL tokens');
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        
+        if (error) {
+          console.log('[ResetPassword] Error setting session:', error.message);
+          toast.error('Invalid or expired reset link. Please request a new one.');
+          setHasSession(false);
+        } else if (data.session) {
+          console.log('[ResetPassword] Session set successfully');
+          setHasSession(true);
+          // Clean up URL hash
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+        return;
+      }
+
+      // Check for existing session
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('[ResetPassword] Existing session check:', !!session);
       
       if (session) {
         setHasSession(true);
       } else {
-        // Check if there are hash params that indicate a recovery attempt
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const hasRecoveryParams = hashParams.has('access_token') || hashParams.has('error');
-        
-        if (hasRecoveryParams && hashParams.has('error')) {
-          const errorDesc = hashParams.get('error_description');
-          toast.error(errorDesc || 'Invalid or expired reset link. Please request a new one.');
-          setHasSession(false);
-        } else if (!hasRecoveryParams) {
-          // No session and no recovery params - invalid access
-          toast.error('Invalid or expired reset link. Please request a new one.');
-          setHasSession(false);
-        }
-        // If has recovery params but no session yet, wait for onAuthStateChange
+        // No tokens and no session - invalid access
+        toast.error('Invalid or expired reset link. Please request a new one.');
+        setHasSession(false);
       }
     };
     
-    checkSession();
+    // Small delay to ensure auth listener is set up
+    setTimeout(checkSession, 50);
 
     return () => subscription.unsubscribe();
   }, []);
