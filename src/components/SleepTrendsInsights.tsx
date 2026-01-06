@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Moon, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
+import { Moon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CheckIn } from '@/contexts/UserDataContext';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths, isSameMonth } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceArea, ReferenceLine, Tooltip } from 'recharts';
@@ -7,8 +7,6 @@ import { DailyFlareState } from '@/utils/flareStateEngine';
 import { Button } from '@/components/ui/button';
 
 const MIN_SLEEP_ENTRIES = 5;
-const MIN_TRIGGER_OCCURRENCES = 2;
-const MIN_DAYS_FOR_TRIGGER_ANALYSIS = 3;
 
 const sleepLabels = ['Very poor', 'Poor', 'Okay', 'Good', 'Very good'];
 
@@ -17,13 +15,6 @@ interface SleepTrendsInsightsProps {
   dailyFlareStates: DailyFlareState[];
 }
 
-interface TriggerCorrelation {
-  trigger: string;
-  avgWithTrigger: number;
-  avgWithoutTrigger: number;
-  difference: number;
-  occurrences: number;
-}
 
 const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsightsProps) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
@@ -97,60 +88,6 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
     }));
   }, [sleepDataWithTriggers]);
 
-  // Calculate trigger correlations (negative = worse sleep)
-  const triggerCorrelations = useMemo((): TriggerCorrelation[] => {
-    if (sleepDataWithTriggers.length < MIN_DAYS_FOR_TRIGGER_ANALYSIS) return [];
-
-    const triggerStats = new Map<string, { withTrigger: number[]; }>();
-    const allSleepScores: number[] = [];
-
-    sleepDataWithTriggers.forEach(day => {
-      allSleepScores.push(day.sleepScore);
-      day.triggers.forEach(trigger => {
-        if (!triggerStats.has(trigger)) {
-          triggerStats.set(trigger, { withTrigger: [] });
-        }
-        triggerStats.get(trigger)!.withTrigger.push(day.sleepScore);
-      });
-    });
-
-    const overallAvg = allSleepScores.reduce((a, b) => a + b, 0) / allSleepScores.length;
-
-    const correlations: TriggerCorrelation[] = [];
-    
-    triggerStats.forEach((stats, trigger) => {
-      if (stats.withTrigger.length >= MIN_TRIGGER_OCCURRENCES) {
-        const avgWithTrigger = stats.withTrigger.reduce((a, b) => a + b, 0) / stats.withTrigger.length;
-        
-        const withoutScores = sleepDataWithTriggers
-          .filter(d => !d.triggers.includes(trigger))
-          .map(d => d.sleepScore);
-        const avgWithoutTrigger = withoutScores.length > 0 
-          ? withoutScores.reduce((a, b) => a + b, 0) / withoutScores.length
-          : overallAvg;
-
-        correlations.push({
-          trigger,
-          avgWithTrigger,
-          avgWithoutTrigger,
-          difference: avgWithTrigger - avgWithoutTrigger, // negative = worse sleep
-          occurrences: stats.withTrigger.length,
-        });
-      }
-    });
-
-    // Sort by absolute difference (impact) - worse sleep first
-    return correlations.sort((a, b) => a.difference - b.difference).slice(0, 4);
-  }, [sleepDataWithTriggers]);
-
-  // Create trigger lookup by date for tooltips
-  const triggersByDate = useMemo(() => {
-    const lookup = new Map<string, string[]>();
-    sleepDataWithTriggers.forEach(d => {
-      lookup.set(d.date, d.triggers);
-    });
-    return lookup;
-  }, [sleepDataWithTriggers]);
 
   // Total sleep entries across all time
   const totalSleepEntries = useMemo(() => {
@@ -257,10 +194,9 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
         displayDate: format(new Date(entry.date), 'd'),
         sleepScore: entry.sleepScore,
         isFlaring,
-        triggers: triggersByDate.get(entry.date) || [],
       };
     });
-  }, [sleepData, flareStateByDate, triggersByDate]);
+  }, [sleepData, flareStateByDate]);
 
   // Calculate tick interval to avoid crowding (show ~6-8 ticks max)
   const tickInterval = useMemo(() => {
@@ -393,16 +329,10 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
                       const data = payload[0].payload;
                       const label = sleepLabels[Math.round(data.sleepScore) - 1] || '';
                       const emoji = ['😫', '😩', '😐', '🙂', '😴'][Math.round(data.sleepScore) - 1] || '';
-                      const triggers = data.triggers as string[];
                       return (
                         <div className="bg-background/95 backdrop-blur-sm border border-border rounded-lg px-3 py-2 shadow-lg">
                           <p className="text-xs text-muted-foreground">{format(new Date(data.date), 'MMM d, yyyy')}</p>
                           <p className="text-sm font-medium text-foreground">{emoji} {label}</p>
-                          {triggers.length > 0 && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Triggers: {triggers.slice(0, 3).join(', ')}{triggers.length > 3 ? ` +${triggers.length - 3}` : ''}
-                            </p>
-                          )}
                         </div>
                       );
                     }}
@@ -428,38 +358,6 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
               </div>
             )}
 
-            {/* Trigger Correlations */}
-            {triggerCorrelations.length > 0 && (
-              <div className="pt-2 border-t border-border/50 space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
-                  <Zap className="w-3.5 h-3.5 text-indigo-500" />
-                  Trigger Correlations
-                </div>
-                <div className="space-y-1.5">
-                  {triggerCorrelations.map((corr) => (
-                    <div key={corr.trigger} className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground truncate max-w-[140px]">{corr.trigger}</span>
-                      <div className="flex items-center gap-2">
-                        <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full ${corr.difference < 0 ? 'bg-rose-500' : 'bg-emerald-500'}`}
-                            style={{ width: `${Math.min(Math.abs(corr.difference) * 20, 100)}%` }}
-                          />
-                        </div>
-                        <span className={`font-medium min-w-[40px] text-right ${corr.difference < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                          {corr.difference > 0 ? '+' : ''}{corr.difference.toFixed(1)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {triggerCorrelations[0] && triggerCorrelations[0].difference < -0.3 && (
-                  <p className="text-xs text-muted-foreground italic">
-                    On days with {triggerCorrelations[0].trigger}, sleep was {Math.abs(triggerCorrelations[0].difference).toFixed(1)} points lower
-                  </p>
-                )}
-              </div>
-            )}
 
             {summary && (
               <p className="text-sm text-muted-foreground italic border-l-2 border-indigo-500/30 pl-3">
