@@ -216,7 +216,8 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
 
   // Get price string
   const priceString = isNativeIOS ? getPriceString() : '£5.99';
-  const isButtonLoading = isUpgrading || isRevenueCatLoading;
+  // CRITICAL: Only consider RevenueCat loading state on iOS - on web, it doesn't apply
+  const isButtonLoading = isUpgrading || (isNativeIOS && isRevenueCatLoading);
   const isSubscribeDisabled = isButtonLoading || (isNativeIOS && !isOfferingsReady);
 
 
