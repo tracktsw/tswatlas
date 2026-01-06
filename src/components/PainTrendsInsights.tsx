@@ -165,6 +165,15 @@ const PainTrendsInsights = ({ checkIns, dailyFlareStates }: PainTrendsInsightsPr
     }));
   }, [painData]);
 
+  // Calculate tick interval to avoid crowding (show ~6-8 ticks max)
+  const tickInterval = useMemo(() => {
+    const dataLength = chartData.length;
+    if (dataLength <= 7) return 0; // Show all
+    if (dataLength <= 14) return 1; // Every other
+    if (dataLength <= 21) return 2; // Every 3rd
+    return Math.floor(dataLength / 7) - 1; // ~7 ticks
+  }, [chartData.length]);
+
   const MonthNavigator = () => (
     <div className="flex items-center gap-1">
       <Button
@@ -265,7 +274,7 @@ const PainTrendsInsights = ({ checkIns, dailyFlareStates }: PainTrendsInsightsPr
                     tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                     axisLine={{ stroke: 'hsl(var(--border))' }}
                     tickLine={false}
-                    interval={0}
+                    interval={tickInterval}
                   />
                   <YAxis 
                     domain={[0, 10]}
