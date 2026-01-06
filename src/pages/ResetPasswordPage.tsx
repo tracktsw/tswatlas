@@ -14,37 +14,25 @@ const ResetPasswordPage = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [hasSession, setHasSession] = useState<boolean | null>(null);
+  const [errors, setErrors] = useState<{ password?: string; confirm?: string }>({});
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up auth state listener FIRST to catch the recovery session
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('[ResetPassword] Auth event:', event, 'hasSession:', !!session);
-        if (event === 'PASSWORD_RECOVERY') {
-          console.log('[ResetPassword] PASSWORD_RECOVERY event received');
-          setHasSession(true);
-        } else if (event === 'SIGNED_IN' && session) {
-          console.log('[ResetPassword] SIGNED_IN with session');
-          setHasSession(true);
-        } else if (event === 'SIGNED_OUT') {
-          setHasSession(false);
-        }
-      }
-    );
-
-    // Check for existing session
-    const checkSession = async () => {
-      // Check URL hash for tokens (Supabase appends them after redirect)
+    const initSession = async () => {
+      // Parse tokens from BOTH hash and search params
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const accessToken = hashParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token');
-      const type = hashParams.get('type');
-      const errorParam = hashParams.get('error');
-      const errorDesc = hashParams.get('error_description');
+      const searchParams = new URLSearchParams(window.location.search);
       
-      console.log('[ResetPassword] Hash params:', { 
+      // Check hash first, then search params
+      const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
+      const type = hashParams.get('type') || searchParams.get('type');
+      const errorParam = hashParams.get('error') || searchParams.get('error');
+      const errorDesc = hashParams.get('error_description') || searchParams.get('error_description');
+      
+      console.log('[ResetPassword] Params:', { 
         hasAccessToken: !!accessToken, 
+        hasRefreshToken: !!refreshToken,
         type, 
         error: errorParam 
       });
@@ -52,14 +40,13 @@ const ResetPasswordPage = () => {
       // Handle error in URL
       if (errorParam) {
         console.log('[ResetPassword] Error in URL:', errorDesc);
-        toast.error(errorDesc || 'Invalid or expired reset link. Please request a new one.');
         setHasSession(false);
         return;
       }
 
-      // If we have tokens in the URL, set the session manually
+      // If we have tokens and type=recovery, set the session
       if (accessToken && refreshToken && type === 'recovery') {
-        console.log('[ResetPassword] Setting session from URL tokens');
+        console.log('[ResetPassword] Setting session from tokens');
         const { data, error } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
@@ -67,48 +54,42 @@ const ResetPasswordPage = () => {
         
         if (error) {
           console.log('[ResetPassword] Error setting session:', error.message);
-          toast.error('Invalid or expired reset link. Please request a new one.');
           setHasSession(false);
         } else if (data.session) {
           console.log('[ResetPassword] Session set successfully');
           setHasSession(true);
-          // Clean up URL hash
+          // Clean up URL
           window.history.replaceState(null, '', window.location.pathname);
         }
         return;
       }
 
-      // Check for existing session
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('[ResetPassword] Existing session check:', !!session);
-      
-      if (session) {
-        setHasSession(true);
-      } else {
-        // No tokens and no session - invalid access
-        toast.error('Invalid or expired reset link. Please request a new one.');
-        setHasSession(false);
-      }
+      // No valid tokens - show error
+      setHasSession(false);
     };
     
-    // Small delay to ensure auth listener is set up
-    setTimeout(checkSession, 50);
-
-    return () => subscription.unsubscribe();
+    initSession();
   }, []);
+
+  const validateForm = (): boolean => {
+    const newErrors: { password?: string; confirm?: string } = {};
+    
+    if (password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    }
+    
+    if (password !== confirmPassword) {
+      newErrors.confirm = 'Passwords do not match';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-    
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
 
@@ -120,11 +101,9 @@ const ResetPasswordPage = () => {
       setSuccess(true);
       toast.success('Password updated successfully!');
       
-      // Sign out and redirect to login after a moment
-      setTimeout(async () => {
-        await supabase.auth.signOut();
-        navigate('/auth');
-      }, 2000);
+      // Sign out and redirect to login
+      await supabase.auth.signOut();
+      setTimeout(() => navigate('/auth'), 2000);
     } catch (error: any) {
       toast.error(error.message || 'Failed to update password');
     } finally {
@@ -132,7 +111,7 @@ const ResetPasswordPage = () => {
     }
   };
 
-  // Loading state while checking session
+  // Loading state
   if (hasSession === null) {
     return (
       <div 
@@ -144,16 +123,17 @@ const ResetPasswordPage = () => {
     );
   }
 
-  // No valid session - show error state
+  // Invalid/expired link
   if (!hasSession) {
     return (
       <div 
         className="h-[100dvh] flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden" 
         style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
       >
-        <div className="decorative-blob w-64 h-64 bg-coral/40 -top-20 -right-20 fixed" />
-        <div className="decorative-blob w-80 h-80 bg-sage/30 -bottom-32 -left-32 fixed" />
-        <div className="fixed inset-0 decorative-dots opacity-30 pointer-events-none" />
+        <div className="hidden sm:block">
+          <div className="decorative-blob w-64 h-64 bg-coral/40 -top-20 -right-20 fixed" />
+          <div className="decorative-blob w-80 h-80 bg-sage/30 -bottom-32 -left-32 fixed" />
+        </div>
         
         <div className="w-full max-w-sm space-y-8 relative z-10">
           <div className="text-center space-y-4 animate-fade-in">
@@ -170,14 +150,23 @@ const ResetPasswordPage = () => {
             </p>
           </div>
           
-          <Button 
-            onClick={() => navigate('/auth')} 
-            variant="warm" 
-            className="w-full h-12"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Sign In
-          </Button>
+          <div className="space-y-3">
+            <Button 
+              onClick={() => navigate('/auth')} 
+              variant="default" 
+              className="w-full h-12"
+            >
+              Request New Link
+            </Button>
+            <Button 
+              onClick={() => navigate('/auth')} 
+              variant="outline" 
+              className="w-full h-12"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Sign In
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -190,9 +179,10 @@ const ResetPasswordPage = () => {
         className="h-[100dvh] flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden" 
         style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
       >
-        <div className="decorative-blob w-64 h-64 bg-coral/40 -top-20 -right-20 fixed" />
-        <div className="decorative-blob w-80 h-80 bg-sage/30 -bottom-32 -left-32 fixed" />
-        <div className="fixed inset-0 decorative-dots opacity-30 pointer-events-none" />
+        <div className="hidden sm:block">
+          <div className="decorative-blob w-64 h-64 bg-coral/40 -top-20 -right-20 fixed" />
+          <div className="decorative-blob w-80 h-80 bg-sage/30 -bottom-32 -left-32 fixed" />
+        </div>
         
         <div className="w-full max-w-sm space-y-8 relative z-10">
           <div className="text-center space-y-4 animate-fade-in">
@@ -211,16 +201,18 @@ const ResetPasswordPage = () => {
     );
   }
 
-  // Form to set new password
+  // Password reset form
   return (
     <div 
       className="h-[100dvh] flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden" 
       style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
     >
-      <div className="decorative-blob w-64 h-64 bg-coral/40 -top-20 -right-20 fixed" />
-      <div className="decorative-blob w-80 h-80 bg-sage/30 -bottom-32 -left-32 fixed" />
-      <div className="decorative-blob w-48 h-48 bg-honey/20 top-1/3 right-0 fixed" />
-      <div className="fixed inset-0 decorative-dots opacity-30 pointer-events-none" />
+      <div className="hidden sm:block">
+        <div className="decorative-blob w-64 h-64 bg-coral/40 -top-20 -right-20 fixed" />
+        <div className="decorative-blob w-80 h-80 bg-sage/30 -bottom-32 -left-32 fixed" />
+        <div className="decorative-blob w-48 h-48 bg-honey/20 top-1/3 right-0 fixed" />
+      </div>
+      <div className="hidden sm:block fixed inset-0 decorative-dots opacity-30 pointer-events-none" />
       
       <div className="w-full max-w-sm space-y-8 relative z-10">
         <div className="text-center space-y-4 animate-fade-in">
@@ -248,13 +240,20 @@ const ResetPasswordPage = () => {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (errors.password) setErrors(prev => ({ ...prev, password: undefined }));
+                }}
                 placeholder="••••••••"
-                className="pl-11 h-12 rounded-xl border-2 focus:border-coral/50 transition-colors"
+                className={`pl-11 h-12 rounded-xl border-2 transition-colors ${
+                  errors.password ? 'border-destructive focus:border-destructive' : 'focus:border-coral/50'
+                }`}
                 required
-                minLength={6}
               />
             </div>
+            {errors.password && (
+              <p className="text-sm text-destructive">{errors.password}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -265,16 +264,23 @@ const ResetPasswordPage = () => {
                 id="confirmPassword"
                 type="password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  if (errors.confirm) setErrors(prev => ({ ...prev, confirm: undefined }));
+                }}
                 placeholder="••••••••"
-                className="pl-11 h-12 rounded-xl border-2 focus:border-coral/50 transition-colors"
+                className={`pl-11 h-12 rounded-xl border-2 transition-colors ${
+                  errors.confirm ? 'border-destructive focus:border-destructive' : 'focus:border-coral/50'
+                }`}
                 required
-                minLength={6}
               />
             </div>
+            {errors.confirm && (
+              <p className="text-sm text-destructive">{errors.confirm}</p>
+            )}
           </div>
 
-          <Button type="submit" variant="warm" className="w-full h-12 text-base" disabled={loading}>
+          <Button type="submit" variant="default" className="w-full h-12 text-base" disabled={loading}>
             {loading ? 'Updating...' : 'Update Password'}
           </Button>
         </form>
