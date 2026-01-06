@@ -286,7 +286,8 @@ const SubscriptionCard = () => {
 
   // Not premium - show upgrade UI
   const priceString = isNativeIOS ? getPriceString() : '£5.99';
-  const isButtonLoading = isCheckoutLoading || isRevenueCatLoading;
+  // CRITICAL: Only consider RevenueCat loading state on iOS - on web, it doesn't apply
+  const isButtonLoading = isCheckoutLoading || (isNativeIOS && isRevenueCatLoading);
   const isSubscribeDisabled = isButtonLoading || (isNativeIOS && !isOfferingsReady);
 
   return (
