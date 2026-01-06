@@ -13,41 +13,13 @@ const ResetPasswordPage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [hasSession, setHasSession] = useState<boolean | null>(null);
+  const [hasValidTokens, setHasValidTokens] = useState<boolean | null>(null);
   const [errors, setErrors] = useState<{ password?: string; confirm?: string }>({});
+  const [tokens, setTokens] = useState<{ access_token: string; refresh_token: string } | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const initSession = async () => {
-      // First, check sessionStorage for tokens from native deep link
-      const storedTokens = sessionStorage.getItem('resetTokens');
-      if (storedTokens) {
-        try {
-          const { access_token, refresh_token, type } = JSON.parse(storedTokens);
-          console.log('[ResetPassword] Found tokens in sessionStorage');
-          sessionStorage.removeItem('resetTokens'); // Clean up
-          
-          if (access_token && refresh_token && type === 'recovery') {
-            const { data, error } = await supabase.auth.setSession({
-              access_token,
-              refresh_token,
-            });
-            
-            if (error) {
-              console.log('[ResetPassword] Error setting session from storage:', error.message);
-              setHasSession(false);
-            } else if (data.session) {
-              console.log('[ResetPassword] Session set successfully from storage');
-              setHasSession(true);
-            }
-            return;
-          }
-        } catch (e) {
-          console.log('[ResetPassword] Error parsing stored tokens:', e);
-          sessionStorage.removeItem('resetTokens');
-        }
-      }
-      
+    const extractTokens = () => {
       // Parse tokens from BOTH hash and search params (for web flow)
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const searchParams = new URLSearchParams(window.location.search);
@@ -69,35 +41,25 @@ const ResetPasswordPage = () => {
       // Handle error in URL
       if (errorParam) {
         console.log('[ResetPassword] Error in URL:', errorDesc);
-        setHasSession(false);
+        setHasValidTokens(false);
         return;
       }
 
-      // If we have tokens and type=recovery, set the session
+      // If we have tokens and type=recovery, store them for later use
       if (accessToken && refreshToken && type === 'recovery') {
-        console.log('[ResetPassword] Setting session from URL tokens');
-        const { data, error } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-        
-        if (error) {
-          console.log('[ResetPassword] Error setting session:', error.message);
-          setHasSession(false);
-        } else if (data.session) {
-          console.log('[ResetPassword] Session set successfully');
-          setHasSession(true);
-          // Clean up URL
-          window.history.replaceState(null, '', window.location.pathname);
-        }
+        console.log('[ResetPassword] Valid recovery tokens found');
+        setTokens({ access_token: accessToken, refresh_token: refreshToken });
+        setHasValidTokens(true);
+        // Clean up URL but keep tokens in state
+        window.history.replaceState(null, '', window.location.pathname);
         return;
       }
 
       // No valid tokens - show error
-      setHasSession(false);
+      setHasValidTokens(false);
     };
     
-    initSession();
+    extractTokens();
   }, []);
 
   const validateForm = (): boolean => {
@@ -119,10 +81,27 @@ const ResetPasswordPage = () => {
     e.preventDefault();
     
     if (!validateForm()) return;
+    if (!tokens) {
+      toast.error('Invalid reset link. Please request a new one.');
+      return;
+    }
 
     setLoading(true);
 
     try {
+      // Set session first using the stored tokens
+      console.log('[ResetPassword] Setting session from tokens...');
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+      });
+      
+      if (sessionError) {
+        console.log('[ResetPassword] Session error:', sessionError.message);
+        throw new Error('Reset link has expired. Please request a new one.');
+      }
+      
+      // Now update the password
       const { error } = await supabase.auth.updateUser({ password });
       
       if (error) throw error;
@@ -141,7 +120,7 @@ const ResetPasswordPage = () => {
   };
 
   // Loading state
-  if (hasSession === null) {
+  if (hasValidTokens === null) {
     return (
       <div 
         className="h-[100dvh] flex items-center justify-center overflow-hidden" 
@@ -153,7 +132,7 @@ const ResetPasswordPage = () => {
   }
 
   // Invalid/expired link
-  if (!hasSession) {
+  if (!hasValidTokens) {
     return (
       <div 
         className="h-[100dvh] flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden" 
