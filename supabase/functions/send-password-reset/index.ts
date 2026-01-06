@@ -81,15 +81,33 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Construct the recovery URL that goes directly to our reset-password page
-    // The token_hash will be verified by Supabase when the user loads the page
+    // Determine if this is a native app request (deep link) or web request
+    const isNativeApp = redirectTo.startsWith('tracktsw://');
+    
+    let recoveryLink: string;
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const tokenHash = data.properties.hashed_token;
     
-    // Use Supabase's verify endpoint which will redirect to our app
-    const recoveryLink = `${supabaseUrl}/auth/v1/verify?token=${tokenHash}&type=recovery&redirect_to=${encodeURIComponent(redirectTo)}`;
-    
-    console.log(`Recovery link generated successfully for ${email}`);
+    if (isNativeApp) {
+      // For native apps, use the action_link which contains the tokens
+      // We'll extract from the action_link or construct with token hash
+      // The action link from generateLink contains the full verification URL
+      const actionLink = data.properties.action_link;
+      
+      // Parse the action_link to get the tokens
+      const actionUrl = new URL(actionLink);
+      const accessToken = actionUrl.searchParams.get('token') || tokenHash;
+      
+      // For native apps, we need to use a different approach
+      // Since we can't easily get refresh_token from generateLink, 
+      // we'll redirect through Supabase verify but with our deep link as redirect
+      recoveryLink = `${supabaseUrl}/auth/v1/verify?token=${tokenHash}&type=recovery&redirect_to=${encodeURIComponent(redirectTo)}`;
+      console.log(`Native app recovery link generated for ${email} (via Supabase verify)`);
+    } else {
+      // For web, use Supabase's verify endpoint which will redirect to our app
+      recoveryLink = `${supabaseUrl}/auth/v1/verify?token=${tokenHash}&type=recovery&redirect_to=${encodeURIComponent(redirectTo)}`;
+      console.log(`Web recovery link generated for ${email}`);
+    }
 
     // Send email via Resend
     const emailResponse = await resend.emails.send({

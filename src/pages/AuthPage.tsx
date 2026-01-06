@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Capacitor } from '@capacitor/core';
 import trackTswLogo from '@/assets/tracktsw-logo-transparent.png';
 
 type AuthMode = 'login' | 'signup' | 'forgot';
@@ -33,10 +34,16 @@ const AuthPage = () => {
     try {
       if (mode === 'forgot') {
         console.log('[RESET] Calling send-password-reset edge function...');
+        
+        // Use deep link for native apps, web URL for browser
+        const redirectTo = Capacitor.isNativePlatform() 
+          ? 'tracktsw://reset-password'
+          : `${window.location.origin}/reset-password`;
+        
         const { data, error } = await supabase.functions.invoke('send-password-reset', {
           body: { 
             email, 
-            redirectTo: `${window.location.origin}/reset-password` 
+            redirectTo
           },
         });
         console.log('[RESET] Response:', { data, error });
