@@ -216,8 +216,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
 
   // Get price string
   const priceString = isNativeIOS ? getPriceString() : '£5.99';
-  // CRITICAL: Only consider RevenueCat loading state on iOS - on web, it doesn't apply
-  const isButtonLoading = isUpgrading || (isNativeIOS && isRevenueCatLoading);
+  const isButtonLoading = isUpgrading || isRevenueCatLoading;
   const isSubscribeDisabled = isButtonLoading || (isNativeIOS && !isOfferingsReady);
 
 
@@ -246,25 +245,32 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
               </Button>
             ) : (
               <>
-                {/* Subscribe Button */}
-                <Button onClick={handleUpgrade} disabled={isSubscribeDisabled} variant="gold" className="gap-2">
-                  {isButtonLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Processing…
-                    </>
-                  ) : isNativeIOS && !isOfferingsReady ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Loading…
-                    </>
-                  ) : (
-                    <>
-                      <Crown className="w-4 h-4" />
-                      Start 14-day free trial
-                    </>
-                  )}
-                </Button>
+                {/* Subscribe Button - show retry if offerings failed/idle */}
+                {isNativeIOS && (offeringsStatus === 'error' || offeringsStatus === 'idle') && !isButtonLoading ? (
+                  <Button onClick={handleRetryOfferings} variant="gold" className="gap-2">
+                    <RefreshCw className="w-4 h-4" />
+                    Load subscription options
+                  </Button>
+                ) : (
+                  <Button onClick={handleUpgrade} disabled={isSubscribeDisabled} variant="gold" className="gap-2">
+                    {isButtonLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Processing…
+                      </>
+                    ) : isNativeIOS && offeringsStatus === 'loading' ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Loading…
+                      </>
+                    ) : (
+                      <>
+                        <Crown className="w-4 h-4" />
+                        Start 14-day free trial
+                      </>
+                    )}
+                  </Button>
+                )}
                 
                 <p className="text-xs text-muted-foreground mt-2">
                   {priceString}/month after · Cancel anytime
@@ -272,18 +278,6 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
               </>
             )}
 
-            {/* iOS: Retry button if offerings failed */}
-            {isNativeIOS && isUserLoggedIn && offeringsStatus === 'error' && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3 gap-2"
-                onClick={handleRetryOfferings}
-              >
-                <RefreshCw className="w-3 h-3" />
-                Retry
-              </Button>
-            )}
 
             {/* Status message */}
             {statusMessage && (
@@ -341,43 +335,37 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
           </Button>
         ) : (
           <>
-            {/* Subscribe Button */}
-            <Button onClick={handleUpgrade} disabled={isSubscribeDisabled} variant="gold" className="w-full gap-2" size="lg">
-              {isButtonLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Processing…
-                </>
-              ) : isNativeIOS && !isOfferingsReady ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Loading subscription…
-                </>
-              ) : (
-                <>
-                  <Crown className="w-4 h-4" />
-                  Start 14-day free trial
-                </>
-              )}
-            </Button>
+            {/* Subscribe Button - show retry if offerings failed/idle */}
+            {isNativeIOS && (offeringsStatus === 'error' || offeringsStatus === 'idle') && !isButtonLoading ? (
+              <Button onClick={handleRetryOfferings} variant="gold" className="w-full gap-2" size="lg">
+                <RefreshCw className="w-4 h-4" />
+                Load subscription options
+              </Button>
+            ) : (
+              <Button onClick={handleUpgrade} disabled={isSubscribeDisabled} variant="gold" className="w-full gap-2" size="lg">
+                {isButtonLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Processing…
+                  </>
+                ) : isNativeIOS && offeringsStatus === 'loading' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading subscription…
+                  </>
+                ) : (
+                  <>
+                    <Crown className="w-4 h-4" />
+                    Start 14-day free trial
+                  </>
+                )}
+              </Button>
+            )}
             
             <p className="text-xs text-muted-foreground">
               {priceString}/month after · Cancel anytime
             </p>
           </>
-        )}
-
-        {/* iOS: Retry button if offerings failed */}
-        {isNativeIOS && isUserLoggedIn && offeringsStatus === 'error' && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full gap-2"
-            onClick={handleRetryOfferings}
-          >
-            <RefreshCw className="w-4 h-4" />
-            Retry loading subscription
-          </Button>
         )}
 
         {/* Status message */}

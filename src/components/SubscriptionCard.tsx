@@ -286,8 +286,7 @@ const SubscriptionCard = () => {
 
   // Not premium - show upgrade UI
   const priceString = isNativeIOS ? getPriceString() : '£5.99';
-  // CRITICAL: Only consider RevenueCat loading state on iOS - on web, it doesn't apply
-  const isButtonLoading = isCheckoutLoading || (isNativeIOS && isRevenueCatLoading);
+  const isButtonLoading = isCheckoutLoading || isRevenueCatLoading;
   const isSubscribeDisabled = isButtonLoading || (isNativeIOS && !isOfferingsReady);
 
   return (
@@ -315,49 +314,48 @@ const SubscriptionCard = () => {
             </Button>
           ) : (
             <>
-              {/* Subscribe button */}
-              <Button 
-                size="sm" 
-                variant="gold"
-                className="mt-3 gap-2"
-                onClick={handleUpgrade}
-                disabled={isSubscribeDisabled}
-              >
-                {isButtonLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Processing…
-                  </>
-                ) : isNativeIOS && !isOfferingsReady ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Loading…
-                  </>
-                ) : (
-                  <>
-                    <Crown className="w-4 h-4" />
-                    Start 14-day free trial
-                  </>
-                )}
-              </Button>
+              {/* Subscribe button - show retry if offerings failed/idle for too long */}
+              {isNativeIOS && (offeringsStatus === 'error' || offeringsStatus === 'idle') && !isButtonLoading ? (
+                <Button 
+                  size="sm" 
+                  variant="gold"
+                  className="mt-3 gap-2"
+                  onClick={handleRetryOfferings}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Load subscription options
+                </Button>
+              ) : (
+                <Button 
+                  size="sm" 
+                  variant="gold"
+                  className="mt-3 gap-2"
+                  onClick={handleUpgrade}
+                  disabled={isSubscribeDisabled}
+                >
+                  {isButtonLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Processing…
+                    </>
+                  ) : isNativeIOS && offeringsStatus === 'loading' ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading…
+                    </>
+                  ) : (
+                    <>
+                      <Crown className="w-4 h-4" />
+                      Start 14-day free trial
+                    </>
+                  )}
+                </Button>
+              )}
               
               <p className="text-xs text-muted-foreground mt-2">
                 {priceString}/month after · Cancel anytime
               </p>
             </>
-          )}
-
-          {/* iOS: Retry if offerings failed */}
-          {isNativeIOS && isUserLoggedIn && offeringsStatus === 'error' && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2 gap-2"
-              onClick={handleRetryOfferings}
-            >
-              <RefreshCw className="w-3 h-3" />
-              Retry
-            </Button>
           )}
 
           {/* Status message */}
