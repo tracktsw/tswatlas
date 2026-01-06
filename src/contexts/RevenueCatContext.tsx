@@ -67,12 +67,14 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
   // Retry initialization - useful if initial load failed
   const retryInitialization = useCallback(async () => {
     if (!getIsNativeIOS()) return;
-    
+
     console.log('[RevenueCatProvider] Retrying initialization...');
-    
+
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user?.id) {
       await revenueCat.initialize(session.user.id);
+      // Ensure offerings are fetched after a retry as well
+      await revenueCat.fetchOfferings();
     } else {
       // CRITICAL: Do NOT fetch offerings without a user - this prevents anonymous purchases
       console.log('[RevenueCatProvider] No user session, cannot initialize');

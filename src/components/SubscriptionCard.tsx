@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Crown, Loader2, RefreshCw, RotateCcw, Bug, LogIn } from 'lucide-react';
+import { Crown, Loader2, RefreshCw, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
@@ -287,7 +287,6 @@ const SubscriptionCard = () => {
   // Not premium - show upgrade UI
   const priceString = isNativeIOS ? getPriceString() : '£5.99';
   const isButtonLoading = isCheckoutLoading || isRevenueCatLoading;
-  const isSubscribeDisabled = isButtonLoading || (isNativeIOS && !isOfferingsReady);
 
   return (
     <div className="glass-card p-4 bg-gradient-to-br from-primary/5 to-accent/5">
@@ -301,62 +300,41 @@ const SubscriptionCard = () => {
             Unlock Photo Diary, full Insights, Community, Journal, and AI Coach.
           </p>
           
-          {/* CRITICAL: Show sign in button if not logged in on iOS */}
-          {isNativeIOS && !isUserLoggedIn ? (
-            <Button 
-              size="sm" 
-              variant="gold"
-              className="mt-3 gap-2"
-              onClick={() => navigate('/auth')}
-            >
-              <LogIn className="w-4 h-4" />
-              Sign in to Subscribe
-            </Button>
-          ) : (
-            <>
-              {/* Subscribe button - show retry if offerings failed/idle for too long */}
-              {isNativeIOS && (offeringsStatus === 'error' || offeringsStatus === 'idle') && !isButtonLoading ? (
-                <Button 
-                  size="sm" 
-                  variant="gold"
-                  className="mt-3 gap-2"
-                  onClick={handleRetryOfferings}
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Load subscription options
-                </Button>
-              ) : (
-                <Button 
-                  size="sm" 
-                  variant="gold"
-                  className="mt-3 gap-2"
-                  onClick={handleUpgrade}
-                  disabled={isSubscribeDisabled}
-                >
-                  {isButtonLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Processing…
-                    </>
-                  ) : isNativeIOS && offeringsStatus === 'loading' ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Loading…
-                    </>
-                  ) : (
-                    <>
-                      <Crown className="w-4 h-4" />
-                      Start 14-day free trial
-                    </>
-                  )}
-                </Button>
-              )}
-              
-              <p className="text-xs text-muted-foreground mt-2">
-                {priceString}/month after · Cancel anytime
-              </p>
-            </>
-          )}
+          <Button 
+            size="sm" 
+            variant="gold"
+            className="mt-3 gap-2"
+            onClick={async () => {
+              // Keep original button label; choose behavior based on iOS state
+              if (isNativeIOS && !isUserLoggedIn) {
+                toast.error('Please sign in to subscribe');
+                navigate('/auth');
+                return;
+              }
+              if (isNativeIOS && !isOfferingsReady) {
+                await handleRetryOfferings();
+                return;
+              }
+              await handleUpgrade();
+            }}
+            disabled={isButtonLoading}
+          >
+            {isButtonLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Processing…
+              </>
+            ) : (
+              <>
+                <Crown className="w-4 h-4" />
+                Start 14-day free trial
+              </>
+            )}
+          </Button>
+          
+          <p className="text-xs text-muted-foreground mt-2">
+            {priceString}/month after · Cancel anytime
+          </p>
 
           {/* Status message */}
           {statusMessage && (
