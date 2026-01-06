@@ -117,7 +117,7 @@ const AuthPage = () => {
 
   const getSubtitle = () => {
     switch (mode) {
-      case 'forgot': return 'Enter your email to receive a reset link';
+      case 'forgot': return "Enter your email and we'll send you a reset link";
       case 'signup': return 'Start tracking your TSW recovery today';
       default: return 'Sign in to continue your healing journey';
     }
@@ -231,6 +231,12 @@ const AuthPage = () => {
           <Button type="submit" variant="default" className="w-full h-12 text-base" disabled={loading}>
             {getButtonText()}
           </Button>
+
+          {mode === 'forgot' && (
+            <p className="text-xs text-center text-muted-foreground">
+              Your reset link should arrive within a few minutes — don't forget to check your junk/spam folder.
+            </p>
+          )}
 
           {mode !== 'forgot' && (
             <p className="text-sm text-center text-muted-foreground">
