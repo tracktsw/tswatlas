@@ -2,7 +2,7 @@ import { ReactNode, useMemo, useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
-import { Lock, Sparkles, Crown, Loader2, RotateCcw, RefreshCw, LogIn } from 'lucide-react';
+import { Lock, Sparkles, Crown, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -217,7 +217,6 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   // Get price string
   const priceString = isNativeIOS ? getPriceString() : '£5.99';
   const isButtonLoading = isUpgrading || isRevenueCatLoading;
-  const isSubscribeDisabled = isButtonLoading || (isNativeIOS && !isOfferingsReady);
 
 
   // Blurred content overlay
@@ -237,46 +236,40 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
               {feature} is available with Premium.
             </p>
             
-            {/* CRITICAL: Show sign in button if not logged in on iOS */}
-            {isNativeIOS && !isUserLoggedIn ? (
-              <Button onClick={() => navigate('/auth')} variant="gold" className="gap-2">
-                <LogIn className="w-4 h-4" />
-                Sign in to Subscribe
-              </Button>
-            ) : (
-              <>
-                {/* Subscribe Button - show retry if offerings failed/idle */}
-                {isNativeIOS && (offeringsStatus === 'error' || offeringsStatus === 'idle') && !isButtonLoading ? (
-                  <Button onClick={handleRetryOfferings} variant="gold" className="gap-2">
-                    <RefreshCw className="w-4 h-4" />
-                    Load subscription options
-                  </Button>
-                ) : (
-                  <Button onClick={handleUpgrade} disabled={isSubscribeDisabled} variant="gold" className="gap-2">
-                    {isButtonLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Processing…
-                      </>
-                    ) : isNativeIOS && offeringsStatus === 'loading' ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Loading…
-                      </>
-                    ) : (
-                      <>
-                        <Crown className="w-4 h-4" />
-                        Start 14-day free trial
-                      </>
-                    )}
-                  </Button>
-                )}
-                
-                <p className="text-xs text-muted-foreground mt-2">
-                  {priceString}/month after · Cancel anytime
-                </p>
-              </>
-            )}
+            <Button
+              onClick={async () => {
+                // Keep original button label; choose behavior based on iOS state
+                if (isNativeIOS && !isUserLoggedIn) {
+                  toast.error('Please sign in to subscribe');
+                  navigate('/auth');
+                  return;
+                }
+                if (isNativeIOS && !isOfferingsReady) {
+                  await handleRetryOfferings();
+                  return;
+                }
+                await handleUpgrade();
+              }}
+              disabled={isButtonLoading}
+              variant="gold"
+              className="gap-2"
+            >
+              {isButtonLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Processing…
+                </>
+              ) : (
+                <>
+                  <Crown className="w-4 h-4" />
+                  Start 14-day free trial
+                </>
+              )}
+            </Button>
+            
+            <p className="text-xs text-muted-foreground mt-2">
+              {priceString}/month after · Cancel anytime
+            </p>
 
 
             {/* Status message */}
@@ -326,47 +319,42 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
         Get full access to all features including Photo Diary, full Insights, Community, Journal, and AI Coach.
       </p>
       
-      <div className="space-y-3 w-full max-w-xs">
-        {/* CRITICAL: Show sign in button if not logged in on iOS */}
-        {isNativeIOS && !isUserLoggedIn ? (
-          <Button onClick={() => navigate('/auth')} variant="gold" className="w-full gap-2" size="lg">
-            <LogIn className="w-4 h-4" />
-            Sign in to Subscribe
-          </Button>
-        ) : (
-          <>
-            {/* Subscribe Button - show retry if offerings failed/idle */}
-            {isNativeIOS && (offeringsStatus === 'error' || offeringsStatus === 'idle') && !isButtonLoading ? (
-              <Button onClick={handleRetryOfferings} variant="gold" className="w-full gap-2" size="lg">
-                <RefreshCw className="w-4 h-4" />
-                Load subscription options
-              </Button>
+        <div className="space-y-3 w-full max-w-xs">
+          <Button
+            onClick={async () => {
+              // Keep original button label; choose behavior based on iOS state
+              if (isNativeIOS && !isUserLoggedIn) {
+                toast.error('Please sign in to subscribe');
+                navigate('/auth');
+                return;
+              }
+              if (isNativeIOS && !isOfferingsReady) {
+                await handleRetryOfferings();
+                return;
+              }
+              await handleUpgrade();
+            }}
+            disabled={isButtonLoading}
+            variant="gold"
+            className="w-full gap-2"
+            size="lg"
+          >
+            {isButtonLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Processing…
+              </>
             ) : (
-              <Button onClick={handleUpgrade} disabled={isSubscribeDisabled} variant="gold" className="w-full gap-2" size="lg">
-                {isButtonLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Processing…
-                  </>
-                ) : isNativeIOS && offeringsStatus === 'loading' ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Loading subscription…
-                  </>
-                ) : (
-                  <>
-                    <Crown className="w-4 h-4" />
-                    Start 14-day free trial
-                  </>
-                )}
-              </Button>
+              <>
+                <Crown className="w-4 h-4" />
+                Start 14-day free trial
+              </>
             )}
-            
-            <p className="text-xs text-muted-foreground">
-              {priceString}/month after · Cancel anytime
-            </p>
-          </>
-        )}
+          </Button>
+          
+          <p className="text-xs text-muted-foreground">
+            {priceString}/month after · Cancel anytime
+          </p>
 
         {/* Status message */}
         {statusMessage && (
