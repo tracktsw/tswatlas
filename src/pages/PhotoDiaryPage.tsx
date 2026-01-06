@@ -699,11 +699,11 @@ const PhotoDiaryPage = () => {
             size="sm"
             className="rounded-xl gap-1.5"
             onClick={() => isPremium ? setCompareMode(true) : setShowComparePaywall(true)}
-            disabled={photos.length < 2}
+            disabled={photos.length < 2 || isSubscriptionLoading}
           >
-            {!isPremium && <Lock className="w-3.5 h-3.5" />}
+            {!isSubscriptionLoading && !isPremium && <Lock className="w-3.5 h-3.5" />}
             Compare
-            {!isPremium && (
+            {!isSubscriptionLoading && !isPremium && (
               <span className="text-[10px] font-semibold bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">
                 Premium
               </span>
@@ -782,7 +782,14 @@ const PhotoDiaryPage = () => {
       </div>
 
       {/* Upload status indicator */}
-      {isPremium ? (
+      {isSubscriptionLoading ? (
+        <div className="glass-card p-4 animate-fade-in">
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Checking subscription...</span>
+          </div>
+        </div>
+      ) : isPremium ? (
         <div className="glass-card p-4 animate-fade-in">
           <p className="text-sm font-semibold text-foreground flex items-center gap-2">
             <Crown className="w-4 h-4 text-primary" />
@@ -1025,12 +1032,17 @@ const PhotoDiaryPage = () => {
       {/* Add Photo Button */}
       <div className="space-y-3">
         <Button 
-          variant={!isPremium && !canUploadMore ? "outline" : "default"}
+          variant={!isSubscriptionLoading && !isPremium && !canUploadMore ? "outline" : "default"}
           className="w-full gap-2 h-12"
           onClick={handleAddPhotoClick}
-          disabled={!isPremium && !canUploadMore}
+          disabled={isSubscriptionLoading || (!isPremium && !canUploadMore)}
         >
-          {!isPremium && !canUploadMore ? (
+          {isSubscriptionLoading ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Loading...
+            </>
+          ) : !isPremium && !canUploadMore ? (
             <>
               <Lock className="w-5 h-5" />
               Daily limit reached
@@ -1044,7 +1056,7 @@ const PhotoDiaryPage = () => {
         </Button>
         
         {/* Upgrade CTA when limit reached */}
-        {!isPremium && !canUploadMore && (
+        {!isSubscriptionLoading && !isPremium && !canUploadMore && (
           <div className="space-y-1">
             <Button 
               variant="gold" 
