@@ -708,7 +708,7 @@ const PhotoDiaryPage = () => {
 
   return (
     <div 
-      className="px-4 pt-6 space-y-6 max-w-lg mx-auto relative"
+      className="px-4 pt-6 space-y-6 max-w-lg mx-auto relative w-full box-border min-h-0"
       style={{ paddingBottom: 'calc(1.5rem + var(--android-safe-bottom, 0px))' }}
     >
       {/* Sparkle celebration effect */}

@@ -557,3 +557,19 @@ html, body, #root {
     bottom: var(--safe-bottom);
   }
 }
+
+/* 
+ * Android-specific layout fixes
+ * Target Android via feature detection (not -webkit-touch-callout means non-iOS)
+ */
+@supports not (-webkit-touch-callout: none) {
+  /* Ensure flex children can shrink properly on Android */
+  .flex-1 {
+    min-width: 0;
+  }
+  
+  /* Prevent horizontal overflow issues on Android */
+  .overflow-x-hidden {
+    overflow-x: hidden !important;
+  }
+}
