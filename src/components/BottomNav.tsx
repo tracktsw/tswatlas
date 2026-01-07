@@ -15,30 +15,36 @@ const navItems = [
  * BottomNav - Fixed bottom navigation bar
  * 
  * Safe area handling:
- * - Uses CSS variable --safe-bottom which is the single source of truth
- * - On Android: Set by AndroidSafeAreaContext from native WindowInsets
- * - On iOS: Set via CSS env(safe-area-inset-bottom) in index.css
+ * - iOS: Uses CSS env(safe-area-inset-bottom) via --safe-bottom variable
+ * - Android: Uses --android-safe-bottom set by AndroidSafeAreaContext from @capacitor-community/safe-area plugin
+ * - Web: No padding needed
  * 
- * This component applies the safe-bottom padding ONCE via the utility class.
- * No other element should apply bottom safe area padding.
+ * Platform detection determines which CSS variable to use.
  */
 const BottomNav = () => {
   const location = useLocation();
   
   // Detect Android platform
   const isAndroid = /android/i.test(navigator.userAgent);
+  
+  // Use platform-specific CSS variable
+  const bottomPadding = isAndroid 
+    ? 'var(--android-safe-bottom, 0px)' 
+    : 'var(--safe-bottom, 0px)';
 
   return (
     <nav 
-      className="fixed left-0 right-0 bottom-0 z-50 border-t border-border/50 shadow-lg"
-      style={{ paddingBottom: isAndroid ? '0px' : 'env(safe-area-inset-bottom, 0px)' }}
+      className="fixed left-0 right-0 bottom-0 z-50"
+      style={{ paddingBottom: bottomPadding }}
     >
-      {/* Background layer that extends below the nav for Android edge-to-edge */}
+      {/* Background layer - extends below nav to fill the safe area */}
       <div 
-        className="absolute inset-0 bg-card/98 backdrop-blur-md"
-        style={{ bottom: isAndroid ? '-100px' : '0' }}
+        className="absolute inset-0 bg-card/98 backdrop-blur-md border-t border-border/50"
+        style={{ 
+          bottom: isAndroid ? 'calc(-1 * var(--android-safe-bottom, 0px))' : '0' 
+        }}
       />
-      <div className="relative flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto">
+      <div className="relative flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto shadow-lg">
         {navItems.map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
           return (

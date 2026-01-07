@@ -18,17 +18,18 @@ body {
 :root {
   /* Top inset uses env() - works reliably on all platforms */
   --safe-top: env(safe-area-inset-top, 0px);
+  
   /* 
-   * Bottom inset: defaults to 0px
-   * - Android: Set dynamically by AndroidSafeAreaContext from native WindowInsets
-   * - iOS: Overridden below with env() (works reliably on iOS)
-   * 
-   * IMPORTANT: On Android, we do NOT use env(safe-area-inset-bottom) because:
-   * 1. WebViews often return 0 incorrectly
-   * 2. We get accurate values from native WindowInsets plugin
-   * 3. Using both causes double-padding bugs
+   * Bottom inset platform handling:
+   * - iOS: Uses env(safe-area-inset-bottom) below
+   * - Android: Set dynamically by AndroidSafeAreaProvider via --android-safe-bottom
+   * - Web: 0px
    */
   --safe-bottom: 0px;
+  
+  /* Android-specific bottom inset - set by SafeArea plugin in AndroidSafeAreaContext */
+  --android-safe-bottom: 0px;
+  
   --ios-header-extra: 16px;
   --ios-dialog-header-extra: 0px;
 }
