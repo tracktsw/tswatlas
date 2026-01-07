@@ -34,7 +34,7 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
 
     const setupInsets = async () => {
       try {
-        // Try our custom native plugin first (real WindowInsets)
+        // Use our custom native plugin (real WindowInsets)
         const AndroidInsets = (await import('@/plugins/androidInsets')).default;
         
         // Get initial insets
@@ -50,29 +50,9 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
           applyBottomInset(newBottom > 0 ? newBottom : FALLBACK_MIN_INSET);
         });
 
-      } catch (nativeError) {
-        console.warn('[AndroidSafeArea] Native plugin not available, trying fallback:', nativeError);
-        
-        // Fallback: try capacitor-plugin-safe-area
-        try {
-          const { SafeArea } = await import('capacitor-plugin-safe-area');
-          await SafeArea.unsetImmersiveNavigationBar();
-          
-          const { insets } = await SafeArea.getSafeAreaInsets();
-          const pluginBottom = clampPx(insets.bottom);
-          
-          applyBottomInset(pluginBottom > 0 ? pluginBottom : FALLBACK_MIN_INSET);
-
-          // Listen for changes
-          listenerHandle = await SafeArea.addListener('safeAreaChanged', ({ insets: newInsets }) => {
-            const newBottom = clampPx(newInsets.bottom);
-            applyBottomInset(newBottom > 0 ? newBottom : FALLBACK_MIN_INSET);
-          });
-
-        } catch (fallbackError) {
-          console.warn('[AndroidSafeArea] Fallback plugin failed, using minimum:', fallbackError);
-          applyBottomInset(FALLBACK_MIN_INSET);
-        }
+      } catch (error) {
+        console.warn('[AndroidSafeArea] Native plugin not available, using fallback:', error);
+        applyBottomInset(FALLBACK_MIN_INSET);
       }
     };
 
