@@ -2,12 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* App shell - use natural scroll hierarchy for Android 16 WebView compatibility */
+/* 
+ * App shell - Android 16 WebView compatibility
+ * - NO overflow:hidden on html/body/#root (breaks scrolling)
+ * - Use min-height:100dvh, not height:100vh (dynamic viewport)
+ * - Let scroll containers manage their own overflow
+ */
 html, body, #root {
-  /* Prefer dynamic viewport units to avoid Android URL bar / WebView "floating" fixed elements */
-  height: 100%;
-  height: 100dvh;
-  /* Removed overflow:hidden - let scroll containers handle their own overflow */
+  min-height: 100%;
+  min-height: 100dvh;
 }
 
 /* Android WebView scroll fix - prevent bounce without breaking scroll */
@@ -17,22 +20,32 @@ html, body, #root {
   }
 }
 
-/* Safe area and platform-specific offsets */
+/* 
+ * Safe area and platform-specific offsets
+ * 
+ * IMPORTANT: --safe-bottom has TWO sources:
+ * - iOS: Set via CSS env() below (reliable)
+ * - Android: Set via JS by AndroidSafeAreaContext (from native WindowInsets)
+ * 
+ * For Android, CSS env(safe-area-inset-bottom) is NOT reliable in WebView,
+ * so we read WindowInsets natively and set --safe-bottom via JS.
+ */
 :root {
   /* Top inset uses env() - works reliably on all platforms */
   --safe-top: env(safe-area-inset-top, 0px);
   
   /* 
-   * Bottom inset platform handling:
-   * - iOS: Uses env(safe-area-inset-bottom) below
-   * - Android: Set dynamically by AndroidSafeAreaProvider via --android-safe-bottom
-   * - Web: 0px
+   * Bottom safe area:
+   * - Default: 0px
+   * - iOS: Overridden below via @supports (-webkit-touch-callout: none)
+   * - Android: Set dynamically by AndroidSafeAreaContext.tsx
    */
   --safe-bottom: 0px;
   
-  /* Android-specific bottom inset - set by SafeArea plugin in AndroidSafeAreaContext */
-  --android-safe-bottom: 0px;
+  /* Nav bar height constant - used for content padding */
+  --nav-height: 56px;
   
+  /* iOS-specific extras */
   --ios-header-extra: 16px;
   --ios-dialog-header-extra: 0px;
 }
@@ -47,6 +60,9 @@ html, body, #root {
 /* 
  * iOS ONLY: use env() for bottom safe area
  * -webkit-touch-callout is an iOS-only property, so this won't affect Android
+ * 
+ * On Android, --safe-bottom is set by AndroidSafeAreaContext.tsx from native
+ * WindowInsets, NOT from CSS env() (which is unreliable in WebView)
  */
 @supports (-webkit-touch-callout: none) {
   :root {

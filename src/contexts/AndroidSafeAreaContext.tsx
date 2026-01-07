@@ -1,16 +1,18 @@
-import { createContext, useContext, useEffect, ReactNode, useState } from 'react';
+import { createContext, useContext, useEffect, ReactNode, useState, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import type { InsetsData } from '@/plugins/androidInsets';
 
 interface AndroidSafeAreaContextType {
   bottomInset: number;
+  imeInset: number;
   navMode: string;
   fallbackUsed: boolean;
 }
 
 const AndroidSafeAreaContext = createContext<AndroidSafeAreaContextType>({
   bottomInset: 0,
+  imeInset: 0,
   navMode: 'unknown',
   fallbackUsed: false,
 });
@@ -18,28 +20,31 @@ const AndroidSafeAreaContext = createContext<AndroidSafeAreaContextType>({
 export const useAndroidSafeArea = () => useContext(AndroidSafeAreaContext);
 
 /**
- * Fallback inset when native plugin unavailable or returns 0.
- * 24px is a reasonable default for most Android devices.
+ * Fallback inset when native plugin is truly unavailable.
+ * Only used for Android web fallback or plugin failure.
  */
 const FALLBACK_INSET = 24;
 
 /**
- * Robust Android platform detection that won't break with minification.
- * Uses Capacitor's API as primary source, with user agent as fallback for web.
+ * Nav bar height constant for layout calculations.
+ */
+const NAV_HEIGHT = 56;
+
+/**
+ * Robust Android platform detection using Capacitor APIs.
  */
 const detectAndroidPlatform = (): { isAndroid: boolean; isNative: boolean } => {
   const platform = Capacitor.getPlatform();
   const isNative = Capacitor.isNativePlatform();
   
-  // Primary: Use Capacitor's platform detection (minification-safe string comparison)
+  // Primary: Use Capacitor's platform detection
   if (platform === 'android') {
     return { isAndroid: true, isNative };
   }
   
-  // Fallback for web: Check user agent (only when not in Capacitor native)
+  // Fallback for web: Check user agent
   if (!isNative && typeof navigator !== 'undefined' && navigator.userAgent) {
     const ua = navigator.userAgent.toLowerCase();
-    // Use indexOf for robustness - string method won't be affected by minification
     if (ua.indexOf('android') !== -1) {
       return { isAndroid: true, isNative: false };
     }
@@ -48,59 +53,121 @@ const detectAndroidPlatform = (): { isAndroid: boolean; isNative: boolean } => {
   return { isAndroid: false, isNative: false };
 };
 
+/**
+ * Log inset changes with detailed debugging info.
+ */
+const logInsetChange = (
+  source: string,
+  data: {
+    platform: string;
+    systemBarsBottom: number;
+    systemGesturesBottom: number;
+    imeBottom: number;
+    computedSafeBottom: number;
+    navMode: string;
+    reason: string;
+    fallbackUsed: boolean;
+  }
+) => {
+  console.log(`[AndroidSafeArea][${source}]`, data);
+};
+
 export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) => {
   const [bottomInset, setBottomInset] = useState(0);
+  const [imeInset, setImeInset] = useState(0);
   const [navMode, setNavMode] = useState<string>('unknown');
   const [fallbackUsed, setFallbackUsed] = useState(false);
 
   const { isAndroid, isNative: isNativeAndroid } = detectAndroidPlatform();
 
+  /**
+   * Apply insets to CSS variables and state.
+   * This is the SINGLE place where --safe-bottom is set for Android.
+   */
+  const applyInsets = useCallback((data: InsetsData, source: string) => {
+    // Compute bottomNavInset as max(systemBars, systemGestures)
+    // This handles both gesture nav and 3-button nav correctly
+    const systemBarsBottom = data.systemBarsBottom ?? data.bottom ?? 0;
+    const systemGesturesBottom = data.systemGesturesBottom ?? 0;
+    const computedBottom = Math.max(systemBarsBottom, systemGesturesBottom);
+    
+    // Keep IME inset separate - never mix with nav inset
+    const ime = data.imeBottom ?? 0;
+    const mode = data.navMode || 'unknown';
+    const reason = data.reason || source;
+    
+    // Determine if we need to use fallback
+    // Only use fallback if native returns 0 AND we're in a situation where it shouldn't be 0
+    // For gesture nav, 0 is valid; for 3-button nav, we expect some inset
+    const useFallback = false; // Native plugin is source of truth - trust its values
+    const finalBottom = computedBottom;
+
+    setBottomInset(finalBottom);
+    setImeInset(ime);
+    setNavMode(mode);
+    setFallbackUsed(useFallback);
+
+    // Set the SINGLE CSS variable for Android safe area
+    // This is the ONLY place --safe-bottom is set for Android
+    document.documentElement.style.setProperty('--safe-bottom', `${finalBottom}px`);
+    
+    // Also set nav height as CSS variable for consistency
+    document.documentElement.style.setProperty('--nav-height', `${NAV_HEIGHT}px`);
+
+    logInsetChange(source, {
+      platform: 'android-native',
+      systemBarsBottom,
+      systemGesturesBottom,
+      imeBottom: ime,
+      computedSafeBottom: finalBottom,
+      navMode: mode,
+      reason,
+      fallbackUsed: useFallback,
+    });
+  }, []);
+
+  /**
+   * Apply fallback values for web or plugin failure.
+   */
+  const applyFallback = useCallback((reason: string) => {
+    setBottomInset(FALLBACK_INSET);
+    setImeInset(0);
+    setNavMode(`${reason}-fallback`);
+    setFallbackUsed(true);
+
+    document.documentElement.style.setProperty('--safe-bottom', `${FALLBACK_INSET}px`);
+    document.documentElement.style.setProperty('--nav-height', `${NAV_HEIGHT}px`);
+
+    logInsetChange(reason, {
+      platform: 'android-web',
+      systemBarsBottom: 0,
+      systemGesturesBottom: 0,
+      imeBottom: 0,
+      computedSafeBottom: FALLBACK_INSET,
+      navMode: 'fallback',
+      reason,
+      fallbackUsed: true,
+    });
+  }, []);
+
   useEffect(() => {
-    // Only apply Android-specific safe area handling
+    // Non-Android platforms: set CSS vars to 0 to not interfere
     if (!isAndroid) {
-      // Not Android - set to 0 to not interfere with iOS
-      document.documentElement.style.setProperty('--android-safe-bottom', '0px');
+      document.documentElement.style.setProperty('--safe-bottom', '0px');
+      document.documentElement.style.setProperty('--nav-height', `${NAV_HEIGHT}px`);
       return;
     }
 
     let listenerHandle: { remove: () => Promise<void> } | null = null;
 
-    const applyInsets = (data: InsetsData, source: string) => {
-      const rawBottom = data.bottom ?? 0;
-      const mode = data.navMode || 'unknown';
-
-      // Use fallback if native returns 0
-      const useFallback = rawBottom === 0;
-      const finalBottom = useFallback ? FALLBACK_INSET : rawBottom;
-
-      setBottomInset(finalBottom);
-      setNavMode(mode);
-      setFallbackUsed(useFallback);
-
-      // Set the Android-specific CSS variable
-      document.documentElement.style.setProperty('--android-safe-bottom', `${finalBottom}px`);
-
-      console.log(`[AndroidSafeArea][${source}]`, {
-        platform: 'android-native',
-        navMode: mode,
-        rawBottom,
-        appliedBottom: finalBottom,
-        fallbackUsed: useFallback,
-        cssVar: `--android-safe-bottom: ${finalBottom}px`,
-      });
-    };
-
     /**
-     * Set Android navigation bar color to match the app background.
-     * Uses the sage-deep color (#3d6b52) to match the app's theme.
+     * Set Android navigation bar color to match app theme.
      */
     const setAndroidNavBarColor = async () => {
       if (!isNativeAndroid) return;
       
       try {
-        // Set navigation bar background to match app theme (sage-deep: #3d6b52)
         await StatusBar.setBackgroundColor({ color: '#3d6b52' });
-        // Use light content (white icons) since background is dark
         await StatusBar.setStyle({ style: Style.Dark });
         console.log('[AndroidSafeArea] Navigation bar color set to #3d6b52');
       } catch (error) {
@@ -111,40 +178,33 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
     const setupInsets = async () => {
       if (isNativeAndroid) {
         try {
-          // Use existing custom AndroidInsets plugin
+          // Import and use native AndroidInsets plugin
           const AndroidInsets = (await import('@/plugins/androidInsets')).default;
 
+          // Get initial insets
           const insets = await AndroidInsets.getInsets();
-          applyInsets(insets, 'initial');
+          applyInsets({ ...insets, reason: 'initial' }, 'initial');
 
-          // Listen for inset changes
+          // Listen for inset changes (nav mode switch, rotation, resume, etc.)
           listenerHandle = await AndroidInsets.addListener('insetsChanged', (data) => {
             applyInsets(data, 'insetsChanged');
           });
 
-          console.log('[AndroidSafeArea] Native plugin initialized');
+          console.log('[AndroidSafeArea] Native plugin initialized - listening for inset changes');
         } catch (error) {
           // Plugin failed - use fallback
           console.warn('[AndroidSafeArea] Plugin error, using fallback:', error);
-          setBottomInset(FALLBACK_INSET);
-          setFallbackUsed(true);
-          setNavMode('error-fallback');
-          document.documentElement.style.setProperty('--android-safe-bottom', `${FALLBACK_INSET}px`);
+          applyFallback('error');
         }
       } else {
         // Android Web - use fallback
-        setBottomInset(FALLBACK_INSET);
-        setFallbackUsed(true);
-        setNavMode('web-fallback');
-        document.documentElement.style.setProperty('--android-safe-bottom', `${FALLBACK_INSET}px`);
-
-        console.log('[AndroidSafeArea] Android web fallback applied:', FALLBACK_INSET);
+        applyFallback('web');
       }
     };
 
     setupInsets();
     
-    // Set Android navigation bar color on native Android
+    // Set navigation bar color on native Android
     if (isNativeAndroid) {
       setAndroidNavBarColor();
     }
@@ -152,10 +212,10 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
     return () => {
       if (listenerHandle) listenerHandle.remove();
     };
-  }, [isAndroid, isNativeAndroid]);
+  }, [isAndroid, isNativeAndroid, applyInsets, applyFallback]);
 
   return (
-    <AndroidSafeAreaContext.Provider value={{ bottomInset, navMode, fallbackUsed }}>
+    <AndroidSafeAreaContext.Provider value={{ bottomInset, imeInset, navMode, fallbackUsed }}>
       {children}
     </AndroidSafeAreaContext.Provider>
   );
