@@ -30,10 +30,15 @@ const BottomNav = () => {
 
   return (
     <nav 
-      className="fixed left-0 right-0 bottom-0 z-50 bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg"
-      style={{ paddingBottom: isAndroid ? '40px' : 'env(safe-area-inset-bottom, 0px)' }}
+      className="fixed left-0 right-0 bottom-0 z-50 border-t border-border/50 shadow-lg"
+      style={{ paddingBottom: isAndroid ? '0px' : 'env(safe-area-inset-bottom, 0px)' }}
     >
-      <div className="flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto">
+      {/* Background layer that extends below the nav for Android edge-to-edge */}
+      <div 
+        className="absolute inset-0 bg-card/98 backdrop-blur-md"
+        style={{ bottom: isAndroid ? '-100px' : '0' }}
+      />
+      <div className="relative flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto">
         {navItems.map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
           return (
