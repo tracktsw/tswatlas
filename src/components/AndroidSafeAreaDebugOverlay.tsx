@@ -17,10 +17,15 @@ export const AndroidSafeAreaDebugOverlay = () => {
   const [values, setValues] = useState<DebugValues | null>(null);
   const probeRef = useRef<HTMLDivElement | null>(null);
 
-  // Check query param on mount
+  // TEMPORARY: Always enable on native Android for debugging
+  // Revert to query param check after debugging is complete
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setEnabled(params.get('debugSafeArea') === '1');
+    if (isNativeAndroid) {
+      setEnabled(true);
+    } else {
+      const params = new URLSearchParams(window.location.search);
+      setEnabled(params.get('debugSafeArea') === '1');
+    }
   }, []);
 
   // Create probe element for reading env(safe-area-inset-bottom)
