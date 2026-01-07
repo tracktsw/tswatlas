@@ -19,13 +19,8 @@ const BottomNav = () => {
   const location = useLocation();
   const { bottomInset } = useAndroidSafeArea();
 
-  // Android: keep the *content* above system navigation, but prevent the whole bar from
-  // “floating” upward by shifting the fixed container down by the same inset.
-  // This makes the background fill the nav-bar area while the icons remain tappable.
-  const androidNavStyle = isNativeAndroid ? ({ bottom: `-${bottomInset}px` } as const) : undefined;
-
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50" style={androidNavStyle}>
+    <nav className="fixed bottom-0 left-0 right-0 z-50">
       <div
         className="bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg"
         style={isNativeAndroid ? { paddingBottom: `${bottomInset}px` } : undefined}

@@ -17,6 +17,8 @@ const Layout = () => {
   const { isKeyboardOpen, isIOS } = useIOSKeyboardContext();
   const navigate = useNavigate();
 
+  const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+
   const {
     shouldShowReminder,
     reminderType,
@@ -73,10 +75,16 @@ const Layout = () => {
           "flex-1 min-h-0 overscroll-contain",
           // On iOS when keyboard is open OR text input is focused, prevent this container from scrolling to stop page jump
           isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto",
-          // Reserve space for BottomNav (5rem) on all platforms when visible
-          // On Android, BottomNav itself adds safe-area padding, so we only need nav height here
+          // Reserve space for BottomNav.
+          // - All platforms: reserve the nav height (5rem)
+          // - Android: also reserve the native bottom inset via --safe-bottom
           !hideBottomNav && "pb-20"
         )}
+        style={
+          !hideBottomNav && isNativeAndroid
+            ? { paddingBottom: 'calc(5rem + var(--safe-bottom))' }
+            : undefined
+        }
       >
         <Outlet />
       </main>
