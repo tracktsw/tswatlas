@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import BottomNav from './BottomNav';
 import { ReminderBanner } from './ReminderBanner';
@@ -10,6 +10,10 @@ import { useIOSKeyboardContext } from '@/contexts/IOSKeyboardContext';
 import { initNotificationListeners, scheduleCheckInReminders } from '@/utils/notificationScheduler';
 import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils';
+
+// Detect Android platform (native or web)
+const isAndroid = Capacitor.getPlatform() === 'android' || 
+  (typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent));
 
 /**
  * Layout - Main app layout wrapper
@@ -65,10 +69,14 @@ const Layout = () => {
     }
   }, [reminderSettings, userId, isLoading]);
 
+  // On Android, no top safe area padding (flush to top)
+  // On iOS, use --safe-top from CSS env()
+  const topPadding = useMemo(() => isAndroid ? '0px' : 'var(--safe-top)', []);
+
   return (
     <div 
       className="min-h-[100dvh] bg-background flex flex-col" 
-      style={{ paddingTop: 'var(--safe-top)' }}
+      style={{ paddingTop: topPadding }}
     >
       {/* Reminder banner - shows when due and user hasn't checked in */}
       {!isLoading && shouldShowReminder && reminderType && (
