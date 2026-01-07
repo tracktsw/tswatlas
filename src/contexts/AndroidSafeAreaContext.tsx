@@ -9,6 +9,9 @@ const AndroidSafeAreaContext = createContext<AndroidSafeAreaContextType>({ botto
 
 export const useAndroidSafeArea = () => useContext(AndroidSafeAreaContext);
 
+// Minimum fallback for gesture navigation (typically 48px on most devices)
+const MIN_GESTURE_NAV_HEIGHT = 48;
+
 export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) => {
   const [bottomInset, setBottomInset] = useState(0);
   const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
@@ -20,15 +23,19 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
 
     const setupSafeArea = async () => {
       try {
+        // Use StatusBar to prevent WebView from drawing behind system bars
+        const { StatusBar } = await import('@capacitor/status-bar');
+        await StatusBar.setOverlaysWebView({ overlay: false });
+        
         const { SafeArea } = await import('capacitor-plugin-safe-area');
         
-        // Don't use immersive mode - let Android handle safe areas naturally
-        // This ensures fixed bottom-0 elements sit above the system nav bar
+        // Ensure we're not in immersive mode
         await SafeArea.unsetImmersiveNavigationBar();
         
-        // Get insets for reference (may be 0 when not in immersive mode, which is fine)
+        // Get insets - use fallback if reported as 0 (common on real devices with gesture nav)
         const { insets } = await SafeArea.getSafeAreaInsets();
-        const bottomValue = Math.max(insets.bottom, 0);
+        // If inset is 0 but we're on Android, use minimum fallback for gesture nav
+        const bottomValue = insets.bottom > 0 ? insets.bottom : MIN_GESTURE_NAV_HEIGHT;
         setBottomInset(bottomValue);
         
         document.documentElement.style.setProperty(
@@ -38,7 +45,7 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
 
         // Listen for changes (rotation, keyboard, etc.)
         listenerHandle = await SafeArea.addListener('safeAreaChanged', ({ insets }) => {
-          const newBottom = Math.max(insets.bottom, 0);
+          const newBottom = insets.bottom > 0 ? insets.bottom : MIN_GESTURE_NAV_HEIGHT;
           setBottomInset(newBottom);
           document.documentElement.style.setProperty(
             '--android-bottom-inset',
@@ -48,7 +55,8 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
 
       } catch (error) {
         console.warn('Failed to setup Android safe area:', error);
-        document.documentElement.style.setProperty('--android-bottom-inset', '0px');
+        // Use fallback on error
+        document.documentElement.style.setProperty('--android-bottom-inset', `${MIN_GESTURE_NAV_HEIGHT}px`);
       }
     };
 
