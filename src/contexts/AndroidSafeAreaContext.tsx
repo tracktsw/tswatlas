@@ -22,14 +22,37 @@ export const useAndroidSafeArea = () => useContext(AndroidSafeAreaContext);
  */
 const FALLBACK_INSET = 24;
 
+/**
+ * Robust Android platform detection that won't break with minification.
+ * Uses Capacitor's API as primary source, with user agent as fallback for web.
+ */
+const detectAndroidPlatform = (): { isAndroid: boolean; isNative: boolean } => {
+  const platform = Capacitor.getPlatform();
+  const isNative = Capacitor.isNativePlatform();
+  
+  // Primary: Use Capacitor's platform detection (minification-safe string comparison)
+  if (platform === 'android') {
+    return { isAndroid: true, isNative };
+  }
+  
+  // Fallback for web: Check user agent (only when not in Capacitor native)
+  if (!isNative && typeof navigator !== 'undefined' && navigator.userAgent) {
+    const ua = navigator.userAgent.toLowerCase();
+    // Use indexOf for robustness - string method won't be affected by minification
+    if (ua.indexOf('android') !== -1) {
+      return { isAndroid: true, isNative: false };
+    }
+  }
+  
+  return { isAndroid: false, isNative: false };
+};
+
 export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) => {
   const [bottomInset, setBottomInset] = useState(0);
   const [navMode, setNavMode] = useState<string>('unknown');
   const [fallbackUsed, setFallbackUsed] = useState(false);
 
-  const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
-  const isAndroidWeb = !Capacitor.isNativePlatform() && /android/i.test(navigator.userAgent);
-  const isAndroid = isNativeAndroid || isAndroidWeb;
+  const { isAndroid, isNative: isNativeAndroid } = detectAndroidPlatform();
 
   useEffect(() => {
     // Only apply Android-specific safe area handling
