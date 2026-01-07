@@ -9,23 +9,10 @@ const AndroidSafeAreaContext = createContext<AndroidSafeAreaContextType>({ botto
 
 export const useAndroidSafeArea = () => useContext(AndroidSafeAreaContext);
 
-// Minimum fallback for 3-button navigation (typically 48-56dp, ~72-80px on high-density screens)
-const MIN_NAV_HEIGHT = 72;
+// Fallback minimum if native plugin fails (covers most 3-button nav bars)
+const FALLBACK_MIN_INSET = 72;
 
 const clampPx = (n: number) => (Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0);
-
-const getVisualViewportBottomOcclusion = () => {
-  // Estimates how much of the bottom is "taken" by system UI / overlays.
-  // On many real Android devices with gesture nav, this is non-zero even when
-  // safe-area env vars and plugin insets report 0.
-  const vv = window.visualViewport;
-  if (!vv) return 0;
-
-  // innerHeight includes the area behind overlays; visualViewport.height is the
-  // visible area. offsetTop matters for keyboards / browser UI.
-  const occlusion = window.innerHeight - vv.height - vv.offsetTop;
-  return clampPx(occlusion);
-};
 
 export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) => {
   const [bottomInset, setBottomInset] = useState(0);
@@ -35,80 +22,61 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
     if (!isNativeAndroid) return;
 
     let listenerHandle: { remove: () => Promise<void> } | null = null;
-    let detachViewportListeners: (() => void) | null = null;
 
-    const applyBottomInset = (candidate: number) => {
-      const next = clampPx(Math.max(candidate, MIN_NAV_HEIGHT));
+    const applyBottomInset = (value: number) => {
+      const next = clampPx(value);
       setBottomInset(next);
-      document.documentElement.style.setProperty('--android-bottom-inset', `${next}px`);
+      document.documentElement.style.setProperty('--app-safe-bottom', `${next}px`);
     };
 
-    const setupSafeArea = async () => {
+    const setupInsets = async () => {
       try {
-        // StatusBar overlay control helps on some devices, but nav-bar/gesture areas
-        // are inconsistent; we combine multiple signals below.
-        const { StatusBar } = await import('@capacitor/status-bar');
-        await StatusBar.setOverlaysWebView({ overlay: false });
+        // Try our custom native plugin first (real WindowInsets)
+        const AndroidInsets = (await import('@/plugins/androidInsets')).default;
+        
+        // Get initial insets
+        const insets = await AndroidInsets.getInsets();
+        const bottom = clampPx(insets.bottom);
+        
+        // If native returns 0, use fallback (some devices/modes report 0 incorrectly)
+        applyBottomInset(bottom > 0 ? bottom : FALLBACK_MIN_INSET);
 
-        const { SafeArea } = await import('capacitor-plugin-safe-area');
-
-        // Ensure we're not in immersive mode
-        await SafeArea.unsetImmersiveNavigationBar();
-
-        const computeAndApply = async () => {
-          const viewportOcclusion = getVisualViewportBottomOcclusion();
-          let pluginBottom = 0;
-
-          try {
-            const { insets } = await SafeArea.getSafeAreaInsets();
-            pluginBottom = clampPx(insets.bottom);
-          } catch {
-            // ignore; we'll rely on viewport occlusion + min fallback
-          }
-
-          applyBottomInset(Math.max(pluginBottom, viewportOcclusion));
-        };
-
-        // Initial
-        await computeAndApply();
-
-        // Listen for plugin changes (rotation, etc.)
-        listenerHandle = await SafeArea.addListener('safeAreaChanged', ({ insets }) => {
-          const viewportOcclusion = getVisualViewportBottomOcclusion();
-          const pluginBottom = clampPx(insets.bottom);
-          applyBottomInset(Math.max(pluginBottom, viewportOcclusion));
+        // Listen for inset changes (rotation, nav mode toggle, etc.)
+        listenerHandle = await AndroidInsets.addListener('insetsChanged', (data) => {
+          const newBottom = clampPx(data.bottom);
+          applyBottomInset(newBottom > 0 ? newBottom : FALLBACK_MIN_INSET);
         });
 
-        // VisualViewport listeners (device-specific gesture/nav overlays + dynamic changes)
-        const vv = window.visualViewport;
-        if (vv) {
-          const onVvChange = () => {
-            const viewportOcclusion = getVisualViewportBottomOcclusion();
-            applyBottomInset(viewportOcclusion);
-          };
+      } catch (nativeError) {
+        console.warn('[AndroidSafeArea] Native plugin not available, trying fallback:', nativeError);
+        
+        // Fallback: try capacitor-plugin-safe-area
+        try {
+          const { SafeArea } = await import('capacitor-plugin-safe-area');
+          await SafeArea.unsetImmersiveNavigationBar();
+          
+          const { insets } = await SafeArea.getSafeAreaInsets();
+          const pluginBottom = clampPx(insets.bottom);
+          
+          applyBottomInset(pluginBottom > 0 ? pluginBottom : FALLBACK_MIN_INSET);
 
-          vv.addEventListener('resize', onVvChange);
-          vv.addEventListener('scroll', onVvChange);
-          window.addEventListener('resize', onVvChange);
+          // Listen for changes
+          listenerHandle = await SafeArea.addListener('safeAreaChanged', ({ insets: newInsets }) => {
+            const newBottom = clampPx(newInsets.bottom);
+            applyBottomInset(newBottom > 0 ? newBottom : FALLBACK_MIN_INSET);
+          });
 
-          detachViewportListeners = () => {
-            vv.removeEventListener('resize', onVvChange);
-            vv.removeEventListener('scroll', onVvChange);
-            window.removeEventListener('resize', onVvChange);
-          };
+        } catch (fallbackError) {
+          console.warn('[AndroidSafeArea] Fallback plugin failed, using minimum:', fallbackError);
+          applyBottomInset(FALLBACK_MIN_INSET);
         }
-      } catch (error) {
-        console.warn('Failed to setup Android safe area:', error);
-        // Last-resort fallback
-        applyBottomInset(MIN_NAV_HEIGHT);
       }
     };
 
-    setupSafeArea();
+    setupInsets();
 
     return () => {
       if (listenerHandle) listenerHandle.remove();
-      if (detachViewportListeners) detachViewportListeners();
     };
   }, [isNativeAndroid]);
 
@@ -118,4 +86,3 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
     </AndroidSafeAreaContext.Provider>
   );
 };
-

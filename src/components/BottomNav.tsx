@@ -1,8 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Camera, CheckCircle, BarChart3, Users, Leaf } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Capacitor } from '@capacitor/core';
-import { useAndroidSafeArea } from '@/contexts/AndroidSafeAreaContext';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Home' },
@@ -15,15 +13,12 @@ const navItems = [
 
 const BottomNav = () => {
   const location = useLocation();
-  const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
-  const { bottomInset } = useAndroidSafeArea();
 
+  // BottomNav does NOT apply Android safe-area padding.
+  // Layout.tsx is the single source of truth for bottom spacing on Android.
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
-      <div
-        className="bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg"
-        style={isNativeAndroid ? { paddingBottom: `${bottomInset}px` } : undefined}
-      >
+      <div className="bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg">
         <div className="flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto">
           {navItems.map(({ path, icon: Icon, label }) => {
             const isActive = location.pathname === path;

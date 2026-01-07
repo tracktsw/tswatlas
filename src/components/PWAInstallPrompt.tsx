@@ -1,18 +1,25 @@
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { Button } from '@/components/ui/button';
 import { Share, MoreVertical, Plus, Download, X } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 
 export function PWAInstallPrompt() {
   const { platform, shouldShowPrompt, dismiss, triggerInstall, canTriggerInstall } = usePWAInstall();
+  const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
   if (!shouldShowPrompt) {
     return null;
   }
 
+  // On native Android, use the CSS var set by AndroidSafeAreaContext; otherwise use env()
+  const safeBottomStyle = isNativeAndroid
+    ? 'calc(80px + var(--app-safe-bottom, 0px))'
+    : 'calc(80px + env(safe-area-inset-bottom, 0px))';
+
   return (
     <div 
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-      style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}
+      style={{ paddingBottom: safeBottomStyle }}
     >
       <div className="w-full max-w-md max-h-full overflow-auto animate-in fade-in zoom-in-95 duration-300">
         <div className="rounded-2xl bg-card border border-border shadow-xl">

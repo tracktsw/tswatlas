@@ -75,14 +75,14 @@ const Layout = () => {
           "flex-1 min-h-0 overscroll-contain",
           // On iOS when keyboard is open OR text input is focused, prevent this container from scrolling to stop page jump
           isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto",
-          // Reserve space for BottomNav on web/iOS; Android uses explicit inset-aware padding below
+          // Reserve space for BottomNav on web/iOS; Android uses CSS var set by context
           !isNativeAndroid && !hideBottomNav && "pb-20"
         )}
         style={
           isNativeAndroid && !hideBottomNav
             ? {
-                paddingBottom:
-                  'calc(5rem + max(env(safe-area-inset-bottom), var(--android-bottom-inset, 0px)))',
+                // Single compensation: 5rem nav height + native-reported safe area
+                paddingBottom: 'calc(5rem + var(--app-safe-bottom, 0px))',
               }
             : undefined
         }
