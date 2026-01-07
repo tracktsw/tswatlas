@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import BottomNav from './BottomNav';
 import { ReminderBanner } from './ReminderBanner';
@@ -69,14 +69,18 @@ const Layout = () => {
     }
   }, [reminderSettings, userId, isLoading]);
 
-  // On Android, no top safe area padding (flush to top)
-  // On iOS, use --safe-top from CSS env()
-  const topPadding = useMemo(() => isAndroid ? '0px' : 'var(--safe-top)', []);
-
   return (
     <div 
-      className="min-h-[100dvh] bg-background flex flex-col" 
-      style={{ paddingTop: topPadding }}
+      className={cn(
+        "bg-background flex flex-col",
+        // Android: min-h-full, no safe areas
+        // iOS: min-h-[100dvh] with top safe area
+        isAndroid ? "min-h-full" : "min-h-[100dvh]"
+      )}
+      style={{ 
+        // iOS only: top safe area padding
+        paddingTop: isAndroid ? undefined : 'var(--safe-top)' 
+      }}
     >
       {/* Reminder banner - shows when due and user hasn't checked in */}
       {!isLoading && shouldShowReminder && reminderType && (
@@ -88,18 +92,18 @@ const Layout = () => {
       )}
       
       {/* 
-        Main content area
-        - Uses --nav-height for bottom padding (not safe area - that's in BottomNav)
-        - min-h-0 enables proper flex shrinking for scroll
-        - touch-action: pan-y for Android 16 WebView scroll compatibility
+        Main content area - ONLY scroll container
+        - flex-1 min-h-0 overflow-y-auto for scrolling
+        - padding-bottom: 56px (nav height only, no safe-bottom)
+        - BottomNav owns safe-bottom exclusively
       */}
       <main 
         className={cn(
           "flex-1 min-h-0",
           // On iOS when keyboard is open, prevent scrolling to stop page jump
           isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto",
-          // Reserve space for nav bar height only - safe area is in BottomNav
-          !hideBottomNav && "pb-[var(--nav-height)]"
+          // Reserve space for nav bar height only (56px) - BottomNav owns safe-bottom
+          !hideBottomNav && "pb-14"
         )}
         style={{ 
           touchAction: 'pan-y',
