@@ -24,11 +24,14 @@ const navItems = [
  */
 const BottomNav = () => {
   const location = useLocation();
+  
+  // Detect Android platform
+  const isAndroid = /android/i.test(navigator.userAgent);
 
   return (
     <nav 
       className="fixed left-0 right-0 bottom-0 z-50 bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      style={{ paddingBottom: isAndroid ? '40px' : 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto">
         {navItems.map(({ path, icon: Icon, label }) => {
