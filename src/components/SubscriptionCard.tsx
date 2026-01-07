@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type TouchEventHandler } from 'react';
+import { useMemo, useState } from 'react';
 import { Crown, Loader2, RefreshCw, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -318,38 +318,23 @@ const SubscriptionCard = () => {
   const priceString = isNativeMobile ? getPriceString() : '£5.99';
   const isButtonLoading = isCheckoutLoading || isRevenueCatLoading;
 
-  // Android-only: ensure taps reliably trigger the handler (some WebView/device combos can miss onClick)
-  const touchTriggeredRef = useRef(false);
-
-  const handlePrimaryPress = async () => {
-    // Keep original button label; choose behavior based on native mobile state
-    if (isNativeMobile && !isUserLoggedIn) {
-      toast.error('Please sign in to subscribe');
-      navigate('/auth');
-      return;
+  const handleButtonClick = async () => {
+    try {
+      // Keep original button label; choose behavior based on native mobile state
+      if (isNativeMobile && !isUserLoggedIn) {
+        toast.error('Please sign in to subscribe');
+        navigate('/auth');
+        return;
+      }
+      if (isNativeMobile && !isOfferingsReady) {
+        await handleRetryOfferings();
+        return;
+      }
+      await handleUpgrade();
+    } catch (err: any) {
+      console.error('[SubscriptionCard] Button click error:', err);
+      toast.error(err?.message || 'Something went wrong');
     }
-    if (isNativeMobile && !isOfferingsReady) {
-      await handleRetryOfferings();
-      return;
-    }
-    await handleUpgrade();
-  };
-
-  const handlePrimaryClick = async () => {
-    if (isNativeAndroid && touchTriggeredRef.current) {
-      // Prevent double-firing after a touch event
-      touchTriggeredRef.current = false;
-      return;
-    }
-    await handlePrimaryPress();
-  };
-
-  const handlePrimaryTouchEnd: TouchEventHandler<HTMLButtonElement> = async (e) => {
-    if (!isNativeAndroid) return;
-    // Prevent the following synthetic click from also firing
-    touchTriggeredRef.current = true;
-    e.preventDefault();
-    await handlePrimaryPress();
   };
 
   return (
@@ -368,8 +353,7 @@ const SubscriptionCard = () => {
             size="sm" 
             variant="gold"
             className="mt-3 gap-2"
-            onClick={handlePrimaryClick}
-            onTouchEnd={handlePrimaryTouchEnd}
+            onClick={handleButtonClick}
             disabled={isButtonLoading}
           >
             {isButtonLoading ? (
