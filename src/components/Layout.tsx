@@ -56,7 +56,7 @@ const Layout = () => {
 
   return (
     <div 
-      className="h-[100dvh] bg-background flex flex-col overflow-hidden" 
+      className="h-[100dvh] bg-background flex flex-col" 
       style={{ paddingTop: 'var(--safe-top)' }}
     >
       {/* Reminder banner - shows when due and user hasn't checked in */}
@@ -73,15 +73,20 @@ const Layout = () => {
         - pb-20: Reserve space for BottomNav (approx 80px height)
         - Safe area padding is applied ONLY in BottomNav via --safe-bottom
         - No safe-bottom padding here to avoid double-padding
+        - touch-action: pan-y for Android 16 WebView scroll compatibility
       */}
       <main 
         className={cn(
-          "flex-1 min-h-0 overscroll-contain",
+          "flex-1 min-h-0",
           // On iOS when keyboard is open, prevent scrolling to stop page jump
           isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto",
           // Reserve space for BottomNav height only (not safe area - that's in BottomNav)
           !hideBottomNav && "pb-20"
         )}
+        style={{ 
+          touchAction: 'pan-y',
+          WebkitOverflowScrolling: 'touch'
+        }}
       >
         <Outlet />
       </main>
