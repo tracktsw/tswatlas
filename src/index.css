@@ -18,6 +18,8 @@ body {
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --ios-header-extra: 16px;
   --ios-dialog-header-extra: 0px;
+  /* Android bottom inset - set dynamically by AndroidSafeAreaContext */
+  --android-bottom-inset: 0px;
 }
 
 /* Legacy iOS fallback using constant() */

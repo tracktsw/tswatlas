@@ -7,6 +7,7 @@ import { UserDataProvider } from "@/contexts/UserDataContext";
 import { LayoutProvider } from "@/contexts/LayoutContext";
 import { DemoModeProvider } from "@/contexts/DemoModeContext";
 import { IOSKeyboardProvider } from "@/contexts/IOSKeyboardContext";
+import { AndroidSafeAreaProvider } from "@/contexts/AndroidSafeAreaContext";
 import { RevenueCatProvider } from "@/contexts/RevenueCatContext";
 import AuthGuard from "@/components/AuthGuard";
 import Layout from "@/components/Layout";
@@ -40,8 +41,9 @@ const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
     <QueryClientProvider client={queryClient}>
       <IOSKeyboardProvider>
-        <LayoutProvider>
-          <TooltipProvider>
+        <AndroidSafeAreaProvider>
+          <LayoutProvider>
+            <TooltipProvider>
             <BrowserRouter>
               <DeepLinkHandler>
                 <Routes>
@@ -83,8 +85,9 @@ const App = () => (
               </Routes>
               </DeepLinkHandler>
             </BrowserRouter>
-          </TooltipProvider>
-        </LayoutProvider>
+            </TooltipProvider>
+          </LayoutProvider>
+        </AndroidSafeAreaProvider>
       </IOSKeyboardProvider>
     </QueryClientProvider>
   </ThemeProvider>
