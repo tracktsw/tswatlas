@@ -1,10 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Camera, CheckCircle, BarChart3, Users, Leaf } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Capacitor } from '@capacitor/core';
-import { useAndroidSafeArea } from '@/contexts/AndroidSafeAreaContext';
-
-const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Home' },
@@ -15,26 +11,26 @@ const navItems = [
   { path: '/coach', icon: Leaf, label: 'Coach' },
 ];
 
+/**
+ * BottomNav - Fixed bottom navigation bar
+ * 
+ * Safe area handling:
+ * - Uses CSS variable --safe-bottom which is the single source of truth
+ * - On Android: Set by AndroidSafeAreaContext from native WindowInsets
+ * - On iOS: Set via CSS env(safe-area-inset-bottom) in index.css
+ * 
+ * This component applies the safe-bottom padding ONCE via the utility class.
+ * No other element should apply bottom safe area padding.
+ */
 const BottomNav = () => {
   const location = useLocation();
-  const { bottomInset } = useAndroidSafeArea();
-
-  // DIAGNOSTIC: On Android, force bottom:0 with zero extra padding to test if issue is double-application
-  // If this snaps the nav down correctly, the problem is double safe-bottom application elsewhere
-  // If it still floats, the problem is viewport/container height (100vh vs 100dvh)
-  const diagnosticStyle = isNativeAndroid 
-    ? { bottom: 0, margin: 0, padding: 0 } 
-    : undefined;
 
   return (
     <nav 
-      className="fixed left-0 right-0 z-50" 
-      style={{ bottom: 0, ...diagnosticStyle }}
+      className="fixed left-0 right-0 bottom-0 z-50"
     >
       <div
-        className="bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg"
-        // Only apply safe-bottom padding on Android ONCE here
-        style={isNativeAndroid ? { paddingBottom: `${bottomInset}px` } : undefined}
+        className="bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg safe-area-inset-bottom"
       >
         <div className="flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto">
           {navItems.map(({ path, icon: Icon, label }) => {

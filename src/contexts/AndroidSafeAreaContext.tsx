@@ -1,22 +1,37 @@
 import { createContext, useContext, useEffect, ReactNode, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
+import type { InsetsData } from '@/plugins/androidInsets';
 
 interface AndroidSafeAreaContextType {
   bottomInset: number;
+  imeInset: number;
+  navMode: string;
 }
 
-const AndroidSafeAreaContext = createContext<AndroidSafeAreaContextType>({ bottomInset: 0 });
+const AndroidSafeAreaContext = createContext<AndroidSafeAreaContextType>({
+  bottomInset: 0,
+  imeInset: 0,
+  navMode: 'unknown',
+});
 
 export const useAndroidSafeArea = () => useContext(AndroidSafeAreaContext);
 
-// Fallback inset when native plugin unavailable or returns 0.
-// 48px covers typical gesture-nav (24-32dp) and 3-button nav (48dp) on most devices.
+/**
+ * Fallback inset when native plugin unavailable or returns null/0.
+ * 48px covers typical gesture-nav (24-32dp) and 3-button nav (48dp) on most devices.
+ * ONLY used as last resort when native returns invalid data.
+ */
 const FALLBACK_INSET = 48;
 
-const clampPx = (n: number) => (Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0);
+const clampPx = (n: number | undefined | null): number =>
+  n != null && Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0;
 
 export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) => {
   const [bottomInset, setBottomInset] = useState(0);
+  const [imeInset, setImeInset] = useState(0);
+  const [navMode, setNavMode] = useState<string>('unknown');
+  const [fallbackUsed, setFallbackUsed] = useState(false);
+
   const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
   useEffect(() => {
@@ -24,36 +39,65 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
 
     let listenerHandle: { remove: () => Promise<void> } | null = null;
 
-    const applyBottomInset = (value: number) => {
-      const next = clampPx(value);
-      setBottomInset(next);
+    const applyInsets = (data: InsetsData, source: string) => {
+      const rawBottom = clampPx(data.bottom);
+      const rawIme = clampPx(data.imeBottom);
+      const mode = data.navMode || 'unknown';
 
-      // On Android, override --safe-bottom to use native value (avoids env() double-application)
-      document.documentElement.style.setProperty('--safe-bottom', `${next}px`);
-      document.documentElement.style.setProperty('--app-safe-bottom', `${next}px`);
+      // Determine if we need fallback
+      const useFallback = rawBottom === 0;
+      const finalBottom = useFallback ? FALLBACK_INSET : rawBottom;
 
-      // TEMP diagnostics (shows in console logs)
-      console.log('[AndroidSafeArea] bottomInset(px)=', next);
+      setBottomInset(finalBottom);
+      setImeInset(rawIme);
+      setNavMode(mode);
+      setFallbackUsed(useFallback);
+
+      // Set the single CSS variable for bottom safe area
+      document.documentElement.style.setProperty('--safe-bottom', `${finalBottom}px`);
+
+      // Log for verification (required)
+      console.log('[AndroidSafeArea]', {
+        source,
+        platform: 'android',
+        navMode: mode,
+        nativeBottomNavInsetPx: rawBottom,
+        imeInsetPx: rawIme,
+        appliedBottomPx: finalBottom,
+        fallbackUsed: useFallback,
+      });
     };
 
     const setupInsets = async () => {
       try {
-        // Use our custom native plugin (real WindowInsets)
+        // Dynamically import to avoid issues when not on Android
         const AndroidInsets = (await import('@/plugins/androidInsets')).default;
 
-        // Get initial insets - use fallback if native returns 0 (some WebViews report 0 incorrectly)
+        // Get initial insets
         const insets = await AndroidInsets.getInsets();
-        const bottom = clampPx(insets.bottom);
-        applyBottomInset(bottom > 0 ? bottom : FALLBACK_INSET);
+        applyInsets(insets, 'initial');
 
-        // Listen for inset changes (rotation, nav mode toggle, etc.)
+        // Listen for inset changes (rotation, nav mode toggle, resume, etc.)
         listenerHandle = await AndroidInsets.addListener('insetsChanged', (data) => {
-          const newBottom = clampPx(data.bottom);
-          applyBottomInset(newBottom > 0 ? newBottom : FALLBACK_INSET);
+          applyInsets(data, 'insetsChanged');
         });
       } catch (error) {
+        // Native plugin not available - use fallback
         console.warn('[AndroidSafeArea] Native plugin not available, using fallback:', error);
-        applyBottomInset(FALLBACK_INSET);
+        setBottomInset(FALLBACK_INSET);
+        setFallbackUsed(true);
+        setNavMode('unknown');
+        document.documentElement.style.setProperty('--safe-bottom', `${FALLBACK_INSET}px`);
+
+        console.log('[AndroidSafeArea]', {
+          source: 'fallback',
+          platform: 'android',
+          navMode: 'unknown',
+          nativeBottomNavInsetPx: 0,
+          imeInsetPx: 0,
+          appliedBottomPx: FALLBACK_INSET,
+          fallbackUsed: true,
+        });
       }
     };
 
@@ -64,9 +108,8 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
     };
   }, [isNativeAndroid]);
 
-
   return (
-    <AndroidSafeAreaContext.Provider value={{ bottomInset }}>
+    <AndroidSafeAreaContext.Provider value={{ bottomInset, imeInset, navMode }}>
       {children}
     </AndroidSafeAreaContext.Provider>
   );
