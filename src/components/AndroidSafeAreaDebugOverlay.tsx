@@ -17,19 +17,26 @@ export const AndroidSafeAreaDebugOverlay = () => {
   const [values, setValues] = useState<DebugValues | null>(null);
   const probeRef = useRef<HTMLDivElement | null>(null);
 
-  // Enable on native Android or via query param
+  // Enable via localStorage (tester-accessible in release builds) or query param
   useEffect(() => {
-    if (isNativeAndroid) {
+    // Check localStorage for tester access (persists across sessions)
+    const storedPref = localStorage.getItem('debugSafeArea');
+    if (storedPref === '1') {
       setEnabled(true);
-    } else {
-      const params = new URLSearchParams(window.location.search);
-      setEnabled(params.get('debugSafeArea') === '1');
+      return;
+    }
+    
+    // Check query param (can be used to enable and will persist to localStorage)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('debugSafeArea') === '1') {
+      localStorage.setItem('debugSafeArea', '1');
+      setEnabled(true);
     }
   }, []);
 
   // Create probe element for reading env(safe-area-inset-bottom)
   useEffect(() => {
-    if (!enabled || !isNativeAndroid) return;
+    if (!enabled) return;
 
     const probe = document.createElement('div');
     probe.style.cssText = `
@@ -55,7 +62,7 @@ export const AndroidSafeAreaDebugOverlay = () => {
 
   // Read and update values
   useEffect(() => {
-    if (!enabled || !isNativeAndroid) return;
+    if (!enabled) return;
 
     const readValues = () => {
       // Read the new unified CSS variable
@@ -106,10 +113,11 @@ export const AndroidSafeAreaDebugOverlay = () => {
     };
   }, [enabled]);
 
-  // Don't render if not enabled or not native Android
-  if (!enabled || !isNativeAndroid || !values) return null;
+  // Don't render if not enabled
+  if (!enabled || !values) return null;
 
   const handleClose = () => {
+    localStorage.removeItem('debugSafeArea');
     const url = new URL(window.location.href);
     url.searchParams.delete('debugSafeArea');
     window.history.replaceState({}, '', url.toString());
@@ -140,6 +148,10 @@ export const AndroidSafeAreaDebugOverlay = () => {
           <span className={values.nativeInsetAvailable ? 'text-green-400' : 'text-orange-400'}>
             {values.nativeInsetAvailable ? 'Active' : 'Fallback'}
           </span>
+        </div>
+        <div>
+          <span className="text-gray-400">Platform:</span>{' '}
+          <span className="text-purple-400">{isNativeAndroid ? 'Android' : 'Web/Other'}</span>
         </div>
         <div className="pt-1 border-t border-gray-600">
           <span className="text-gray-400">env(safe-area-inset-bottom):</span>{' '}
