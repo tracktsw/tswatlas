@@ -26,6 +26,9 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
     const applyBottomInset = (value: number) => {
       const next = clampPx(value);
       setBottomInset(next);
+      // On Android, override --safe-bottom to use native value (kills env() double-application)
+      // Also set --app-safe-bottom for any component that needs to reference the raw value
+      document.documentElement.style.setProperty('--safe-bottom', `${next}px`);
       document.documentElement.style.setProperty('--app-safe-bottom', `${next}px`);
     };
 

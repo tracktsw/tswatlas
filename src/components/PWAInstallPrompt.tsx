@@ -1,20 +1,18 @@
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { Button } from '@/components/ui/button';
 import { Share, MoreVertical, Plus, Download, X } from 'lucide-react';
-import { Capacitor } from '@capacitor/core';
 
 export function PWAInstallPrompt() {
   const { platform, shouldShowPrompt, dismiss, triggerInstall, canTriggerInstall } = usePWAInstall();
-  const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
   if (!shouldShowPrompt) {
     return null;
   }
 
-  // On native Android, use the CSS var set by AndroidSafeAreaContext; otherwise use env()
-  const safeBottomStyle = isNativeAndroid
-    ? 'calc(80px + var(--app-safe-bottom, 0px))'
-    : 'calc(80px + env(safe-area-inset-bottom, 0px))';
+  // Use --safe-bottom which is set correctly per platform:
+  // - Android: set by AndroidSafeAreaContext from native plugin
+  // - iOS/web: defaults to env(safe-area-inset-bottom) from index.css
+  const safeBottomStyle = 'calc(80px + var(--safe-bottom, 0px))';
 
   return (
     <div 
