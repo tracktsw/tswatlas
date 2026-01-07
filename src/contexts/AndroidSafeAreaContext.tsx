@@ -9,8 +9,10 @@ const AndroidSafeAreaContext = createContext<AndroidSafeAreaContextType>({ botto
 
 export const useAndroidSafeArea = () => useContext(AndroidSafeAreaContext);
 
-// Fallback minimum if native plugin fails (covers most 3-button nav bars)
-const FALLBACK_MIN_INSET = 72;
+// Fallback inset used ONLY if native plugin is unavailable.
+// IMPORTANT: Do not force a minimum inset when the platform reports 0,
+// otherwise we double-apply spacing and the BottomNav appears to "float".
+const FALLBACK_INSET = 0;
 
 const clampPx = (n: number) => (Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0);
 
@@ -26,33 +28,31 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
     const applyBottomInset = (value: number) => {
       const next = clampPx(value);
       setBottomInset(next);
-      // On Android, override --safe-bottom to use native value (kills env() double-application)
-      // Also set --app-safe-bottom for any component that needs to reference the raw value
+
+      // On Android, override --safe-bottom to use native value (avoids env() double-application)
       document.documentElement.style.setProperty('--safe-bottom', `${next}px`);
       document.documentElement.style.setProperty('--app-safe-bottom', `${next}px`);
+
+      // TEMP diagnostics (shows in console logs)
+      console.log('[AndroidSafeArea] bottomInset(px)=', next);
     };
 
     const setupInsets = async () => {
       try {
         // Use our custom native plugin (real WindowInsets)
         const AndroidInsets = (await import('@/plugins/androidInsets')).default;
-        
+
         // Get initial insets
         const insets = await AndroidInsets.getInsets();
-        const bottom = clampPx(insets.bottom);
-        
-        // If native returns 0, use fallback (some devices/modes report 0 incorrectly)
-        applyBottomInset(bottom > 0 ? bottom : FALLBACK_MIN_INSET);
+        applyBottomInset(insets.bottom);
 
         // Listen for inset changes (rotation, nav mode toggle, etc.)
         listenerHandle = await AndroidInsets.addListener('insetsChanged', (data) => {
-          const newBottom = clampPx(data.bottom);
-          applyBottomInset(newBottom > 0 ? newBottom : FALLBACK_MIN_INSET);
+          applyBottomInset(data.bottom);
         });
-
       } catch (error) {
         console.warn('[AndroidSafeArea] Native plugin not available, using fallback:', error);
-        applyBottomInset(FALLBACK_MIN_INSET);
+        applyBottomInset(FALLBACK_INSET);
       }
     };
 
@@ -62,6 +62,7 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
       if (listenerHandle) listenerHandle.remove();
     };
   }, [isNativeAndroid]);
+
 
   return (
     <AndroidSafeAreaContext.Provider value={{ bottomInset }}>
