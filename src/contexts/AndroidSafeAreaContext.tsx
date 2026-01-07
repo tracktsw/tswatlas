@@ -9,10 +9,9 @@ const AndroidSafeAreaContext = createContext<AndroidSafeAreaContextType>({ botto
 
 export const useAndroidSafeArea = () => useContext(AndroidSafeAreaContext);
 
-// Fallback inset used ONLY if native plugin is unavailable.
-// IMPORTANT: Do not force a minimum inset when the platform reports 0,
-// otherwise we double-apply spacing and the BottomNav appears to "float".
-const FALLBACK_INSET = 0;
+// Fallback inset when native plugin unavailable or returns 0.
+// 48px covers typical gesture-nav (24-32dp) and 3-button nav (48dp) on most devices.
+const FALLBACK_INSET = 48;
 
 const clampPx = (n: number) => (Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0);
 
@@ -42,13 +41,15 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
         // Use our custom native plugin (real WindowInsets)
         const AndroidInsets = (await import('@/plugins/androidInsets')).default;
 
-        // Get initial insets
+        // Get initial insets - use fallback if native returns 0 (some WebViews report 0 incorrectly)
         const insets = await AndroidInsets.getInsets();
-        applyBottomInset(insets.bottom);
+        const bottom = clampPx(insets.bottom);
+        applyBottomInset(bottom > 0 ? bottom : FALLBACK_INSET);
 
         // Listen for inset changes (rotation, nav mode toggle, etc.)
         listenerHandle = await AndroidInsets.addListener('insetsChanged', (data) => {
-          applyBottomInset(data.bottom);
+          const newBottom = clampPx(data.bottom);
+          applyBottomInset(newBottom > 0 ? newBottom : FALLBACK_INSET);
         });
       } catch (error) {
         console.warn('[AndroidSafeArea] Native plugin not available, using fallback:', error);
