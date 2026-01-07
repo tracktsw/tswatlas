@@ -10,16 +10,13 @@ interface DebugValues {
   innerHeight: number;
   vpHeight: number;
   vpOffsetTop: number;
-  bottomInset: number;
-  imeInset: number;
-  navMode: string;
 }
 
 export const AndroidSafeAreaDebugOverlay = () => {
   const [enabled, setEnabled] = useState(false);
   const [values, setValues] = useState<DebugValues | null>(null);
   const probeRef = useRef<HTMLDivElement | null>(null);
-  const { bottomInset, imeInset, navMode } = useAndroidSafeArea();
+  const { bottomInset, imeInset, navMode, fallbackUsed, rawInsets } = useAndroidSafeArea();
 
   // Enable via localStorage (tester-accessible in release builds) or query param
   useEffect(() => {
@@ -93,9 +90,6 @@ export const AndroidSafeAreaDebugOverlay = () => {
         innerHeight,
         vpHeight: Math.round(vpHeight),
         vpOffsetTop: Math.round(vpOffsetTop),
-        bottomInset,
-        imeInset,
-        navMode,
       });
     };
 
@@ -117,7 +111,7 @@ export const AndroidSafeAreaDebugOverlay = () => {
       window.removeEventListener('resize', readValues);
       clearInterval(interval);
     };
-  }, [enabled, bottomInset, imeInset, navMode]);
+  }, [enabled]);
 
   // Don't render if not enabled
   if (!enabled || !values) return null;
@@ -130,11 +124,9 @@ export const AndroidSafeAreaDebugOverlay = () => {
     setEnabled(false);
   };
 
-  const isFallback = isNativeAndroid && values.bottomInset === 48;
-
   return (
     <div
-      className="fixed top-2 left-2 z-[9999] bg-black/90 text-white p-3 rounded-lg text-xs font-mono max-w-[300px]"
+      className="fixed top-2 left-2 z-[9999] bg-black/90 text-white p-3 rounded-lg text-xs font-mono max-w-[320px]"
       style={{ pointerEvents: 'auto' }}
     >
       <div className="flex justify-between items-center mb-2">
@@ -155,20 +147,42 @@ export const AndroidSafeAreaDebugOverlay = () => {
           <>
             <div>
               <span className="text-gray-400">navMode:</span>{' '}
-              <span className="text-cyan-400">{values.navMode}</span>
+              <span className="text-cyan-400">{navMode}</span>
+            </div>
+            <div className="pt-1 border-t border-gray-600 mt-1">
+              <span className="text-gray-500 text-[10px]">Raw Insets from Native:</span>
             </div>
             <div>
-              <span className="text-gray-400">nativeBottomInsetPx:</span>{' '}
-              <span className="text-green-400 font-bold">{values.bottomInset}px</span>
+              <span className="text-gray-400">systemBars.bottom:</span>{' '}
+              <span className="text-blue-400">{rawInsets.systemBarsBottom}px</span>
             </div>
             <div>
-              <span className="text-gray-400">imeInsetPx:</span>{' '}
-              <span className="text-blue-400">{values.imeInset}px</span>
+              <span className="text-gray-400">systemGestures.bottom:</span>{' '}
+              <span className="text-blue-400">{rawInsets.systemGesturesBottom}px</span>
+            </div>
+            <div>
+              <span className="text-gray-400">navigationBars.bottom:</span>{' '}
+              <span className="text-blue-400">{rawInsets.navigationBarsBottom}px</span>
+            </div>
+            <div>
+              <span className="text-gray-400">ime.bottom:</span>{' '}
+              <span className="text-blue-400">{rawInsets.imeBottom}px</span>
+            </div>
+            <div className="pt-1 border-t border-gray-600 mt-1">
+              <span className="text-gray-500 text-[10px]">Computed:</span>
+            </div>
+            <div>
+              <span className="text-gray-400">computedBottom:</span>{' '}
+              <span className="text-yellow-400">{rawInsets.computedBottom}px</span>
+            </div>
+            <div>
+              <span className="text-gray-400">appliedBottomPx:</span>{' '}
+              <span className="text-green-400 font-bold">{bottomInset}px</span>
             </div>
             <div>
               <span className="text-gray-400">fallbackUsed:</span>{' '}
-              <span className={isFallback ? 'text-orange-400' : 'text-green-400'}>
-                {isFallback ? 'true' : 'false'}
+              <span className={fallbackUsed ? 'text-orange-400 font-bold' : 'text-green-400'}>
+                {fallbackUsed ? 'TRUE' : 'false'}
               </span>
             </div>
           </>

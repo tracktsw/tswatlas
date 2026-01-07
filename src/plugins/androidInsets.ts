@@ -10,6 +10,10 @@ export interface InsetsData {
   imeBottom?: number;
   /** Navigation mode: 'gesture', '3button', or 'unknown' */
   navMode?: 'gesture' | '3button' | 'unknown';
+  /** Raw inset components for debugging */
+  systemBarsBottom?: number;
+  systemGesturesBottom?: number;
+  navigationBarsBottom?: number;
 }
 
 export interface AndroidInsetsPlugin {
