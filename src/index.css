@@ -2,16 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-/* App shell - prevent body scrolling, content scrolls inside main */
+/* App shell - use natural scroll hierarchy for Android 16 WebView compatibility */
 html, body, #root {
   /* Prefer dynamic viewport units to avoid Android URL bar / WebView "floating" fixed elements */
   height: 100%;
   height: 100dvh;
-  overflow: hidden;
+  /* Removed overflow:hidden - let scroll containers handle their own overflow */
 }
 
-body {
-  overscroll-behavior: none;
+/* Android WebView scroll fix - prevent bounce without breaking scroll */
+@supports not (-webkit-touch-callout: none) {
+  html {
+    overscroll-behavior-y: contain;
+  }
 }
 
 /* Safe area and platform-specific offsets */
