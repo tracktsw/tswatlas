@@ -119,6 +119,7 @@ const PhotoDiaryPage = () => {
     offeringsError,
     getPriceString,
     retryInitialization,
+    isUserLoggedIn,
   } = useRevenueCatContext();
   
   // Platform detection
@@ -127,10 +128,17 @@ const PhotoDiaryPage = () => {
     []
   );
 
+  const isNativeAndroid = useMemo(
+    () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android',
+    []
+  );
+
+  const isNativeMobile = isNativeIOS || isNativeAndroid;
+
   // Premium is enforced by backend for ALL platforms.
   const isPremium = isAdmin || isPremiumFromBackend;
   const isSubscriptionLoading = isBackendLoading;
-  const isOfferingsReady = isNativeIOS ? offeringsStatus === 'ready' : true;
+  const isOfferingsReady = isNativeMobile ? (isUserLoggedIn && offeringsStatus === 'ready') : true;
 
   const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | 'all'>('all');
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
@@ -252,9 +260,15 @@ const PhotoDiaryPage = () => {
   const handleUpgrade = async () => {
     if (isUpgrading) return;
     setIsUpgrading(true);
-    
-    // iOS NATIVE PATH - STRIPE IS COMPLETELY BLOCKED
-    if (isNativeIOS) {
+
+    // NATIVE MOBILE PATH (Android or iOS) - NEVER route to Stripe
+    if (isNativeMobile) {
+      if (!isUserLoggedIn) {
+        toast.error('Please sign in to subscribe');
+        setIsUpgrading(false);
+        return;
+      }
+
       if (!isOfferingsReady) {
         const msg = offeringsError || 'Loading subscription options…';
         toast.error(msg);
@@ -301,9 +315,15 @@ const PhotoDiaryPage = () => {
   };
 
   const handleRestore = async () => {
-    if (isRestoring || !isNativeIOS) return;
+    if (isRestoring || !isNativeMobile) return;
+    if (!isUserLoggedIn) {
+      toast.error('Please sign in to restore purchases');
+      setIsRestoring(false);
+      return;
+    }
+
     setIsRestoring(true);
-    
+
     try {
       await restorePurchases();
       const updated = await refreshSubscription();
@@ -317,7 +337,7 @@ const PhotoDiaryPage = () => {
     } catch (err: any) {
       toast.error('Failed to restore purchases');
     }
-    
+
     setIsRestoring(false);
   };
 
@@ -827,15 +847,15 @@ const PhotoDiaryPage = () => {
           {/* Upgrade Button */}
           <Button 
             onClick={handleUpgrade} 
-            disabled={isUpgrading} 
+            disabled={isUpgrading || (isNativeMobile && !isOfferingsReady)}
             variant="gold" 
             className="w-full gap-2"
           >
             <Crown className="w-4 h-4" />
-            {isUpgrading ? 'Loading...' : 'Start 14-day free trial'}
+            {isUpgrading ? 'Loading...' : isNativeMobile && !isOfferingsReady ? 'Loading…' : 'Start 14-day free trial'}
           </Button>
           <p className="text-xs text-center text-muted-foreground">
-            £5.99/month after · Cancel anytime
+            {isNativeMobile ? `${getPriceString()}/month after` : '£5.99/month after'} · Cancel anytime
           </p>
         </div>
       )}
@@ -868,7 +888,7 @@ const PhotoDiaryPage = () => {
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Processing…
                   </>
-                ) : isNativeIOS && !isOfferingsReady ? (
+                ) : isNativeMobile && !isOfferingsReady ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading…
@@ -881,11 +901,11 @@ const PhotoDiaryPage = () => {
                 )}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
+                {isNativeMobile ? getPriceString() : '£5.99'}/month after · Cancel anytime
               </p>
 
-              {/* iOS: Retry button if offerings failed */}
-              {isNativeIOS && offeringsStatus === 'error' && (
+              {/* Native mobile: Retry button if offerings failed */}
+              {isNativeMobile && offeringsStatus === 'error' && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -897,8 +917,8 @@ const PhotoDiaryPage = () => {
                 </Button>
               )}
 
-              {/* iOS: Restore purchases */}
-              {isNativeIOS && (
+              {/* Native mobile: Restore purchases */}
+              {isNativeMobile && isUserLoggedIn && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -966,7 +986,7 @@ const PhotoDiaryPage = () => {
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Processing…
                   </>
-                ) : isNativeIOS && !isOfferingsReady ? (
+                ) : isNativeMobile && !isOfferingsReady ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading…
@@ -979,11 +999,11 @@ const PhotoDiaryPage = () => {
                 )}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
+                {isNativeMobile ? getPriceString() : '£5.99'}/month after · Cancel anytime
               </p>
 
-              {/* iOS: Retry button if offerings failed */}
-              {isNativeIOS && offeringsStatus === 'error' && (
+              {/* Native mobile: Retry button if offerings failed */}
+              {isNativeMobile && offeringsStatus === 'error' && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -995,8 +1015,8 @@ const PhotoDiaryPage = () => {
                 </Button>
               )}
 
-              {/* iOS: Restore purchases */}
-              {isNativeIOS && (
+              {/* Native mobile: Restore purchases */}
+              {isNativeMobile && isUserLoggedIn && (
                 <Button
                   variant="ghost"
                   size="sm"
