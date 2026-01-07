@@ -86,8 +86,8 @@ const Layout = () => {
           "flex-1 min-h-0",
           // On iOS when keyboard is open, prevent scrolling to stop page jump
           isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto",
-          // Reserve space for nav bar height only (56px) - BottomNav owns safe-bottom
-          !hideBottomNav ? "pb-14" : "",
+          // Reserve space for nav bar + extra clearance (72px) - BottomNav owns safe-bottom
+          !hideBottomNav ? "pb-[72px]" : "",
         ].filter(Boolean).join(" ")}
         style={{ 
           touchAction: 'pan-y',
