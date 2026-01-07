@@ -345,7 +345,10 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
         style={{ 
           height: '100dvh',
           paddingTop: 'env(safe-area-inset-top)',
-          paddingBottom: 'env(safe-area-inset-bottom)',
+          // Use the unified safe-area variable:
+          // - Android: set from native plugin
+          // - iOS: set from env(safe-area-inset-bottom)
+          paddingBottom: 'var(--safe-bottom)',
           paddingLeft: 'env(safe-area-inset-left)',
           paddingRight: 'env(safe-area-inset-right)',
         }}

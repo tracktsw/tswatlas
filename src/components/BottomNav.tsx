@@ -19,14 +19,17 @@ const BottomNav = () => {
   const location = useLocation();
   const { bottomInset } = useAndroidSafeArea();
 
-  // On Android, BottomNav applies padding so it sits above system navigation.
-  // Layout.tsx reserves space for BottomNav height only (not the safe area).
+  // Android: keep the *content* above system navigation, but prevent the whole bar from
+  // “floating” upward by shifting the fixed container down by the same inset.
+  // This makes the background fill the nav-bar area while the icons remain tappable.
+  const androidNavStyle = isNativeAndroid ? ({ bottom: `-${bottomInset}px` } as const) : undefined;
+
   return (
-    <nav 
-      className="fixed bottom-0 left-0 right-0 z-50"
-      style={isNativeAndroid ? { paddingBottom: `${bottomInset}px` } : undefined}
-    >
-      <div className="bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg">
+    <nav className="fixed bottom-0 left-0 right-0 z-50" style={androidNavStyle}>
+      <div
+        className="bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg"
+        style={isNativeAndroid ? { paddingBottom: `${bottomInset}px` } : undefined}
+      >
         <div className="flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto">
           {navItems.map(({ path, icon: Icon, label }) => {
             const isActive = location.pathname === path;
