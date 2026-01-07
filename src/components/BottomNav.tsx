@@ -44,8 +44,8 @@ const BottomNav = () => {
             );
           })}
         </div>
-        {/* Android safe area padding for system navigation bar - fixed fallback since env() isn't reliable on all Android WebViews */}
-        {isNativeAndroid && <div className="h-6" />}
+        {/* Android safe area padding for system navigation bar - uses dynamic inset from capacitor-plugin-safe-area */}
+        {isNativeAndroid && <div style={{ height: 'var(--android-bottom-inset, 0px)' }} />}
       </div>
     </nav>
   );
