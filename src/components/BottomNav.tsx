@@ -44,8 +44,8 @@ const BottomNav = () => {
             );
           })}
         </div>
-        {/* Android safe area padding for system navigation bar */}
-        {isNativeAndroid && <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />}
+        {/* Android safe area padding for system navigation bar - fixed fallback since env() isn't reliable on all Android WebViews */}
+        {isNativeAndroid && <div className="h-6" />}
       </div>
     </nav>
   );
