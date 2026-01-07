@@ -9,8 +9,8 @@
  * - Let scroll containers manage their own overflow
  */
 html, body, #root {
+  height: 100%;
   min-height: 100%;
-  min-height: 100dvh;
 }
 
 /* Android WebView scroll fix - prevent bounce without breaking scroll */
@@ -67,6 +67,11 @@ html, body, #root {
 @supports (-webkit-touch-callout: none) {
   :root {
     --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* iOS: dynamic viewport height (Android must NOT use dvh in global CSS) */
+  html, body, #root {
+    min-height: 100dvh;
   }
 }
 
