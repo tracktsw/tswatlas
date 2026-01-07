@@ -34,9 +34,11 @@ export const AndroidSafeAreaDebugOverlay = () => {
     }
   }, []);
 
-  // Create probe element for reading env(safe-area-inset-bottom)
+  // On Android we intentionally avoid env(safe-area-inset-*) to prevent double-application.
+  // (Keeping the overlay around for viewport metrics + native inset visibility.)
   useEffect(() => {
     if (!enabled) return;
+    if (isNativeAndroid) return;
 
     const probe = document.createElement('div');
     probe.style.cssText = `
@@ -70,9 +72,11 @@ export const AndroidSafeAreaDebugOverlay = () => {
         .getPropertyValue('--app-safe-bottom')
         .trim() || '0px';
 
-      const envSafeAreaBottom = probeRef.current
-        ? getComputedStyle(probeRef.current).paddingBottom
-        : '0px';
+      const envSafeAreaBottom = isNativeAndroid
+        ? 'disabled'
+        : probeRef.current
+          ? getComputedStyle(probeRef.current).paddingBottom
+          : '0px';
 
       const innerHeight = window.innerHeight;
       const vp = window.visualViewport;

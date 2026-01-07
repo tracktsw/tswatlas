@@ -4,7 +4,9 @@
 
 /* App shell - prevent body scrolling, content scrolls inside main */
 html, body, #root {
+  /* Prefer dynamic viewport units to avoid Android URL bar / WebView "floating" fixed elements */
   height: 100%;
+  height: 100dvh;
   overflow: hidden;
 }
 
