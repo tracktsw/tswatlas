@@ -417,6 +417,13 @@ const SubscriptionCard = () => {
             </Button>
           )}
 
+          {/* Android debug info */}
+          {isNativeAndroid && (
+            <p className="text-[10px] text-muted-foreground/60 mt-3 font-mono break-all">
+              android={String(isNativeAndroid)} | loggedIn={String(isUserLoggedIn)} | offerings={offeringsStatus} | err={offeringsError ?? 'none'}
+            </p>
+          )}
+
         </div>
       </div>
     </div>
