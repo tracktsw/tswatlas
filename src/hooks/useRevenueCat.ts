@@ -51,7 +51,7 @@ export const isIOSNative = getIsNativeIOS();
 
 const REVENUECAT_IOS_KEY = 'appl_rgvRTJPduIhlItjWllSWcPCuwkn';
 // Android RevenueCat API key
-const REVENUECAT_ANDROID_KEY = 'goog_lOjQDMFXvZCJiWwUKKXYfGBYdYJ';
+const REVENUECAT_ANDROID_KEY = 'goog_AptGipsbvRtbMTkDAeqPcEauAGJ';
 
 // CRITICAL: The entitlement identifier MUST match exactly what's in RevenueCat dashboard
 const PREMIUM_ENTITLEMENT_ID = 'premium';
