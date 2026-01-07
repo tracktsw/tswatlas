@@ -1,21 +1,25 @@
 import { useEffect, useState, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { useAndroidSafeArea } from '@/contexts/AndroidSafeAreaContext';
 
 const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
 interface DebugValues {
-  appSafeBottom: string;
+  safeBottom: string;
   envSafeAreaBottom: string;
   innerHeight: number;
   vpHeight: number;
   vpOffsetTop: number;
-  nativeInsetAvailable: boolean;
+  bottomInset: number;
+  imeInset: number;
+  navMode: string;
 }
 
 export const AndroidSafeAreaDebugOverlay = () => {
   const [enabled, setEnabled] = useState(false);
   const [values, setValues] = useState<DebugValues | null>(null);
   const probeRef = useRef<HTMLDivElement | null>(null);
+  const { bottomInset, imeInset, navMode } = useAndroidSafeArea();
 
   // Enable via localStorage (tester-accessible in release builds) or query param
   useEffect(() => {
@@ -34,8 +38,8 @@ export const AndroidSafeAreaDebugOverlay = () => {
     }
   }, []);
 
-  // On Android we intentionally avoid env(safe-area-inset-*) to prevent double-application.
-  // (Keeping the overlay around for viewport metrics + native inset visibility.)
+  // On iOS only: create probe for env(safe-area-inset-bottom)
+  // Android doesn't use env() so we skip this
   useEffect(() => {
     if (!enabled) return;
     if (isNativeAndroid) return;
@@ -67,13 +71,13 @@ export const AndroidSafeAreaDebugOverlay = () => {
     if (!enabled) return;
 
     const readValues = () => {
-      // Read the new unified CSS variable
-      const appSafeBottom = getComputedStyle(document.documentElement)
-        .getPropertyValue('--app-safe-bottom')
+      // Read the single source of truth CSS variable
+      const safeBottom = getComputedStyle(document.documentElement)
+        .getPropertyValue('--safe-bottom')
         .trim() || '0px';
 
       const envSafeAreaBottom = isNativeAndroid
-        ? 'disabled'
+        ? 'n/a (disabled)'
         : probeRef.current
           ? getComputedStyle(probeRef.current).paddingBottom
           : '0px';
@@ -83,17 +87,15 @@ export const AndroidSafeAreaDebugOverlay = () => {
       const vpHeight = vp?.height ?? innerHeight;
       const vpOffsetTop = vp?.offsetTop ?? 0;
 
-      // Check if native plugin provided a value (non-fallback)
-      const parsedSafe = parseInt(appSafeBottom, 10);
-      const nativeInsetAvailable = !isNaN(parsedSafe) && parsedSafe > 0;
-
       setValues({
-        appSafeBottom,
+        safeBottom,
         envSafeAreaBottom,
         innerHeight,
         vpHeight: Math.round(vpHeight),
         vpOffsetTop: Math.round(vpOffsetTop),
-        nativeInsetAvailable,
+        bottomInset,
+        imeInset,
+        navMode,
       });
     };
 
@@ -115,7 +117,7 @@ export const AndroidSafeAreaDebugOverlay = () => {
       window.removeEventListener('resize', readValues);
       clearInterval(interval);
     };
-  }, [enabled]);
+  }, [enabled, bottomInset, imeInset, navMode]);
 
   // Don't render if not enabled
   if (!enabled || !values) return null;
@@ -128,9 +130,11 @@ export const AndroidSafeAreaDebugOverlay = () => {
     setEnabled(false);
   };
 
+  const isFallback = isNativeAndroid && values.bottomInset === 48;
+
   return (
     <div
-      className="fixed top-2 left-2 z-[9999] bg-black/80 text-white p-3 rounded-lg text-xs font-mono max-w-[280px]"
+      className="fixed top-2 left-2 z-[9999] bg-black/90 text-white p-3 rounded-lg text-xs font-mono max-w-[300px]"
       style={{ pointerEvents: 'auto' }}
     >
       <div className="flex justify-between items-center mb-2">
@@ -144,29 +148,47 @@ export const AndroidSafeAreaDebugOverlay = () => {
       </div>
       <div className="space-y-1">
         <div>
-          <span className="text-gray-400">--app-safe-bottom:</span>{' '}
-          <span className="text-green-400 font-bold">{values.appSafeBottom}</span>
-        </div>
-        <div>
-          <span className="text-gray-400">Native plugin:</span>{' '}
-          <span className={values.nativeInsetAvailable ? 'text-green-400' : 'text-orange-400'}>
-            {values.nativeInsetAvailable ? 'Active' : 'Fallback'}
-          </span>
-        </div>
-        <div>
           <span className="text-gray-400">Platform:</span>{' '}
-          <span className="text-purple-400">{isNativeAndroid ? 'Android' : 'Web/Other'}</span>
+          <span className="text-purple-400">{isNativeAndroid ? 'android' : 'web/ios'}</span>
         </div>
+        {isNativeAndroid && (
+          <>
+            <div>
+              <span className="text-gray-400">navMode:</span>{' '}
+              <span className="text-cyan-400">{values.navMode}</span>
+            </div>
+            <div>
+              <span className="text-gray-400">nativeBottomInsetPx:</span>{' '}
+              <span className="text-green-400 font-bold">{values.bottomInset}px</span>
+            </div>
+            <div>
+              <span className="text-gray-400">imeInsetPx:</span>{' '}
+              <span className="text-blue-400">{values.imeInset}px</span>
+            </div>
+            <div>
+              <span className="text-gray-400">fallbackUsed:</span>{' '}
+              <span className={isFallback ? 'text-orange-400' : 'text-green-400'}>
+                {isFallback ? 'true' : 'false'}
+              </span>
+            </div>
+          </>
+        )}
         <div className="pt-1 border-t border-gray-600">
-          <span className="text-gray-400">env(safe-area-inset-bottom):</span>{' '}
-          <span className="text-blue-400">{values.envSafeAreaBottom}</span>
+          <span className="text-gray-400">--safe-bottom:</span>{' '}
+          <span className="text-green-400 font-bold">{values.safeBottom}</span>
         </div>
-        <div>
-          <span className="text-gray-400">window.innerHeight:</span>{' '}
+        {!isNativeAndroid && (
+          <div>
+            <span className="text-gray-400">env(safe-area-inset-bottom):</span>{' '}
+            <span className="text-blue-400">{values.envSafeAreaBottom}</span>
+          </div>
+        )}
+        <div className="pt-1 border-t border-gray-600">
+          <span className="text-gray-400">innerHeight:</span>{' '}
           <span className="text-blue-400">{values.innerHeight}px</span>
         </div>
         <div>
-          <span className="text-gray-400">visualViewport.height:</span>{' '}
+          <span className="text-gray-400">vpHeight:</span>{' '}
           <span className="text-blue-400">{values.vpHeight}px</span>
         </div>
       </div>
