@@ -305,7 +305,10 @@ const CheckInPage = () => {
     }
   };
   return (
-    <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
+    <div 
+      className="px-4 pt-6 space-y-6 max-w-lg mx-auto relative"
+      style={{ paddingBottom: 'calc(1.5rem + var(--android-safe-bottom, 0px))' }}
+    >
       {/* Sparkle celebration effect */}
       <SparkleEffect isActive={showSparkles} onComplete={() => setShowSparkles(false)} />
       

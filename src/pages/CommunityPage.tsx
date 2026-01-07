@@ -198,7 +198,10 @@ const CommunityPage = () => {
   };
 
   return (
-    <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
+    <div 
+      className="px-4 pt-6 space-y-6 max-w-lg mx-auto relative"
+      style={{ paddingBottom: 'calc(1.5rem + var(--android-safe-bottom, 0px))' }}
+    >
       {/* Decorative elements */}
       <div className="decorative-blob w-36 h-36 bg-terracotta/25 -top-10 -right-10 fixed" />
       <div className="decorative-blob w-44 h-44 bg-primary/20 bottom-32 -left-16 fixed" />
