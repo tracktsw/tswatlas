@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   bundledWebRuntime: false,
   android: {
-    adjustMarginsForEdgeToEdge: 'enable'
+    adjustMarginsForEdgeToEdge: 'force'
   }
 };
 
