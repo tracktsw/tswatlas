@@ -10,6 +10,8 @@ import { initNotificationListeners, scheduleCheckInReminders } from '@/utils/not
 import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils';
 
+const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+
 const Layout = () => {
   const { hideBottomNav } = useLayout();
   const { reminderSettings, checkIns, userId, isLoading } = useUserData();
@@ -74,6 +76,9 @@ const Layout = () => {
           // On iOS when keyboard is open OR text input is focused, prevent this container from scrolling to stop page jump
           isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto"
         )}
+        style={isNativeAndroid && !hideBottomNav ? {
+          paddingBottom: 'calc(5rem + var(--android-bottom-inset, 0px))'
+        } : undefined}
       >
         <Outlet />
       </main>
