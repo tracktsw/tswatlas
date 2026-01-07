@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import BottomNav from './BottomNav';
 import { ReminderBanner } from './ReminderBanner';
-import { AndroidSafeAreaDebugOverlay } from './AndroidSafeAreaDebugOverlay';
+
 import { useCheckInReminder } from '@/hooks/useCheckInReminder';
 import { useUserData } from '@/contexts/UserDataContext';
 import { useLayout } from '@/contexts/LayoutContext';
@@ -86,7 +86,7 @@ const Layout = () => {
         <Outlet />
       </main>
       {!hideBottomNav && <BottomNav />}
-      <AndroidSafeAreaDebugOverlay />
+      
     </div>
   );
 };
