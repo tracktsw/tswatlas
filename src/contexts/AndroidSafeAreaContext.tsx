@@ -81,14 +81,18 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
   const { isAndroid, isNative: isNativeAndroid } = detectAndroidPlatform();
 
   /**
-   * Apply insets to state only - NO CSS variable setting for Android.
-   * Android layout does NOT use --safe-bottom; system handles insets.
+   * Apply insets to state only - Android bottom-nav uses navigationBars.bottom via --nav-bottom-inset.
+   * We do NOT use env(safe-area-*) on Android.
    */
   const applyInsets = useCallback((data: InsetsData, source: string) => {
     const systemBarsBottom = data.systemBarsBottom ?? data.bottom ?? 0;
     const systemGesturesBottom = data.systemGesturesBottom ?? 0;
     const computedBottom = Math.max(systemBarsBottom, systemGesturesBottom);
     const ime = data.imeBottom ?? 0;
+
+    // What we actually need for BottomNav clipping: navigation bar inset only (no IME)
+    const navBottom = data.navigationBarsBottom ?? 0;
+
     const mode = data.navMode || 'unknown';
     const reason = data.reason || source;
 
@@ -97,9 +101,13 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
     setNavMode(mode);
     setFallbackUsed(false);
 
-    // DO NOT set --safe-bottom for Android - let system handle insets
-    // Only set nav height for reference
+    // CSS vars:
+    // - --nav-height: constant row height
+    // - --nav-bottom-inset: navigationBars.bottom from WindowInsetsCompat
     document.documentElement.style.setProperty('--nav-height', `${NAV_HEIGHT}px`);
+    document.documentElement.style.setProperty('--nav-bottom-inset', `${navBottom}px`);
+
+    console.log(`[Insets] navigationBars.bottom=${navBottom}`);
 
     logInsetChange(source, {
       platform: 'android-native',
@@ -114,7 +122,8 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
   }, []);
 
   /**
-   * Apply fallback values for web or plugin failure - state only, no CSS.
+   * Apply fallback values for web or plugin failure.
+   * We cannot reliably read navigationBars.bottom on plain web, so keep it 0.
    */
   const applyFallback = useCallback((reason: string) => {
     setBottomInset(FALLBACK_INSET);
@@ -122,8 +131,8 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
     setNavMode(`${reason}-fallback`);
     setFallbackUsed(true);
 
-    // DO NOT set --safe-bottom for Android web fallback either
     document.documentElement.style.setProperty('--nav-height', `${NAV_HEIGHT}px`);
+    document.documentElement.style.setProperty('--nav-bottom-inset', '0px');
 
     logInsetChange(reason, {
       platform: 'android-web',
@@ -138,9 +147,10 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
   }, []);
 
   useEffect(() => {
-    // Non-Android platforms: set CSS vars to 0 to not interfere
+    // Non-Android platforms: ensure vars are 0 so we never affect iOS/web.
     if (!isAndroid) {
       document.documentElement.style.setProperty('--safe-bottom', '0px');
+      document.documentElement.style.setProperty('--nav-bottom-inset', '0px');
       document.documentElement.style.setProperty('--nav-height', `${NAV_HEIGHT}px`);
       return;
     }
