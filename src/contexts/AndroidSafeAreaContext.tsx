@@ -22,13 +22,12 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
       try {
         const { SafeArea } = await import('capacitor-plugin-safe-area');
         
-        // Enable immersive/edge-to-edge mode so the app renders behind the nav bar
-        await SafeArea.setImmersiveNavigationBar();
+        // Don't use immersive mode - let Android handle safe areas naturally
+        // This ensures fixed bottom-0 elements sit above the system nav bar
+        await SafeArea.unsetImmersiveNavigationBar();
         
-        // Get initial insets
+        // Get insets for reference (may be 0 when not in immersive mode, which is fine)
         const { insets } = await SafeArea.getSafeAreaInsets();
-        
-        // Use actual value - don't clamp (nav bars can be 48-96px)
         const bottomValue = Math.max(insets.bottom, 0);
         setBottomInset(bottomValue);
         
