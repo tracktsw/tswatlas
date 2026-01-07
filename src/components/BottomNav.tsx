@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Camera, CheckCircle, BarChart3, Users, Leaf } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -19,10 +20,15 @@ const navItems = [
  */
 const BottomNav = () => {
   const location = useLocation();
+  const isAndroid = Capacitor.getPlatform() === 'android';
 
   return (
     <nav 
       className="fixed left-0 right-0 bottom-0 z-50 bg-card/98 backdrop-blur-md border-t border-border/50 h-14"
+      style={isAndroid ? {
+        paddingBottom: 'var(--nav-bottom-inset, 0px)',
+        height: 'calc(56px + var(--nav-bottom-inset, 0px))',
+      } : undefined}
     >
       {/* Navigation items - 56px height */}
       <div className="flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto h-14">
