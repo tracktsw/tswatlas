@@ -94,26 +94,48 @@ const InsightsPage = () => {
   const isOfferingsReady = isNativeMobile ? (isUserLoggedIn && offeringsStatus === 'ready') : true;
 
   const handleUpgrade = async () => {
-    if (isUpgrading) return;
+    // CRITICAL: Log at the VERY START to confirm this function is called
+    console.log('[InsightsPage] ========== handleUpgrade() CALLED ==========');
+    console.log('[InsightsPage] State:', {
+      isUpgrading,
+      isNativeIOS,
+      isNativeAndroid,
+      isNativeMobile,
+      isUserLoggedIn,
+      offeringsStatus,
+      offeringsError,
+      isOfferingsReady,
+    });
+
+    if (isUpgrading) {
+      console.log('[InsightsPage] Already upgrading, returning early');
+      return;
+    }
     setIsUpgrading(true);
 
     // NATIVE MOBILE PATH (Android or iOS) - NEVER route to Stripe
     if (isNativeMobile) {
+      console.log('[InsightsPage] Native mobile path - will use RevenueCat');
+      
       if (!isUserLoggedIn) {
+        console.log('[InsightsPage] User not logged in');
         toast.error('Please sign in to subscribe');
         setIsUpgrading(false);
         return;
       }
 
       if (!isOfferingsReady) {
+        console.log('[InsightsPage] Offerings not ready:', { offeringsStatus, offeringsError });
         const msg = offeringsError || 'Loading subscription options…';
         toast.error(msg);
         setIsUpgrading(false);
         return;
       }
 
+      console.log('[InsightsPage] All checks passed, calling purchaseMonthly()...');
       try {
         const result = await purchaseMonthly();
+        console.log('[InsightsPage] Purchase result:', result);
         if (result.success) {
           toast.success('Purchase successful!');
           await refreshSubscription();
@@ -121,6 +143,7 @@ const InsightsPage = () => {
           toast.error(result.error);
         }
       } catch (err: any) {
+        console.error('[InsightsPage] Purchase error:', err);
         toast.error(err.message || 'Purchase failed');
       }
       setIsUpgrading(false);

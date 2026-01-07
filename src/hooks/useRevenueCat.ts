@@ -443,6 +443,16 @@ export const useRevenueCat = () => {
     errorCode?: number;
     isPremiumNow?: boolean;
   }> => {
+    // CRITICAL: Log at the VERY START to confirm this function is called
+    console.log('[RevenueCat] ========== purchaseMonthly() CALLED ==========');
+    console.log('[RevenueCat] Platform check:', {
+      isNativePlatform: Capacitor.isNativePlatform(),
+      capacitorPlatform: Capacitor.getPlatform(),
+      getIsNativeMobile: getIsNativeMobile(),
+      getIsNativeAndroid: getIsNativeAndroid(),
+      getIsNativeIOS: getIsNativeIOS(),
+    });
+
     if (!getIsNativeMobile()) {
       console.log('[RevenueCat] Purchase skipped - not native mobile');
       return { success: false, error: 'Not native mobile', isPremiumNow: false };
@@ -451,7 +461,14 @@ export const useRevenueCat = () => {
     const isAndroid = getIsNativeAndroid();
     const platform = isAndroid ? 'android' : 'ios';
     
-    console.log(`[RevenueCat] [${platform}] Subscribe tapped`);
+    console.log(`[RevenueCat] [${platform}] Subscribe tapped - starting purchase flow`);
+    console.log(`[RevenueCat] [${platform}] Current state:`, {
+      isInitialized,
+      offeringsStatus,
+      offeringsError,
+      boundUserId: boundUserIdRef.current,
+      monthlyPackageId: monthlyPackage?.identifier,
+    });
 
     // SECURITY: Must be logged in to purchase
     if (!boundUserIdRef.current) {
