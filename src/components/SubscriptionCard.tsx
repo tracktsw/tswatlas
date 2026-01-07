@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState, type TouchEventHandler } from 'react';
 import { Crown, Loader2, RefreshCw, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -318,6 +318,40 @@ const SubscriptionCard = () => {
   const priceString = isNativeMobile ? getPriceString() : '£5.99';
   const isButtonLoading = isCheckoutLoading || isRevenueCatLoading;
 
+  // Android-only: ensure taps reliably trigger the handler (some WebView/device combos can miss onClick)
+  const touchTriggeredRef = useRef(false);
+
+  const handlePrimaryPress = async () => {
+    // Keep original button label; choose behavior based on native mobile state
+    if (isNativeMobile && !isUserLoggedIn) {
+      toast.error('Please sign in to subscribe');
+      navigate('/auth');
+      return;
+    }
+    if (isNativeMobile && !isOfferingsReady) {
+      await handleRetryOfferings();
+      return;
+    }
+    await handleUpgrade();
+  };
+
+  const handlePrimaryClick = async () => {
+    if (isNativeAndroid && touchTriggeredRef.current) {
+      // Prevent double-firing after a touch event
+      touchTriggeredRef.current = false;
+      return;
+    }
+    await handlePrimaryPress();
+  };
+
+  const handlePrimaryTouchEnd: TouchEventHandler<HTMLButtonElement> = async (e) => {
+    if (!isNativeAndroid) return;
+    // Prevent the following synthetic click from also firing
+    touchTriggeredRef.current = true;
+    e.preventDefault();
+    await handlePrimaryPress();
+  };
+
   return (
     <div className="glass-card p-4 bg-gradient-to-br from-primary/5 to-accent/5">
       <div className="flex items-start gap-3">
@@ -334,19 +368,8 @@ const SubscriptionCard = () => {
             size="sm" 
             variant="gold"
             className="mt-3 gap-2"
-            onClick={async () => {
-              // Keep original button label; choose behavior based on native mobile state
-              if (isNativeMobile && !isUserLoggedIn) {
-                toast.error('Please sign in to subscribe');
-                navigate('/auth');
-                return;
-              }
-              if (isNativeMobile && !isOfferingsReady) {
-                await handleRetryOfferings();
-                return;
-              }
-              await handleUpgrade();
-            }}
+            onClick={handlePrimaryClick}
+            onTouchEnd={handlePrimaryTouchEnd}
             disabled={isButtonLoading}
           >
             {isButtonLoading ? (

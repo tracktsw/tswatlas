@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState, useEffect } from 'react';
+import { ReactNode, useMemo, useRef, useState, useEffect, type TouchEventHandler } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
@@ -247,6 +247,38 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   const priceString = isNativeMobile ? getPriceString() : '£5.99';
   const isButtonLoading = isUpgrading || isRevenueCatLoading;
 
+  // Android-only: ensure taps reliably trigger the handler (some WebView/device combos can miss onClick)
+  const touchTriggeredRef = useRef(false);
+
+  const handleCtaPress = async () => {
+    // Keep original button label; choose behavior based on native mobile state
+    if (isNativeMobile && !isUserLoggedIn) {
+      toast.error('Please sign in to subscribe');
+      navigate('/auth');
+      return;
+    }
+    if (isNativeMobile && !isOfferingsReady) {
+      await handleRetryOfferings();
+      return;
+    }
+    await handleUpgrade();
+  };
+
+  const handleCtaClick = async () => {
+    if (isNativeAndroid && touchTriggeredRef.current) {
+      touchTriggeredRef.current = false;
+      return;
+    }
+    await handleCtaPress();
+  };
+
+  const handleCtaTouchEnd: TouchEventHandler<HTMLButtonElement> = async (e) => {
+    if (!isNativeAndroid) return;
+    touchTriggeredRef.current = true;
+    e.preventDefault();
+    await handleCtaPress();
+  };
+
 
   // Blurred content overlay
   if (showBlurred) {
@@ -266,19 +298,8 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
             </p>
             
             <Button
-              onClick={async () => {
-                // Keep original button label; choose behavior based on native mobile state
-                if (isNativeMobile && !isUserLoggedIn) {
-                  toast.error('Please sign in to subscribe');
-                  navigate('/auth');
-                  return;
-                }
-                if (isNativeMobile && !isOfferingsReady) {
-                  await handleRetryOfferings();
-                  return;
-                }
-                await handleUpgrade();
-              }}
+              onClick={handleCtaClick}
+              onTouchEnd={handleCtaTouchEnd}
               disabled={isButtonLoading}
               variant="gold"
               className="gap-2"
@@ -350,19 +371,8 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
       
         <div className="space-y-3 w-full max-w-xs">
           <Button
-            onClick={async () => {
-              // Keep original button label; choose behavior based on native mobile state
-              if (isNativeMobile && !isUserLoggedIn) {
-                toast.error('Please sign in to subscribe');
-                navigate('/auth');
-                return;
-              }
-              if (isNativeMobile && !isOfferingsReady) {
-                await handleRetryOfferings();
-                return;
-              }
-              await handleUpgrade();
-            }}
+            onClick={handleCtaClick}
+            onTouchEnd={handleCtaTouchEnd}
             disabled={isButtonLoading}
             variant="gold"
             className="w-full gap-2"
