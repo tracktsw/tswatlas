@@ -4,7 +4,11 @@ const config: CapacitorConfig = {
   appId: 'app.tracktsw.atlas',
   appName: 'TSW Atlas',
   webDir: 'dist',
-  bundledWebRuntime: false
+  bundledWebRuntime: false,
+
+  android: {
+    adjustMarginsForEdgeToEdge: 'auto',
+  },
 };
 
 export default config;
