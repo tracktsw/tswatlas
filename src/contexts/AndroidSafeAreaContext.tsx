@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useEffect, ReactNode, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 
 interface AndroidSafeAreaContextType {
@@ -10,49 +10,60 @@ const AndroidSafeAreaContext = createContext<AndroidSafeAreaContextType>({ botto
 export const useAndroidSafeArea = () => useContext(AndroidSafeAreaContext);
 
 export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) => {
+  const [bottomInset, setBottomInset] = useState(0);
   const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
   useEffect(() => {
     if (!isNativeAndroid) return;
 
-    const updateSafeArea = async () => {
+    let listenerHandle: { remove: () => Promise<void> } | null = null;
+
+    const setupSafeArea = async () => {
       try {
-        // Dynamic import to avoid loading on non-Android platforms
         const { SafeArea } = await import('capacitor-plugin-safe-area');
-        const insets = await SafeArea.getSafeAreaInsets();
         
-        // Clamp bottom inset to 0-24px to prevent excessive padding
-        const clampedInset = Math.min(Math.max(insets.insets.bottom, 0), 24);
+        // Enable immersive/edge-to-edge mode so the app renders behind the nav bar
+        await SafeArea.setImmersiveNavigationBar();
+        
+        // Get initial insets
+        const { insets } = await SafeArea.getSafeAreaInsets();
+        
+        // Use actual value - don't clamp (nav bars can be 48-96px)
+        const bottomValue = Math.max(insets.bottom, 0);
+        setBottomInset(bottomValue);
         
         document.documentElement.style.setProperty(
           '--android-bottom-inset',
-          `${clampedInset}px`
+          `${bottomValue}px`
         );
+
+        // Listen for changes (rotation, keyboard, etc.)
+        listenerHandle = await SafeArea.addListener('safeAreaChanged', ({ insets }) => {
+          const newBottom = Math.max(insets.bottom, 0);
+          setBottomInset(newBottom);
+          document.documentElement.style.setProperty(
+            '--android-bottom-inset',
+            `${newBottom}px`
+          );
+        });
+
       } catch (error) {
-        console.warn('Failed to get Android safe area insets:', error);
-        // Fallback to 0
+        console.warn('Failed to setup Android safe area:', error);
         document.documentElement.style.setProperty('--android-bottom-inset', '0px');
       }
     };
 
-    updateSafeArea();
-
-    // Listen for orientation changes to recalculate
-    const handleResize = () => {
-      updateSafeArea();
-    };
-
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize);
+    setupSafeArea();
 
     return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
+      if (listenerHandle) {
+        listenerHandle.remove();
+      }
     };
   }, [isNativeAndroid]);
 
   return (
-    <AndroidSafeAreaContext.Provider value={{ bottomInset: 0 }}>
+    <AndroidSafeAreaContext.Provider value={{ bottomInset }}>
       {children}
     </AndroidSafeAreaContext.Provider>
   );
