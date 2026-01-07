@@ -14,35 +14,21 @@ const navItems = [
 /**
  * BottomNav - Fixed bottom navigation bar
  * 
- * Safe area handling:
- * - iOS: Uses CSS env(safe-area-inset-bottom) via --safe-bottom variable
- * - Android: Uses --android-safe-bottom set by AndroidSafeAreaContext from @capacitor-community/safe-area plugin
- * - Web: No padding needed
- * 
- * Platform detection determines which CSS variable to use.
+ * Safe area handling uses env(safe-area-inset-bottom) for both platforms.
+ * The background extends into the safe area to fill the gap.
  */
 const BottomNav = () => {
   const location = useLocation();
-  
-  // Detect Android platform
-  const isAndroid = /android/i.test(navigator.userAgent);
-  
-  // Use platform-specific CSS variable
-  const bottomPadding = isAndroid 
-    ? 'var(--android-safe-bottom, 0px)' 
-    : 'var(--safe-bottom, 0px)';
 
   return (
     <nav 
       className="fixed left-0 right-0 bottom-0 z-50"
-      style={{ paddingBottom: bottomPadding }}
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      {/* Background layer - extends below nav to fill the safe area */}
+      {/* Background layer - extends into the safe area */}
       <div 
         className="absolute inset-0 bg-card/98 backdrop-blur-md border-t border-border/50"
-        style={{ 
-          bottom: isAndroid ? 'calc(-1 * var(--android-safe-bottom, 0px))' : '0' 
-        }}
+        style={{ bottom: 'calc(-1 * env(safe-area-inset-bottom, 0px))' }}
       />
       <div className="relative flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto shadow-lg">
         {navItems.map(({ path, icon: Icon, label }) => {
