@@ -45,6 +45,9 @@ html, body, #root {
   /* Nav bar height constant - used for content padding */
   --nav-height: 56px;
   
+  /* App nav bar height - fixed 56px for bottom nav */
+  --app-nav-height: 56px;
+  
   /* iOS-specific extras */
   --ios-header-extra: 16px;
   --ios-dialog-header-extra: 0px;
