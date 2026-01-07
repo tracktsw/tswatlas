@@ -11,8 +11,6 @@ import { initNotificationListeners, scheduleCheckInReminders } from '@/utils/not
 import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils';
 
-const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
-
 const Layout = () => {
   const { hideBottomNav } = useLayout();
   const { reminderSettings, checkIns, userId, isLoading } = useUserData();
@@ -75,17 +73,10 @@ const Layout = () => {
           "flex-1 min-h-0 overscroll-contain",
           // On iOS when keyboard is open OR text input is focused, prevent this container from scrolling to stop page jump
           isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto",
-          // Reserve space for BottomNav on web/iOS; Android uses CSS var set by context
-          !isNativeAndroid && !hideBottomNav && "pb-20"
+          // Reserve space for BottomNav (5rem) on all platforms when visible
+          // On Android, BottomNav itself adds safe-area padding, so we only need nav height here
+          !hideBottomNav && "pb-20"
         )}
-        style={
-          isNativeAndroid && !hideBottomNav
-            ? {
-                // Single compensation: 5rem nav height + native-reported safe area
-                paddingBottom: 'calc(5rem + var(--app-safe-bottom, 0px))',
-              }
-            : undefined
-        }
       >
         <Outlet />
       </main>
