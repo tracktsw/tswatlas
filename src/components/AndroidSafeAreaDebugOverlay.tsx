@@ -4,12 +4,12 @@ import { Capacitor } from '@capacitor/core';
 const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
 interface DebugValues {
-  androidBottomInset: string;
+  appSafeBottom: string;
   envSafeAreaBottom: string;
   innerHeight: number;
   vpHeight: number;
   vpOffsetTop: number;
-  bottomOcclusion: number;
+  nativeInsetAvailable: boolean;
 }
 
 export const AndroidSafeAreaDebugOverlay = () => {
@@ -17,8 +17,7 @@ export const AndroidSafeAreaDebugOverlay = () => {
   const [values, setValues] = useState<DebugValues | null>(null);
   const probeRef = useRef<HTMLDivElement | null>(null);
 
-  // TEMPORARY: Always enable on native Android for debugging
-  // Revert to query param check after debugging is complete
+  // Enable on native Android or via query param
   useEffect(() => {
     if (isNativeAndroid) {
       setEnabled(true);
@@ -59,8 +58,9 @@ export const AndroidSafeAreaDebugOverlay = () => {
     if (!enabled || !isNativeAndroid) return;
 
     const readValues = () => {
-      const androidBottomInset = getComputedStyle(document.documentElement)
-        .getPropertyValue('--android-bottom-inset')
+      // Read the new unified CSS variable
+      const appSafeBottom = getComputedStyle(document.documentElement)
+        .getPropertyValue('--app-safe-bottom')
         .trim() || '0px';
 
       const envSafeAreaBottom = probeRef.current
@@ -71,15 +71,18 @@ export const AndroidSafeAreaDebugOverlay = () => {
       const vp = window.visualViewport;
       const vpHeight = vp?.height ?? innerHeight;
       const vpOffsetTop = vp?.offsetTop ?? 0;
-      const bottomOcclusion = Math.max(0, Math.round(innerHeight - vpHeight - vpOffsetTop));
+
+      // Check if native plugin provided a value (non-fallback)
+      const parsedSafe = parseInt(appSafeBottom, 10);
+      const nativeInsetAvailable = !isNaN(parsedSafe) && parsedSafe > 0;
 
       setValues({
-        androidBottomInset,
+        appSafeBottom,
         envSafeAreaBottom,
         innerHeight,
         vpHeight: Math.round(vpHeight),
         vpOffsetTop: Math.round(vpOffsetTop),
-        bottomOcclusion,
+        nativeInsetAvailable,
       });
     };
 
@@ -129,12 +132,18 @@ export const AndroidSafeAreaDebugOverlay = () => {
       </div>
       <div className="space-y-1">
         <div>
-          <span className="text-gray-400">--android-bottom-inset:</span>{' '}
-          <span className="text-green-400">{values.androidBottomInset}</span>
+          <span className="text-gray-400">--app-safe-bottom:</span>{' '}
+          <span className="text-green-400 font-bold">{values.appSafeBottom}</span>
         </div>
         <div>
+          <span className="text-gray-400">Native plugin:</span>{' '}
+          <span className={values.nativeInsetAvailable ? 'text-green-400' : 'text-orange-400'}>
+            {values.nativeInsetAvailable ? 'Active' : 'Fallback'}
+          </span>
+        </div>
+        <div className="pt-1 border-t border-gray-600">
           <span className="text-gray-400">env(safe-area-inset-bottom):</span>{' '}
-          <span className="text-green-400">{values.envSafeAreaBottom}</span>
+          <span className="text-blue-400">{values.envSafeAreaBottom}</span>
         </div>
         <div>
           <span className="text-gray-400">window.innerHeight:</span>{' '}
@@ -143,14 +152,6 @@ export const AndroidSafeAreaDebugOverlay = () => {
         <div>
           <span className="text-gray-400">visualViewport.height:</span>{' '}
           <span className="text-blue-400">{values.vpHeight}px</span>
-        </div>
-        <div>
-          <span className="text-gray-400">visualViewport.offsetTop:</span>{' '}
-          <span className="text-blue-400">{values.vpOffsetTop}px</span>
-        </div>
-        <div className="pt-1 border-t border-gray-600">
-          <span className="text-gray-400">bottomOcclusion (derived):</span>{' '}
-          <span className="text-orange-400 font-bold">{values.bottomOcclusion}px</span>
         </div>
       </div>
     </div>
