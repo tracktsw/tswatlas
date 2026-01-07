@@ -258,26 +258,48 @@ const PhotoDiaryPage = () => {
   const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
 
   const handleUpgrade = async () => {
-    if (isUpgrading) return;
+    // CRITICAL: Log at the VERY START to confirm this function is called
+    console.log('[PhotoDiaryPage] ========== handleUpgrade() CALLED ==========');
+    console.log('[PhotoDiaryPage] State:', {
+      isUpgrading,
+      isNativeIOS,
+      isNativeAndroid,
+      isNativeMobile,
+      isUserLoggedIn,
+      offeringsStatus,
+      offeringsError,
+      isOfferingsReady,
+    });
+
+    if (isUpgrading) {
+      console.log('[PhotoDiaryPage] Already upgrading, returning early');
+      return;
+    }
     setIsUpgrading(true);
 
     // NATIVE MOBILE PATH (Android or iOS) - NEVER route to Stripe
     if (isNativeMobile) {
+      console.log('[PhotoDiaryPage] Native mobile path - will use RevenueCat');
+      
       if (!isUserLoggedIn) {
+        console.log('[PhotoDiaryPage] User not logged in');
         toast.error('Please sign in to subscribe');
         setIsUpgrading(false);
         return;
       }
 
       if (!isOfferingsReady) {
+        console.log('[PhotoDiaryPage] Offerings not ready:', { offeringsStatus, offeringsError });
         const msg = offeringsError || 'Loading subscription options…';
         toast.error(msg);
         setIsUpgrading(false);
         return;
       }
 
+      console.log('[PhotoDiaryPage] All checks passed, calling purchaseMonthly()...');
       try {
         const result = await purchaseMonthly();
+        console.log('[PhotoDiaryPage] Purchase result:', result);
         if (result.success) {
           toast.success('Purchase successful!');
           setShowUpgradePrompt(false);
@@ -287,6 +309,7 @@ const PhotoDiaryPage = () => {
           toast.error(result.error);
         }
       } catch (err: any) {
+        console.error('[PhotoDiaryPage] Purchase error:', err);
         toast.error(err.message || 'Purchase failed');
       }
       setIsUpgrading(false);

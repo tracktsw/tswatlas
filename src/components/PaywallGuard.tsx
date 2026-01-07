@@ -69,15 +69,33 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   }, [isPremium, isUpgrading]);
 
   const handleUpgrade = async () => {
-    if (isUpgrading) return;
+    // CRITICAL: Log at the VERY START to confirm this function is called
+    console.log('[PaywallGuard] ========== handleUpgrade() CALLED ==========');
+    console.log('[PaywallGuard] State:', {
+      isUpgrading,
+      isNativeIOS,
+      isNativeAndroid,
+      isNativeMobile,
+      isUserLoggedIn,
+      offeringsStatus,
+      offeringsError,
+      isOfferingsReady,
+    });
 
-    console.log('[PaywallGuard] handleUpgrade called');
+    if (isUpgrading) {
+      console.log('[PaywallGuard] Already upgrading, returning early');
+      return;
+    }
+
     setStatusMessage(null);
 
     // NATIVE MOBILE PATH (iOS or Android) - STRIPE IS COMPLETELY BLOCKED
     if (isNativeMobile) {
+      console.log('[PaywallGuard] Native mobile path - will use RevenueCat');
+      
       // CRITICAL: Must be logged in to purchase
       if (!isUserLoggedIn) {
+        console.log('[PaywallGuard] User not logged in, redirecting to auth');
         toast.error('Please sign in to subscribe');
         navigate('/auth');
         return;
@@ -85,11 +103,14 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
 
       // If offerings aren't ready, show error + retry button (NEVER fall back to Stripe)
       if (!isOfferingsReady) {
+        console.log('[PaywallGuard] Offerings not ready:', { offeringsStatus, offeringsError });
         const msg = offeringsError || 'Loading subscription options…';
         setStatusMessage(msg);
         toast.error(msg);
         return;
       }
+      
+      console.log('[PaywallGuard] All checks passed, calling purchaseMonthly()...');
 
       setIsUpgrading(true);
       const storeName = isNativeIOS ? 'App Store' : 'Google Play';

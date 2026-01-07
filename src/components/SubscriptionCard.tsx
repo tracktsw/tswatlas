@@ -55,28 +55,50 @@ const SubscriptionCard = () => {
   const isOfferingsReady = isNativeMobile ? (isUserLoggedIn && offeringsStatus === 'ready') : true;
 
   const handleUpgrade = async () => {
-    if (isCheckoutLoading) return;
-
+    // CRITICAL: Log at the VERY START to confirm this function is called
+    console.log('[SubscriptionCard] ========== handleUpgrade() CALLED ==========');
+    
     const debugInfo = getDebugInfo();
-    console.log('[SubscriptionCard] handleUpgrade:', debugInfo);
+    console.log('[SubscriptionCard] Debug info:', debugInfo);
+    console.log('[SubscriptionCard] State:', {
+      isCheckoutLoading,
+      isNativeIOS,
+      isNativeAndroid,
+      isNativeMobile,
+      isUserLoggedIn,
+      offeringsStatus,
+      offeringsError,
+      isOfferingsReady,
+    });
+
+    if (isCheckoutLoading) {
+      console.log('[SubscriptionCard] Already loading, returning early');
+      return;
+    }
 
     setStatusMessage(null);
 
     // NATIVE MOBILE PATH (iOS or Android) - STRIPE IS COMPLETELY BLOCKED
     if (isNativeMobile) {
+      console.log('[SubscriptionCard] Native mobile path - will use RevenueCat');
+      
       // CRITICAL: Must be logged in to purchase
       if (!isUserLoggedIn) {
+        console.log('[SubscriptionCard] User not logged in, redirecting to auth');
         toast.error('Please sign in to subscribe');
         navigate('/auth');
         return;
       }
 
       if (!isOfferingsReady) {
+        console.log('[SubscriptionCard] Offerings not ready:', { offeringsStatus, offeringsError });
         const msg = offeringsError || 'Loading subscription options…';
         setStatusMessage(msg);
         toast.error(msg);
         return;
       }
+      
+      console.log('[SubscriptionCard] All checks passed, calling purchaseMonthly()...');
 
       setIsCheckoutLoading(true);
       const storeName = isNativeIOS ? 'App Store' : 'Google Play';
