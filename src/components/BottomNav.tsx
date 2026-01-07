@@ -14,8 +14,14 @@ const navItems = [
 /**
  * BottomNav - Fixed bottom navigation bar
  * 
- * Safe area handling uses env(safe-area-inset-bottom) for both platforms.
- * The background extends into the safe area to fill the gap.
+ * Safe area handling:
+ * - iOS: Uses env(safe-area-inset-bottom) via CSS
+ * - Android: Uses --safe-bottom set by AndroidSafeAreaContext (from native WindowInsets)
+ * 
+ * Layout strategy (Option B from spec):
+ * - BottomNav gets padding-bottom: var(--safe-bottom)
+ * - Content wrapper gets padding-bottom: var(--nav-height) only
+ * - This avoids double-padding the safe area
  */
 const BottomNav = () => {
   const location = useLocation();
@@ -23,14 +29,23 @@ const BottomNav = () => {
   return (
     <nav 
       className="fixed left-0 right-0 bottom-0 z-50"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      style={{ 
+        // iOS uses env() from CSS, Android uses --safe-bottom from JS
+        // Both resolve correctly per platform
+        paddingBottom: 'var(--safe-bottom, env(safe-area-inset-bottom, 0px))'
+      }}
     >
-      {/* Background layer - extends into the safe area */}
+      {/* Background layer - extends into the safe area for seamless look */}
       <div 
         className="absolute inset-0 bg-card/98 backdrop-blur-md border-t border-border/50"
-        style={{ bottom: 'calc(-1 * env(safe-area-inset-bottom, 0px))' }}
+        style={{ 
+          // Extend background down into the safe area
+          bottom: 'calc(-1 * var(--safe-bottom, env(safe-area-inset-bottom, 0px)))' 
+        }}
       />
-      <div className="relative flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto shadow-lg">
+      
+      {/* Navigation items - 56px height matches --nav-height */}
+      <div className="relative flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto shadow-lg h-[56px]">
         {navItems.map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
           return (

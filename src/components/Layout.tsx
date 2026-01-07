@@ -11,6 +11,19 @@ import { initNotificationListeners, scheduleCheckInReminders } from '@/utils/not
 import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils';
 
+/**
+ * Layout - Main app layout wrapper
+ * 
+ * Safe area strategy (Option B):
+ * - Content gets padding-bottom: var(--nav-height) - just the nav bar height
+ * - BottomNav gets padding-bottom: var(--safe-bottom) - the system safe area
+ * - This ensures safe area is applied ONCE, not doubled
+ * 
+ * Scroll handling:
+ * - Uses min-h-0 on scroll container for proper flex shrinking
+ * - Avoids height:100vh in favor of flex layouts
+ * - No overflow:hidden on html/body/#root (handled in index.css)
+ */
 const Layout = () => {
   const { hideBottomNav } = useLayout();
   const { reminderSettings, checkIns, userId, isLoading } = useUserData();
@@ -33,7 +46,6 @@ const Layout = () => {
     if (!Capacitor.isNativePlatform()) return;
 
     const cleanup = initNotificationListeners((route) => {
-      // Navigate to the route when notification is tapped
       navigate(route);
     });
 
@@ -44,7 +56,6 @@ const Layout = () => {
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || !userId || isLoading) return;
 
-    // Only schedule if we have valid settings
     if (reminderSettings.morningTime && reminderSettings.eveningTime) {
       scheduleCheckInReminders(
         reminderSettings.morningTime,
@@ -56,7 +67,7 @@ const Layout = () => {
 
   return (
     <div 
-      className="h-[100dvh] bg-background flex flex-col" 
+      className="min-h-[100dvh] bg-background flex flex-col" 
       style={{ paddingTop: 'var(--safe-top)' }}
     >
       {/* Reminder banner - shows when due and user hasn't checked in */}
@@ -70,9 +81,8 @@ const Layout = () => {
       
       {/* 
         Main content area
-        - pb-20: Reserve space for BottomNav (approx 80px height)
-        - Safe area padding is applied ONLY in BottomNav via --safe-bottom
-        - No safe-bottom padding here to avoid double-padding
+        - Uses --nav-height for bottom padding (not safe area - that's in BottomNav)
+        - min-h-0 enables proper flex shrinking for scroll
         - touch-action: pan-y for Android 16 WebView scroll compatibility
       */}
       <main 
@@ -80,8 +90,8 @@ const Layout = () => {
           "flex-1 min-h-0",
           // On iOS when keyboard is open, prevent scrolling to stop page jump
           isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto",
-          // Reserve space for BottomNav height only (not safe area - that's in BottomNav)
-          !hideBottomNav && "pb-20"
+          // Reserve space for nav bar height only - safe area is in BottomNav
+          !hideBottomNav && "pb-[var(--nav-height)]"
         )}
         style={{ 
           touchAction: 'pan-y',
@@ -90,8 +100,8 @@ const Layout = () => {
       >
         <Outlet />
       </main>
-      {!hideBottomNav && <BottomNav />}
       
+      {!hideBottomNav && <BottomNav />}
     </div>
   );
 };
