@@ -457,6 +457,22 @@ const PhotoDiaryPage = () => {
   const handleConfirmUpload = async () => {
     if (!pendingFile) return;
 
+    // CRITICAL: Re-check daily limit from database before allowing upload (prevents race condition)
+    if (!isPremium) {
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+      const { count, error } = await supabase
+        .from('user_photos')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', startOfDay);
+      
+      if (!error && count !== null && count >= FREE_DAILY_PHOTO_LIMIT) {
+        toast.error(`Daily limit reached (${FREE_DAILY_PHOTO_LIMIT} photos). Upgrade for unlimited uploads.`);
+        setShowUpgradePrompt(true);
+        return;
+      }
+    }
+
     // Close modal immediately for better UX
     setIsCapturing(false);
 
@@ -557,10 +573,20 @@ const PhotoDiaryPage = () => {
 
     let filesToUpload: File[];
 
-    // Check upload limits for free users
+    // Check upload limits for free users - query database for accurate count
     if (!isPremium) {
-      const allowedCount = Math.max(0, remainingUploads);
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+      const { count, error } = await supabase
+        .from('user_photos')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', startOfDay);
+      
+      const actualTodayCount = error ? photosUploadedToday : (count ?? 0);
+      const allowedCount = Math.max(0, FREE_DAILY_PHOTO_LIMIT - actualTodayCount);
+      
       if (allowedCount === 0) {
+        toast.error(`Daily limit reached (${FREE_DAILY_PHOTO_LIMIT} photos). Upgrade for unlimited uploads.`);
         setShowUpgradePrompt(true);
         return;
       }
