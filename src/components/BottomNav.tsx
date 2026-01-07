@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Camera, CheckCircle, BarChart3, Users, Leaf } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Capacitor } from '@capacitor/core';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Home' },
@@ -13,6 +14,7 @@ const navItems = [
 
 const BottomNav = () => {
   const location = useLocation();
+  const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
@@ -42,6 +44,8 @@ const BottomNav = () => {
             );
           })}
         </div>
+        {/* Android safe area padding for system navigation bar */}
+        {isNativeAndroid && <div className="h-6" />}
       </div>
     </nav>
   );
