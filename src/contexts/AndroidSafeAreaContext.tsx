@@ -9,8 +9,8 @@ const AndroidSafeAreaContext = createContext<AndroidSafeAreaContextType>({ botto
 
 export const useAndroidSafeArea = () => useContext(AndroidSafeAreaContext);
 
-// Minimum fallback for gesture navigation (typically ~48px on many devices)
-const MIN_GESTURE_NAV_HEIGHT = 48;
+// Minimum fallback for 3-button navigation (typically 48-56dp, ~72-80px on high-density screens)
+const MIN_NAV_HEIGHT = 72;
 
 const clampPx = (n: number) => (Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0);
 
@@ -38,7 +38,7 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
     let detachViewportListeners: (() => void) | null = null;
 
     const applyBottomInset = (candidate: number) => {
-      const next = clampPx(Math.max(candidate, MIN_GESTURE_NAV_HEIGHT));
+      const next = clampPx(Math.max(candidate, MIN_NAV_HEIGHT));
       setBottomInset(next);
       document.documentElement.style.setProperty('--android-bottom-inset', `${next}px`);
     };
@@ -100,7 +100,7 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
       } catch (error) {
         console.warn('Failed to setup Android safe area:', error);
         // Last-resort fallback
-        applyBottomInset(MIN_GESTURE_NAV_HEIGHT);
+        applyBottomInset(MIN_NAV_HEIGHT);
       }
     };
 
