@@ -9,11 +9,6 @@ import { useLayout } from '@/contexts/LayoutContext';
 import { useIOSKeyboardContext } from '@/contexts/IOSKeyboardContext';
 import { initNotificationListeners, scheduleCheckInReminders } from '@/utils/notificationScheduler';
 import { Capacitor } from '@capacitor/core';
-import { cn } from '@/lib/utils';
-
-// Detect Android platform (native or web)
-const isAndroid = Capacitor.getPlatform() === 'android' || 
-  (typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent));
 
 /**
  * Layout - Main app layout wrapper
@@ -70,18 +65,7 @@ const Layout = () => {
   }, [reminderSettings, userId, isLoading]);
 
   return (
-    <div 
-      className={cn(
-        "bg-background flex flex-col",
-        // Android: min-h-full, no safe areas
-        // iOS: min-h-[100dvh] with top safe area
-        isAndroid ? "min-h-full" : "min-h-[100dvh]"
-      )}
-      style={{ 
-        // iOS only: top safe area padding
-        paddingTop: isAndroid ? undefined : 'var(--safe-top)' 
-      }}
-    >
+    <div className="bg-background flex flex-col min-h-full">
       {/* Reminder banner - shows when due and user hasn't checked in */}
       {!isLoading && shouldShowReminder && reminderType && (
         <ReminderBanner
@@ -98,13 +82,13 @@ const Layout = () => {
         - BottomNav owns safe-bottom exclusively
       */}
       <main 
-        className={cn(
+        className={[
           "flex-1 min-h-0",
           // On iOS when keyboard is open, prevent scrolling to stop page jump
           isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto",
           // Reserve space for nav bar height only (56px) - BottomNav owns safe-bottom
-          !hideBottomNav && "pb-14"
-        )}
+          !hideBottomNav ? "pb-14" : "",
+        ].filter(Boolean).join(" ")}
         style={{ 
           touchAction: 'pan-y',
           WebkitOverflowScrolling: 'touch'
