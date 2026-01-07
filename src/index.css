@@ -14,19 +14,29 @@ body {
 
 /* Safe area and iOS-specific offsets */
 :root {
+  /* Top inset uses env() - works reliably on all platforms */
   --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Bottom inset: defaults to 0px. 
+     - On Android: AndroidSafeAreaContext sets this from native plugin
+     - On iOS: overridden below with env() */
+  --safe-bottom: 0px;
   --ios-header-extra: 16px;
   --ios-dialog-header-extra: 0px;
   /* Android bottom inset - set dynamically by AndroidSafeAreaContext */
-  --android-bottom-inset: 0px;
+  --app-safe-bottom: 0px;
 }
 
 /* Legacy iOS fallback using constant() */
 @supports (padding-top: constant(safe-area-inset-top)) {
   :root {
     --safe-top: constant(safe-area-inset-top);
-    --safe-bottom: constant(safe-area-inset-bottom);
+  }
+}
+
+/* iOS: use env() for bottom safe area (reliable on iOS) */
+@supports (-webkit-touch-callout: none) {
+  :root {
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
@@ -507,9 +517,9 @@ body {
     animation: shimmer 1.5s ease-in-out infinite;
   }
 
-  /* Safe area padding for iOS devices */
+  /* Safe area padding - uses --safe-bottom which is set appropriately per platform */
   .safe-area-inset-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: var(--safe-bottom);
   }
   
   .safe-area-inset-top {
