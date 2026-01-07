@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, ReactNode, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import type { InsetsData } from '@/plugins/androidInsets';
 
 interface AndroidSafeAreaContextType {
@@ -89,6 +90,24 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
       });
     };
 
+    /**
+     * Set Android navigation bar color to match the app background.
+     * Uses the sage-deep color (#3d6b52) to match the app's theme.
+     */
+    const setAndroidNavBarColor = async () => {
+      if (!isNativeAndroid) return;
+      
+      try {
+        // Set navigation bar background to match app theme (sage-deep: #3d6b52)
+        await StatusBar.setBackgroundColor({ color: '#3d6b52' });
+        // Use light content (white icons) since background is dark
+        await StatusBar.setStyle({ style: Style.Dark });
+        console.log('[AndroidSafeArea] Navigation bar color set to #3d6b52');
+      } catch (error) {
+        console.warn('[AndroidSafeArea] Failed to set navigation bar color:', error);
+      }
+    };
+
     const setupInsets = async () => {
       if (isNativeAndroid) {
         try {
@@ -124,6 +143,11 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
     };
 
     setupInsets();
+    
+    // Set Android navigation bar color on native Android
+    if (isNativeAndroid) {
+      setAndroidNavBarColor();
+    }
 
     return () => {
       if (listenerHandle) listenerHandle.remove();
