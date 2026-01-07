@@ -65,6 +65,7 @@ const InsightsPage = () => {
     offeringsError,
     getPriceString,
     retryInitialization,
+    isUserLoggedIn,
   } = useRevenueCatContext();
   const { baselineConfidence, dailyFlareStates } = useFlareState();
   const [calendarMonth, setCalendarMonth] = useState(new Date());
@@ -80,17 +81,30 @@ const InsightsPage = () => {
     []
   );
 
+  const isNativeAndroid = useMemo(
+    () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android',
+    []
+  );
+
+  const isNativeMobile = isNativeIOS || isNativeAndroid;
+
   // Premium is enforced by backend for ALL platforms.
   const isPremium = isAdmin || isPremiumFromBackend;
   const isSubscriptionLoading = isBackendLoading;
-  const isOfferingsReady = isNativeIOS ? offeringsStatus === 'ready' : true;
+  const isOfferingsReady = isNativeMobile ? (isUserLoggedIn && offeringsStatus === 'ready') : true;
 
   const handleUpgrade = async () => {
     if (isUpgrading) return;
     setIsUpgrading(true);
 
-    // iOS NATIVE PATH - STRIPE IS COMPLETELY BLOCKED
-    if (isNativeIOS) {
+    // NATIVE MOBILE PATH (Android or iOS) - NEVER route to Stripe
+    if (isNativeMobile) {
+      if (!isUserLoggedIn) {
+        toast.error('Please sign in to subscribe');
+        setIsUpgrading(false);
+        return;
+      }
+
       if (!isOfferingsReady) {
         const msg = offeringsError || 'Loading subscription options…';
         toast.error(msg);
@@ -132,9 +146,15 @@ const InsightsPage = () => {
   };
 
   const handleRestore = async () => {
-    if (isRestoring || !isNativeIOS) return;
+    if (isRestoring || !isNativeMobile) return;
+    if (!isUserLoggedIn) {
+      toast.error('Please sign in to restore purchases');
+      setIsRestoring(false);
+      return;
+    }
+
     setIsRestoring(true);
-    
+
     try {
       await restorePurchases();
       const updated = await refreshSubscription();
@@ -146,7 +166,7 @@ const InsightsPage = () => {
     } catch (err: any) {
       toast.error('Failed to restore purchases');
     }
-    
+
     setIsRestoring(false);
   };
 
