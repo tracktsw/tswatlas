@@ -1,7 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Camera, CheckCircle, BarChart3, Users, Leaf } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Capacitor } from '@capacitor/core';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Home' },
@@ -20,20 +19,13 @@ const navItems = [
  */
 const BottomNav = () => {
   const location = useLocation();
-  const isAndroid = Capacitor.getPlatform() === 'android';
 
   return (
     <nav 
-      className="fixed left-0 right-0 bottom-0 z-50 bg-card/98 backdrop-blur-md border-t border-border/50"
-      style={isAndroid ? {
-        height: 'calc(56px + var(--safe-bottom, 48px) + 8px)',
-        paddingBottom: 'calc(var(--safe-bottom, 48px) + 8px)',
-      } : {
-        height: '56px',
-      }}
+      className="fixed left-0 right-0 bottom-0 z-50 bg-card/98 backdrop-blur-md border-t border-border/50 h-14"
     >
       {/* Navigation items - 56px height */}
-      <div className="flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto" style={{ height: '56px' }}>
+      <div className="flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto h-14">
         {navItems.map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
           return (
