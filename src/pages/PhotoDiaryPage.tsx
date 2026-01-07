@@ -902,7 +902,7 @@ const PhotoDiaryPage = () => {
             <div className="space-y-2">
               <Button 
                 onClick={handleUpgrade} 
-                disabled={isUpgrading || (isNativeIOS && !isOfferingsReady)} 
+                disabled={isUpgrading || (isNativeMobile && !isOfferingsReady)} 
                 variant="gold" 
                 className="w-full gap-2"
               >

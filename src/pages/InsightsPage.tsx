@@ -533,7 +533,7 @@ const InsightsPage = () => {
               {/* Subscribe Button */}
               <Button 
                 onClick={handleUpgrade} 
-                disabled={isUpgrading || (isNativeIOS && !isOfferingsReady)} 
+                disabled={isUpgrading || (isNativeMobile && !isOfferingsReady)} 
                 variant="gold" 
                 className="w-full gap-2" 
                 size="default"
@@ -543,7 +543,7 @@ const InsightsPage = () => {
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Processing…
                   </>
-                ) : isNativeIOS && !isOfferingsReady ? (
+                ) : isNativeMobile && !isOfferingsReady ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading…
@@ -556,11 +556,11 @@ const InsightsPage = () => {
                 )}
               </Button>
               <p className="text-xs text-muted-foreground mt-1.5">
-                14 days free · {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
+                14 days free · {isNativeMobile ? getPriceString() : '£5.99'}/month after · Cancel anytime
               </p>
 
               {/* iOS: Retry button if offerings failed */}
-              {isNativeIOS && offeringsStatus === 'error' && (
+              {isNativeMobile && offeringsStatus === 'error' && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -573,7 +573,7 @@ const InsightsPage = () => {
               )}
 
               {/* iOS: Restore purchases */}
-              {isNativeIOS && (
+              {isNativeMobile && isUserLoggedIn && (
                 <Button
                   variant="ghost"
                   size="sm"
