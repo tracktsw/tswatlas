@@ -57,7 +57,7 @@ const Layout = () => {
   return (
     <div 
       className="h-[100dvh] bg-background flex flex-col overflow-hidden" 
-      style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
+      style={{ paddingTop: 'var(--safe-top)' }}
     >
       {/* Reminder banner - shows when due and user hasn't checked in */}
       {!isLoading && shouldShowReminder && reminderType && (
