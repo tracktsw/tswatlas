@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import BottomNav from './BottomNav';
 import { ReminderBanner } from './ReminderBanner';
@@ -9,6 +9,8 @@ import { useIOSKeyboardContext } from '@/contexts/IOSKeyboardContext';
 import { initNotificationListeners, scheduleCheckInReminders } from '@/utils/notificationScheduler';
 import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils';
+
+const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
 const Layout = () => {
   const { hideBottomNav } = useLayout();
@@ -67,12 +69,17 @@ const Layout = () => {
         />
       )}
       
-      <main className={cn(
-        "flex-1 min-h-0 overscroll-contain",
-        !hideBottomNav && "pb-20",
-        // On iOS when keyboard is open OR text input is focused, prevent this container from scrolling to stop page jump
-        isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto"
-      )}>
+      <main 
+        className={cn(
+          "flex-1 min-h-0 overscroll-contain",
+          !hideBottomNav && "pb-20",
+          // On iOS when keyboard is open OR text input is focused, prevent this container from scrolling to stop page jump
+          isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto"
+        )}
+        style={isNativeAndroid && !hideBottomNav ? {
+          paddingBottom: 'calc(5rem + var(--android-bottom-inset, 0px))'
+        } : undefined}
+      >
         <Outlet />
       </main>
       {!hideBottomNav && <BottomNav />}
