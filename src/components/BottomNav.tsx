@@ -19,10 +19,21 @@ const BottomNav = () => {
   const location = useLocation();
   const { bottomInset } = useAndroidSafeArea();
 
+  // DIAGNOSTIC: On Android, force bottom:0 with zero extra padding to test if issue is double-application
+  // If this snaps the nav down correctly, the problem is double safe-bottom application elsewhere
+  // If it still floats, the problem is viewport/container height (100vh vs 100dvh)
+  const diagnosticStyle = isNativeAndroid 
+    ? { bottom: 0, margin: 0, padding: 0 } 
+    : undefined;
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50">
+    <nav 
+      className="fixed left-0 right-0 z-50" 
+      style={{ bottom: 0, ...diagnosticStyle }}
+    >
       <div
         className="bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg"
+        // Only apply safe-bottom padding on Android ONCE here
         style={isNativeAndroid ? { paddingBottom: `${bottomInset}px` } : undefined}
       >
         <div className="flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto">
