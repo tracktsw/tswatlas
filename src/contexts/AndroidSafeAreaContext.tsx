@@ -81,37 +81,24 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
   const { isAndroid, isNative: isNativeAndroid } = detectAndroidPlatform();
 
   /**
-   * Apply insets to CSS variables and state.
-   * This is the SINGLE place where --safe-bottom is set for Android.
+   * Apply insets to state only - NO CSS variable setting for Android.
+   * Android layout does NOT use --safe-bottom; system handles insets.
    */
   const applyInsets = useCallback((data: InsetsData, source: string) => {
-    // Compute bottomNavInset as max(systemBars, systemGestures)
-    // This handles both gesture nav and 3-button nav correctly
     const systemBarsBottom = data.systemBarsBottom ?? data.bottom ?? 0;
     const systemGesturesBottom = data.systemGesturesBottom ?? 0;
     const computedBottom = Math.max(systemBarsBottom, systemGesturesBottom);
-    
-    // Keep IME inset separate - never mix with nav inset
     const ime = data.imeBottom ?? 0;
     const mode = data.navMode || 'unknown';
     const reason = data.reason || source;
-    
-    // Determine if we need to use fallback
-    // Only use fallback if native returns 0 AND we're in a situation where it shouldn't be 0
-    // For gesture nav, 0 is valid; for 3-button nav, we expect some inset
-    const useFallback = false; // Native plugin is source of truth - trust its values
-    const finalBottom = computedBottom;
 
-    setBottomInset(finalBottom);
+    setBottomInset(computedBottom);
     setImeInset(ime);
     setNavMode(mode);
-    setFallbackUsed(useFallback);
+    setFallbackUsed(false);
 
-    // Set the SINGLE CSS variable for Android safe area
-    // This is the ONLY place --safe-bottom is set for Android
-    document.documentElement.style.setProperty('--safe-bottom', `${finalBottom}px`);
-    
-    // Also set nav height as CSS variable for consistency
+    // DO NOT set --safe-bottom for Android - let system handle insets
+    // Only set nav height for reference
     document.documentElement.style.setProperty('--nav-height', `${NAV_HEIGHT}px`);
 
     logInsetChange(source, {
@@ -119,15 +106,15 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
       systemBarsBottom,
       systemGesturesBottom,
       imeBottom: ime,
-      computedSafeBottom: finalBottom,
+      computedSafeBottom: computedBottom,
       navMode: mode,
       reason,
-      fallbackUsed: useFallback,
+      fallbackUsed: false,
     });
   }, []);
 
   /**
-   * Apply fallback values for web or plugin failure.
+   * Apply fallback values for web or plugin failure - state only, no CSS.
    */
   const applyFallback = useCallback((reason: string) => {
     setBottomInset(FALLBACK_INSET);
@@ -135,7 +122,7 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
     setNavMode(`${reason}-fallback`);
     setFallbackUsed(true);
 
-    document.documentElement.style.setProperty('--safe-bottom', `${FALLBACK_INSET}px`);
+    // DO NOT set --safe-bottom for Android web fallback either
     document.documentElement.style.setProperty('--nav-height', `${NAV_HEIGHT}px`);
 
     logInsetChange(reason, {
