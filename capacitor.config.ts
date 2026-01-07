@@ -5,10 +5,9 @@ const config: CapacitorConfig = {
   appName: 'TSW Atlas',
   webDir: 'dist',
   bundledWebRuntime: false,
-
   android: {
-    adjustMarginsForEdgeToEdge: 'auto',
-  },
+    adjustMarginsForEdgeToEdge: 'disable'
+  }
 };
 
 export default config;

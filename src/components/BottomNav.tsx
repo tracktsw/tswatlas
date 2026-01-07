@@ -14,28 +14,16 @@ const navItems = [
 /**
  * BottomNav - Fixed bottom navigation bar
  * 
- * Safe area handling:
- * - iOS: Uses env(safe-area-inset-bottom) via CSS
- * - Android: Uses --safe-bottom set by AndroidSafeAreaContext (from native WindowInsets)
- * 
- * Layout strategy (Option B from spec):
- * - BottomNav gets padding-bottom: var(--safe-bottom)
- * - Content wrapper gets padding-bottom: var(--nav-height) only
- * - This avoids double-padding the safe area
+ * Layout: Fixed 56px height, positioned at bottom.
+ * Safe area: iOS uses CSS env() via index.css. Android lets system handle insets.
  */
 const BottomNav = () => {
   const location = useLocation();
 
   return (
-    <nav 
-      className="fixed left-0 right-0 bottom-0 z-50"
-      style={{ paddingBottom: 'var(--safe-bottom)' }}
-    >
-      {/* Background layer */}
-      <div className="absolute inset-0 bg-card/98 backdrop-blur-md border-t border-border/50" />
-      
-      {/* Navigation items - 56px height matches --nav-height */}
-      <div className="relative flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto shadow-lg h-[56px]">
+    <nav className="fixed left-0 right-0 bottom-0 z-50 h-14 bg-card/98 backdrop-blur-md border-t border-border/50">
+      {/* Navigation items - 56px height */}
+      <div className="flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto h-full">
         {navItems.map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
           return (
