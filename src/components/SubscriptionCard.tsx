@@ -57,7 +57,19 @@ const SubscriptionCard = () => {
     await restorePurchases();
   };
 
+  /**
+   * Manage subscription via Stripe Customer Portal
+   * CRITICAL: This is ONLY available on web platform
+   * Native platforms manage subscriptions through App Store / Play Store
+   */
   const handleManageSubscription = async () => {
+    // HARD RULE: No Stripe on native platforms
+    if (isNative) {
+      console.log('[SubscriptionCard] Manage subscription not available on native - use App Store/Play Store');
+      toast.info('Manage your subscription in your device settings');
+      return;
+    }
+
     if (isPortalLoading) return;
 
     setIsPortalLoading(true);
@@ -71,6 +83,7 @@ const SubscriptionCard = () => {
         return;
       }
 
+      // Call Stripe customer portal edge function (web only)
       const { data, error } = await supabase.functions.invoke('customer-portal', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -136,13 +149,16 @@ const SubscriptionCard = () => {
                   ? `Renews on ${format(parseISO(subscriptionEnd), 'MMMM d, yyyy')}`
                   : 'You have full access to all features.'}
             </p>
-            {/* Web users: Manage via Stripe portal */}
-            {!isAdmin && !isNative && (
+            {/* Manage subscription: Web → Stripe portal, Native → App Store / Play Store */}
+            {!isAdmin && (
               <Button 
                 variant="outline" 
                 size="sm" 
                 className="mt-3 gap-2"
-                onClick={handleManageSubscription}
+                onClick={isNative 
+                  ? () => toast.info('Manage your subscription in your device settings (App Store or Google Play)')
+                  : handleManageSubscription
+                }
                 disabled={isPortalLoading}
               >
                 {isPortalLoading ? (
