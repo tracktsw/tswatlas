@@ -147,11 +147,9 @@ export const AndroidSafeAreaProvider = ({ children }: { children: ReactNode }) =
   }, []);
 
   useEffect(() => {
-    // Non-Android platforms: ensure vars are 0 so we never affect iOS/web.
+    // Non-Android platforms: do nothing - let CSS handle safe areas
+    // iOS uses env(safe-area-inset-bottom) via index.css
     if (!isAndroid) {
-      document.documentElement.style.setProperty('--safe-bottom', '0px');
-      document.documentElement.style.setProperty('--nav-bottom-inset', '0px');
-      document.documentElement.style.setProperty('--nav-height', `${NAV_HEIGHT}px`);
       return;
     }
 

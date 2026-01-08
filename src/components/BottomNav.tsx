@@ -20,15 +20,32 @@ const navItems = [
  */
 const BottomNav = () => {
   const location = useLocation();
-  const isAndroid = Capacitor.getPlatform() === 'android';
+  const platform = Capacitor.getPlatform();
+  const isAndroid = platform === 'android';
+  const isIOS = platform === 'ios';
+
+  // Platform-specific styles for safe area handling
+  const getNavStyles = () => {
+    if (isAndroid) {
+      return {
+        paddingBottom: 'var(--nav-bottom-inset, 0px)',
+        height: 'calc(56px + var(--nav-bottom-inset, 0px))',
+      };
+    }
+    if (isIOS) {
+      return {
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        height: 'calc(56px + env(safe-area-inset-bottom, 0px))',
+      };
+    }
+    // Web fallback
+    return { height: '56px' };
+  };
 
   return (
     <nav 
-      className="fixed left-0 right-0 bottom-0 z-50 bg-card/98 backdrop-blur-md border-t border-border/50 h-14"
-      style={isAndroid ? {
-        paddingBottom: 'var(--nav-bottom-inset, 0px)',
-        height: 'calc(56px + var(--nav-bottom-inset, 0px))',
-      } : undefined}
+      className="fixed left-0 right-0 bottom-0 z-50 bg-card/98 backdrop-blur-md border-t border-border/50"
+      style={getNavStyles()}
     >
       {/* Navigation items - 56px height */}
       <div className="flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto h-14">
