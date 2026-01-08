@@ -17,8 +17,20 @@ interface UploadOptions {
   skipLimitCheck?: boolean;
 }
 
+/** Full photo data returned after successful upload */
+export interface UploadedPhoto {
+  id: string;
+  thumbUrl: string;
+  mediumUrl: string;
+  originalUrl: string | null;
+  bodyPart: BodyPart;
+  takenAt: string | null;
+  createdAt: string;
+  notes: string | null;
+}
+
 interface UseSingleUploadOptions {
-  onSuccess?: (photoId: string) => void;
+  onSuccess?: (photo: UploadedPhoto) => void;
   onError?: (error: string) => void;
   /** Called when daily limit is reached */
   onLimitReached?: () => void;
@@ -62,7 +74,7 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
   const processAndUploadFile = useCallback(async (
     file: File,
     uploadOptions: UploadOptions
-  ): Promise<string | null> => {
+  ): Promise<UploadedPhoto | null> => {
     const { bodyPart, notes, takenAtOverride, skipLimitCheck } = uploadOptions;
 
     // Always log upload attempts for debugging Android issues
@@ -209,6 +221,18 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
       setProgress(100);
       setIsUploading(false);
 
+      // Build full photo object for direct list insertion
+      const uploadedPhoto: UploadedPhoto = {
+        id: insertedPhoto.id,
+        thumbUrl,
+        mediumUrl,
+        originalUrl,
+        bodyPart,
+        takenAt: insertedPhoto.taken_at,
+        createdAt: insertedPhoto.created_at,
+        notes: insertedPhoto.notes,
+      };
+
       if (import.meta.env.DEV) {
         const dateSource = takenAtOverride !== undefined ? 'override' : (takenAt ? 'exif' : 'upload_fallback');
         console.log('[SingleUpload] Upload complete:', {
@@ -220,8 +244,8 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
         });
       }
 
-      onSuccess?.(insertedPhoto.id);
-      return insertedPhoto.id;
+      onSuccess?.(uploadedPhoto);
+      return uploadedPhoto;
 
     } catch (error) {
       // Cleanup uploaded files on error
