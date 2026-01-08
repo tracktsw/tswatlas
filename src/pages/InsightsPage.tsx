@@ -513,7 +513,7 @@ const InsightsPage = () => {
                 )}
               </Button>
               <p className="text-xs text-muted-foreground mt-1.5">
-                14 days free · {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
+                14 day free trial · {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
               </p>
 
               {/* iOS: Retry button if offerings failed */}

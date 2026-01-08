@@ -268,7 +268,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
             </Button>
             
             <p className="text-xs text-muted-foreground mt-2">
-              {priceString}/month after · Cancel anytime
+              14 day free trial · {priceString}/month after · Cancel anytime
             </p>
 
 
@@ -353,7 +353,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
           </Button>
           
           <p className="text-xs text-muted-foreground">
-            {priceString}/month after · Cancel anytime
+            14 day free trial · {priceString}/month after · Cancel anytime
           </p>
 
         {/* Status message */}
