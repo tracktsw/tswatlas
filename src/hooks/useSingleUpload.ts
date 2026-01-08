@@ -65,9 +65,8 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
   ): Promise<string | null> => {
     const { bodyPart, notes, takenAtOverride, skipLimitCheck } = uploadOptions;
 
-    if (import.meta.env.DEV) {
-      console.log('[SingleUpload] Starting upload:', file.name, 'type:', file.type, 'size:', file.size);
-    }
+    // Always log upload attempts for debugging Android issues
+    console.log('[SingleUpload] Starting upload:', file.name, 'type:', file.type, 'size:', file.size);
 
     setIsUploading(true);
     setProgress(5);
@@ -118,11 +117,18 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
       }
 
       // Convert HEIC to JPEG if needed, returns data URL
-      if (import.meta.env.DEV) {
-        console.log('[SingleUpload] Converting file to data URL (HEIC if needed)...');
-      }
+      console.log('[SingleUpload] Converting file to data URL (HEIC if needed)...');
       setProgress(15);
-      const dataUrl = await prepareFileForUpload(file);
+      
+      let dataUrl: string;
+      try {
+        dataUrl = await prepareFileForUpload(file);
+        console.log('[SingleUpload] File conversion successful, data URL length:', dataUrl.length);
+      } catch (conversionError) {
+        const msg = conversionError instanceof Error ? conversionError.message : 'File conversion failed';
+        console.error('[SingleUpload] File conversion failed:', msg);
+        throw new Error(`Could not process image: ${msg}`);
+      }
       
       setProgress(25);
 
