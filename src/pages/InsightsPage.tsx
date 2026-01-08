@@ -537,6 +537,9 @@ const InsightsPage = () => {
               </ul>
 
               {/* Subscribe Button */}
+              <p className="text-xs text-muted-foreground mb-2">
+                14-day free trial. Then {isNativeMobile ? getPriceString() : '£5.99'}/month. Cancel anytime.
+              </p>
               <Button 
                 onClick={handleUpgrade} 
                 disabled={isUpgrading || (isNativeMobile && !isOfferingsReady)} 
@@ -557,13 +560,10 @@ const InsightsPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Start 14-day free trial
+                    Unlock – {isNativeMobile ? getPriceString() : '£5.99'}/month
                   </>
                 )}
               </Button>
-              <p className="text-xs text-muted-foreground mt-1.5">
-                14 days free · {isNativeMobile ? getPriceString() : '£5.99'}/month after · Cancel anytime
-              </p>
 
               {/* iOS: Retry button if offerings failed */}
               {isNativeMobile && offeringsStatus === 'error' && (
