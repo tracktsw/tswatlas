@@ -2,7 +2,7 @@ import { ReactNode, useMemo, useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
-import { Lock, Sparkles, Crown, Loader2, RotateCcw } from 'lucide-react';
+import { Crown, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -275,19 +275,25 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
         </div>
         <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-sm rounded-xl">
           <div className="text-center p-6 max-w-sm">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
-              <Lock className="w-6 h-6 text-primary" />
-            </div>
-            <h3 className="font-semibold text-foreground mb-1">Premium Feature</h3>
+            {/* Price is the most prominent - Apple 3.1.2 compliance */}
+            <h2 className="text-2xl font-bold text-foreground mb-1">
+              {priceString} per month
+            </h2>
             <p className="text-sm text-muted-foreground mb-4">
-              {feature} is available with Premium.
+              Auto-renews monthly
+            </p>
+            
+            <p className="text-sm text-muted-foreground mb-5">
+              Full access to everything.
+              <br />
+              Try it free for 14 days — cancel anytime.
             </p>
             
             <Button
               onClick={handleButtonClick}
               disabled={isButtonLoading}
               variant="gold"
-              className="gap-2"
+              className="gap-2 w-full"
             >
               {isButtonLoading ? (
                 <>
@@ -297,15 +303,10 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
               ) : (
                 <>
                   <Crown className="w-4 h-4" />
-                  Start 14-day free trial
+                  Continue – {priceString}/month
                 </>
               )}
             </Button>
-            
-            <p className="text-xs text-muted-foreground mt-2">
-              {priceString}/month after · Cancel anytime
-            </p>
-
 
             {/* Status message */}
             {statusMessage && (
@@ -341,43 +342,43 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
     );
   }
 
-  // Full paywall screen
+  // Full paywall screen - Apple 3.1.2 compliant
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-      <div className="w-16 h-16 mb-4 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-        <Sparkles className="w-8 h-8 text-primary" />
-      </div>
-      <h2 className="font-display text-xl font-bold text-foreground mb-2">
-        Unlock {feature}
-      </h2>
-      <p className="text-muted-foreground mb-6 max-w-xs">
-        Get full access to all features including Photo Diary, full Insights, Community, Journal, and AI Coach.
+      {/* Price is the most prominent element - no text above */}
+      <h1 className="text-3xl font-bold text-foreground mb-1">
+        {priceString} per month
+      </h1>
+      <p className="text-base text-muted-foreground mb-6">
+        Auto-renews monthly
       </p>
       
-        <div className="space-y-3 w-full max-w-xs">
-          <Button
-            onClick={handleButtonClick}
-            disabled={isButtonLoading}
-            variant="gold"
-            className="w-full gap-2"
-            size="lg"
-          >
-            {isButtonLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Processing…
-              </>
-            ) : (
-              <>
-                <Crown className="w-4 h-4" />
-                Start 14-day free trial
-              </>
-            )}
-          </Button>
-          
-          <p className="text-xs text-muted-foreground">
-            {priceString}/month after · Cancel anytime
-          </p>
+      <p className="text-muted-foreground mb-8 max-w-xs">
+        Full access to everything.
+        <br />
+        Try it free for 14 days — cancel anytime.
+      </p>
+      
+      <div className="space-y-3 w-full max-w-xs">
+        <Button
+          onClick={handleButtonClick}
+          disabled={isButtonLoading}
+          variant="gold"
+          className="w-full gap-2"
+          size="lg"
+        >
+          {isButtonLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Processing…
+            </>
+          ) : (
+            <>
+              <Crown className="w-4 h-4" />
+              Continue – {priceString}/month
+            </>
+          )}
+        </Button>
 
         {/* Status message */}
         {statusMessage && (
