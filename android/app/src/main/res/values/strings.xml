@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TSW Atlas</string>
+    <string name="title_activity_main">TSW Atlas</string>
+    <string name="package_name">app.tracktsw.atlas</string>
+    <string name="custom_url_scheme">app.tracktsw.atlas</string>
+</resources>

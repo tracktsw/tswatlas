@@ -1,25 +1,22 @@
-import { Sparkles, Heart } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { CoachChat } from '@/components/CoachChat';
 import { useAICoach } from '@/hooks/useAICoach';
 import PaywallGuard from '@/components/PaywallGuard';
 import { SparkleIllustration, HeartIllustration } from '@/components/illustrations';
+import { Capacitor } from '@capacitor/core';
 
 const CoachPage = () => {
   const { messages, isLoading, sendMessage, clearChat } = useAICoach();
+  const platform = Capacitor.getPlatform();
 
   return (
     <PaywallGuard feature="AI Coach">
-    <div className="flex flex-col relative safe-area-inset-top" style={{ height: 'calc(100dvh - 8rem)' }}>
-      {/* Decorative elements */}
-      <div className="decorative-blob w-32 h-32 bg-coral/20 -top-10 -right-10 fixed" />
-      <div className="decorative-blob w-40 h-40 bg-primary/15 bottom-40 -left-16 fixed" />
-      
-      {/* Decorative illustrations */}
-      <SparkleIllustration variant="cluster" className="w-20 h-20 fixed top-16 right-2 opacity-25 pointer-events-none" />
-      <HeartIllustration variant="floating" className="w-14 h-18 fixed bottom-48 left-0 opacity-20 pointer-events-none" />
-      
+    <div className="flex flex-col h-full relative">
       {/* Header */}
-      <div className="px-4 py-4 border-b border-border/60 bg-card/50 backdrop-blur-sm">
+      <div 
+        className="px-4 border-b border-border/60 bg-card/50 backdrop-blur-sm shrink-0"
+        style={platform === 'android' ? { paddingTop: '20px', paddingBottom: '16px' } : { paddingTop: '16px', paddingBottom: '16px' }}
+      >
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-coral/20 to-coral-light flex items-center justify-center shadow-warm-sm">
             <Sparkles className="w-5 h-5 text-coral" />

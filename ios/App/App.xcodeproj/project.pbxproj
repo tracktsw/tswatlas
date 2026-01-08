@@ -308,7 +308,7 @@
 				);
 				MARKETING_VERSION = 1.5.3;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
-				PRODUCT_BUNDLE_IDENTIFIER = com.haroon.tracktsw;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hk.tracktsw;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -336,7 +336,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.5.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.haroon.tracktsw;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hk.tracktsw;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;

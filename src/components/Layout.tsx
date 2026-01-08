@@ -15,6 +15,7 @@ const Layout = () => {
   const { reminderSettings, checkIns, userId, isLoading } = useUserData();
   const { isKeyboardOpen, isIOS, isAndroid } = useIOSKeyboardContext();
   const navigate = useNavigate();
+  const platform = Capacitor.getPlatform();
 
   const {
     shouldShowReminder,
@@ -32,7 +33,6 @@ const Layout = () => {
     if (!Capacitor.isNativePlatform()) return;
 
     const cleanup = initNotificationListeners((route) => {
-      // Navigate to the route when notification is tapped
       navigate(route);
     });
 
@@ -43,7 +43,6 @@ const Layout = () => {
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || !userId || isLoading) return;
 
-    // Only schedule if we have valid settings
     if (reminderSettings.morningTime && reminderSettings.eveningTime) {
       scheduleCheckInReminders(
         reminderSettings.morningTime,
@@ -55,8 +54,14 @@ const Layout = () => {
 
   return (
     <div 
-      className="h-[100dvh] bg-background flex flex-col overflow-hidden" 
-      style={isAndroid ? undefined : { paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
+      className={cn(
+        "h-[100dvh] bg-background flex flex-col overflow-hidden"
+      )}
+      style={
+        platform === 'ios' 
+          ? { paddingTop: 'var(--safe-top,0px)', paddingBottom: 'var(--safe-bottom,0px)' }
+          : undefined
+      }
     >
       {/* Reminder banner - shows when due and user hasn't checked in */}
       {!isLoading && shouldShowReminder && reminderType && (
@@ -70,7 +75,7 @@ const Layout = () => {
       <main className={cn(
         "flex-1 min-h-0 overscroll-contain",
         !hideBottomNav && "pb-20",
-        // On iOS when keyboard is open OR text input is focused, prevent this container from scrolling to stop page jump
+        // On iOS when keyboard is open, prevent scrolling to stop page jump
         isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto"
       )}>
         <Outlet />

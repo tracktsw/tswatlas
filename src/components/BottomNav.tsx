@@ -1,5 +1,8 @@
+import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Camera, CheckCircle, BarChart3, Users, Leaf } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { SafeArea } from 'capacitor-plugin-safe-area';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -13,11 +16,15 @@ const navItems = [
 
 const BottomNav = () => {
   const location = useLocation();
+  const platform = Capacitor.getPlatform();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
       <div className="bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg">
-        <div className="flex items-center justify-around px-1 py-2.5 max-w-lg mx-auto">
+        <div className={cn(
+          "flex items-center justify-around px-1 max-w-lg mx-auto",
+          platform === 'ios' ? "py-2.5" : "py-3"
+        )}>
           {navItems.map(({ path, icon: Icon, label }) => {
             const isActive = location.pathname === path;
             return (
