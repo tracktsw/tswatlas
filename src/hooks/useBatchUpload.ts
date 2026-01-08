@@ -99,7 +99,15 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
       }
 
       // Prepare file (converts HEIC if needed, returns data URL)
-      const dataUrl = await prepareFileForUpload(item.file);
+      let dataUrl: string;
+      try {
+        dataUrl = await prepareFileForUpload(item.file);
+        console.log('[BatchUpload] File conversion successful:', item.file.name, 'data URL length:', dataUrl.length);
+      } catch (conversionError) {
+        const msg = conversionError instanceof Error ? conversionError.message : 'File conversion failed';
+        console.error('[BatchUpload] File conversion failed:', item.file.name, '-', msg);
+        throw new Error(`Could not process image: ${msg}`);
+      }
       
       updateItem(item.id, { status: 'uploading', progress: 20 });
 
