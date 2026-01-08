@@ -7,8 +7,10 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import trackTswLogo from '@/assets/tracktsw-logo-transparent.png';
+import { usePlatform } from '@/hooks/usePlatform';
 
 const ResetPasswordPage = () => {
+  const { isAndroid } = usePlatform();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -124,7 +126,7 @@ const ResetPasswordPage = () => {
     return (
       <div 
         className="h-[100dvh] flex items-center justify-center overflow-hidden" 
-        style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
+        style={isAndroid ? undefined : { paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
       >
         <div className="animate-pulse text-muted-foreground">Verifying reset link...</div>
       </div>
@@ -136,7 +138,7 @@ const ResetPasswordPage = () => {
     return (
       <div 
         className="h-[100dvh] flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden" 
-        style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
+        style={isAndroid ? undefined : { paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
       >
         <div className="hidden sm:block">
           <div className="decorative-blob w-64 h-64 bg-coral/40 -top-20 -right-20 fixed" />
@@ -185,7 +187,7 @@ const ResetPasswordPage = () => {
     return (
       <div 
         className="h-[100dvh] flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden" 
-        style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
+        style={isAndroid ? undefined : { paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
       >
         <div className="hidden sm:block">
           <div className="decorative-blob w-64 h-64 bg-coral/40 -top-20 -right-20 fixed" />
@@ -213,7 +215,7 @@ const ResetPasswordPage = () => {
   return (
     <div 
       className="h-[100dvh] flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden" 
-      style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
+      style={isAndroid ? undefined : { paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
     >
       <div className="hidden sm:block">
         <div className="decorative-blob w-64 h-64 bg-coral/40 -top-20 -right-20 fixed" />

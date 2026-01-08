@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import trackTswLogo from '@/assets/tracktsw-logo-transparent.png';
+import { usePlatform } from '@/hooks/usePlatform';
 
 type AuthMode = 'login' | 'signup' | 'forgot';
 
@@ -16,6 +17,7 @@ const AuthPage = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { isAndroid } = usePlatform();
 
   // Check if already logged in - single check, no subscription
   useEffect(() => {
@@ -135,7 +137,7 @@ const AuthPage = () => {
   return (
     <div 
       className="h-[100dvh] flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden" 
-      style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
+      style={isAndroid ? undefined : { paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
     >
       {/* Decorative background - simplified for mobile performance */}
       <div className="hidden sm:block">

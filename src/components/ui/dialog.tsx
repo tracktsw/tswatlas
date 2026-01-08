@@ -3,6 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { getPlatformInfo } from "@/hooks/usePlatform";
 
 // Custom Dialog wrapper that ensures body scroll is restored on iOS
 const Dialog = React.forwardRef<
@@ -90,27 +91,31 @@ DialogContent.displayName = DialogPrimitive.Content.displayName;
 const DialogContentFullscreen = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DialogPortal>
-    <DialogOverlay />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed inset-0 z-50 flex flex-col bg-background duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-        // Use dvh for iOS Safari compatibility
-        "h-[100dvh] max-h-[100dvh] overflow-hidden",
-        className,
-      )}
-      style={{
-        paddingTop: 'var(--safe-top)',
-        paddingBottom: 'var(--safe-bottom)',
-      }}
-      {...props}
-    >
-      {children}
-    </DialogPrimitive.Content>
-  </DialogPortal>
-));
+>(({ className, children, ...props }, ref) => {
+  const { isAndroid } = getPlatformInfo();
+  
+  return (
+    <DialogPortal>
+      <DialogOverlay />
+      <DialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          "fixed inset-0 z-50 flex flex-col bg-background duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+          // Use dvh for iOS Safari compatibility
+          "h-[100dvh] max-h-[100dvh] overflow-hidden",
+          className,
+        )}
+        style={isAndroid ? undefined : {
+          paddingTop: 'var(--safe-top)',
+          paddingBottom: 'var(--safe-bottom)',
+        }}
+        {...props}
+      >
+        {children}
+      </DialogPrimitive.Content>
+    </DialogPortal>
+  );
+});
 DialogContentFullscreen.displayName = "DialogContentFullscreen";
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
