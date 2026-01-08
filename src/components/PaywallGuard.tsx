@@ -2,7 +2,7 @@ import { ReactNode, useMemo, useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
-import { Crown, Loader2, RotateCcw, Sparkles } from 'lucide-react';
+import { Lock, Sparkles, Crown, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -44,20 +44,13 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
     []
   );
   
-  const isNativeAndroid = useMemo(
-    () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android',
-    []
-  );
-  
-  const isNativeMobile = isNativeIOS || isNativeAndroid;
-  
   // Premium is enforced by backend for ALL platforms.
   // RevenueCat is used for purchasing/restoring only; the backend decides access.
   const isPremium = isAdmin || isPremiumFromBackend;
   const isLoading = isBackendLoading;
   
-  // CRITICAL: On native mobile, offerings are only ready if user is logged in AND offerings loaded
-  const isOfferingsReady = isNativeMobile ? (isUserLoggedIn && offeringsStatus === 'ready') : true;
+  // CRITICAL: On iOS, offerings are only ready if user is logged in AND offerings loaded
+  const isOfferingsReady = isNativeIOS ? (isUserLoggedIn && offeringsStatus === 'ready') : true;
 
   // Auto-hide paywall when premium becomes active
   useEffect(() => {
@@ -69,33 +62,15 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   }, [isPremium, isUpgrading]);
 
   const handleUpgrade = async () => {
-    // CRITICAL: Log at the VERY START to confirm this function is called
-    console.log('[PaywallGuard] ========== handleUpgrade() CALLED ==========');
-    console.log('[PaywallGuard] State:', {
-      isUpgrading,
-      isNativeIOS,
-      isNativeAndroid,
-      isNativeMobile,
-      isUserLoggedIn,
-      offeringsStatus,
-      offeringsError,
-      isOfferingsReady,
-    });
+    if (isUpgrading) return;
 
-    if (isUpgrading) {
-      console.log('[PaywallGuard] Already upgrading, returning early');
-      return;
-    }
-
+    console.log('[PaywallGuard] handleUpgrade called');
     setStatusMessage(null);
 
-    // NATIVE MOBILE PATH (iOS or Android) - STRIPE IS COMPLETELY BLOCKED
-    if (isNativeMobile) {
-      console.log('[PaywallGuard] Native mobile path - will use RevenueCat');
-      
+    // iOS NATIVE PATH - STRIPE IS COMPLETELY BLOCKED
+    if (isNativeIOS) {
       // CRITICAL: Must be logged in to purchase
       if (!isUserLoggedIn) {
-        console.log('[PaywallGuard] User not logged in, redirecting to auth');
         toast.error('Please sign in to subscribe');
         navigate('/auth');
         return;
@@ -103,18 +78,14 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
 
       // If offerings aren't ready, show error + retry button (NEVER fall back to Stripe)
       if (!isOfferingsReady) {
-        console.log('[PaywallGuard] Offerings not ready:', { offeringsStatus, offeringsError });
         const msg = offeringsError || 'Loading subscription options…';
         setStatusMessage(msg);
         toast.error(msg);
         return;
       }
-      
-      console.log('[PaywallGuard] All checks passed, calling purchaseMonthly()...');
 
       setIsUpgrading(true);
-      const storeName = isNativeIOS ? 'App Store' : 'Google Play';
-      setStatusMessage(`Opening ${storeName}…`);
+      setStatusMessage('Opening App Store…');
 
       try {
         const result = await purchaseMonthly();
@@ -177,7 +148,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   };
 
   const handleRestore = async () => {
-    if (isRestoring || !isNativeMobile) return;
+    if (isRestoring || !isNativeIOS) return;
     
     // CRITICAL: Must be logged in to restore
     if (!isUserLoggedIn) {
@@ -244,27 +215,9 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   }
 
   // Get price string
-  const priceString = isNativeMobile ? getPriceString() : '£5.99';
+  const priceString = isNativeIOS ? getPriceString() : '£5.99';
   const isButtonLoading = isUpgrading || isRevenueCatLoading;
 
-  const handleButtonClick = async () => {
-    try {
-      // Keep original button label; choose behavior based on native mobile state
-      if (isNativeMobile && !isUserLoggedIn) {
-        toast.error('Please sign in to subscribe');
-        navigate('/auth');
-        return;
-      }
-      if (isNativeMobile && !isOfferingsReady) {
-        await handleRetryOfferings();
-        return;
-      }
-      await handleUpgrade();
-    } catch (err: any) {
-      console.error('[PaywallGuard] Button click error:', err);
-      toast.error(err?.message || 'Something went wrong');
-    }
-  };
 
   // Blurred content overlay
   if (showBlurred) {
@@ -275,31 +228,31 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
         </div>
         <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-sm rounded-xl">
           <div className="text-center p-6 max-w-sm">
-            {/* Sparkle icon */}
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-              <Sparkles className="w-8 h-8 text-primary" />
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
+              <Lock className="w-6 h-6 text-primary" />
             </div>
-            
-            {/* Title */}
-            <h2 className="text-xl font-bold text-foreground mb-3">
-              Unlock AI Coach
-            </h2>
-            
-            {/* Description */}
-            <p className="text-sm text-muted-foreground mb-5">
-              Get full access to all features including Photo Diary, full Insights, Community, Journal, and AI Coach.
-            </p>
-            
-            {/* Disclaimer above button */}
-            <p className="text-xs text-muted-foreground mb-3">
-              14-day free trial. Then {priceString}/month. Cancel anytime.
+            <h3 className="font-semibold text-foreground mb-1">Premium Feature</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              {feature} is available with Premium.
             </p>
             
             <Button
-              onClick={handleButtonClick}
+              onClick={async () => {
+                // Keep original button label; choose behavior based on iOS state
+                if (isNativeIOS && !isUserLoggedIn) {
+                  toast.error('Please sign in to subscribe');
+                  navigate('/auth');
+                  return;
+                }
+                if (isNativeIOS && !isOfferingsReady) {
+                  await handleRetryOfferings();
+                  return;
+                }
+                await handleUpgrade();
+              }}
               disabled={isButtonLoading}
               variant="gold"
-              className="gap-2 w-full"
+              className="gap-2"
             >
               {isButtonLoading ? (
                 <>
@@ -309,18 +262,23 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
               ) : (
                 <>
                   <Crown className="w-4 h-4" />
-                  Unlock – {priceString}/month
+                  Start 14-day free trial
                 </>
               )}
             </Button>
+            
+            <p className="text-xs text-muted-foreground mt-2">
+              {priceString}/month after · Cancel anytime
+            </p>
+
 
             {/* Status message */}
             {statusMessage && (
               <p className="text-xs text-muted-foreground mt-2">{statusMessage}</p>
             )}
 
-            {/* Native mobile: Restore purchases - only if logged in */}
-            {isNativeMobile && isUserLoggedIn && (
+            {/* iOS: Restore purchases - only if logged in */}
+            {isNativeIOS && isUserLoggedIn && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -351,54 +309,60 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   // Full paywall screen
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-      {/* Sparkle icon */}
-      <div className="w-20 h-20 mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-        <Sparkles className="w-10 h-10 text-primary" />
+      <div className="w-16 h-16 mb-4 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+        <Sparkles className="w-8 h-8 text-primary" />
       </div>
-      
-      {/* Title */}
-      <h1 className="text-2xl font-bold text-foreground mb-3">
-        Unlock AI Coach
-      </h1>
-      
-      {/* Description */}
+      <h2 className="font-display text-xl font-bold text-foreground mb-2">
+        Unlock {feature}
+      </h2>
       <p className="text-muted-foreground mb-6 max-w-xs">
         Get full access to all features including Photo Diary, full Insights, Community, Journal, and AI Coach.
       </p>
       
-      <div className="space-y-3 w-full max-w-xs">
-        {/* Disclaimer above button */}
-        <p className="text-xs text-muted-foreground">
-          14-day free trial. Then {priceString}/month. Cancel anytime.
-        </p>
-        
-        <Button
-          onClick={handleButtonClick}
-          disabled={isButtonLoading}
-          variant="gold"
-          className="w-full gap-2"
-          size="lg"
-        >
-          {isButtonLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Processing…
-            </>
-          ) : (
-            <>
-              <Crown className="w-4 h-4" />
-              Unlock – {priceString}/month
-            </>
-          )}
-        </Button>
+        <div className="space-y-3 w-full max-w-xs">
+          <Button
+            onClick={async () => {
+              // Keep original button label; choose behavior based on iOS state
+              if (isNativeIOS && !isUserLoggedIn) {
+                toast.error('Please sign in to subscribe');
+                navigate('/auth');
+                return;
+              }
+              if (isNativeIOS && !isOfferingsReady) {
+                await handleRetryOfferings();
+                return;
+              }
+              await handleUpgrade();
+            }}
+            disabled={isButtonLoading}
+            variant="gold"
+            className="w-full gap-2"
+            size="lg"
+          >
+            {isButtonLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Processing…
+              </>
+            ) : (
+              <>
+                <Crown className="w-4 h-4" />
+                Start 14-day free trial
+              </>
+            )}
+          </Button>
+          
+          <p className="text-xs text-muted-foreground">
+            {priceString}/month after · Cancel anytime
+          </p>
 
         {/* Status message */}
         {statusMessage && (
           <p className="text-sm text-muted-foreground">{statusMessage}</p>
         )}
 
-        {/* Native mobile: Restore purchases - only if logged in */}
-        {isNativeMobile && isUserLoggedIn && (
+        {/* iOS: Restore purchases - only if logged in */}
+        {isNativeIOS && isUserLoggedIn && (
           <Button
             variant="ghost"
             size="sm"

@@ -1,5 +1,4 @@
-import { Sparkles } from 'lucide-react';
-import { Capacitor } from '@capacitor/core';
+import { Sparkles, Heart } from 'lucide-react';
 import { CoachChat } from '@/components/CoachChat';
 import { useAICoach } from '@/hooks/useAICoach';
 import PaywallGuard from '@/components/PaywallGuard';
@@ -10,13 +9,7 @@ const CoachPage = () => {
 
   return (
     <PaywallGuard feature="AI Coach">
-    <div 
-      className="flex flex-col h-full relative"
-      style={{ 
-        // iOS needs explicit safe area handling for full-height pages
-        paddingBottom: Capacitor.getPlatform() === 'ios' ? 'env(safe-area-inset-bottom, 0px)' : undefined 
-      }}
-    >
+    <div className="flex flex-col relative safe-area-inset-top" style={{ height: 'calc(100dvh - 8rem)' }}>
       {/* Decorative elements */}
       <div className="decorative-blob w-32 h-32 bg-coral/20 -top-10 -right-10 fixed" />
       <div className="decorative-blob w-40 h-40 bg-primary/15 bottom-40 -left-16 fixed" />

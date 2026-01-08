@@ -133,7 +133,10 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-full flex flex-col items-center justify-center px-4 py-8 relative overflow-y-auto">
+    <div 
+      className="h-[100dvh] flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden" 
+      style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
+    >
       {/* Decorative background - simplified for mobile performance */}
       <div className="hidden sm:block">
         <div className="decorative-blob w-64 h-64 bg-coral/40 -top-20 -right-20 fixed" />

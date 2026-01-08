@@ -65,7 +65,6 @@ const InsightsPage = () => {
     offeringsError,
     getPriceString,
     retryInitialization,
-    isUserLoggedIn,
   } = useRevenueCatContext();
   const { baselineConfidence, dailyFlareStates } = useFlareState();
   const [calendarMonth, setCalendarMonth] = useState(new Date());
@@ -81,61 +80,26 @@ const InsightsPage = () => {
     []
   );
 
-  const isNativeAndroid = useMemo(
-    () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android',
-    []
-  );
-
-  const isNativeMobile = isNativeIOS || isNativeAndroid;
-
   // Premium is enforced by backend for ALL platforms.
   const isPremium = isAdmin || isPremiumFromBackend;
   const isSubscriptionLoading = isBackendLoading;
-  const isOfferingsReady = isNativeMobile ? (isUserLoggedIn && offeringsStatus === 'ready') : true;
+  const isOfferingsReady = isNativeIOS ? offeringsStatus === 'ready' : true;
 
   const handleUpgrade = async () => {
-    // CRITICAL: Log at the VERY START to confirm this function is called
-    console.log('[InsightsPage] ========== handleUpgrade() CALLED ==========');
-    console.log('[InsightsPage] State:', {
-      isUpgrading,
-      isNativeIOS,
-      isNativeAndroid,
-      isNativeMobile,
-      isUserLoggedIn,
-      offeringsStatus,
-      offeringsError,
-      isOfferingsReady,
-    });
-
-    if (isUpgrading) {
-      console.log('[InsightsPage] Already upgrading, returning early');
-      return;
-    }
+    if (isUpgrading) return;
     setIsUpgrading(true);
 
-    // NATIVE MOBILE PATH (Android or iOS) - NEVER route to Stripe
-    if (isNativeMobile) {
-      console.log('[InsightsPage] Native mobile path - will use RevenueCat');
-      
-      if (!isUserLoggedIn) {
-        console.log('[InsightsPage] User not logged in');
-        toast.error('Please sign in to subscribe');
-        setIsUpgrading(false);
-        return;
-      }
-
+    // iOS NATIVE PATH - STRIPE IS COMPLETELY BLOCKED
+    if (isNativeIOS) {
       if (!isOfferingsReady) {
-        console.log('[InsightsPage] Offerings not ready:', { offeringsStatus, offeringsError });
         const msg = offeringsError || 'Loading subscription options…';
         toast.error(msg);
         setIsUpgrading(false);
         return;
       }
 
-      console.log('[InsightsPage] All checks passed, calling purchaseMonthly()...');
       try {
         const result = await purchaseMonthly();
-        console.log('[InsightsPage] Purchase result:', result);
         if (result.success) {
           toast.success('Purchase successful!');
           await refreshSubscription();
@@ -143,7 +107,6 @@ const InsightsPage = () => {
           toast.error(result.error);
         }
       } catch (err: any) {
-        console.error('[InsightsPage] Purchase error:', err);
         toast.error(err.message || 'Purchase failed');
       }
       setIsUpgrading(false);
@@ -169,15 +132,9 @@ const InsightsPage = () => {
   };
 
   const handleRestore = async () => {
-    if (isRestoring || !isNativeMobile) return;
-    if (!isUserLoggedIn) {
-      toast.error('Please sign in to restore purchases');
-      setIsRestoring(false);
-      return;
-    }
-
+    if (isRestoring || !isNativeIOS) return;
     setIsRestoring(true);
-
+    
     try {
       await restorePurchases();
       const updated = await refreshSubscription();
@@ -189,7 +146,7 @@ const InsightsPage = () => {
     } catch (err: any) {
       toast.error('Failed to restore purchases');
     }
-
+    
     setIsRestoring(false);
   };
 
@@ -304,10 +261,7 @@ const InsightsPage = () => {
 
   if (checkIns.length === 0) {
     return (
-      <div 
-        className="px-4 pt-6 space-y-6 max-w-lg mx-auto relative"
-        style={{ paddingBottom: 'calc(1.5rem + var(--android-safe-bottom, 0px))' }}
-      >
+      <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
         {/* Decorative elements */}
         <div className="decorative-blob w-36 h-36 bg-honey/25 -top-10 -right-10 fixed" />
         <div className="decorative-blob w-44 h-44 bg-primary/20 bottom-32 -left-16 fixed" />
@@ -334,10 +288,7 @@ const InsightsPage = () => {
   }
 
   return (
-    <div 
-      className="px-4 pt-6 space-y-6 max-w-lg mx-auto relative"
-      style={{ paddingBottom: 'calc(1.5rem + var(--android-safe-bottom, 0px))' }}
-    >
+    <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
       {/* Decorative elements */}
       <div className="decorative-blob w-36 h-36 bg-honey/25 -top-10 -right-10 fixed" />
       <div className="decorative-blob w-44 h-44 bg-primary/20 bottom-32 -left-16 fixed" />
@@ -537,12 +488,9 @@ const InsightsPage = () => {
               </ul>
 
               {/* Subscribe Button */}
-              <p className="text-xs text-muted-foreground mb-2">
-                14-day free trial. Then {isNativeMobile ? getPriceString() : '£5.99'}/month. Cancel anytime.
-              </p>
               <Button 
                 onClick={handleUpgrade} 
-                disabled={isUpgrading || (isNativeMobile && !isOfferingsReady)} 
+                disabled={isUpgrading || (isNativeIOS && !isOfferingsReady)} 
                 variant="gold" 
                 className="w-full gap-2" 
                 size="default"
@@ -552,7 +500,7 @@ const InsightsPage = () => {
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Processing…
                   </>
-                ) : isNativeMobile && !isOfferingsReady ? (
+                ) : isNativeIOS && !isOfferingsReady ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading…
@@ -560,13 +508,16 @@ const InsightsPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Unlock – {isNativeMobile ? getPriceString() : '£5.99'}/month
+                    Start 14-day free trial
                   </>
                 )}
               </Button>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                14 days free · {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
+              </p>
 
               {/* iOS: Retry button if offerings failed */}
-              {isNativeMobile && offeringsStatus === 'error' && (
+              {isNativeIOS && offeringsStatus === 'error' && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -579,7 +530,7 @@ const InsightsPage = () => {
               )}
 
               {/* iOS: Restore purchases */}
-              {isNativeMobile && isUserLoggedIn && (
+              {isNativeIOS && (
                 <Button
                   variant="ghost"
                   size="sm"

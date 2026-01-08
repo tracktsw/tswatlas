@@ -39,70 +39,40 @@ const SubscriptionCard = () => {
     () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios',
     []
   );
-  
-  const isNativeAndroid = useMemo(
-    () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android',
-    []
-  );
-  
-  const isNativeMobile = isNativeIOS || isNativeAndroid;
 
   // Premium is enforced by backend for ALL platforms.
   const isPremium = isAdmin || isPremiumFromBackend;
   const isLoading = isBackendLoading;
   
-  // CRITICAL: On native mobile, offerings are only ready if user is logged in AND offerings loaded
-  const isOfferingsReady = isNativeMobile ? (isUserLoggedIn && offeringsStatus === 'ready') : true;
+  // CRITICAL: On iOS, offerings are only ready if user is logged in AND offerings loaded
+  const isOfferingsReady = isNativeIOS ? (isUserLoggedIn && offeringsStatus === 'ready') : true;
 
   const handleUpgrade = async () => {
-    // CRITICAL: Log at the VERY START to confirm this function is called
-    console.log('[SubscriptionCard] ========== handleUpgrade() CALLED ==========');
-    
-    const debugInfo = getDebugInfo();
-    console.log('[SubscriptionCard] Debug info:', debugInfo);
-    console.log('[SubscriptionCard] State:', {
-      isCheckoutLoading,
-      isNativeIOS,
-      isNativeAndroid,
-      isNativeMobile,
-      isUserLoggedIn,
-      offeringsStatus,
-      offeringsError,
-      isOfferingsReady,
-    });
+    if (isCheckoutLoading) return;
 
-    if (isCheckoutLoading) {
-      console.log('[SubscriptionCard] Already loading, returning early');
-      return;
-    }
+    const debugInfo = getDebugInfo();
+    console.log('[SubscriptionCard] handleUpgrade:', debugInfo);
 
     setStatusMessage(null);
 
-    // NATIVE MOBILE PATH (iOS or Android) - STRIPE IS COMPLETELY BLOCKED
-    if (isNativeMobile) {
-      console.log('[SubscriptionCard] Native mobile path - will use RevenueCat');
-      
+    // iOS NATIVE PATH - STRIPE IS COMPLETELY BLOCKED
+    if (isNativeIOS) {
       // CRITICAL: Must be logged in to purchase
       if (!isUserLoggedIn) {
-        console.log('[SubscriptionCard] User not logged in, redirecting to auth');
         toast.error('Please sign in to subscribe');
         navigate('/auth');
         return;
       }
 
       if (!isOfferingsReady) {
-        console.log('[SubscriptionCard] Offerings not ready:', { offeringsStatus, offeringsError });
         const msg = offeringsError || 'Loading subscription options…';
         setStatusMessage(msg);
         toast.error(msg);
         return;
       }
-      
-      console.log('[SubscriptionCard] All checks passed, calling purchaseMonthly()...');
 
       setIsCheckoutLoading(true);
-      const storeName = isNativeIOS ? 'App Store' : 'Google Play';
-      setStatusMessage(`Opening ${storeName}…`);
+      setStatusMessage('Opening App Store…');
 
       try {
         const result = await purchaseMonthly();
@@ -152,7 +122,7 @@ const SubscriptionCard = () => {
   };
 
   const handleRestore = async () => {
-    if (isRestoring || !isNativeMobile) return;
+    if (isRestoring || !isNativeIOS) return;
     
     // CRITICAL: Must be logged in to restore
     if (!isUserLoggedIn) {
@@ -282,7 +252,7 @@ const SubscriptionCard = () => {
                   : 'You have full access to all features.'}
             </p>
             {/* Web users: Manage via Stripe portal */}
-            {!isAdmin && !isNativeMobile && (
+            {!isAdmin && !isNativeIOS && (
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -315,29 +285,9 @@ const SubscriptionCard = () => {
   }
 
   // Not premium - show upgrade UI
-  const priceString = isNativeMobile ? getPriceString() : '£5.99';
+  const priceString = isNativeIOS ? getPriceString() : '£5.99';
   const isButtonLoading = isCheckoutLoading || isRevenueCatLoading;
 
-  const handleButtonClick = async () => {
-    try {
-      // Keep original button label; choose behavior based on native mobile state
-      if (isNativeMobile && !isUserLoggedIn) {
-        toast.error('Please sign in to subscribe');
-        navigate('/auth');
-        return;
-      }
-      if (isNativeMobile && !isOfferingsReady) {
-        await handleRetryOfferings();
-        return;
-      }
-      await handleUpgrade();
-    } catch (err: any) {
-      console.error('[SubscriptionCard] Button click error:', err);
-      toast.error(err?.message || 'Something went wrong');
-    }
-  };
-
-  // Subscription card matching Settings layout
   return (
     <div className="glass-card p-4 bg-gradient-to-br from-primary/5 to-accent/5">
       <div className="flex items-start gap-3">
@@ -350,15 +300,23 @@ const SubscriptionCard = () => {
             Unlock Photo Diary, full Insights, Community, Journal, and AI Coach.
           </p>
           
-          <p className="text-xs text-muted-foreground mt-3">
-            14-day free trial. Then {priceString}/month. Cancel anytime.
-          </p>
-          
           <Button 
             size="sm" 
             variant="gold"
-            className="mt-2 gap-2"
-            onClick={handleButtonClick}
+            className="mt-3 gap-2"
+            onClick={async () => {
+              // Keep original button label; choose behavior based on iOS state
+              if (isNativeIOS && !isUserLoggedIn) {
+                toast.error('Please sign in to subscribe');
+                navigate('/auth');
+                return;
+              }
+              if (isNativeIOS && !isOfferingsReady) {
+                await handleRetryOfferings();
+                return;
+              }
+              await handleUpgrade();
+            }}
             disabled={isButtonLoading}
           >
             {isButtonLoading ? (
@@ -369,18 +327,22 @@ const SubscriptionCard = () => {
             ) : (
               <>
                 <Crown className="w-4 h-4" />
-                Unlock – {priceString}/month
+                Start 14-day free trial
               </>
             )}
           </Button>
+          
+          <p className="text-xs text-muted-foreground mt-2">
+            {priceString}/month after · Cancel anytime
+          </p>
 
           {/* Status message */}
           {statusMessage && (
             <p className="text-xs text-muted-foreground mt-2">{statusMessage}</p>
           )}
 
-          {/* Native mobile: Restore purchases - only if logged in */}
-          {isNativeMobile && isUserLoggedIn && (
+          {/* iOS: Restore purchases - only if logged in */}
+          {isNativeIOS && isUserLoggedIn && (
             <Button
               variant="ghost"
               size="sm"
@@ -402,12 +364,6 @@ const SubscriptionCard = () => {
             </Button>
           )}
 
-          {/* Android debug info */}
-          {isNativeAndroid && (
-            <p className="text-[10px] text-muted-foreground/60 mt-3 font-mono break-all">
-              android={String(isNativeAndroid)} | loggedIn={String(isUserLoggedIn)} | offerings={offeringsStatus} | err={offeringsError ?? 'none'}
-            </p>
-          )}
         </div>
       </div>
     </div>

@@ -119,7 +119,6 @@ const PhotoDiaryPage = () => {
     offeringsError,
     getPriceString,
     retryInitialization,
-    isUserLoggedIn,
   } = useRevenueCatContext();
   
   // Platform detection
@@ -128,17 +127,10 @@ const PhotoDiaryPage = () => {
     []
   );
 
-  const isNativeAndroid = useMemo(
-    () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android',
-    []
-  );
-
-  const isNativeMobile = isNativeIOS || isNativeAndroid;
-
   // Premium is enforced by backend for ALL platforms.
   const isPremium = isAdmin || isPremiumFromBackend;
   const isSubscriptionLoading = isBackendLoading;
-  const isOfferingsReady = isNativeMobile ? (isUserLoggedIn && offeringsStatus === 'ready') : true;
+  const isOfferingsReady = isNativeIOS ? offeringsStatus === 'ready' : true;
 
   const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | 'all'>('all');
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
@@ -258,48 +250,20 @@ const PhotoDiaryPage = () => {
   const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
 
   const handleUpgrade = async () => {
-    // CRITICAL: Log at the VERY START to confirm this function is called
-    console.log('[PhotoDiaryPage] ========== handleUpgrade() CALLED ==========');
-    console.log('[PhotoDiaryPage] State:', {
-      isUpgrading,
-      isNativeIOS,
-      isNativeAndroid,
-      isNativeMobile,
-      isUserLoggedIn,
-      offeringsStatus,
-      offeringsError,
-      isOfferingsReady,
-    });
-
-    if (isUpgrading) {
-      console.log('[PhotoDiaryPage] Already upgrading, returning early');
-      return;
-    }
+    if (isUpgrading) return;
     setIsUpgrading(true);
-
-    // NATIVE MOBILE PATH (Android or iOS) - NEVER route to Stripe
-    if (isNativeMobile) {
-      console.log('[PhotoDiaryPage] Native mobile path - will use RevenueCat');
-      
-      if (!isUserLoggedIn) {
-        console.log('[PhotoDiaryPage] User not logged in');
-        toast.error('Please sign in to subscribe');
-        setIsUpgrading(false);
-        return;
-      }
-
+    
+    // iOS NATIVE PATH - STRIPE IS COMPLETELY BLOCKED
+    if (isNativeIOS) {
       if (!isOfferingsReady) {
-        console.log('[PhotoDiaryPage] Offerings not ready:', { offeringsStatus, offeringsError });
         const msg = offeringsError || 'Loading subscription options…';
         toast.error(msg);
         setIsUpgrading(false);
         return;
       }
 
-      console.log('[PhotoDiaryPage] All checks passed, calling purchaseMonthly()...');
       try {
         const result = await purchaseMonthly();
-        console.log('[PhotoDiaryPage] Purchase result:', result);
         if (result.success) {
           toast.success('Purchase successful!');
           setShowUpgradePrompt(false);
@@ -309,7 +273,6 @@ const PhotoDiaryPage = () => {
           toast.error(result.error);
         }
       } catch (err: any) {
-        console.error('[PhotoDiaryPage] Purchase error:', err);
         toast.error(err.message || 'Purchase failed');
       }
       setIsUpgrading(false);
@@ -338,15 +301,9 @@ const PhotoDiaryPage = () => {
   };
 
   const handleRestore = async () => {
-    if (isRestoring || !isNativeMobile) return;
-    if (!isUserLoggedIn) {
-      toast.error('Please sign in to restore purchases');
-      setIsRestoring(false);
-      return;
-    }
-
+    if (isRestoring || !isNativeIOS) return;
     setIsRestoring(true);
-
+    
     try {
       await restorePurchases();
       const updated = await refreshSubscription();
@@ -360,7 +317,7 @@ const PhotoDiaryPage = () => {
     } catch (err: any) {
       toast.error('Failed to restore purchases');
     }
-
+    
     setIsRestoring(false);
   };
 
@@ -456,22 +413,6 @@ const PhotoDiaryPage = () => {
   // Confirm and upload the pending file
   const handleConfirmUpload = async () => {
     if (!pendingFile) return;
-
-    // CRITICAL: Re-check daily limit from database before allowing upload (prevents race condition)
-    if (!isPremium) {
-      const today = new Date();
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
-      const { count, error } = await supabase
-        .from('user_photos')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', startOfDay);
-      
-      if (!error && count !== null && count >= FREE_DAILY_PHOTO_LIMIT) {
-        toast.error(`Daily limit reached (${FREE_DAILY_PHOTO_LIMIT} photos). Upgrade for unlimited uploads.`);
-        setShowUpgradePrompt(true);
-        return;
-      }
-    }
 
     // Close modal immediately for better UX
     setIsCapturing(false);
@@ -573,20 +514,10 @@ const PhotoDiaryPage = () => {
 
     let filesToUpload: File[];
 
-    // Check upload limits for free users - query database for accurate count
+    // Check upload limits for free users
     if (!isPremium) {
-      const today = new Date();
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
-      const { count, error } = await supabase
-        .from('user_photos')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', startOfDay);
-      
-      const actualTodayCount = error ? photosUploadedToday : (count ?? 0);
-      const allowedCount = Math.max(0, FREE_DAILY_PHOTO_LIMIT - actualTodayCount);
-      
+      const allowedCount = Math.max(0, remainingUploads);
       if (allowedCount === 0) {
-        toast.error(`Daily limit reached (${FREE_DAILY_PHOTO_LIMIT} photos). Upgrade for unlimited uploads.`);
         setShowUpgradePrompt(true);
         return;
       }
@@ -733,10 +664,7 @@ const PhotoDiaryPage = () => {
   }, [compareMode, selectedCompareIdsKey, prefetchMediumUrls]);
 
   return (
-    <div 
-      className="px-4 pt-6 space-y-6 max-w-lg mx-auto relative w-full box-border min-h-0"
-      style={{ paddingBottom: 'calc(1.5rem + var(--android-safe-bottom, 0px))' }}
-    >
+    <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
       {/* Sparkle celebration effect */}
       <SparkleEffect isActive={showSparkles} onComplete={() => setShowSparkles(false)} />
       
@@ -897,18 +825,18 @@ const PhotoDiaryPage = () => {
           </div>
           
           {/* Upgrade Button */}
-          <p className="text-xs text-center text-muted-foreground mb-2">
-            14-day free trial. Then {isNativeMobile ? getPriceString() : '£5.99'}/month. Cancel anytime.
-          </p>
           <Button 
             onClick={handleUpgrade} 
-            disabled={isUpgrading || (isNativeMobile && !isOfferingsReady)}
+            disabled={isUpgrading} 
             variant="gold" 
             className="w-full gap-2"
           >
             <Crown className="w-4 h-4" />
-            {isUpgrading ? 'Loading...' : isNativeMobile && !isOfferingsReady ? 'Loading…' : `Unlock – ${isNativeMobile ? getPriceString() : '£5.99'}/month`}
+            {isUpgrading ? 'Loading...' : 'Start 14-day free trial'}
           </Button>
+          <p className="text-xs text-center text-muted-foreground">
+            £5.99/month after · Cancel anytime
+          </p>
         </div>
       )}
 
@@ -929,12 +857,9 @@ const PhotoDiaryPage = () => {
               <p className="text-sm text-muted-foreground">Your limit resets tomorrow</p>
             </div>
             <div className="space-y-2">
-              <p className="text-xs text-muted-foreground text-center">
-                14-day free trial. Then {isNativeMobile ? getPriceString() : '£5.99'}/month. Cancel anytime.
-              </p>
               <Button 
                 onClick={handleUpgrade} 
-                disabled={isUpgrading || (isNativeMobile && !isOfferingsReady)} 
+                disabled={isUpgrading || (isNativeIOS && !isOfferingsReady)} 
                 variant="gold" 
                 className="w-full gap-2"
               >
@@ -943,7 +868,7 @@ const PhotoDiaryPage = () => {
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Processing…
                   </>
-                ) : isNativeMobile && !isOfferingsReady ? (
+                ) : isNativeIOS && !isOfferingsReady ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading…
@@ -951,13 +876,16 @@ const PhotoDiaryPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Unlock – {isNativeMobile ? getPriceString() : '£5.99'}/month
+                    Start 14-day free trial
                   </>
                 )}
               </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
+              </p>
 
-              {/* Native mobile: Retry button if offerings failed */}
-              {isNativeMobile && offeringsStatus === 'error' && (
+              {/* iOS: Retry button if offerings failed */}
+              {isNativeIOS && offeringsStatus === 'error' && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -966,6 +894,29 @@ const PhotoDiaryPage = () => {
                 >
                   <RefreshCw className="w-4 h-4" />
                   Retry loading
+                </Button>
+              )}
+
+              {/* iOS: Restore purchases */}
+              {isNativeIOS && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 text-muted-foreground"
+                  onClick={handleRestore}
+                  disabled={isRestoring}
+                >
+                  {isRestoring ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Restoring…
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="w-3 h-3" />
+                      Restore purchases
+                    </>
+                  )}
                 </Button>
               )}
             </div>
@@ -1004,9 +955,6 @@ const PhotoDiaryPage = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <p className="text-xs text-muted-foreground text-center">
-                14-day free trial. Then {isNativeMobile ? getPriceString() : '£5.99'}/month. Cancel anytime.
-              </p>
               <Button 
                 onClick={handleUpgrade} 
                 disabled={isUpgrading || (isNativeIOS && !isOfferingsReady)}
@@ -1018,7 +966,7 @@ const PhotoDiaryPage = () => {
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Processing…
                   </>
-                ) : isNativeMobile && !isOfferingsReady ? (
+                ) : isNativeIOS && !isOfferingsReady ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading…
@@ -1026,13 +974,16 @@ const PhotoDiaryPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Unlock – {isNativeMobile ? getPriceString() : '£5.99'}/month
+                    Start 14-day free trial
                   </>
                 )}
               </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
+              </p>
 
-              {/* Native mobile: Retry button if offerings failed */}
-              {isNativeMobile && offeringsStatus === 'error' && (
+              {/* iOS: Retry button if offerings failed */}
+              {isNativeIOS && offeringsStatus === 'error' && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1041,6 +992,29 @@ const PhotoDiaryPage = () => {
                 >
                   <RefreshCw className="w-4 h-4" />
                   Retry loading
+                </Button>
+              )}
+
+              {/* iOS: Restore purchases */}
+              {isNativeIOS && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 text-muted-foreground"
+                  onClick={handleRestore}
+                  disabled={isRestoring}
+                >
+                  {isRestoring ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Restoring…
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="w-3 h-3" />
+                      Restore purchases
+                    </>
+                  )}
                 </Button>
               )}
             </div>
@@ -1084,9 +1058,6 @@ const PhotoDiaryPage = () => {
         {/* Upgrade CTA when limit reached */}
         {!isSubscriptionLoading && !isPremium && !canUploadMore && (
           <div className="space-y-1">
-            <p className="text-xs text-center text-muted-foreground">
-              14-day free trial. Then {isNativeMobile ? getPriceString() : '£5.99'}/month. Cancel anytime.
-            </p>
             <Button 
               variant="gold" 
               className="w-full gap-2 h-12"
@@ -1094,8 +1065,11 @@ const PhotoDiaryPage = () => {
               disabled={isUpgrading}
             >
               <Crown className="w-5 h-5" />
-              {isUpgrading ? 'Loading...' : `Unlock – ${isNativeMobile ? getPriceString() : '£5.99'}/month`}
+              {isUpgrading ? 'Loading...' : 'Start 14-day free trial'}
             </Button>
+            <p className="text-xs text-center text-muted-foreground">
+              £5.99/month after · Cancel anytime
+            </p>
           </div>
         )}
       </div>

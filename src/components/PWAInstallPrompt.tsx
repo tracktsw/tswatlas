@@ -9,15 +9,10 @@ export function PWAInstallPrompt() {
     return null;
   }
 
-  // Use --safe-bottom which is set correctly per platform:
-  // - Android: set by AndroidSafeAreaContext from native plugin
-  // - iOS/web: defaults to env(safe-area-inset-bottom) from index.css
-  const safeBottomStyle = 'calc(80px + var(--safe-bottom, 0px))';
-
   return (
     <div 
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-      style={{ paddingBottom: safeBottomStyle }}
+      style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}
     >
       <div className="w-full max-w-md max-h-full overflow-auto animate-in fade-in zoom-in-95 duration-300">
         <div className="rounded-2xl bg-card border border-border shadow-xl">

@@ -198,10 +198,7 @@ const CommunityPage = () => {
   };
 
   return (
-    <div 
-      className="px-4 pt-6 space-y-6 max-w-lg mx-auto relative w-full box-border overflow-x-hidden"
-      style={{ paddingBottom: 'calc(1.5rem + var(--android-safe-bottom, 0px))' }}
-    >
+    <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
       {/* Decorative elements */}
       <div className="decorative-blob w-36 h-36 bg-terracotta/25 -top-10 -right-10 fixed" />
       <div className="decorative-blob w-44 h-44 bg-primary/20 bottom-32 -left-16 fixed" />
@@ -345,19 +342,19 @@ const CommunityPage = () => {
                 </div>
                 
                 {/* Voting buttons - 3 options */}
-                <div className="flex gap-2 mt-4 w-full min-w-0">
+                <div className="flex gap-2 mt-4">
                   <Button
                     variant={treatment.userVote === 'helps' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => handleVote(treatment.id, 'helps')}
                     disabled={voteMutation.isPending}
-                    className="flex-1 min-w-0 gap-1.5 rounded-xl"
+                    className="flex-1 gap-1.5 rounded-xl"
                   >
                     <ThumbsUp className={cn(
-                      'w-4 h-4 shrink-0',
+                      'w-4 h-4',
                       treatment.userVote === 'helps' && 'fill-current'
                     )} />
-                    <span className="truncate">Helps</span>
+                    Helps
                   </Button>
                   <Button
                     variant={treatment.userVote === 'neutral' ? 'secondary' : 'outline'}
@@ -365,25 +362,25 @@ const CommunityPage = () => {
                     onClick={() => handleVote(treatment.id, 'neutral')}
                     disabled={voteMutation.isPending}
                     className={cn(
-                      'flex-1 min-w-0 gap-1.5 rounded-xl',
+                      'flex-1 gap-1.5 rounded-xl',
                       treatment.userVote === 'neutral' && 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500'
                     )}
                   >
-                    <Minus className="w-4 h-4 shrink-0" />
-                    <span className="truncate">No change</span>
+                    <Minus className="w-4 h-4" />
+                    No change
                   </Button>
                   <Button
                     variant={treatment.userVote === 'harms' ? 'destructive' : 'outline'}
                     size="sm"
                     onClick={() => handleVote(treatment.id, 'harms')}
                     disabled={voteMutation.isPending}
-                    className="flex-1 min-w-0 gap-1.5 rounded-xl"
+                    className="flex-1 gap-1.5 rounded-xl"
                   >
                     <ThumbsDown className={cn(
-                      'w-4 h-4 shrink-0',
+                      'w-4 h-4',
                       treatment.userVote === 'harms' && 'fill-current'
                     )} />
-                    <span className="truncate">Worsens</span>
+                    Worsens
                   </Button>
                 </div>
                 

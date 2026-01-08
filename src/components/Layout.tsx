@@ -2,27 +2,14 @@ import { useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import BottomNav from './BottomNav';
 import { ReminderBanner } from './ReminderBanner';
-
 import { useCheckInReminder } from '@/hooks/useCheckInReminder';
 import { useUserData } from '@/contexts/UserDataContext';
 import { useLayout } from '@/contexts/LayoutContext';
 import { useIOSKeyboardContext } from '@/contexts/IOSKeyboardContext';
 import { initNotificationListeners, scheduleCheckInReminders } from '@/utils/notificationScheduler';
 import { Capacitor } from '@capacitor/core';
+import { cn } from '@/lib/utils';
 
-/**
- * Layout - Main app layout wrapper
- * 
- * Safe area strategy (Option B):
- * - Content gets padding-bottom: var(--nav-height) - just the nav bar height
- * - BottomNav gets padding-bottom: var(--safe-bottom) - the system safe area
- * - This ensures safe area is applied ONCE, not doubled
- * 
- * Scroll handling:
- * - Uses min-h-0 on scroll container for proper flex shrinking
- * - Avoids height:100vh in favor of flex layouts
- * - No overflow:hidden on html/body/#root (handled in index.css)
- */
 const Layout = () => {
   const { hideBottomNav } = useLayout();
   const { reminderSettings, checkIns, userId, isLoading } = useUserData();
@@ -45,6 +32,7 @@ const Layout = () => {
     if (!Capacitor.isNativePlatform()) return;
 
     const cleanup = initNotificationListeners((route) => {
+      // Navigate to the route when notification is tapped
       navigate(route);
     });
 
@@ -55,6 +43,7 @@ const Layout = () => {
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || !userId || isLoading) return;
 
+    // Only schedule if we have valid settings
     if (reminderSettings.morningTime && reminderSettings.eveningTime) {
       scheduleCheckInReminders(
         reminderSettings.morningTime,
@@ -65,7 +54,10 @@ const Layout = () => {
   }, [reminderSettings, userId, isLoading]);
 
   return (
-    <div className="bg-background flex flex-col min-h-full">
+    <div 
+      className="h-[100dvh] bg-background flex flex-col overflow-hidden" 
+      style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
+    >
       {/* Reminder banner - shows when due and user hasn't checked in */}
       {!isLoading && shouldShowReminder && reminderType && (
         <ReminderBanner
@@ -75,31 +67,14 @@ const Layout = () => {
         />
       )}
       
-      {/* 
-        Main content area - ONLY scroll container
-        - flex-1 min-h-0 overflow-y-auto for scrolling
-        - padding-bottom: 56px (nav height only, no safe-bottom)
-        - BottomNav owns safe-bottom exclusively
-      */}
-      <main 
-        className={[
-          "flex-1 min-h-0",
-          // On iOS when keyboard is open, prevent scrolling to stop page jump
-          isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto",
-        ].filter(Boolean).join(" ")}
-        style={{ 
-          touchAction: 'pan-y',
-          WebkitOverflowScrolling: 'touch',
-          // iOS: nav height + safe area (since we need full clearance for content)
-          // Android/Web: just nav height (BottomNav handles safe area)
-          paddingBottom: !hideBottomNav 
-            ? (isIOS ? 'calc(56px + env(safe-area-inset-bottom, 0px))' : 'var(--app-nav-height)') 
-            : undefined,
-        }}
-      >
+      <main className={cn(
+        "flex-1 min-h-0 overscroll-contain",
+        !hideBottomNav && "pb-20",
+        // On iOS when keyboard is open OR text input is focused, prevent this container from scrolling to stop page jump
+        isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto"
+      )}>
         <Outlet />
       </main>
-      
       {!hideBottomNav && <BottomNav />}
     </div>
   );
