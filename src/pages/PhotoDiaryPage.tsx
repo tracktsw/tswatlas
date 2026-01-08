@@ -897,6 +897,9 @@ const PhotoDiaryPage = () => {
           </div>
           
           {/* Upgrade Button */}
+          <p className="text-xs text-center text-muted-foreground mb-2">
+            14-day free trial. Then {isNativeMobile ? getPriceString() : '£5.99'}/month. Cancel anytime.
+          </p>
           <Button 
             onClick={handleUpgrade} 
             disabled={isUpgrading || (isNativeMobile && !isOfferingsReady)}
@@ -906,9 +909,6 @@ const PhotoDiaryPage = () => {
             <Crown className="w-4 h-4" />
             {isUpgrading ? 'Loading...' : isNativeMobile && !isOfferingsReady ? 'Loading…' : `Unlock – ${isNativeMobile ? getPriceString() : '£5.99'}/month`}
           </Button>
-          <p className="text-xs text-center text-muted-foreground">
-            {isNativeMobile ? `${getPriceString()}/month after` : '£5.99/month after'} · Cancel anytime
-          </p>
         </div>
       )}
 
@@ -929,6 +929,9 @@ const PhotoDiaryPage = () => {
               <p className="text-sm text-muted-foreground">Your limit resets tomorrow</p>
             </div>
             <div className="space-y-2">
+              <p className="text-xs text-muted-foreground text-center">
+                14-day free trial. Then {isNativeMobile ? getPriceString() : '£5.99'}/month. Cancel anytime.
+              </p>
               <Button 
                 onClick={handleUpgrade} 
                 disabled={isUpgrading || (isNativeMobile && !isOfferingsReady)} 
@@ -952,9 +955,6 @@ const PhotoDiaryPage = () => {
                   </>
                 )}
               </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                {isNativeMobile ? getPriceString() : '£5.99'}/month after · Cancel anytime
-              </p>
 
               {/* Native mobile: Retry button if offerings failed */}
               {isNativeMobile && offeringsStatus === 'error' && (
@@ -1027,6 +1027,9 @@ const PhotoDiaryPage = () => {
               </div>
             </div>
             <div className="space-y-2">
+              <p className="text-xs text-muted-foreground text-center">
+                14-day free trial. Then {isNativeMobile ? getPriceString() : '£5.99'}/month. Cancel anytime.
+              </p>
               <Button 
                 onClick={handleUpgrade} 
                 disabled={isUpgrading || (isNativeIOS && !isOfferingsReady)}
@@ -1050,9 +1053,6 @@ const PhotoDiaryPage = () => {
                   </>
                 )}
               </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                {isNativeMobile ? getPriceString() : '£5.99'}/month after · Cancel anytime
-              </p>
 
               {/* Native mobile: Retry button if offerings failed */}
               {isNativeMobile && offeringsStatus === 'error' && (
@@ -1130,6 +1130,9 @@ const PhotoDiaryPage = () => {
         {/* Upgrade CTA when limit reached */}
         {!isSubscriptionLoading && !isPremium && !canUploadMore && (
           <div className="space-y-1">
+            <p className="text-xs text-center text-muted-foreground">
+              14-day free trial. Then {isNativeMobile ? getPriceString() : '£5.99'}/month. Cancel anytime.
+            </p>
             <Button 
               variant="gold" 
               className="w-full gap-2 h-12"
@@ -1139,9 +1142,6 @@ const PhotoDiaryPage = () => {
               <Crown className="w-5 h-5" />
               {isUpgrading ? 'Loading...' : `Unlock – ${isNativeMobile ? getPriceString() : '£5.99'}/month`}
             </Button>
-            <p className="text-xs text-center text-muted-foreground">
-              £5.99/month after · Cancel anytime
-            </p>
           </div>
         )}
       </div>
