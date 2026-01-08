@@ -427,17 +427,17 @@ const InsightsPage = () => {
               {/* Subscribe Button */}
               <Button 
                 onClick={handleUpgrade} 
-                disabled={isUpgrading || (isNativeIOS && !isOfferingsReady)} 
+                disabled={isPurchasing || (isNative && !isOfferingsReady)} 
                 variant="gold" 
                 className="w-full gap-2" 
                 size="default"
               >
-                {isUpgrading ? (
+                {isPurchasing ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Processing…
                   </>
-                ) : isNativeIOS && !isOfferingsReady ? (
+                ) : isNative && !isOfferingsReady ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading…
@@ -445,16 +445,16 @@ const InsightsPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Unlock · {isNativeIOS ? getPriceString() : '£5.99'}/month
+                    Unlock · {priceString}/month
                   </>
                 )}
               </Button>
               <p className="text-xs text-muted-foreground mt-1.5">
-                14 day free trial · {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
+                14 day free trial · {priceString}/month after · Cancel anytime
               </p>
 
               {/* iOS: Retry button if offerings failed */}
-              {isNativeIOS && offeringsStatus === 'error' && (
+              {isNative && !isOfferingsReady && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -467,7 +467,7 @@ const InsightsPage = () => {
               )}
 
               {/* iOS: Restore purchases */}
-              {isNativeIOS && (
+              {isNative && (
                 <Button
                   variant="ghost"
                   size="sm"
