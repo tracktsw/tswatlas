@@ -2,7 +2,7 @@ import { ReactNode, useMemo, useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
-import { Crown, Loader2, RotateCcw } from 'lucide-react';
+import { Crown, Loader2, RotateCcw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -275,11 +275,22 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
         </div>
         <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-sm rounded-xl">
           <div className="text-center p-6 max-w-sm">
-            {/* Value proposition headline */}
-            <h2 className="text-xl font-bold text-foreground mb-4">
-              Subscribe to get full access to Photo Diary, advanced Insight analysis and AI Coach
+            {/* Sparkle icon */}
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+              <Sparkles className="w-8 h-8 text-primary" />
+            </div>
+            
+            {/* Title */}
+            <h2 className="text-xl font-bold text-foreground mb-3">
+              Unlock AI Coach
             </h2>
             
+            {/* Description */}
+            <p className="text-sm text-muted-foreground mb-5">
+              Get full access to all features including Photo Diary, full Insights, Community, Journal, and AI Coach.
+            </p>
+            
+            {/* Disclaimer above button */}
             <p className="text-xs text-muted-foreground mb-3">
               14-day free trial. Then {priceString}/month. Cancel anytime.
             </p>
@@ -340,12 +351,23 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   // Full paywall screen
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-      {/* Value proposition headline */}
-      <h1 className="text-2xl font-bold text-foreground mb-4 max-w-xs">
-        Subscribe to get full access to Photo Diary, advanced Insight analysis and AI Coach
+      {/* Sparkle icon */}
+      <div className="w-20 h-20 mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+        <Sparkles className="w-10 h-10 text-primary" />
+      </div>
+      
+      {/* Title */}
+      <h1 className="text-2xl font-bold text-foreground mb-3">
+        Unlock AI Coach
       </h1>
       
+      {/* Description */}
+      <p className="text-muted-foreground mb-6 max-w-xs">
+        Get full access to all features including Photo Diary, full Insights, Community, Journal, and AI Coach.
+      </p>
+      
       <div className="space-y-3 w-full max-w-xs">
+        {/* Disclaimer above button */}
         <p className="text-xs text-muted-foreground">
           14-day free trial. Then {priceString}/month. Cancel anytime.
         </p>
