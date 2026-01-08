@@ -1,9 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Capacitor } from '@capacitor/core';
 
 // Detect iOS Safari/WebView
 function detectIOS(): boolean {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+}
+
+// Detect Android via Capacitor
+function detectAndroid(): boolean {
+  return Capacitor.getPlatform() === 'android';
 }
 
 // Check if element is a text input that would trigger keyboard
@@ -26,6 +32,7 @@ interface IOSKeyboardContextValue {
   isKeyboardOpen: boolean;
   isTextInputFocused: boolean;
   isIOS: boolean;
+  isAndroid: boolean;
 }
 
 const IOSKeyboardContext = createContext<IOSKeyboardContextValue>({
@@ -33,25 +40,31 @@ const IOSKeyboardContext = createContext<IOSKeyboardContextValue>({
   isKeyboardOpen: false,
   isTextInputFocused: false,
   isIOS: false,
+  isAndroid: false,
 });
 
 export function IOSKeyboardProvider({ children }: { children: React.ReactNode }) {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isTextInputFocused, setIsTextInputFocused] = useState(false);
   const [isIOS] = useState(() => detectIOS());
+  const [isAndroid] = useState(() => detectAndroid());
 
   // Compute isKeyboardOpen from either visualViewport OR focus state
   const isKeyboardOpen = isIOS && (keyboardHeight > 50 || isTextInputFocused);
 
-  // Add iOS class to document for CSS targeting
+  // Add platform classes to document for CSS targeting
   useEffect(() => {
     if (isIOS) {
       document.documentElement.classList.add('ios');
     }
+    if (isAndroid) {
+      document.documentElement.classList.add('android-edge');
+    }
     return () => {
       document.documentElement.classList.remove('ios');
+      document.documentElement.classList.remove('android-edge');
     };
-  }, [isIOS]);
+  }, [isIOS, isAndroid]);
 
   // Document-level scroll lock for iOS when keyboard is open
   // SIMPLIFIED: Only set a CSS custom property, let Layout handle overflow
@@ -149,7 +162,7 @@ export function IOSKeyboardProvider({ children }: { children: React.ReactNode })
   }, [isIOS, isTextInputFocused]);
 
   return (
-    <IOSKeyboardContext.Provider value={{ keyboardHeight, isKeyboardOpen, isTextInputFocused, isIOS }}>
+    <IOSKeyboardContext.Provider value={{ keyboardHeight, isKeyboardOpen, isTextInputFocused, isIOS, isAndroid }}>
       {children}
     </IOSKeyboardContext.Provider>
   );

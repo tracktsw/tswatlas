@@ -3,6 +3,7 @@ import { Bell, X, Clock, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePlatform } from '@/hooks/usePlatform';
 
 interface ReminderBannerProps {
   reminderType: 'morning' | 'evening';
@@ -13,6 +14,7 @@ interface ReminderBannerProps {
 export function ReminderBanner({ reminderType, onDismiss, onSnooze }: ReminderBannerProps) {
   const navigate = useNavigate();
   const [isVisible, setIsVisible] = useState(true);
+  const { isAndroid } = usePlatform();
 
   const handleCheckIn = () => {
     setIsVisible(false);
@@ -41,7 +43,7 @@ export function ReminderBanner({ reminderType, onDismiss, onSnooze }: ReminderBa
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3 }}
           className="fixed left-0 right-0 z-50 p-3"
-          style={{ top: 'var(--safe-top)' }}
+          style={isAndroid ? { top: 0 } : { top: 'var(--safe-top)' }}
         >
           <div className="max-w-lg mx-auto">
             <div className="bg-primary text-primary-foreground rounded-2xl shadow-lg p-4">

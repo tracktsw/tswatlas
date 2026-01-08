@@ -36,6 +36,29 @@ body {
   }
 }
 
+/* Android edge-to-edge: remove ALL safe-area padding for Android devices */
+.android-edge {
+  --safe-top: 0px !important;
+  --safe-bottom: 0px !important;
+  --ios-header-extra: 0px !important;
+  --ios-dialog-header-extra: 0px !important;
+}
+
+/* Override safe-area utility classes when android-edge is active */
+.android-edge .safe-area-inset-bottom,
+.android-edge .safe-area-inset-top,
+.android-edge .safe-area-top,
+.android-edge .safe-area-bottom {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.android-edge .safe-area-top-offset,
+.android-edge .safe-area-bottom-offset {
+  top: 0 !important;
+  bottom: 0 !important;
+}
+
 @layer base {
   :root {
     /* 

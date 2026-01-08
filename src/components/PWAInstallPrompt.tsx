@@ -1,8 +1,10 @@
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { Button } from '@/components/ui/button';
 import { Share, MoreVertical, Plus, Download, X } from 'lucide-react';
+import { usePlatform } from '@/hooks/usePlatform';
 
 export function PWAInstallPrompt() {
+  const { isAndroid } = usePlatform();
   const { platform, shouldShowPrompt, dismiss, triggerInstall, canTriggerInstall } = usePWAInstall();
 
   if (!shouldShowPrompt) {
@@ -12,7 +14,7 @@ export function PWAInstallPrompt() {
   return (
     <div 
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-      style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}
+      style={isAndroid ? { paddingBottom: '80px' } : { paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}
     >
       <div className="w-full max-w-md max-h-full overflow-auto animate-in fade-in zoom-in-95 duration-300">
         <div className="rounded-2xl bg-card border border-border shadow-xl">
