@@ -909,29 +909,6 @@ const PhotoDiaryPage = () => {
             <Crown className="w-4 h-4" />
             {isUpgrading ? 'Loading...' : isNativeMobile && !isOfferingsReady ? 'Loading…' : `Unlock – ${isNativeMobile ? getPriceString() : '£5.99'}/month`}
           </Button>
-          
-          {/* Native mobile: Restore purchases */}
-          {isNativeMobile && isUserLoggedIn && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full mt-2 gap-2 text-muted-foreground"
-              onClick={handleRestore}
-              disabled={isRestoring}
-            >
-              {isRestoring ? (
-                <>
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  Restoring…
-                </>
-              ) : (
-                <>
-                  <RotateCcw className="w-3 h-3" />
-                  Restore purchases
-                </>
-              )}
-            </Button>
-          )}
         </div>
       )}
 
@@ -989,29 +966,6 @@ const PhotoDiaryPage = () => {
                 >
                   <RefreshCw className="w-4 h-4" />
                   Retry loading
-                </Button>
-              )}
-
-              {/* Native mobile: Restore purchases */}
-              {isNativeMobile && isUserLoggedIn && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-2 text-muted-foreground"
-                  onClick={handleRestore}
-                  disabled={isRestoring}
-                >
-                  {isRestoring ? (
-                    <>
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      Restoring…
-                    </>
-                  ) : (
-                    <>
-                      <RotateCcw className="w-3 h-3" />
-                      Restore purchases
-                    </>
-                  )}
                 </Button>
               )}
             </div>
@@ -1089,29 +1043,6 @@ const PhotoDiaryPage = () => {
                   Retry loading
                 </Button>
               )}
-
-              {/* Native mobile: Restore purchases */}
-              {isNativeMobile && isUserLoggedIn && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-2 text-muted-foreground"
-                  onClick={handleRestore}
-                  disabled={isRestoring}
-                >
-                  {isRestoring ? (
-                    <>
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      Restoring…
-                    </>
-                  ) : (
-                    <>
-                      <RotateCcw className="w-3 h-3" />
-                      Restore purchases
-                    </>
-                  )}
-                </Button>
-              )}
             </div>
             <Button 
               variant="ghost" 
@@ -1165,29 +1096,6 @@ const PhotoDiaryPage = () => {
               <Crown className="w-5 h-5" />
               {isUpgrading ? 'Loading...' : `Unlock – ${isNativeMobile ? getPriceString() : '£5.99'}/month`}
             </Button>
-            
-            {/* Native mobile: Restore purchases */}
-            {isNativeMobile && isUserLoggedIn && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full mt-1 gap-2 text-muted-foreground"
-                onClick={handleRestore}
-                disabled={isRestoring}
-              >
-                {isRestoring ? (
-                  <>
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    Restoring…
-                  </>
-                ) : (
-                  <>
-                    <RotateCcw className="w-3 h-3" />
-                    Restore purchases
-                  </>
-                )}
-              </Button>
-            )}
           </div>
         )}
       </div>
