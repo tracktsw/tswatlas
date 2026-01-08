@@ -276,14 +276,12 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
         <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-sm rounded-xl">
           <div className="text-center p-6 max-w-sm">
             {/* Value proposition headline */}
-            <h2 className="text-xl font-bold text-foreground mb-3">
+            <h2 className="text-xl font-bold text-foreground mb-4">
               Subscribe to get full access to Photo Diary, advanced Insight analysis and AI Coach
             </h2>
             
-            <p className="text-sm text-muted-foreground mb-5">
-              {priceString} per month · Auto-renews monthly
-              <br />
-              Try it free for 14 days — cancel anytime.
+            <p className="text-xs text-muted-foreground mb-3">
+              14-day free trial. Then {priceString}/month. Cancel anytime.
             </p>
             
             <Button
@@ -300,7 +298,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
               ) : (
                 <>
                   <Crown className="w-4 h-4" />
-                  Continue – {priceString}/month
+                  Unlock – {priceString}/month
                 </>
               )}
             </Button>
@@ -343,17 +341,15 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
       {/* Value proposition headline */}
-      <h1 className="text-2xl font-bold text-foreground mb-3 max-w-xs">
+      <h1 className="text-2xl font-bold text-foreground mb-4 max-w-xs">
         Subscribe to get full access to Photo Diary, advanced Insight analysis and AI Coach
       </h1>
       
-      <p className="text-muted-foreground mb-8 max-w-xs">
-        {priceString} per month · Auto-renews monthly
-        <br />
-        Try it free for 14 days — cancel anytime.
-      </p>
-      
       <div className="space-y-3 w-full max-w-xs">
+        <p className="text-xs text-muted-foreground">
+          14-day free trial. Then {priceString}/month. Cancel anytime.
+        </p>
+        
         <Button
           onClick={handleButtonClick}
           disabled={isButtonLoading}
@@ -369,7 +365,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
           ) : (
             <>
               <Crown className="w-4 h-4" />
-              Continue – {priceString}/month
+              Unlock – {priceString}/month
             </>
           )}
         </Button>
