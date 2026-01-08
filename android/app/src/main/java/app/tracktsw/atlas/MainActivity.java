@@ -27,14 +27,22 @@ public class MainActivity extends BridgeActivity {
                 WindowInsetsCompat.Type.displayCutout()
             );
             
-            // Apply insets as padding
-            v.setPadding(insets.left, insets.top, insets.right, insets.bottom);
+            int left = insets.left;
+            int top = insets.top;
+            int right = insets.right;
+            int bottom = insets.bottom;
             
-            // For Android 15+, also handle navigation bars explicitly
+            // For Android 15+, ensure navigation bar insets are properly accounted for
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                 Insets navInsets = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars());
-                v.setPadding(insets.left, insets.top, insets.right, Math.max(insets.bottom, navInsets.bottom));
+                // Preserve left/right, but ensure bottom accounts for navigation bar
+                left = Math.max(left, navInsets.left);
+                right = Math.max(right, navInsets.right);
+                bottom = Math.max(bottom, navInsets.bottom);
             }
+            
+            // Apply combined insets as padding
+            v.setPadding(left, top, right, bottom);
             
             return WindowInsetsCompat.CONSUMED;
         });

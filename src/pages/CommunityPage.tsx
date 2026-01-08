@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, ThumbsUp, ThumbsDown, Minus, Plus, Send, Loader2, Heart, Sparkles } from 'lucide-react';
+import { Users, ThumbsUp, ThumbsDown, Minus, Plus, Send, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -198,12 +198,12 @@ const CommunityPage = () => {
   };
 
   return (
-    <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
+    <div className="py-6 space-y-6 w-full max-w-lg mx-auto px-safe">
       {/* Decorative elements */}
       <div className="decorative-blob w-36 h-36 bg-terracotta/25 -top-10 -right-10 fixed" />
       <div className="decorative-blob w-44 h-44 bg-primary/20 bottom-32 -left-16 fixed" />
       
-      <div className="flex items-center justify-between animate-fade-in">
+      <div className="flex items-center justify-between animate-fade-in px-4">
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">Community</h1>
           <p className="text-muted-foreground">What's helping others heal</p>
@@ -273,7 +273,7 @@ const CommunityPage = () => {
       </div>
 
       {/* Info Card */}
-      <div className="glass-card-warm p-5 animate-slide-up" style={{ animationDelay: '0.05s' }}>
+      <div className="glass-card-warm p-5 animate-slide-up mx-4" style={{ animationDelay: '0.05s' }}>
         <div className="flex items-start gap-4">
           <div className="p-3 rounded-2xl bg-gradient-to-br from-terracotta/20 to-coral-light shadow-warm-sm animate-float">
             <Users className="w-6 h-6 text-terracotta" />
@@ -293,7 +293,7 @@ const CommunityPage = () => {
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 px-4">
           {treatments.map((treatment, index) => {
             const percentages = getVotePercentages(treatment);
             
@@ -301,7 +301,7 @@ const CommunityPage = () => {
               <div 
                 key={treatment.id} 
                 className={cn(
-                  'glass-card p-5 transition-all duration-300 animate-slide-up hover:shadow-warm',
+                  'glass-card p-4 transition-all duration-300 animate-slide-up hover:shadow-warm',
                   treatment.userVote === 'helps' && 'ring-2 ring-primary',
                   treatment.userVote === 'neutral' && 'ring-2 ring-amber-500',
                   treatment.userVote === 'harms' && 'ring-2 ring-destructive'
@@ -342,16 +342,16 @@ const CommunityPage = () => {
                 </div>
                 
                 {/* Voting buttons - 3 options */}
-                <div className="flex gap-2 mt-4">
+                <div className="grid grid-cols-3 gap-2 mt-4">
                   <Button
                     variant={treatment.userVote === 'helps' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => handleVote(treatment.id, 'helps')}
                     disabled={voteMutation.isPending}
-                    className="flex-1 gap-1.5 rounded-xl"
+                    className="gap-1 rounded-xl text-xs px-2"
                   >
                     <ThumbsUp className={cn(
-                      'w-4 h-4',
+                      'w-3.5 h-3.5',
                       treatment.userVote === 'helps' && 'fill-current'
                     )} />
                     Helps
@@ -362,11 +362,11 @@ const CommunityPage = () => {
                     onClick={() => handleVote(treatment.id, 'neutral')}
                     disabled={voteMutation.isPending}
                     className={cn(
-                      'flex-1 gap-1.5 rounded-xl',
+                      'gap-1 rounded-xl text-xs px-2',
                       treatment.userVote === 'neutral' && 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500'
                     )}
                   >
-                    <Minus className="w-4 h-4" />
+                    <Minus className="w-3.5 h-3.5" />
                     No change
                   </Button>
                   <Button
@@ -374,10 +374,10 @@ const CommunityPage = () => {
                     size="sm"
                     onClick={() => handleVote(treatment.id, 'harms')}
                     disabled={voteMutation.isPending}
-                    className="flex-1 gap-1.5 rounded-xl"
+                    className="gap-1 rounded-xl text-xs px-2"
                   >
                     <ThumbsDown className={cn(
-                      'w-4 h-4',
+                      'w-3.5 h-3.5',
                       treatment.userVote === 'harms' && 'fill-current'
                     )} />
                     Worsens
