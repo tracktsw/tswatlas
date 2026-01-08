@@ -327,7 +327,7 @@ const SubscriptionCard = () => {
             ) : (
               <>
                 <Crown className="w-4 h-4" />
-                Start 14-day free trial
+                Unlock · {priceString}/month
               </>
             )}
           </Button>
