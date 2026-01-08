@@ -1,8 +1,9 @@
 import { createContext, useContext, useEffect, ReactNode, useState, useCallback } from 'react';
-import { useRevenueCat, getIsNativeIOS } from '@/hooks/useRevenueCat';
+import { useRevenueCat, getIsNativeIOS, getIsNativeMobile } from '@/hooks/useRevenueCat';
 import { supabase } from '@/integrations/supabase/client';
 
 interface RevenueCatContextType {
+  isNativeMobile: boolean;
   isIOSNative: boolean;
   platformLabel: string;
   isInitialized: boolean;
@@ -31,9 +32,12 @@ export const useRevenueCatContext = () => {
   const context = useContext(RevenueCatContext);
   if (!context) {
     // Return a default context - use actual platform detection
+    const isNativeMobile = getIsNativeMobile();
+    const isNativeIOS = getIsNativeIOS();
     return {
-      isIOSNative: getIsNativeIOS(),
-      platformLabel: getIsNativeIOS() ? 'ios_native' : 'web_or_other',
+      isNativeMobile,
+      isIOSNative: isNativeIOS,
+      platformLabel: isNativeMobile ? (isNativeIOS ? 'ios_native' : 'android_native') : 'web',
       isInitialized: false,
       isLoading: false,
       offeringsStatus: 'idle' as const,
@@ -66,7 +70,7 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
 
   // Retry initialization - useful if initial load failed
   const retryInitialization = useCallback(async () => {
-    if (!getIsNativeIOS()) return;
+    if (!getIsNativeMobile()) return;
 
     console.log('[RevenueCatProvider] Retrying initialization...');
 
@@ -81,11 +85,11 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
     }
   }, [revenueCat]);
 
-  // Initialize RevenueCat ONLY when user is authenticated (iOS only)
+  // Initialize RevenueCat ONLY when user is authenticated (native mobile only)
   // CRITICAL: Never initialize without a logged-in user
   useEffect(() => {
-    if (!getIsNativeIOS()) {
-      console.log('[RevenueCatProvider] Not iOS native, skipping initialization');
+    if (!getIsNativeMobile()) {
+      console.log('[RevenueCatProvider] Not native mobile, skipping initialization');
       return;
     }
 
@@ -149,11 +153,13 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
     };
   }, [revenueCat.initialize, revenueCat.logout, revenueCat.fetchOfferings]);
 
+  const isNativeMobile = getIsNativeMobile();
   const isNativeIOS = getIsNativeIOS();
 
   const value: RevenueCatContextType = {
+    isNativeMobile,
     isIOSNative: isNativeIOS,
-    platformLabel: isNativeIOS ? 'ios_native' : 'web_or_other',
+    platformLabel: isNativeMobile ? (isNativeIOS ? 'ios_native' : 'android_native') : 'web',
     isInitialized: revenueCat.isInitialized,
     isLoading: revenueCat.isLoading,
     offeringsStatus: revenueCat.offeringsStatus,

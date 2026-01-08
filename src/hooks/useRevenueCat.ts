@@ -43,11 +43,20 @@ interface CustomerInfo {
 
 // Platform detection (runtime) - MUST be called at runtime, not module load
 export const getIsNativeIOS = () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+export const getIsNativeAndroid = () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+export const getIsNativeMobile = () => getIsNativeIOS() || getIsNativeAndroid();
 
 // Backwards-compatible constant - DO NOT use for routing logic, use getIsNativeIOS()
 export const isIOSNative = getIsNativeIOS();
 
 const REVENUECAT_IOS_KEY = 'appl_rgvRTJPduIhlItjWllSWcPCuwkn';
+const REVENUECAT_ANDROID_KEY = 'goog_AptGipsbvRtbMTkDAeqPcEauAGJ';
+
+const getRevenueCatKey = () => {
+  if (getIsNativeIOS()) return REVENUECAT_IOS_KEY;
+  if (getIsNativeAndroid()) return REVENUECAT_ANDROID_KEY;
+  return null;
+};
 
 // CRITICAL: The entitlement identifier MUST match exactly what's in RevenueCat dashboard
 const PREMIUM_ENTITLEMENT_ID = 'premium';
@@ -125,7 +134,7 @@ export const useRevenueCat = () => {
 
   // Refresh CustomerInfo - call this after any purchase/restore
   const refreshCustomerInfo = useCallback(async (): Promise<boolean> => {
-    if (!getIsNativeIOS()) return false;
+    if (!getIsNativeMobile()) return false;
 
     try {
       console.log('[RevenueCat] Refreshing CustomerInfo...');
@@ -165,8 +174,14 @@ export const useRevenueCat = () => {
   // CRITICAL: Never allow anonymous IDs - always require explicit user ID
   // CRITICAL: Each Supabase user ID = unique RevenueCat customer, NO aliasing allowed
   const initialize = useCallback(async (userId: string) => {
-    if (!getIsNativeIOS()) {
-      console.log('[RevenueCat] Skipping init - not iOS native');
+    if (!getIsNativeMobile()) {
+      console.log('[RevenueCat] Skipping init - not native mobile');
+      return;
+    }
+
+    const apiKey = getRevenueCatKey();
+    if (!apiKey) {
+      console.error('[RevenueCat] No API key for platform:', Capacitor.getPlatform());
       return;
     }
 
@@ -213,10 +228,10 @@ export const useRevenueCat = () => {
       // CRITICAL: Pass appUserID directly in configure() to prevent ANY anonymous ID creation
       // This ensures the subscription is ALWAYS bound to the authenticated user from the start
       await Purchases.configure({ 
-        apiKey: REVENUECAT_IOS_KEY,
+        apiKey,
         appUserID: userId 
       });
-      console.log('[RevenueCat] Configured with API key and user ID:', userId);
+      console.log('[RevenueCat] Configured with API key for platform:', Capacitor.getPlatform(), 'user:', userId);
 
       // Store the bound user ID BEFORE fetching customer info
       boundUserIdRef.current = userId;
@@ -284,8 +299,8 @@ export const useRevenueCat = () => {
     setOfferingsStatus('idle');
     setOfferingsError(null);
     
-    if (!getIsNativeIOS()) {
-      console.log('[RevenueCat] Not iOS native, state cleared');
+    if (!getIsNativeMobile()) {
+      console.log('[RevenueCat] Not native mobile, state cleared');
       return;
     }
 
@@ -316,7 +331,7 @@ export const useRevenueCat = () => {
 
   // Fetch offerings
   const fetchOfferings = useCallback(async () => {
-    if (!getIsNativeIOS()) return null;
+    if (!getIsNativeMobile()) return null;
 
     setOfferingsStatus('loading');
     setOfferingsError(null);
@@ -377,9 +392,9 @@ export const useRevenueCat = () => {
     errorCode?: number;
     isPremiumNow?: boolean;
   }> => {
-    if (!getIsNativeIOS()) {
-      console.log('[RevenueCat] Purchase skipped - not iOS native');
-      return { success: false, error: 'Not iOS native', isPremiumNow: false };
+    if (!getIsNativeMobile()) {
+      console.log('[RevenueCat] Purchase skipped - not native mobile');
+      return { success: false, error: 'Not native mobile', isPremiumNow: false };
     }
 
     // SECURITY: Must be logged in to purchase
@@ -491,9 +506,9 @@ export const useRevenueCat = () => {
     error?: string;
     isLinkedToOtherAccount?: boolean;
   }> => {
-    if (!getIsNativeIOS()) {
-      console.log('[RevenueCat] Restore skipped - not iOS native');
-      return { success: false, isPremiumNow: false, error: 'Not iOS native' };
+    if (!getIsNativeMobile()) {
+      console.log('[RevenueCat] Restore skipped - not native mobile');
+      return { success: false, isPremiumNow: false, error: 'Not native mobile' };
     }
 
     // SECURITY: Must be logged in to restore
@@ -564,9 +579,10 @@ export const useRevenueCat = () => {
 
   // Get debug info
   const getDebugInfo = useCallback(() => ({
-    platform: getIsNativeIOS() ? 'ios_native' : 'web_or_other',
+    platform: getIsNativeMobile() ? Capacitor.getPlatform() : 'web',
     isNativePlatform: Capacitor.isNativePlatform(),
     capacitorPlatform: Capacitor.getPlatform(),
+    isNativeMobile: getIsNativeMobile(),
     isInitialized,
     offeringsStatus,
     offeringsError,
