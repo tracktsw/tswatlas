@@ -90,8 +90,11 @@ const Layout = () => {
         style={{ 
           touchAction: 'pan-y',
           WebkitOverflowScrolling: 'touch',
-          // Reserve space for nav bar height only - BottomNav owns safe-area
-          paddingBottom: !hideBottomNav ? 'var(--app-nav-height)' : undefined,
+          // iOS: nav height + safe area (since we need full clearance for content)
+          // Android/Web: just nav height (BottomNav handles safe area)
+          paddingBottom: !hideBottomNav 
+            ? (isIOS ? 'calc(56px + env(safe-area-inset-bottom, 0px))' : 'var(--app-nav-height)') 
+            : undefined,
         }}
       >
         <Outlet />
