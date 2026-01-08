@@ -332,8 +332,8 @@ const SubscriptionCard = () => {
             )}
           </Button>
           
-          <p className="text-xs text-muted-foreground mt-2">
-            {priceString}/month after · Cancel anytime
+          <p className="text-xs text-muted-foreground">
+            14 day free trial · {priceString}/month after · Cancel anytime
           </p>
 
           {/* Status message */}

@@ -835,7 +835,7 @@ const PhotoDiaryPage = () => {
             {isUpgrading ? 'Loading...' : `Unlock · ${isNativeIOS ? getPriceString() : '£5.99'}/month`}
           </Button>
           <p className="text-xs text-center text-muted-foreground">
-            £5.99/month after · Cancel anytime
+            14 day free trial · {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
           </p>
         </div>
       )}
@@ -881,7 +881,7 @@ const PhotoDiaryPage = () => {
                 )}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
+                14 day free trial · {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
               </p>
 
               {/* iOS: Retry button if offerings failed */}
@@ -979,7 +979,7 @@ const PhotoDiaryPage = () => {
                 )}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
+                14 day free trial · {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
               </p>
 
               {/* iOS: Retry button if offerings failed */}
@@ -1068,7 +1068,7 @@ const PhotoDiaryPage = () => {
               {isUpgrading ? 'Loading...' : `Unlock · ${isNativeIOS ? getPriceString() : '£5.99'}/month`}
             </Button>
             <p className="text-xs text-center text-muted-foreground">
-              £5.99/month after · Cancel anytime
+              14 day free trial · {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
             </p>
           </div>
         )}
