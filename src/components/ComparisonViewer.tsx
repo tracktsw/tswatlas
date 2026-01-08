@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { VirtualPhoto } from '@/hooks/useVirtualizedPhotos';
 import { parseLocalDateTime } from '@/utils/localDateTime';
 import { useLayout } from '@/contexts/LayoutContext';
+import { usePlatform } from '@/hooks/usePlatform';
 
 interface ComparisonViewerProps {
   photos: VirtualPhoto[];
@@ -172,10 +173,12 @@ const FullscreenViewer = ({
   photos,
   initialIndex,
   onClose,
+  isAndroid,
 }: {
   photos: VirtualPhoto[];
   initialIndex: number;
   onClose: () => void;
+  isAndroid: boolean;
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const touchStartX = useRef<number | null>(null);
@@ -210,7 +213,7 @@ const FullscreenViewer = ({
     <div 
       ref={containerRef}
       className="fixed inset-0 z-50 bg-black flex flex-col"
-      style={{ 
+      style={isAndroid ? undefined : { 
         paddingTop: 'var(--safe-top)',
         paddingBottom: 'var(--safe-bottom)',
       }}
@@ -220,7 +223,7 @@ const FullscreenViewer = ({
       {/* Header - uses safe-area + extra offset to guarantee clearing Dynamic Island */}
       <div 
         className="flex items-center justify-between px-4 py-3 bg-black/50 backdrop-blur-sm"
-        style={{ 
+        style={isAndroid ? undefined : { 
           marginTop: 'calc(max(env(safe-area-inset-top, 44px), constant(safe-area-inset-top, 44px)) + var(--ios-header-extra, 16px))' 
         }}
       >
@@ -288,6 +291,7 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
   const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
   const isMobile = useIsMobile();
   const { setHideBottomNav } = useLayout();
+  const { isAndroid } = usePlatform();
   // Track if user has manually toggled the layout
   const hasUserToggled = useRef(false);
   // Layout state: stacked (true) or side-by-side (false)
@@ -342,7 +346,7 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
       {/* Immersive comparison view - fixed position with full height and safe areas */}
       <div 
         className="fixed inset-0 z-40 bg-background flex flex-col overscroll-none"
-        style={{ 
+        style={isAndroid ? { height: '100dvh' } : { 
           height: '100dvh',
           paddingTop: 'env(safe-area-inset-top)',
           paddingBottom: 'env(safe-area-inset-bottom)',
@@ -440,6 +444,7 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
           photos={photos}
           initialIndex={fullscreenIndex}
           onClose={() => setFullscreenIndex(null)}
+          isAndroid={isAndroid}
         />
       )}
     </>

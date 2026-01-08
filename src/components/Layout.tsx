@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 const Layout = () => {
   const { hideBottomNav } = useLayout();
   const { reminderSettings, checkIns, userId, isLoading } = useUserData();
-  const { isKeyboardOpen, isIOS } = useIOSKeyboardContext();
+  const { isKeyboardOpen, isIOS, isAndroid } = useIOSKeyboardContext();
   const navigate = useNavigate();
 
   const {
@@ -56,7 +56,7 @@ const Layout = () => {
   return (
     <div 
       className="h-[100dvh] bg-background flex flex-col overflow-hidden" 
-      style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
+      style={isAndroid ? undefined : { paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
     >
       {/* Reminder banner - shows when due and user hasn't checked in */}
       {!isLoading && shouldShowReminder && reminderType && (

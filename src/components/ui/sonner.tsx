@@ -1,16 +1,18 @@
 import { useTheme } from "next-themes";
 import { Toaster as Sonner, toast } from "sonner";
+import { getPlatformInfo } from "@/hooks/usePlatform";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
+  const { isAndroid } = getPlatformInfo();
 
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
-      style={{ top: 'var(--safe-top, 0px)' }}
+      style={isAndroid ? undefined : { top: 'var(--safe-top, 0px)' }}
       toastOptions={{
         classNames: {
           toast:

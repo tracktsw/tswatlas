@@ -1,8 +1,10 @@
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { usePlatform } from '@/hooks/usePlatform';
 
 const NotFound = () => {
   const location = useLocation();
+  const { isAndroid } = usePlatform();
 
   useEffect(() => {
     console.error("404 Error: User attempted to access non-existent route:", location.pathname);
@@ -11,7 +13,7 @@ const NotFound = () => {
   return (
     <div 
       className="flex h-[100dvh] items-center justify-center bg-muted overflow-hidden" 
-      style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
+      style={isAndroid ? undefined : { paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
     >
       <div className="text-center">
         <h1 className="mb-4 text-4xl font-bold">404</h1>
