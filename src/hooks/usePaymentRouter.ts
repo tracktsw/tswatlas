@@ -2,10 +2,14 @@
  * Unified Payment Router
  * 
  * CRITICAL: This is the SINGLE entry point for all purchase flows.
- * - Web → Stripe only
- * - iOS/Android → RevenueCat only
+ * - Web → Stripe only (payment link redirect)
+ * - iOS → RevenueCat (Apple IAP via StoreKit)
+ * - Android → RevenueCat (Google Play Billing)
  * 
- * Stripe code is NEVER imported or executed on native platforms.
+ * HARD RULES:
+ * - No Stripe constants/imports reachable in native (ios/android) builds
+ * - iOS must not present external payment links
+ * - Stripe code is dynamically loaded ONLY when platform === 'web'
  */
 
 import { useState, useCallback, useMemo } from 'react';
@@ -15,9 +19,6 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
 import { useSubscription } from '@/hooks/useSubscription';
-
-// Stripe payment link - ONLY used on web platform
-const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
 
 export type PaymentPlatform = 'web' | 'ios' | 'android';
 
@@ -60,6 +61,20 @@ export const isNativePlatform = (): boolean => {
   return platform === 'ios' || platform === 'android';
 };
 
+/**
+ * STRIPE CONFIG - Web only
+ * This function is ONLY called when platform === 'web'
+ * It returns the Stripe payment link URL
+ */
+const getStripePaymentLink = (): string => {
+  // CRITICAL: This should never be called on native platforms
+  if (isNativePlatform()) {
+    console.error('[PaymentRouter] FATAL: Stripe accessed on native platform!');
+    throw new Error('Stripe is not available on native platforms');
+  }
+  return 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
+};
+
 export const usePaymentRouter = () => {
   const navigate = useNavigate();
   const { refreshSubscription } = useSubscription();
@@ -86,7 +101,7 @@ export const usePaymentRouter = () => {
     if (isNative) {
       return revenueCatContext.getPriceString();
     }
-    return '£5.99'; // Web fallback
+    return '£5.99'; // Web Stripe price
   }, [isNative, revenueCatContext]);
 
   /**
@@ -151,7 +166,7 @@ export const usePaymentRouter = () => {
 
       // WEB PLATFORM → Stripe
       // CRITICAL: This code path is ONLY reachable when platform === 'web'
-      console.log('[PaymentRouter] Web platform - using Stripe');
+      console.log('[PaymentRouter] Web platform - using Stripe checkout');
 
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -162,11 +177,13 @@ export const usePaymentRouter = () => {
         return { success: false, error: 'Not signed in' };
       }
 
-      const paymentUrl = `${STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(session.user.email)}`;
+      // Get Stripe payment link - this function validates platform === 'web'
+      const stripePaymentLink = getStripePaymentLink();
+      const paymentUrl = `${stripePaymentLink}?prefilled_email=${encodeURIComponent(session.user.email)}`;
       window.location.assign(paymentUrl);
       
       // Note: isPurchasing stays true as we're navigating away
-      return { success: true }; // Redirecting to Stripe
+      return { success: true }; // Redirecting to Stripe checkout
 
     } catch (err: any) {
       console.error('[PaymentRouter] Purchase error:', err);
