@@ -262,7 +262,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
               ) : (
                 <>
                   <Crown className="w-4 h-4" />
-                  Start 14-day free trial
+                  Unlock · {priceString}/month
                 </>
               )}
             </Button>
@@ -347,7 +347,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
             ) : (
               <>
                 <Crown className="w-4 h-4" />
-                Start 14-day free trial
+                Unlock · {priceString}/month
               </>
             )}
           </Button>

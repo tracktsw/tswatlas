@@ -508,7 +508,7 @@ const InsightsPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Start 14-day free trial
+                    Unlock · {isNativeIOS ? getPriceString() : '£5.99'}/month
                   </>
                 )}
               </Button>
