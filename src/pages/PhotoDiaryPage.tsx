@@ -904,7 +904,7 @@ const PhotoDiaryPage = () => {
             className="w-full gap-2"
           >
             <Crown className="w-4 h-4" />
-            {isUpgrading ? 'Loading...' : isNativeMobile && !isOfferingsReady ? 'Loading…' : 'Start 14-day free trial'}
+            {isUpgrading ? 'Loading...' : isNativeMobile && !isOfferingsReady ? 'Loading…' : `Unlock – ${isNativeMobile ? getPriceString() : '£5.99'}/month`}
           </Button>
           <p className="text-xs text-center text-muted-foreground">
             {isNativeMobile ? `${getPriceString()}/month after` : '£5.99/month after'} · Cancel anytime
@@ -948,7 +948,7 @@ const PhotoDiaryPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Start 14-day free trial
+                    Unlock – {isNativeMobile ? getPriceString() : '£5.99'}/month
                   </>
                 )}
               </Button>
@@ -1046,7 +1046,7 @@ const PhotoDiaryPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Start 14-day free trial
+                    Unlock – {isNativeMobile ? getPriceString() : '£5.99'}/month
                   </>
                 )}
               </Button>
@@ -1137,7 +1137,7 @@ const PhotoDiaryPage = () => {
               disabled={isUpgrading}
             >
               <Crown className="w-5 h-5" />
-              {isUpgrading ? 'Loading...' : 'Start 14-day free trial'}
+              {isUpgrading ? 'Loading...' : `Unlock – ${isNativeMobile ? getPriceString() : '£5.99'}/month`}
             </Button>
             <p className="text-xs text-center text-muted-foreground">
               £5.99/month after · Cancel anytime
