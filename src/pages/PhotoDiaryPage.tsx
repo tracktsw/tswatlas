@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown, X, ImagePlus, CalendarIcon, ArrowUpDown, ArrowDown, ArrowUp, Loader2, RotateCcw, RefreshCw } from 'lucide-react';
 import { useUserData, BodyPart, Photo } from '@/contexts/UserDataContext';
-import { useVirtualizedPhotos, VirtualPhoto, SortOrder } from '@/hooks/useVirtualizedPhotos';
+import { useVirtualizedPhotos, VirtualPhoto, SortOrder, BodyPart as VBodyPart } from '@/hooks/useVirtualizedPhotos';
 import { VirtualizedPhotoGrid } from '@/components/VirtualizedPhotoGrid';
 import { ComparisonViewer } from '@/components/ComparisonViewer';
 import { BatchUploadModal } from '@/components/BatchUploadModal';
@@ -195,10 +195,8 @@ const PhotoDiaryPage = () => {
 
   // Single upload hook (shared pipeline for Take Photo / Single Photo)
   const singleUpload = useSingleUpload({
-    onSuccess: () => {
+    onSuccess: (photo) => {
       setShowSparkles(true);
-      // Refresh virtualized list for PhotoDiaryPage
-      refresh();
       // Also refresh context photos so HomePage updates immediately
       refreshPhotos();
       toast.success('Photo saved to cloud');
@@ -394,27 +392,41 @@ const PhotoDiaryPage = () => {
     setDateSource('upload_fallback');
 
     // Start upload in background
-    const photoId = await singleUpload.processAndUploadFile(fileToUpload, {
+    const uploadedPhoto = await singleUpload.processAndUploadFile(fileToUpload, {
       bodyPart: bodyPartToUpload,
       notes: notesToUpload,
       takenAtOverride: takenAtToUpload,
       skipLimitCheck: isPremium, // Premium users bypass limit
     });
 
-    if (photoId) {
+    if (uploadedPhoto) {
       // Debug logging for verification
       if (import.meta.env.DEV) {
         const finalDateSource = didUserAdjustDate ? 'user' : dateSource;
         console.log('[PhotoDiary] Upload complete:', {
-          photo_id: photoId,
-          taken_at: takenAtToUpload,
+          photo_id: uploadedPhoto.id,
+          taken_at: uploadedPhoto.takenAt,
           date_source: finalDateSource,
           exif_present: dateSource === 'exif',
           was_camera: dateSource === 'camera_capture',
         });
       }
-      // Resolve optimistic photo - refresh will handle adding the real photo
-      resolveOptimisticPhoto(tempId);
+      
+      // Convert to VirtualPhoto and add directly - no refresh needed!
+      const realPhoto: VirtualPhoto = {
+        id: uploadedPhoto.id,
+        thumbnailUrl: uploadedPhoto.thumbUrl,
+        mediumUrl: uploadedPhoto.mediumUrl,
+        originalUrl: uploadedPhoto.originalUrl || undefined,
+        bodyPart: uploadedPhoto.bodyPart as VBodyPart,
+        takenAt: uploadedPhoto.takenAt,
+        uploadedAt: uploadedPhoto.createdAt,
+        timestamp: uploadedPhoto.takenAt || uploadedPhoto.createdAt,
+        notes: uploadedPhoto.notes || undefined,
+      };
+      
+      // Resolve optimistic photo with real data - seamless transition
+      resolveOptimisticPhoto(tempId, realPhoto);
     } else {
       // Upload failed - remove the optimistic placeholder
       removeOptimisticPhoto(tempId);
