@@ -337,75 +337,78 @@ const SubscriptionCard = () => {
     }
   };
 
-  // Apple 3.1.2 compliant subscription card
+  // Subscription card matching Settings layout
   return (
-    <div className="glass-card p-5 bg-gradient-to-br from-primary/5 to-accent/5">
-      <div className="text-center">
-        {/* Value proposition headline */}
-        <h2 className="text-lg font-bold text-foreground mb-3">
-          Subscribe to get full access to Photo Diary, advanced Insight analysis and AI Coach
-        </h2>
-        
-        <p className="text-sm text-muted-foreground mb-5">
-          {priceString} per month · Auto-renews monthly
-          <br />
-          Try it free for 14 days — cancel anytime.
-        </p>
-        
-        <Button 
-          size="lg" 
-          variant="gold"
-          className="w-full gap-2"
-          onClick={handleButtonClick}
-          disabled={isButtonLoading}
-        >
-          {isButtonLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Processing…
-            </>
-          ) : (
-            <>
-              <Crown className="w-4 h-4" />
-              Continue – {priceString}/month
-            </>
-          )}
-        </Button>
-
-        {/* Status message */}
-        {statusMessage && (
-          <p className="text-xs text-muted-foreground mt-2">{statusMessage}</p>
-        )}
-
-        {/* Native mobile: Restore purchases - only if logged in */}
-        {isNativeMobile && isUserLoggedIn && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-3 gap-2 text-muted-foreground"
-            onClick={handleRestore}
-            disabled={isRestoring}
+    <div className="glass-card p-4 bg-gradient-to-br from-primary/5 to-accent/5">
+      <div className="flex items-start gap-3">
+        <div className="p-2 rounded-full bg-primary/10">
+          <Crown className="w-5 h-5 text-primary" />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-foreground">Upgrade to Premium</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Unlock Photo Diary, full Insights, Community, Journal, and AI Coach.
+          </p>
+          
+          <p className="text-xs text-muted-foreground mt-3">
+            14-day free trial. Then {priceString}/month. Cancel anytime.
+          </p>
+          
+          <Button 
+            size="sm" 
+            variant="gold"
+            className="mt-2 gap-2"
+            onClick={handleButtonClick}
+            disabled={isButtonLoading}
           >
-            {isRestoring ? (
+            {isButtonLoading ? (
               <>
-                <Loader2 className="w-3 h-3 animate-spin" />
-                Restoring…
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Processing…
               </>
             ) : (
               <>
-                <RotateCcw className="w-3 h-3" />
-                Restore purchases
+                <Crown className="w-4 h-4" />
+                Unlock – {priceString}/month
               </>
             )}
           </Button>
-        )}
 
-        {/* Android debug info */}
-        {isNativeAndroid && (
-          <p className="text-[10px] text-muted-foreground/60 mt-3 font-mono break-all">
-            android={String(isNativeAndroid)} | loggedIn={String(isUserLoggedIn)} | offerings={offeringsStatus} | err={offeringsError ?? 'none'}
-          </p>
-        )}
+          {/* Status message */}
+          {statusMessage && (
+            <p className="text-xs text-muted-foreground mt-2">{statusMessage}</p>
+          )}
+
+          {/* Native mobile: Restore purchases - only if logged in */}
+          {isNativeMobile && isUserLoggedIn && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2 gap-2 text-muted-foreground"
+              onClick={handleRestore}
+              disabled={isRestoring}
+            >
+              {isRestoring ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Restoring…
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="w-3 h-3" />
+                  Restore purchases
+                </>
+              )}
+            </Button>
+          )}
+
+          {/* Android debug info */}
+          {isNativeAndroid && (
+            <p className="text-[10px] text-muted-foreground/60 mt-3 font-mono break-all">
+              android={String(isNativeAndroid)} | loggedIn={String(isUserLoggedIn)} | offerings={offeringsStatus} | err={offeringsError ?? 'none'}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
