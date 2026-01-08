@@ -1,5 +1,4 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
-import { Capacitor } from '@capacitor/core';
 import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown, X, ImagePlus, CalendarIcon, ArrowUpDown, ArrowDown, ArrowUp, Loader2, RotateCcw, RefreshCw } from 'lucide-react';
 import { useUserData, BodyPart, Photo } from '@/contexts/UserDataContext';
 import { useVirtualizedPhotos, VirtualPhoto, SortOrder } from '@/hooks/useVirtualizedPhotos';
@@ -17,7 +16,7 @@ import { format, isToday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { parseLocalDateTime } from '@/utils/localDateTime';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
+import { usePaymentRouter } from '@/hooks/usePaymentRouter';
 import { useBatchUpload } from '@/hooks/useBatchUpload';
 import { useSingleUpload } from '@/hooks/useSingleUpload';
 import { extractExifDateWithSource } from '@/utils/exifExtractor';
@@ -112,25 +111,23 @@ const PhotoDiaryPage = () => {
   const { addPhoto, deletePhoto, photos: contextPhotos, isLoading: contextLoading, refreshPhotos } = useUserData();
   const { isPremium: isPremiumFromBackend, isAdmin, isLoading: isBackendLoading, refreshSubscription } = useSubscription();
   const {
-    isLoading: isRevenueCatLoading,
-    purchaseMonthly,
+    platform,
+    isNative,
+    isPurchasing,
+    isRestoring,
+    statusMessage,
+    isOfferingsReady,
+    priceString,
+    startPurchase,
     restorePurchases,
-    offeringsStatus,
-    offeringsError,
-    getPriceString,
-    retryInitialization,
-  } = useRevenueCatContext();
-  
-  // Platform detection
-  const isNativeIOS = useMemo(
-    () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios',
-    []
-  );
+    retryOfferings,
+    isUserLoggedIn,
+    isRevenueCatLoading,
+  } = usePaymentRouter();
 
   // Premium is enforced by backend for ALL platforms.
   const isPremium = isAdmin || isPremiumFromBackend;
   const isSubscriptionLoading = isBackendLoading;
-  const isOfferingsReady = isNativeIOS ? offeringsStatus === 'ready' : true;
 
   const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | 'all'>('all');
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
@@ -142,8 +139,6 @@ const PhotoDiaryPage = () => {
   const [showSparkles, setShowSparkles] = useState(false);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [showComparePaywall, setShowComparePaywall] = useState(false);
-  const [isUpgrading, setIsUpgrading] = useState(false);
-  const [isRestoring, setIsRestoring] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState<VirtualPhoto | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   
@@ -256,82 +251,24 @@ const PhotoDiaryPage = () => {
   const uploadProgress = Math.min(Math.max(photosUploadedToday / FREE_DAILY_PHOTO_LIMIT, 0), 1);
   const isLimitReached = !isPremium && uploadProgress >= 1;
 
-  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
-
   const handleUpgrade = async () => {
-    if (isUpgrading) return;
-    setIsUpgrading(true);
-    
-    // iOS NATIVE PATH - STRIPE IS COMPLETELY BLOCKED
-    if (isNativeIOS) {
-      if (!isOfferingsReady) {
-        const msg = offeringsError || 'Loading subscription options…';
-        toast.error(msg);
-        setIsUpgrading(false);
-        return;
-      }
-
-      try {
-        const result = await purchaseMonthly();
-        if (result.success) {
-          toast.success('Purchase successful!');
-          setShowUpgradePrompt(false);
-          setShowComparePaywall(false);
-          await refreshSubscription();
-        } else if (result.error) {
-          toast.error(result.error);
-        }
-      } catch (err: any) {
-        toast.error(err.message || 'Purchase failed');
-      }
-      setIsUpgrading(false);
-      return;
-    }
-
-    // WEB PATH - Use Stripe
-    try {
-      console.log('[Upgrade] Starting checkout...');
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.user?.email) {
-        toast.error('Please sign in to subscribe');
-        setIsUpgrading(false);
-        return;
-      }
-
-      const paymentUrl = `${STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(session.user.email)}`;
-      console.log('[Upgrade] Redirecting to Payment Link...');
-      window.location.assign(paymentUrl);
-    } catch (err) {
-      console.error('[Upgrade] Checkout error:', err);
-      toast.error('Failed to start checkout');
-      setIsUpgrading(false);
+    const result = await startPurchase();
+    if (result.success) {
+      setShowUpgradePrompt(false);
+      setShowComparePaywall(false);
     }
   };
 
   const handleRestore = async () => {
-    if (isRestoring || !isNativeIOS) return;
-    setIsRestoring(true);
-    
-    try {
-      await restorePurchases();
-      const updated = await refreshSubscription();
-      if (updated.isPremium) {
-        toast.success('Purchases restored! Premium activated.');
-        setShowUpgradePrompt(false);
-        setShowComparePaywall(false);
-      } else {
-        toast.error('This subscription is linked to another account.');
-      }
-    } catch (err: any) {
-      toast.error('Failed to restore purchases');
+    const result = await restorePurchases();
+    if (result.success && result.isPremiumNow) {
+      setShowUpgradePrompt(false);
+      setShowComparePaywall(false);
     }
-    
-    setIsRestoring(false);
   };
 
   const handleRetryOfferings = async () => {
-    await retryInitialization();
+    await retryOfferings();
   };
 
   const handleAddPhotoClick = () => {
@@ -837,15 +774,15 @@ const PhotoDiaryPage = () => {
           {/* Upgrade Button */}
           <Button 
             onClick={handleUpgrade} 
-            disabled={isUpgrading} 
+            disabled={isPurchasing} 
             variant="gold" 
             className="w-full gap-2"
           >
             <Crown className="w-4 h-4" />
-            {isUpgrading ? 'Loading...' : `Unlock · ${isNativeIOS ? getPriceString() : '£5.99'}/month`}
+            {isPurchasing ? 'Loading...' : `Unlock · ${priceString}/month`}
           </Button>
           <p className="text-xs text-center text-muted-foreground">
-            14 day free trial · {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
+            14 day free trial · {priceString}/month after · Cancel anytime
           </p>
         </div>
       )}
@@ -869,16 +806,16 @@ const PhotoDiaryPage = () => {
             <div className="space-y-2">
               <Button 
                 onClick={handleUpgrade} 
-                disabled={isUpgrading || (isNativeIOS && !isOfferingsReady)} 
+                disabled={isPurchasing || (isNative && !isOfferingsReady)} 
                 variant="gold" 
                 className="w-full gap-2"
               >
-                {isUpgrading ? (
+                {isPurchasing ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Processing…
                   </>
-                ) : isNativeIOS && !isOfferingsReady ? (
+                ) : isNative && !isOfferingsReady ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading…
@@ -886,16 +823,16 @@ const PhotoDiaryPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Unlock · {isNativeIOS ? getPriceString() : '£5.99'}/month
+                    Unlock · {priceString}/month
                   </>
                 )}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                14 day free trial · {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
+                14 day free trial · {priceString}/month after · Cancel anytime
               </p>
 
-              {/* iOS: Retry button if offerings failed */}
-              {isNativeIOS && offeringsStatus === 'error' && (
+              {/* Native: Retry button if offerings failed */}
+              {isNative && !isOfferingsReady && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -907,8 +844,8 @@ const PhotoDiaryPage = () => {
                 </Button>
               )}
 
-              {/* iOS: Restore purchases */}
-              {isNativeIOS && (
+              {/* Native: Restore purchases */}
+              {isNative && (
                 <Button
                   variant="ghost"
                   size="sm"

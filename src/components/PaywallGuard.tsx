@@ -1,10 +1,8 @@
-import { ReactNode, useMemo, useState, useEffect } from 'react';
-import { Capacitor } from '@capacitor/core';
+import { ReactNode, useState, useEffect } from 'react';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
+import { usePaymentRouter } from '@/hooks/usePaymentRouter';
 import { Lock, Sparkles, Crown, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,190 +12,62 @@ interface PaywallGuardProps {
   showBlurred?: boolean;
 }
 
-// STRIPE IS COMPLETELY DISABLED ON iOS - This link is ONLY for web
-const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
-
 const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false }: PaywallGuardProps) => {
   const navigate = useNavigate();
-  const { isPremium: isPremiumFromBackend, isAdmin, isLoading: isBackendLoading, refreshSubscription } = useSubscription();
+  const { isPremium: isPremiumFromBackend, isAdmin, isLoading: isBackendLoading } = useSubscription();
   const {
-    isLoading: isRevenueCatLoading,
-    isInitialized,
-    purchaseMonthly,
+    platform,
+    isNative,
+    isPurchasing,
+    isRestoring,
+    statusMessage,
+    isOfferingsReady,
+    priceString,
+    startPurchase,
     restorePurchases,
-    refreshCustomerInfo,
-    getPriceString,
-    offeringsStatus,
-    offeringsError,
+    retryOfferings,
     isUserLoggedIn,
-    boundUserId,
-    retryInitialization,
-  } = useRevenueCatContext();
+    isRevenueCatLoading,
+  } = usePaymentRouter();
   
-  const [isUpgrading, setIsUpgrading] = useState(false);
-  const [isRestoring, setIsRestoring] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [upgradeAttempted, setUpgradeAttempted] = useState(false);
 
-  // CRITICAL: Check platform at runtime
-  const isNativeIOS = useMemo(
-    () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios',
-    []
-  );
-  
   // Premium is enforced by backend for ALL platforms.
-  // RevenueCat is used for purchasing/restoring only; the backend decides access.
   const isPremium = isAdmin || isPremiumFromBackend;
   const isLoading = isBackendLoading;
-  
-  // CRITICAL: On iOS, offerings are only ready if user is logged in AND offerings loaded
-  const isOfferingsReady = isNativeIOS ? (isUserLoggedIn && offeringsStatus === 'ready') : true;
 
   // Auto-hide paywall when premium becomes active
   useEffect(() => {
-    if (isPremium && isUpgrading) {
+    if (isPremium && upgradeAttempted) {
       console.log('[PaywallGuard] Premium detected, closing paywall');
-      setIsUpgrading(false);
-      setStatusMessage(null);
+      setUpgradeAttempted(false);
     }
-  }, [isPremium, isUpgrading]);
+  }, [isPremium, upgradeAttempted]);
 
   const handleUpgrade = async () => {
-    if (isUpgrading) return;
+    console.log(`[PaywallGuard] handleUpgrade on platform: ${platform}`);
+    setUpgradeAttempted(true);
 
-    console.log('[PaywallGuard] handleUpgrade called');
-    setStatusMessage(null);
-
-    // iOS NATIVE PATH - STRIPE IS COMPLETELY BLOCKED
-    if (isNativeIOS) {
-      // CRITICAL: Must be logged in to purchase
-      if (!isUserLoggedIn) {
-        toast.error('Please sign in to subscribe');
-        navigate('/auth');
-        return;
-      }
-
-      // If offerings aren't ready, show error + retry button (NEVER fall back to Stripe)
-      if (!isOfferingsReady) {
-        const msg = offeringsError || 'Loading subscription options…';
-        setStatusMessage(msg);
-        toast.error(msg);
-        return;
-      }
-
-      setIsUpgrading(true);
-      setStatusMessage('Opening App Store…');
-
-      try {
-        const result = await purchaseMonthly();
-        console.log('[PaywallGuard] Purchase result:', result);
-
-        if (result.success) {
-          setStatusMessage('Purchase successful! Activating…');
-          toast.success('Purchase successful!');
-          
-          // Premium should already be set from purchaseMonthly
-          // But also refresh backend to sync
-          if (result.isPremiumNow) {
-            console.log('[PaywallGuard] Premium active immediately!');
-          }
-          
-          // Also refresh backend subscription status
-          await refreshSubscription();
-          setStatusMessage(null);
-        } else if (result.error) {
-          console.error('[PaywallGuard] Purchase error:', result.error);
-          setStatusMessage(`Error: ${result.error}`);
-          toast.error(result.error);
-        } else {
-          // User cancelled
-          setStatusMessage('Purchase cancelled');
-          console.log('[PaywallGuard] User cancelled purchase');
-        }
-      } catch (err: any) {
-        console.error('[PaywallGuard] Purchase exception:', err);
-        setStatusMessage(`Error: ${err.message || 'Unknown error'}`);
-        toast.error(err.message || 'Purchase failed');
-      }
-
-      setIsUpgrading(false);
+    // On native, check if user is logged in first
+    if (isNative && !isUserLoggedIn) {
+      toast.error('Please sign in to subscribe');
+      navigate('/auth');
       return;
     }
 
-    // WEB PATH - Use Stripe
-    setIsUpgrading(true);
-    console.log('[PaywallGuard] Web - using Stripe');
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.user?.email) {
-        toast.error('Please sign in to subscribe');
-        navigate('/auth');
-        setIsUpgrading(false);
-        return;
-      }
-
-      const paymentUrl = `${STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(session.user.email)}`;
-      window.location.assign(paymentUrl);
-      // Note: isUpgrading stays true as we're navigating away
-    } catch (err) {
-      console.error('[PaywallGuard] Stripe error:', err);
-      toast.error('Failed to start checkout');
-      setIsUpgrading(false);
+    // On native, retry offerings if not ready
+    if (isNative && !isOfferingsReady) {
+      await retryOfferings();
+      return;
     }
+
+    // Use unified purchase flow
+    await startPurchase();
   };
 
   const handleRestore = async () => {
-    if (isRestoring || !isNativeIOS) return;
-    
-    // CRITICAL: Must be logged in to restore
-    if (!isUserLoggedIn) {
-      toast.error('Please sign in to restore purchases');
-      navigate('/auth');
-      return;
-    }
-    
-    setIsRestoring(true);
-    setStatusMessage('Restoring purchases…');
-    console.log('[PaywallGuard] Starting restore...');
-    
-    try {
-      const result = await restorePurchases();
-      console.log('[PaywallGuard] Restore result:', result);
-
-      if (result.isLinkedToOtherAccount) {
-        setStatusMessage('Subscription linked to another account');
-        toast.error('This subscription is already linked to another account.');
-        return;
-      }
-
-      // Always trust backend as the source of truth
-      const updated = await refreshSubscription();
-      if (updated.isPremium) {
-        setStatusMessage('Purchases restored!');
-        toast.success('Purchases restored! Premium activated.');
-      } else {
-        setStatusMessage('Subscription not available for this account');
-        toast.error('This subscription is linked to another account.');
-      }
-    } catch (err: any) {
-      console.error('[PaywallGuard] Restore error:', err);
-      setStatusMessage(`Restore failed: ${err.message || 'Unknown error'}`);
-      toast.error('Failed to restore purchases');
-    }
-    
-    setIsRestoring(false);
-  };
-
-  const handleRetryOfferings = async () => {
-    if (!isUserLoggedIn) {
-      toast.error('Please sign in first');
-      navigate('/auth');
-      return;
-    }
-    setStatusMessage('Retrying…');
-    await retryInitialization();
-    setStatusMessage(null);
+    if (!isNative) return;
+    await restorePurchases();
   };
 
   // Loading state
@@ -214,10 +84,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
     return <>{children}</>;
   }
 
-  // Get price string
-  const priceString = isNativeIOS ? getPriceString() : '£5.99';
-  const isButtonLoading = isUpgrading || isRevenueCatLoading;
-
+  const isButtonLoading = isPurchasing || isRevenueCatLoading;
 
   // Blurred content overlay
   if (showBlurred) {
@@ -237,19 +104,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
             </p>
             
             <Button
-              onClick={async () => {
-                // Keep original button label; choose behavior based on iOS state
-                if (isNativeIOS && !isUserLoggedIn) {
-                  toast.error('Please sign in to subscribe');
-                  navigate('/auth');
-                  return;
-                }
-                if (isNativeIOS && !isOfferingsReady) {
-                  await handleRetryOfferings();
-                  return;
-                }
-                await handleUpgrade();
-              }}
+              onClick={handleUpgrade}
               disabled={isButtonLoading}
               variant="gold"
               className="gap-2"
@@ -271,14 +126,13 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
               14 day free trial · {priceString}/month after · Cancel anytime
             </p>
 
-
             {/* Status message */}
             {statusMessage && (
               <p className="text-xs text-muted-foreground mt-2">{statusMessage}</p>
             )}
 
-            {/* iOS: Restore purchases - only if logged in */}
-            {isNativeIOS && isUserLoggedIn && (
+            {/* Native: Restore purchases - only if logged in */}
+            {isNative && isUserLoggedIn && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -319,50 +173,38 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
         Get full access to all features including Photo Diary, full Insights, Community, Journal, and AI Coach.
       </p>
       
-        <div className="space-y-3 w-full max-w-xs">
-          <Button
-            onClick={async () => {
-              // Keep original button label; choose behavior based on iOS state
-              if (isNativeIOS && !isUserLoggedIn) {
-                toast.error('Please sign in to subscribe');
-                navigate('/auth');
-                return;
-              }
-              if (isNativeIOS && !isOfferingsReady) {
-                await handleRetryOfferings();
-                return;
-              }
-              await handleUpgrade();
-            }}
-            disabled={isButtonLoading}
-            variant="gold"
-            className="w-full gap-2"
-            size="lg"
-          >
-            {isButtonLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Processing…
-              </>
-            ) : (
-              <>
-                <Crown className="w-4 h-4" />
-                Unlock · {priceString}/month
-              </>
-            )}
-          </Button>
-          
-          <p className="text-xs text-muted-foreground">
-            14 day free trial · {priceString}/month after · Cancel anytime
-          </p>
+      <div className="space-y-3 w-full max-w-xs">
+        <Button
+          onClick={handleUpgrade}
+          disabled={isButtonLoading}
+          variant="gold"
+          className="w-full gap-2"
+          size="lg"
+        >
+          {isButtonLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Processing…
+            </>
+          ) : (
+            <>
+              <Crown className="w-4 h-4" />
+              Unlock · {priceString}/month
+            </>
+          )}
+        </Button>
+        
+        <p className="text-xs text-muted-foreground">
+          14 day free trial · {priceString}/month after · Cancel anytime
+        </p>
 
         {/* Status message */}
         {statusMessage && (
           <p className="text-sm text-muted-foreground">{statusMessage}</p>
         )}
 
-        {/* iOS: Restore purchases - only if logged in */}
-        {isNativeIOS && isUserLoggedIn && (
+        {/* Native: Restore purchases - only if logged in */}
+        {isNative && isUserLoggedIn && (
           <Button
             variant="ghost"
             size="sm"
@@ -383,7 +225,6 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
             )}
           </Button>
         )}
-
       </div>
     </div>
   );

@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Capacitor } from '@capacitor/core';
 import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles, Eye, Pencil, Crown, Loader2, Flame, Activity, CalendarDays, Moon, Wand2, Trash2, RotateCcw, RefreshCw } from 'lucide-react';
 import { useUserData, BodyPart, CheckIn } from '@/contexts/UserDataContext';
 import { useDemoMode } from '@/contexts/DemoModeContext';
@@ -11,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
+import { usePaymentRouter } from '@/hooks/usePaymentRouter';
 import { PlantIllustration, SparkleIllustration, SunIllustration } from '@/components/illustrations';
 import DemoEditModal from '@/components/DemoEditModal';
 import SymptomsInsights from '@/components/SymptomsInsights';
@@ -21,7 +20,6 @@ import PainTrendsInsights from '@/components/PainTrendsInsights';
 import WhatHelpedInsights from '@/components/WhatHelpedInsights';
 import { FlareStatusBadge } from '@/components/FlareStatusBadge';
 import { severityColors, severityLabels } from '@/constants/severityColors';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useFlareState } from '@/hooks/useFlareState';
 
@@ -58,100 +56,39 @@ const InsightsPage = () => {
   const { isDemoMode, isAdmin, getEffectiveCheckIns, demoCheckIns, generateSampleData, clearDemoData } = useDemoMode();
   const { isPremium: isPremiumFromBackend, isLoading: isBackendLoading, refreshSubscription } = useSubscription();
   const {
-    isLoading: isRevenueCatLoading,
-    purchaseMonthly,
+    platform,
+    isNative,
+    isPurchasing,
+    isRestoring,
+    statusMessage,
+    isOfferingsReady,
+    priceString,
+    startPurchase,
     restorePurchases,
-    offeringsStatus,
-    offeringsError,
-    getPriceString,
-    retryInitialization,
-  } = useRevenueCatContext();
+    retryOfferings,
+    isUserLoggedIn,
+    isRevenueCatLoading,
+  } = usePaymentRouter();
   const { baselineConfidence, dailyFlareStates } = useFlareState();
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [demoEditDate, setDemoEditDate] = useState<Date | null>(null);
-  const [isUpgrading, setIsUpgrading] = useState(false);
-  const [isRestoring, setIsRestoring] = useState(false);
-
-  // Platform detection
-  const isNativeIOS = useMemo(
-    () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios',
-    []
-  );
 
   // Premium is enforced by backend for ALL platforms.
   const isPremium = isAdmin || isPremiumFromBackend;
   const isSubscriptionLoading = isBackendLoading;
-  const isOfferingsReady = isNativeIOS ? offeringsStatus === 'ready' : true;
 
   const handleUpgrade = async () => {
-    if (isUpgrading) return;
-    setIsUpgrading(true);
-
-    // iOS NATIVE PATH - STRIPE IS COMPLETELY BLOCKED
-    if (isNativeIOS) {
-      if (!isOfferingsReady) {
-        const msg = offeringsError || 'Loading subscription options…';
-        toast.error(msg);
-        setIsUpgrading(false);
-        return;
-      }
-
-      try {
-        const result = await purchaseMonthly();
-        if (result.success) {
-          toast.success('Purchase successful!');
-          await refreshSubscription();
-        } else if (result.error) {
-          toast.error(result.error);
-        }
-      } catch (err: any) {
-        toast.error(err.message || 'Purchase failed');
-      }
-      setIsUpgrading(false);
-      return;
-    }
-
-    // WEB PATH - Use Stripe
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.user?.email) {
-        toast.error('Please sign in to subscribe');
-        setIsUpgrading(false);
-        return;
-      }
-
-      const paymentUrl = `${STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(session.user.email)}`;
-      window.location.assign(paymentUrl);
-    } catch (err) {
-      toast.error('Failed to start checkout');
-      setIsUpgrading(false);
-    }
+    await startPurchase();
   };
 
   const handleRestore = async () => {
-    if (isRestoring || !isNativeIOS) return;
-    setIsRestoring(true);
-    
-    try {
-      await restorePurchases();
-      const updated = await refreshSubscription();
-      if (updated.isPremium) {
-        toast.success('Purchases restored! Premium activated.');
-      } else {
-        toast.error('This subscription is linked to another account.');
-      }
-    } catch (err: any) {
-      toast.error('Failed to restore purchases');
-    }
-    
-    setIsRestoring(false);
+    await restorePurchases();
   };
 
   const handleRetryOfferings = async () => {
-    await retryInitialization();
+    await retryOfferings();
   };
   
   // Use effective check-ins (real + demo overrides when in demo mode)

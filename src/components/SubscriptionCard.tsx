@@ -1,175 +1,60 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Crown, Loader2, RefreshCw, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
+import { usePaymentRouter } from '@/hooks/usePaymentRouter';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
-import { Capacitor } from '@capacitor/core';
 import { useNavigate } from 'react-router-dom';
-
-// STRIPE IS COMPLETELY DISABLED ON iOS - This link is ONLY for web
-const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
 
 const SubscriptionCard = () => {
   const navigate = useNavigate();
   const { isPremium: isPremiumFromBackend, isAdmin, isLoading: isBackendLoading, subscriptionEnd, refreshSubscription } = useSubscription();
   const {
-    isLoading: isRevenueCatLoading,
-    purchaseMonthly,
+    platform,
+    isNative,
+    isPurchasing,
+    isRestoring,
+    statusMessage,
+    isOfferingsReady,
+    priceString,
+    startPurchase,
     restorePurchases,
-    getPriceString,
-    offeringsStatus,
-    offeringsError,
+    retryOfferings,
     isUserLoggedIn,
-    boundUserId,
-    getDebugInfo,
-    retryInitialization,
-  } = useRevenueCatContext();
+    isRevenueCatLoading,
+  } = usePaymentRouter();
   
-  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
-  const [isRestoring, setIsRestoring] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  
-
-  // CRITICAL: Runtime platform check
-  const isNativeIOS = useMemo(
-    () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios',
-    []
-  );
 
   // Premium is enforced by backend for ALL platforms.
   const isPremium = isAdmin || isPremiumFromBackend;
   const isLoading = isBackendLoading;
-  
-  // CRITICAL: On iOS, offerings are only ready if user is logged in AND offerings loaded
-  const isOfferingsReady = isNativeIOS ? (isUserLoggedIn && offeringsStatus === 'ready') : true;
 
   const handleUpgrade = async () => {
-    if (isCheckoutLoading) return;
+    console.log(`[SubscriptionCard] handleUpgrade on platform: ${platform}`);
 
-    const debugInfo = getDebugInfo();
-    console.log('[SubscriptionCard] handleUpgrade:', debugInfo);
-
-    setStatusMessage(null);
-
-    // iOS NATIVE PATH - STRIPE IS COMPLETELY BLOCKED
-    if (isNativeIOS) {
-      // CRITICAL: Must be logged in to purchase
-      if (!isUserLoggedIn) {
-        toast.error('Please sign in to subscribe');
-        navigate('/auth');
-        return;
-      }
-
-      if (!isOfferingsReady) {
-        const msg = offeringsError || 'Loading subscription options…';
-        setStatusMessage(msg);
-        toast.error(msg);
-        return;
-      }
-
-      setIsCheckoutLoading(true);
-      setStatusMessage('Opening App Store…');
-
-      try {
-        const result = await purchaseMonthly();
-        console.log('[SubscriptionCard] Purchase result:', result);
-
-        if (result.success) {
-          setStatusMessage('Purchase successful!');
-          toast.success('Purchase successful!');
-          await refreshSubscription();
-        } else if (result.error) {
-          setStatusMessage(`Error: ${result.error}`);
-          toast.error(result.error);
-        } else {
-          setStatusMessage('Cancelled');
-        }
-      } catch (err: any) {
-        console.error('[SubscriptionCard] Purchase error:', err);
-        setStatusMessage(`Error: ${err.message}`);
-        toast.error(err.message || 'Purchase failed');
-      }
-
-      setIsCheckoutLoading(false);
+    // On native, check if user is logged in first
+    if (isNative && !isUserLoggedIn) {
+      toast.error('Please sign in to subscribe');
+      navigate('/auth');
       return;
     }
 
-    // WEB PATH - Stripe
-    setIsCheckoutLoading(true);
-    console.log('[SubscriptionCard] Web - using Stripe');
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.user?.email) {
-        toast.error('Please sign in to subscribe');
-        navigate('/auth');
-        setIsCheckoutLoading(false);
-        return;
-      }
-
-      const paymentUrl = `${STRIPE_PAYMENT_LINK}?prefilled_email=${encodeURIComponent(session.user.email)}`;
-      window.location.assign(paymentUrl);
-    } catch (err) {
-      console.error('[SubscriptionCard] Stripe error:', err);
-      toast.error('Checkout couldn\'t start. Please try again.');
-      setIsCheckoutLoading(false);
+    // On native, retry offerings if not ready
+    if (isNative && !isOfferingsReady) {
+      await retryOfferings();
+      return;
     }
+
+    // Use unified purchase flow
+    await startPurchase();
   };
 
   const handleRestore = async () => {
-    if (isRestoring || !isNativeIOS) return;
-    
-    // CRITICAL: Must be logged in to restore
-    if (!isUserLoggedIn) {
-      toast.error('Please sign in to restore purchases');
-      navigate('/auth');
-      return;
-    }
-    
-    setIsRestoring(true);
-    setStatusMessage('Restoring…');
-    
-    try {
-      const result = await restorePurchases();
-
-      if (result.isLinkedToOtherAccount) {
-        toast.error('This subscription is already linked to another account.');
-        setStatusMessage('Linked to another account');
-        return;
-      }
-
-      // Always trust backend as the source of truth
-      const updated = await refreshSubscription();
-      if (updated.isPremium) {
-        toast.success('Purchases restored!');
-        setStatusMessage(null);
-      } else {
-        toast.error('This subscription is linked to another account.');
-        setStatusMessage('Linked to another account');
-      }
-    } catch (err: any) {
-      console.error('[SubscriptionCard] Restore error:', err);
-      toast.error('Failed to restore purchases');
-      setStatusMessage(null);
-    }
-    
-    setIsRestoring(false);
-  };
-
-  const handleRetryOfferings = async () => {
-    if (!isUserLoggedIn) {
-      toast.error('Please sign in first');
-      navigate('/auth');
-      return;
-    }
-    setStatusMessage('Retrying…');
-    await retryInitialization();
-    setStatusMessage(null);
+    if (!isNative) return;
+    await restorePurchases();
   };
 
   const handleManageSubscription = async () => {
@@ -252,7 +137,7 @@ const SubscriptionCard = () => {
                   : 'You have full access to all features.'}
             </p>
             {/* Web users: Manage via Stripe portal */}
-            {!isAdmin && !isNativeIOS && (
+            {!isAdmin && !isNative && (
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -279,14 +164,12 @@ const SubscriptionCard = () => {
             <RefreshCw className="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
-
       </div>
     );
   }
 
   // Not premium - show upgrade UI
-  const priceString = isNativeIOS ? getPriceString() : '£5.99';
-  const isButtonLoading = isCheckoutLoading || isRevenueCatLoading;
+  const isButtonLoading = isPurchasing || isRevenueCatLoading;
 
   return (
     <div className="glass-card p-4 bg-gradient-to-br from-primary/5 to-accent/5">
@@ -304,19 +187,7 @@ const SubscriptionCard = () => {
             size="sm" 
             variant="gold"
             className="mt-3 gap-2"
-            onClick={async () => {
-              // Keep original button label; choose behavior based on iOS state
-              if (isNativeIOS && !isUserLoggedIn) {
-                toast.error('Please sign in to subscribe');
-                navigate('/auth');
-                return;
-              }
-              if (isNativeIOS && !isOfferingsReady) {
-                await handleRetryOfferings();
-                return;
-              }
-              await handleUpgrade();
-            }}
+            onClick={handleUpgrade}
             disabled={isButtonLoading}
           >
             {isButtonLoading ? (
@@ -341,8 +212,8 @@ const SubscriptionCard = () => {
             <p className="text-xs text-muted-foreground mt-2">{statusMessage}</p>
           )}
 
-          {/* iOS: Restore purchases - only if logged in */}
-          {isNativeIOS && isUserLoggedIn && (
+          {/* Native: Restore purchases - only if logged in */}
+          {isNative && isUserLoggedIn && (
             <Button
               variant="ghost"
               size="sm"
