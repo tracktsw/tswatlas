@@ -967,16 +967,16 @@ const PhotoDiaryPage = () => {
             <div className="space-y-2">
               <Button 
                 onClick={handleUpgrade} 
-                disabled={isUpgrading || (isNativeIOS && !isOfferingsReady)}
+                disabled={isPurchasing || (isNative && !isOfferingsReady)}
                 className="w-full gap-2"
                 variant="gold"
               >
-                {isUpgrading ? (
+                {isPurchasing ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Processing…
                   </>
-                ) : isNativeIOS && !isOfferingsReady ? (
+                ) : isNative && !isOfferingsReady ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Loading…
@@ -984,16 +984,16 @@ const PhotoDiaryPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Unlock · {isNativeIOS ? getPriceString() : '£5.99'}/month
+                    Unlock · {priceString}/month
                   </>
                 )}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                14 day free trial · {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
+                14 day free trial · {priceString}/month after · Cancel anytime
               </p>
 
-              {/* iOS: Retry button if offerings failed */}
-              {isNativeIOS && offeringsStatus === 'error' && (
+              {/* Native: Retry button if offerings failed */}
+              {isNative && !isOfferingsReady && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1005,8 +1005,8 @@ const PhotoDiaryPage = () => {
                 </Button>
               )}
 
-              {/* iOS: Restore purchases */}
-              {isNativeIOS && (
+              {/* Native: Restore purchases */}
+              {isNative && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1072,13 +1072,13 @@ const PhotoDiaryPage = () => {
               variant="gold" 
               className="w-full gap-2 h-12"
               onClick={handleUpgrade}
-              disabled={isUpgrading}
+              disabled={isPurchasing}
             >
               <Crown className="w-5 h-5" />
-              {isUpgrading ? 'Loading...' : `Unlock · ${isNativeIOS ? getPriceString() : '£5.99'}/month`}
+              {isPurchasing ? 'Loading...' : `Unlock · ${priceString}/month`}
             </Button>
             <p className="text-xs text-center text-muted-foreground">
-              14 day free trial · {isNativeIOS ? getPriceString() : '£5.99'}/month after · Cancel anytime
+              14 day free trial · {priceString}/month after · Cancel anytime
             </p>
           </div>
         )}
