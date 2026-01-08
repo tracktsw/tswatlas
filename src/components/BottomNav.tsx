@@ -34,8 +34,8 @@ const BottomNav = () => {
     }
     if (isIOS) {
       return {
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        height: 'calc(56px + env(safe-area-inset-bottom, 0px))',
+        paddingBottom: 'var(--safe-bottom)',
+        height: 'calc(56px + var(--safe-bottom))',
       };
     }
     // Web fallback
