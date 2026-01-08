@@ -341,16 +341,13 @@ const SubscriptionCard = () => {
   return (
     <div className="glass-card p-5 bg-gradient-to-br from-primary/5 to-accent/5">
       <div className="text-center">
-        {/* Price is the most prominent - no text above */}
-        <h2 className="text-2xl font-bold text-foreground mb-1">
-          {priceString} per month
+        {/* Value proposition headline */}
+        <h2 className="text-lg font-bold text-foreground mb-3">
+          Subscribe to get full access to Photo Diary, advanced Insight analysis and AI Coach
         </h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Auto-renews monthly
-        </p>
         
         <p className="text-sm text-muted-foreground mb-5">
-          Full access to everything.
+          {priceString} per month · Auto-renews monthly
           <br />
           Try it free for 14 days — cancel anytime.
         </p>

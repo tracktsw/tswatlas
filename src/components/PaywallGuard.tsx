@@ -275,16 +275,13 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
         </div>
         <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-sm rounded-xl">
           <div className="text-center p-6 max-w-sm">
-            {/* Price is the most prominent - Apple 3.1.2 compliance */}
-            <h2 className="text-2xl font-bold text-foreground mb-1">
-              {priceString} per month
+            {/* Value proposition headline */}
+            <h2 className="text-xl font-bold text-foreground mb-3">
+              Subscribe to get full access to Photo Diary, advanced Insight analysis and AI Coach
             </h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Auto-renews monthly
-            </p>
             
             <p className="text-sm text-muted-foreground mb-5">
-              Full access to everything.
+              {priceString} per month · Auto-renews monthly
               <br />
               Try it free for 14 days — cancel anytime.
             </p>
@@ -342,19 +339,16 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
     );
   }
 
-  // Full paywall screen - Apple 3.1.2 compliant
+  // Full paywall screen
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-      {/* Price is the most prominent element - no text above */}
-      <h1 className="text-3xl font-bold text-foreground mb-1">
-        {priceString} per month
+      {/* Value proposition headline */}
+      <h1 className="text-2xl font-bold text-foreground mb-3 max-w-xs">
+        Subscribe to get full access to Photo Diary, advanced Insight analysis and AI Coach
       </h1>
-      <p className="text-base text-muted-foreground mb-6">
-        Auto-renews monthly
-      </p>
       
       <p className="text-muted-foreground mb-8 max-w-xs">
-        Full access to everything.
+        {priceString} per month · Auto-renews monthly
         <br />
         Try it free for 14 days — cancel anytime.
       </p>
