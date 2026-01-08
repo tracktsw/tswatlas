@@ -211,11 +211,16 @@ const PhotoDiaryPage = () => {
     onError: (error) => {
       toast.error(error || 'Failed to save photo');
     },
+    onLimitReached: () => {
+      setShowUpgradePrompt(true);
+      toast.error('Daily photo limit reached');
+    },
   });
 
   // Batch upload hook
   const batchUpload = useBatchUpload({
     concurrency: 1, // Sequential for iOS safety
+    skipLimitCheck: isPremium, // Premium users bypass limit
     onComplete: (results) => {
       if (results.success > 0) {
         setShowSparkles(true);
@@ -225,9 +230,13 @@ const PhotoDiaryPage = () => {
         refreshPhotos();
         toast.success(`${results.success} photo${results.success !== 1 ? 's' : ''} uploaded`);
       }
-      if (results.failed > 0 && results.success === 0) {
+      if (results.failed > 0 && results.success === 0 && !results.limitReached) {
         toast.error(`${results.failed} upload${results.failed !== 1 ? 's' : ''} failed`);
       }
+    },
+    onLimitReached: () => {
+      setShowUpgradePrompt(true);
+      toast.error('Daily photo limit reached');
     },
   });
 
@@ -452,6 +461,7 @@ const PhotoDiaryPage = () => {
       bodyPart: bodyPartToUpload,
       notes: notesToUpload,
       takenAtOverride: takenAtToUpload,
+      skipLimitCheck: isPremium, // Premium users bypass limit
     });
 
     if (photoId) {

@@ -4,6 +4,9 @@ import { processImageForUpload, getPublicUrl } from '@/utils/imageCompression';
 import { BodyPart } from '@/contexts/UserDataContext';
 import { isHeicFile, prepareFileForUpload } from '@/utils/heicConverter';
 import { extractExifDate } from '@/utils/exifExtractor';
+import { startOfDay, endOfDay } from 'date-fns';
+
+const FREE_DAILY_PHOTO_LIMIT = 2;
 
 export interface UploadItem {
   id: string;
@@ -18,17 +21,44 @@ export interface UploadItem {
 interface UseBatchUploadOptions {
   concurrency?: number;
   onPhotoUploaded?: (photoId: string) => void;
-  onComplete?: (results: { success: number; failed: number }) => void;
+  onComplete?: (results: { success: number; failed: number; limitReached?: boolean }) => void;
+  /** Called when daily limit is reached */
+  onLimitReached?: () => void;
+  /** Skip the daily limit check (for premium users) */
+  skipLimitCheck?: boolean;
 }
 
 export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
-  const { concurrency = 2, onPhotoUploaded, onComplete } = options;
+  const { concurrency = 2, onPhotoUploaded, onComplete, onLimitReached, skipLimitCheck } = options;
   
   const [items, setItems] = useState<UploadItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [bodyPart, setBodyPart] = useState<BodyPart>('face');
   const cancelledRef = useRef(false);
   const activeUploadsRef = useRef(0);
+  // Track successful uploads in current batch for limit checking
+  const batchSuccessCountRef = useRef(0);
+
+  // Server-side check for daily upload limit
+  const checkDailyLimit = useCallback(async (userId: string): Promise<number> => {
+    const today = new Date();
+    const dayStart = startOfDay(today).toISOString();
+    const dayEnd = endOfDay(today).toISOString();
+
+    const { count, error } = await supabase
+      .from('user_photos')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', dayStart)
+      .lte('created_at', dayEnd);
+
+    if (error) {
+      console.error('[BatchUpload] Error checking daily limit:', error);
+      return 0; // Assume 0 on error (fail open)
+    }
+
+    return count || 0;
+  }, []);
 
   const updateItem = useCallback((id: string, updates: Partial<UploadItem>) => {
     setItems(prev => prev.map(item => 
@@ -188,9 +218,11 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
   };
 
   // Sequential processing for iOS safety - no Promise.all race conditions
-  const processQueue = async (queue: UploadItem[], userId: string) => {
+  // Also checks limit before each upload for free users
+  const processQueue = async (queue: UploadItem[], userId: string, initialPhotosToday: number) => {
     let successCount = 0;
     let failedCount = 0;
+    let limitReached = false;
 
     for (const item of queue) {
       if (cancelledRef.current) break;
@@ -200,17 +232,33 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
         continue;
       }
 
+      // Check limit before each upload (for free users)
+      if (!skipLimitCheck) {
+        const currentPhotosToday = initialPhotosToday + batchSuccessCountRef.current;
+        if (currentPhotosToday >= FREE_DAILY_PHOTO_LIMIT) {
+          if (import.meta.env.DEV) {
+            console.log('[BatchUpload] Daily limit reached, stopping uploads');
+          }
+          limitReached = true;
+          // Mark remaining items as errors with limit message
+          updateItem(item.id, { status: 'error', progress: 0, error: 'Daily limit reached' });
+          failedCount++;
+          continue;
+        }
+      }
+
       // Process one at a time - iOS is more reliable this way
       const success = await uploadSinglePhoto(item, userId);
 
       if (success) {
         successCount++;
+        batchSuccessCountRef.current++;
       } else {
         failedCount++;
       }
     }
 
-    return { success: successCount, failed: failedCount };
+    return { success: successCount, failed: failedCount, limitReached };
   };
 
   const startUpload = useCallback(async (files: File[]) => {
@@ -238,7 +286,22 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
     }
 
     cancelledRef.current = false;
+    batchSuccessCountRef.current = 0;
     setIsUploading(true);
+
+    // Check current daily count before starting (for free users)
+    let initialPhotosToday = 0;
+    if (!skipLimitCheck) {
+      initialPhotosToday = await checkDailyLimit(user.id);
+      if (initialPhotosToday >= FREE_DAILY_PHOTO_LIMIT) {
+        if (import.meta.env.DEV) {
+          console.log('[BatchUpload] Daily limit already reached');
+        }
+        setIsUploading(false);
+        onLimitReached?.();
+        return { success: 0, failed: files.length, limitReached: true };
+      }
+    }
 
     // Create upload items with HEIC detection
     const newItems: UploadItem[] = files.map((file, index) => ({
@@ -258,17 +321,21 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
     setItems(newItems);
 
     // Process queue
-    const results = await processQueue(newItems, user.id);
+    const results = await processQueue(newItems, user.id, initialPhotosToday);
     
     if (import.meta.env.DEV) {
-      console.log('[BatchUpload] Upload complete. Success:', results.success, 'Failed:', results.failed);
+      console.log('[BatchUpload] Upload complete. Success:', results.success, 'Failed:', results.failed, 'LimitReached:', results.limitReached);
+    }
+    
+    if (results.limitReached) {
+      onLimitReached?.();
     }
     
     setIsUploading(false);
     onComplete?.(results);
 
     return results;
-  }, [bodyPart, concurrency, onComplete, onPhotoUploaded]);
+  }, [bodyPart, concurrency, onComplete, onPhotoUploaded, skipLimitCheck, checkDailyLimit, onLimitReached]);
 
   const retryFailed = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -278,19 +345,36 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
     if (failedItems.length === 0) return;
 
     cancelledRef.current = false;
+    batchSuccessCountRef.current = 0;
     setIsUploading(true);
+
+    // Check current daily count before retrying (for free users)
+    let initialPhotosToday = 0;
+    if (!skipLimitCheck) {
+      initialPhotosToday = await checkDailyLimit(user.id);
+      if (initialPhotosToday >= FREE_DAILY_PHOTO_LIMIT) {
+        setIsUploading(false);
+        onLimitReached?.();
+        return { success: 0, failed: failedItems.length, limitReached: true };
+      }
+    }
 
     // Reset failed items to pending
     failedItems.forEach(item => {
       updateItem(item.id, { status: 'pending', progress: 0, error: undefined });
     });
 
-    const results = await processQueue(failedItems, user.id);
+    const results = await processQueue(failedItems, user.id, initialPhotosToday);
+    
+    if (results.limitReached) {
+      onLimitReached?.();
+    }
+    
     setIsUploading(false);
     onComplete?.(results);
 
     return results;
-  }, [items, onComplete, onPhotoUploaded, updateItem]);
+  }, [items, onComplete, onPhotoUploaded, updateItem, skipLimitCheck, checkDailyLimit, onLimitReached]);
 
   const cancel = useCallback(() => {
     cancelledRef.current = true;

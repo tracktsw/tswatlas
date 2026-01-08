@@ -4,17 +4,24 @@ import { processImageForUpload, getPublicUrl } from '@/utils/imageCompression';
 import { BodyPart } from '@/contexts/UserDataContext';
 import { prepareFileForUpload } from '@/utils/heicConverter';
 import { extractExifDate } from '@/utils/exifExtractor';
+import { startOfDay, endOfDay } from 'date-fns';
+
+const FREE_DAILY_PHOTO_LIMIT = 2;
 
 interface UploadOptions {
   bodyPart: BodyPart;
   notes?: string;
   /** Override EXIF date with user-provided date */
   takenAtOverride?: string | null;
+  /** Skip the daily limit check (for premium users) */
+  skipLimitCheck?: boolean;
 }
 
 interface UseSingleUploadOptions {
   onSuccess?: (photoId: string) => void;
   onError?: (error: string) => void;
+  /** Called when daily limit is reached */
+  onLimitReached?: () => void;
 }
 
 /**
@@ -22,15 +29,41 @@ interface UseSingleUploadOptions {
  * Handles HEIC conversion, thumbnail/medium/original generation, and database insert.
  */
 export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
-  const { onSuccess, onError } = options;
+  const { onSuccess, onError, onLimitReached } = options;
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  // Server-side check for daily upload limit
+  const checkDailyLimit = useCallback(async (userId: string): Promise<boolean> => {
+    const today = new Date();
+    const dayStart = startOfDay(today).toISOString();
+    const dayEnd = endOfDay(today).toISOString();
+
+    const { count, error } = await supabase
+      .from('user_photos')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', dayStart)
+      .lte('created_at', dayEnd);
+
+    if (error) {
+      console.error('[SingleUpload] Error checking daily limit:', error);
+      return true; // Allow upload on error (fail open)
+    }
+
+    const photosToday = count || 0;
+    if (import.meta.env.DEV) {
+      console.log('[SingleUpload] Daily limit check:', photosToday, '/', FREE_DAILY_PHOTO_LIMIT);
+    }
+
+    return photosToday < FREE_DAILY_PHOTO_LIMIT;
+  }, []);
 
   const processAndUploadFile = useCallback(async (
     file: File,
     uploadOptions: UploadOptions
   ): Promise<string | null> => {
-    const { bodyPart, notes, takenAtOverride } = uploadOptions;
+    const { bodyPart, notes, takenAtOverride, skipLimitCheck } = uploadOptions;
 
     if (import.meta.env.DEV) {
       console.log('[SingleUpload] Starting upload:', file.name, 'type:', file.type, 'size:', file.size);
@@ -46,6 +79,17 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('Not authenticated');
+      }
+
+      // Server-side limit check (unless skipped for premium users)
+      if (!skipLimitCheck) {
+        const canUpload = await checkDailyLimit(user.id);
+        if (!canUpload) {
+          setIsUploading(false);
+          setProgress(0);
+          onLimitReached?.();
+          return null;
+        }
       }
 
       // Extract EXIF date from ORIGINAL file BEFORE any conversion
@@ -191,7 +235,7 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
       onError?.(message);
       return null;
     }
-  }, [onSuccess, onError]);
+  }, [onSuccess, onError, onLimitReached, checkDailyLimit]);
 
   const reset = useCallback(() => {
     setIsUploading(false);
