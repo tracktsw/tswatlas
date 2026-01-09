@@ -1,9 +1,7 @@
-import { useState } from 'react';
 import { Crown, Loader2, RefreshCw, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
 import { usePaymentRouter } from '@/hooks/usePaymentRouter';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -26,8 +24,6 @@ const SubscriptionCard = () => {
     isRevenueCatLoading,
   } = usePaymentRouter();
   
-  const [isPortalLoading, setIsPortalLoading] = useState(false);
-
   // Premium is enforced by backend for ALL platforms.
   const isPremium = isAdmin || isPremiumFromBackend;
   const isLoading = isBackendLoading;
@@ -57,61 +53,20 @@ const SubscriptionCard = () => {
     await restorePurchases();
   };
 
-  /**
-   * Manage subscription via Stripe Customer Portal
-   * CRITICAL: This is ONLY available on web platform
-   * Native platforms manage subscriptions through App Store / Play Store
-   */
-  const handleManageSubscription = async () => {
-    // HARD RULE: No Stripe on native platforms
-    if (isNative) {
-      console.log('[SubscriptionCard] Manage subscription not available on native - use App Store/Play Store');
-      toast.info('Manage your subscription in your device settings');
-      return;
-    }
-
-    if (isPortalLoading) return;
-
-    setIsPortalLoading(true);
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        toast.error('Please sign in');
-        setIsPortalLoading(false);
-        return;
-      }
-
-      // Call Stripe customer portal edge function (web only)
-      const { data, error } = await supabase.functions.invoke('customer-portal', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (error || data?.error) {
-        if (data?.error?.includes('No Stripe customer')) {
-          toast.error('No active subscription found.');
-        } else {
-          toast.error('Failed to open subscription portal.');
-        }
-        setIsPortalLoading(false);
-        return;
-      }
-
-      if (data?.url) {
-        window.location.assign(data.url);
-      } else {
-        toast.error('Failed to open subscription portal.');
-        setIsPortalLoading(false);
-      }
-    } catch (err) {
-      console.error('[SubscriptionCard] Portal error:', err);
-      toast.error('Failed to open subscription portal.');
-      setIsPortalLoading(false);
-    }
+  // Platform-specific URLs
+  const getManageSubscriptionUrl = () => {
+    return platform === 'ios' 
+      ? 'https://apps.apple.com/account/subscriptions'
+      : 'https://play.google.com/store/account/subscriptions';
   };
+
+  const getTermsUrl = () => {
+    return platform === 'ios'
+      ? 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/'
+      : 'https://play.google.com/about/play-terms/';
+  };
+
+  const privacyPolicyUrl = 'https://docs.google.com/document/d/1qFfvOp8s6k5Wul4G6VYzJSw1V0asApM_2foT1bC80t0/edit?tab=t.0';
 
 
   if (isLoading) {
@@ -149,29 +104,44 @@ const SubscriptionCard = () => {
                   ? `Renews on ${format(parseISO(subscriptionEnd), 'MMMM d, yyyy')}`
                   : 'You have full access to all features.'}
             </p>
-            {/* Manage subscription: Web → Stripe portal, Native → App Store / Play Store */}
-            {!isAdmin && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="mt-3 gap-2"
-                onClick={isNative 
-                  ? () => toast.info(platform === 'ios' 
-                    ? 'Manage your subscription in Settings → Apple ID → Subscriptions'
-                    : 'Manage your subscription in Google Play Store → Payments & subscriptions')
-                  : handleManageSubscription
-                }
-                disabled={isPortalLoading}
-              >
-                {isPortalLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Opening...
-                  </>
-                ) : (
-                  'Manage Subscription'
-                )}
-              </Button>
+            {/* Subscription management links for native platforms */}
+            {!isAdmin && isNative && (
+              <div className="flex flex-wrap items-center gap-1 mt-3 text-xs">
+                <button
+                  onClick={handleRestore}
+                  disabled={isRestoring}
+                  className="text-primary underline hover:opacity-80 disabled:opacity-50"
+                >
+                  {isRestoring ? 'Restoring...' : 'Restore Purchases'}
+                </button>
+                <span className="text-muted-foreground">|</span>
+                <a
+                  href={getManageSubscriptionUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline hover:opacity-80"
+                >
+                  Manage Subscription
+                </a>
+                <span className="text-muted-foreground">|</span>
+                <a
+                  href={privacyPolicyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline hover:opacity-80"
+                >
+                  Privacy Policy
+                </a>
+                <span className="text-muted-foreground">|</span>
+                <a
+                  href={getTermsUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline hover:opacity-80"
+                >
+                  Terms of Use
+                </a>
+              </div>
             )}
           </div>
           <button 
