@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { Capacitor } from '@capacitor/core';
 import type { ChatMessage } from '@/hooks/useAICoach';
 
 interface CoachChatProps {
@@ -20,10 +21,54 @@ const quickSuggestions = [
   { label: "Daily summary", prompt: "Give me a brief summary of my most recent check-ins and any notable observations." },
 ];
 
+const BOTTOM_NAV_HEIGHT = 64; // Your app's bottom navigation height
+
 export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: CoachChatProps) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputContainerRef = useRef<HTMLDivElement>(null);
+  const [keyboardOverlap, setKeyboardOverlap] = useState(0);
+  const isAndroid = Capacitor.getPlatform() === 'android';
+
+  // CORRECT Visual Viewport calculation
+  useEffect(() => {
+    if (!isAndroid || typeof window.visualViewport === 'undefined') {
+      console.log('[CoachChat] Visual Viewport not available');
+      return;
+    }
+
+    const calculateKeyboardOverlap = () => {
+      if (!window.visualViewport) return;
+
+      // Visual viewport bottom position
+      const vvBottom = window.visualViewport.offsetTop + window.visualViewport.height;
+      
+      // Layout viewport (window) bottom position
+      const layoutBottom = window.innerHeight;
+      
+      // Keyboard overlap = how much viewport is cut off from bottom
+      const overlap = Math.max(0, layoutBottom - vvBottom);
+
+      console.log('[CoachChat] VV bottom:', vvBottom, 'Layout bottom:', layoutBottom, 'Overlap:', overlap);
+      
+      setKeyboardOverlap(overlap);
+    };
+
+    // Listen for viewport changes
+    window.visualViewport.addEventListener('resize', calculateKeyboardOverlap);
+    window.visualViewport.addEventListener('scroll', calculateKeyboardOverlap);
+    
+    // Initial calculation
+    calculateKeyboardOverlap();
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', calculateKeyboardOverlap);
+        window.visualViewport.removeEventListener('scroll', calculateKeyboardOverlap);
+      }
+    };
+  }, [isAndroid]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -58,10 +103,36 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
     }
   };
 
+  // Calculate input bar bottom position
+  // When keyboard closed: sit above bottom nav with buffer
+  // When keyboard open: sit at max(keyboardOverlap, bottomNavHeight + buffer) to avoid both
+  const calculateBottom = () => {
+    if (!isAndroid) {
+      return BOTTOM_NAV_HEIGHT + 16; // iOS or web - add 16px buffer
+    }
+
+    if (keyboardOverlap > 0) {
+      // Keyboard open: use the larger of overlap or (nav height + buffer)
+      // This ensures input sits above BOTH keyboard and nav bar
+      return Math.max(keyboardOverlap, BOTTOM_NAV_HEIGHT + 16);
+    } else {
+      // Keyboard closed: sit above nav bar with buffer
+      return BOTTOM_NAV_HEIGHT + 16;
+    }
+  };
+
+  const bottomPosition = calculateBottom();
+
   return (
     <div className="flex flex-col h-full">
-      {/* Chat Messages - Takes remaining space */}
-      <ScrollArea className="flex-1 px-4" ref={scrollRef}>
+      {/* Chat Messages */}
+      <ScrollArea 
+        className="flex-1 px-4" 
+        ref={scrollRef}
+        style={{
+          paddingBottom: `${bottomPosition + 120}px`,
+        }}
+      >
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-8">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -118,11 +189,14 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
         )}
       </ScrollArea>
 
-      {/* Input Area - Normal document flow, NOT fixed */}
+      {/* Input Area - Position using calculated bottom */}
       <div 
-        className="border-t border-border p-4 bg-background"
+        ref={inputContainerRef}
+        className="fixed left-0 right-0 border-t border-border p-4 bg-background"
         style={{
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+          bottom: `${bottomPosition}px`,
+          zIndex: 50,
+          transition: 'bottom 0.2s ease-out',
         }}
       >
         {messages.length > 0 && (
