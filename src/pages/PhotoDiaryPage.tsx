@@ -1092,10 +1092,30 @@ const PhotoDiaryPage = () => {
             className="w-full gap-2"
           >
             <Crown className="w-4 h-4" />
-            {isPurchasing ? 'Loading...' : `Unlock · ${priceString}/month`}
+            {isPurchasing ? 'Loading...' : `Start 14-Day Free Trial · ${priceString}/month`}
           </Button>
           <p className="text-xs text-center text-muted-foreground">
-            14 day free trial · {priceString}/month after · Cancel anytime
+            {priceString}/month after 14-day free trial. Auto-renewable. Cancel anytime.
+          </p>
+          <p className="text-xs text-center text-muted-foreground mt-1">
+            By subscribing, you agree to our{' '}
+            <a 
+              href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="underline text-primary"
+            >
+              Terms of Use
+            </a>{' '}
+            and{' '}
+            <a 
+              href="https://docs.google.com/document/d/1qFfvOp8s6k5Wul4G6VYzJSw1V0asApM_2foT1bC80t0/edit" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="underline text-primary"
+            >
+              Privacy Policy
+            </a>.
           </p>
         </div>
       )}
@@ -1136,12 +1156,32 @@ const PhotoDiaryPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Unlock · {priceString}/month
+                    Start 14-Day Free Trial · {priceString}/month
                   </>
                 )}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                14 day free trial · {priceString}/month after · Cancel anytime
+                {priceString}/month after 14-day free trial. Auto-renewable. Cancel anytime.
+              </p>
+              <p className="text-xs text-muted-foreground text-center mt-1">
+                By subscribing, you agree to our{' '}
+                <a 
+                  href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="underline text-primary"
+                >
+                  Terms of Use
+                </a>{' '}
+                and{' '}
+                <a 
+                  href="https://docs.google.com/document/d/1qFfvOp8s6k5Wul4G6VYzJSw1V0asApM_2foT1bC80t0/edit" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="underline text-primary"
+                >
+                  Privacy Policy
+                </a>.
               </p>
 
               {/* Native: Retry button if offerings failed */}
@@ -1234,12 +1274,32 @@ const PhotoDiaryPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Unlock · {priceString}/month
+                    Start 14-Day Free Trial · {priceString}/month
                   </>
                 )}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                14 day free trial · {priceString}/month after · Cancel anytime
+                {priceString}/month after 14-day free trial. Auto-renewable. Cancel anytime.
+              </p>
+              <p className="text-xs text-muted-foreground text-center mt-1">
+                By subscribing, you agree to our{' '}
+                <a 
+                  href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="underline text-primary"
+                >
+                  Terms of Use
+                </a>{' '}
+                and{' '}
+                <a 
+                  href="https://docs.google.com/document/d/1qFfvOp8s6k5Wul4G6VYzJSw1V0asApM_2foT1bC80t0/edit" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="underline text-primary"
+                >
+                  Privacy Policy
+                </a>.
               </p>
 
               {/* Native: Retry button if offerings failed */}
