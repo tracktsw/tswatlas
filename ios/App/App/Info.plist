@@ -41,6 +41,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>This app uses the camera to capture photos for tracking and comparison.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>We need access to your photo library to select photos</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>This app saves images to your photo library.</string>
 	<key>NSUserNotificationsUsageDescription</key>
