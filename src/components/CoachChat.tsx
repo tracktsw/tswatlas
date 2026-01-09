@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useIOSKeyboardContext } from '@/contexts/IOSKeyboardContext';
+import { usePlatform } from '@/hooks/usePlatform';
 import type { ChatMessage } from '@/hooks/useAICoach';
 
 interface CoachChatProps {
@@ -29,6 +30,10 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
   const [inputHeight, setInputHeight] = useState(0);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const { keyboardHeight } = useIOSKeyboardContext();
+  const { isIOS } = usePlatform();
+  
+  // iOS needs extra bottom padding to account for safe area
+  const bottomOffset = isIOS ? 80 : 64;
 
   // Measure input container height dynamically with ResizeObserver
   useEffect(() => {
@@ -165,7 +170,7 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
       <div 
         ref={inputContainerRef}
         className="fixed left-0 right-0 border-t border-border p-4 bg-background z-10"
-        style={{ bottom: isInputFocused ? '320px' : '64px' }}
+        style={{ bottom: isInputFocused ? '320px' : `${bottomOffset}px` }}
       >
         {messages.length > 0 && (
           <div className="flex justify-end mb-2">
