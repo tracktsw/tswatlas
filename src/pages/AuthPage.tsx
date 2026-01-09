@@ -16,8 +16,38 @@ const AuthPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
   const navigate = useNavigate();
   const { isAndroid } = usePlatform();
+
+  // Email validation: exactly one @, at least one . after @, valid domain
+  const validateEmail = (email: string): boolean => {
+    const trimmed = email.trim();
+    const atIndex = trimmed.indexOf('@');
+    const lastAtIndex = trimmed.lastIndexOf('@');
+    
+    // Must have exactly one @
+    if (atIndex === -1 || atIndex !== lastAtIndex) return false;
+    
+    const domain = trimmed.slice(atIndex + 1);
+    
+    // Domain must have at least one .
+    const dotIndex = domain.indexOf('.');
+    if (dotIndex === -1) return false;
+    
+    // Domain can't start or end with .
+    if (domain.startsWith('.') || domain.endsWith('.')) return false;
+    
+    // Must have content before @ and valid domain parts
+    const local = trimmed.slice(0, atIndex);
+    if (local.length === 0) return false;
+    
+    // Domain must have content after last dot
+    const lastDot = domain.lastIndexOf('.');
+    if (domain.slice(lastDot + 1).length === 0) return false;
+    
+    return true;
+  };
 
   // Check if already logged in - single check, no subscription
   useEffect(() => {
@@ -30,6 +60,14 @@ const AuthPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Client-side email validation first
+    if (!validateEmail(email)) {
+      setEmailError('Invalid email address');
+      return;
+    }
+    
+    setEmailError('');
     setLoading(true);
 
     try {
@@ -107,18 +145,22 @@ const AuthPage = () => {
       console.error('[AUTH] Error:', errorMessage);
       
       // Provide user-friendly messages for common errors
-      if (errorMessage.includes('Invalid login credentials')) {
-        toast.error('Incorrect email or password. Please check and try again.');
-      } else if (errorMessage.includes('invalid_credentials') || errorMessage.includes('invalid credentials')) {
-        toast.error('Incorrect email or password. Please check and try again.');
+      if (
+        errorMessage.includes('Invalid login credentials') ||
+        errorMessage.includes('invalid_credentials') ||
+        errorMessage.includes('invalid credentials')
+      ) {
+        toast.error('Incorrect credentials');
       } else if (errorMessage.includes('Email not confirmed')) {
         toast.error('Please verify your email address before signing in.');
       } else if (errorMessage.includes('User already registered')) {
         toast.error('An account with this email already exists. Try signing in instead.');
-      } else if (errorMessage.includes('Invalid email') || errorMessage.includes('invalid email')) {
-        toast.error('Please enter a valid email address.');
-      } else if (errorMessage.includes('Unable to validate email')) {
-        toast.error('Please enter a valid email address.');
+      } else if (
+        errorMessage.includes('Invalid email') ||
+        errorMessage.includes('invalid email') ||
+        errorMessage.includes('Unable to validate email')
+      ) {
+        setEmailError('Invalid email address');
       } else {
         toast.error(errorMessage);
       }
@@ -209,12 +251,18 @@ const AuthPage = () => {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (emailError) setEmailError('');
+                }}
                 placeholder="you@example.com"
-                className="pl-11 h-12 rounded-xl border-2 focus:border-coral/50 transition-colors"
+                className={`pl-11 h-12 rounded-xl border-2 transition-colors ${emailError ? 'border-destructive focus:border-destructive' : 'focus:border-coral/50'}`}
                 required
               />
             </div>
+            {emailError && (
+              <p className="text-sm text-destructive">{emailError}</p>
+            )}
           </div>
 
           {mode !== 'forgot' && (
