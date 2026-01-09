@@ -103,7 +103,18 @@ const AuthPage = () => {
         setMode('login');
       }
     } catch (error: any) {
-      toast.error(error.message || 'Authentication failed');
+      const errorMessage = error.message || 'Authentication failed';
+      
+      // Provide user-friendly messages for common errors
+      if (errorMessage.includes('Invalid login credentials')) {
+        toast.error('Incorrect email or password. Please try again.');
+      } else if (errorMessage.includes('Email not confirmed')) {
+        toast.error('Please verify your email address before signing in.');
+      } else if (errorMessage.includes('User already registered')) {
+        toast.error('An account with this email already exists. Try signing in instead.');
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
