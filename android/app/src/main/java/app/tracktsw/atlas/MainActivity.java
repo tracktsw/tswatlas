@@ -22,6 +22,7 @@ public class MainActivity extends BridgeActivity {
         
         // Apply window insets
         ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, windowInsets) -> {
+            // Get system bars (status bar, navigation bar) and display cutout insets
             Insets insets = windowInsets.getInsets(
                 WindowInsetsCompat.Type.systemBars() | 
                 WindowInsetsCompat.Type.displayCutout()
@@ -35,7 +36,6 @@ public class MainActivity extends BridgeActivity {
             // For Android 15+, ensure navigation bar insets are properly accounted for
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                 Insets navInsets = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars());
-                // Preserve left/right, but ensure bottom accounts for navigation bar
                 left = Math.max(left, navInsets.left);
                 right = Math.max(right, navInsets.right);
                 bottom = Math.max(bottom, navInsets.bottom);
@@ -44,7 +44,9 @@ public class MainActivity extends BridgeActivity {
             // Apply combined insets as padding
             v.setPadding(left, top, right, bottom);
             
-            return WindowInsetsCompat.CONSUMED;
+            // CRITICAL: Return windowInsets, NOT CONSUMED
+            // This allows keyboard insets to propagate and push content up
+            return windowInsets;
         });
     }
 }

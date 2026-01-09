@@ -4,8 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { useIOSKeyboardContext } from '@/contexts/IOSKeyboardContext';
-import { usePlatform } from '@/hooks/usePlatform';
 import type { ChatMessage } from '@/hooks/useAICoach';
 
 interface CoachChatProps {
@@ -26,49 +24,8 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const inputContainerRef = useRef<HTMLDivElement>(null);
-  const [inputHeight, setInputHeight] = useState(0);
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const { keyboardHeight } = useIOSKeyboardContext();
-  const { isIOS } = usePlatform();
-  
-  // iOS needs extra bottom padding to account for safe area
-  const bottomOffset = isIOS ? 80 : 64;
 
-  // Measure input container height dynamically with ResizeObserver
-  useEffect(() => {
-    const container = inputContainerRef.current;
-    const textarea = textareaRef.current;
-    if (!container) return;
-
-    const updateHeight = () => {
-      setInputHeight(container.offsetHeight);
-    };
-
-    // Initial measurement
-    updateHeight();
-
-    // Watch for container size changes
-    const containerObserver = new ResizeObserver(updateHeight);
-    containerObserver.observe(container);
-
-    // Also watch textarea for when user types multiple lines
-    if (textarea) {
-      const textareaObserver = new ResizeObserver(updateHeight);
-      textareaObserver.observe(textarea);
-      
-      return () => {
-        containerObserver.disconnect();
-        textareaObserver.disconnect();
-      };
-    }
-
-    return () => {
-      containerObserver.disconnect();
-    };
-  }, []);
-
-  // Scroll to bottom when messages change or keyboard opens/closes
+  // Scroll to bottom when messages change
   useEffect(() => {
     const root = scrollRef.current;
     const viewport = root?.querySelector(
@@ -77,11 +34,10 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
 
     if (!viewport) return;
 
-    // Ensure we scroll after the DOM has painted (important on iOS)
     requestAnimationFrame(() => {
       viewport.scrollTop = viewport.scrollHeight;
     });
-  }, [messages, isLoading, keyboardHeight]);
+  }, [messages, isLoading]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,15 +59,11 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
   };
 
   return (
-    <div className="flex flex-col h-full relative">
-      {/* Chat Messages */}
-      <ScrollArea 
-        className="flex-1 px-4" 
-        ref={scrollRef}
-        style={{ paddingBottom: `${inputHeight + 80}px` }}
-      >
+    <div className="flex flex-col h-full">
+      {/* Chat Messages - Takes remaining space */}
+      <ScrollArea className="flex-1 px-4" ref={scrollRef}>
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
+          <div className="flex flex-col items-center justify-center h-full text-center py-8">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
               <Sparkles className="w-8 h-8 text-primary" />
             </div>
@@ -134,7 +86,7 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
             </div>
           </div>
         ) : (
-          <div className="py-4 space-y-4 pb-4">
+          <div className="py-4 space-y-4">
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -166,11 +118,12 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
         )}
       </ScrollArea>
 
-      {/* Input Area - Fixed at bottom */}
+      {/* Input Area - Normal document flow, NOT fixed */}
       <div 
-        ref={inputContainerRef}
-        className="fixed left-0 right-0 border-t border-border p-4 bg-background z-10"
-        style={{ bottom: isInputFocused ? '320px' : `${bottomOffset}px` }}
+        className="border-t border-border p-4 bg-background"
+        style={{
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+        }}
       >
         {messages.length > 0 && (
           <div className="flex justify-end mb-2">
@@ -191,8 +144,6 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            onFocus={() => setIsInputFocused(true)}
-            onBlur={() => setIsInputFocused(false)}
             placeholder="Ask about your TSW journey..."
             className="min-h-[44px] max-h-32 resize-none"
             rows={1}
