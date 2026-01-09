@@ -156,7 +156,9 @@ const SubscriptionCard = () => {
                 size="sm" 
                 className="mt-3 gap-2"
                 onClick={isNative 
-                  ? () => toast.info('Manage your subscription in your device settings (App Store or Google Play)')
+                  ? () => toast.info(platform === 'ios' 
+                    ? 'Manage your subscription in Settings → Apple ID → Subscriptions'
+                    : 'Manage your subscription in Google Play Store → Payments & subscriptions')
                   : handleManageSubscription
                 }
                 disabled={isPortalLoading}
