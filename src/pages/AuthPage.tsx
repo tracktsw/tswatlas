@@ -150,7 +150,7 @@ const AuthPage = () => {
         errorMessage.includes('invalid_credentials') ||
         errorMessage.includes('invalid credentials')
       ) {
-        toast.error('Incorrect credentials');
+        toast.error('Incorrect email or password');
       } else if (errorMessage.includes('Email not confirmed')) {
         toast.error('Please verify your email address before signing in.');
       } else if (errorMessage.includes('User already registered')) {
