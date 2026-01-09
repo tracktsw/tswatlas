@@ -61,6 +61,13 @@ const getRevenueCatKey = () => {
 // CRITICAL: The entitlement identifier MUST match exactly what's in RevenueCat dashboard
 const PREMIUM_ENTITLEMENT_ID = 'premium';
 
+// Get the correct offering identifier based on platform
+const getOfferingIdentifier = () => {
+  if (getIsNativeIOS()) return 'default';
+  if (getIsNativeAndroid()) return 'default2';
+  return 'default';
+};
+
 export interface RevenueCatState {
   isIOSNative: boolean;
   isInitialized: boolean;
@@ -277,7 +284,7 @@ export const useRevenueCat = () => {
       setOfferingsStatus('error');
       setOfferingsError(error?.message ?? 'Failed to initialize purchases');
     }
-  }, [isInitialized, checkPremiumFromCustomerInfo]);
+  }, [isInitialized, checkPremiumFromCustomerInfo, refreshCustomerInfo]);
 
   // Logout from RevenueCat - MUST be called when user logs out
   // CRITICAL: This clears premium status immediately and FULLY resets RevenueCat identity
@@ -343,11 +350,15 @@ export const useRevenueCat = () => {
       const offerings = await Purchases.getOfferings();
       console.log('[RevenueCat] Offerings received:', JSON.stringify(offerings, null, 2));
 
-      // Get default offering (current offering or 'default' from all)
-      const defaultOffering = offerings?.current ?? offerings?.all?.['default'];
+      // Get platform-specific offering identifier
+      const offeringId = getOfferingIdentifier();
+      console.log('[RevenueCat] Looking for offering:', offeringId, 'Available:', Object.keys(offerings?.all || {}));
+      
+      // Get default offering (current offering or platform-specific from all)
+      const defaultOffering = offerings?.current ?? offerings?.all?.[offeringId];
 
       if (!defaultOffering) {
-        console.error('[RevenueCat] No default offering found');
+        console.error('[RevenueCat] No default offering found for platform:', offeringId);
         setOfferingsStatus('error');
         setOfferingsError('No subscription offering found. Please try again later.');
         return null;
@@ -413,10 +424,12 @@ export const useRevenueCat = () => {
       const offerings = await Purchases.getOfferings();
       console.log('[RevenueCat] Offerings result:', JSON.stringify(offerings, null, 2));
       
-      const defaultOffering = offerings?.current ?? offerings?.all?.['default'];
+      // Get platform-specific offering
+      const offeringId = getOfferingIdentifier();
+      const defaultOffering = offerings?.current ?? offerings?.all?.[offeringId];
       
       if (!defaultOffering || !defaultOffering.availablePackages?.length) {
-        console.error('[RevenueCat] No offerings available');
+        console.error('[RevenueCat] No offerings available for platform:', offeringId);
         setIsLoading(false);
         return { 
           success: false, 
@@ -483,7 +496,7 @@ export const useRevenueCat = () => {
       if (error.code === 23) {
         return { 
           success: false, 
-          error: 'Unable to connect to App Store. Please try again.',
+          error: 'Unable to connect to Play Store. Please try again.',
           errorCode: 23,
           isPremiumNow: false,
         };
