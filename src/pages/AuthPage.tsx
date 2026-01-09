@@ -107,7 +107,7 @@ const AuthPage = () => {
     
     // Client-side email validation first
     if (!validateEmail(email)) {
-      setEmailError('Please use a valid email address');
+      setEmailError('Invalid email address');
       return;
     }
     
@@ -115,6 +115,23 @@ const AuthPage = () => {
     if (mode === 'signup' && !validatePassword(password)) {
       setPasswordError('Password must be at least 6 characters');
       return;
+    }
+    
+    // Server-side domain validation for signup only
+    if (mode === 'signup') {
+      try {
+        const { data, error } = await supabase.functions.invoke('validate-email-domain', {
+          body: { email },
+        });
+        
+        if (error || !data?.valid) {
+          setEmailError('Invalid email domain');
+          return;
+        }
+      } catch {
+        setEmailError('Invalid email domain');
+        return;
+      }
     }
     
     setLoading(true);
