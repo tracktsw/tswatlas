@@ -224,6 +224,27 @@ const SubscriptionCard = () => {
           <p className="text-xs text-muted-foreground">
             {priceString}/month after 14-day free trial. Auto-renewable. Cancel anytime.
           </p>
+          
+          <p className="text-xs text-muted-foreground mt-1">
+            By subscribing, you agree to our{' '}
+            <a 
+              href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="underline text-primary"
+            >
+              Terms of Use
+            </a>{' '}
+            and{' '}
+            <a 
+              href="https://docs.google.com/document/d/1qFfvOp8s6k5Wul4G6VYzJSw1V0asApM_2foT1bC80t0/edit" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="underline text-primary"
+            >
+              Privacy Policy
+            </a>.
+          </p>
 
           {/* Status message */}
           {statusMessage && (
