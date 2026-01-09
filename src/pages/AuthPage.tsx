@@ -18,13 +18,33 @@ const AuthPage = () => {
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [authError, setAuthError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const { isAndroid } = usePlatform();
 
+  // Common valid email domains
+  const validDomains = [
+    'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com',
+    'aol.com', 'protonmail.com', 'mail.com', 'zoho.com', 'yandex.com',
+    'live.com', 'msn.com', 'me.com', 'mac.com', 'googlemail.com',
+    'fastmail.com', 'tutanota.com', 'hey.com', 'pm.me'
+  ];
+
+  // Valid TLDs (top-level domains)
+  const validTLDs = [
+    'com', 'org', 'net', 'edu', 'gov', 'io', 'co', 'uk', 'de', 'fr', 'es',
+    'it', 'nl', 'be', 'at', 'ch', 'au', 'ca', 'us', 'info', 'biz', 'app',
+    'dev', 'tech', 'online', 'store', 'shop', 'blog', 'site', 'xyz', 'me',
+    'tv', 'cc', 'in', 'jp', 'cn', 'ru', 'br', 'mx', 'pl', 'se', 'no', 'fi',
+    'dk', 'nz', 'ie', 'pt', 'cz', 'hu', 'ro', 'gr', 'za', 'sg', 'hk', 'tw',
+    'kr', 'my', 'ph', 'id', 'th', 'vn', 'ae', 'sa', 'il', 'eg', 'ng', 'ke',
+    'co.uk', 'co.nz', 'co.za', 'com.au', 'com.br', 'com.mx', 'org.uk', 'net.au'
+  ];
+
   // Email validation: exactly one @, at least one . after @, valid domain
   const validateEmail = (email: string): boolean => {
-    const trimmed = email.trim();
+    const trimmed = email.trim().toLowerCase();
     const atIndex = trimmed.indexOf('@');
     const lastAtIndex = trimmed.lastIndexOf('@');
     
@@ -46,9 +66,21 @@ const AuthPage = () => {
     
     // Domain must have content after last dot
     const lastDot = domain.lastIndexOf('.');
-    if (domain.slice(lastDot + 1).length === 0) return false;
+    const tld = domain.slice(lastDot + 1);
+    if (tld.length === 0) return false;
     
-    return true;
+    // Check if it's a known valid domain OR has a valid TLD
+    const isKnownDomain = validDomains.includes(domain);
+    const hasValidTLD = validTLDs.some(validTld => 
+      domain.endsWith('.' + validTld) || domain === validTld
+    );
+    
+    return isKnownDomain || hasValidTLD;
+  };
+
+  // Password validation for signup
+  const validatePassword = (password: string): boolean => {
+    return password.length >= 6;
   };
 
   // Check if already logged in - single check, no subscription
@@ -65,14 +97,21 @@ const AuthPage = () => {
     
     // Clear previous errors
     setAuthError('');
+    setPasswordError('');
+    setEmailError('');
     
     // Client-side email validation first
     if (!validateEmail(email)) {
-      setEmailError('Invalid email address');
+      setEmailError('Please use a valid email address');
       return;
     }
     
-    setEmailError('');
+    // Password validation for signup only
+    if (mode === 'signup' && !validatePassword(password)) {
+      setPasswordError('Password must be at least 6 characters');
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -282,6 +321,7 @@ const AuthPage = () => {
                   onChange={(e) => {
                     setPassword(e.target.value);
                     if (authError) setAuthError('');
+                    if (passwordError) setPasswordError('');
                   }}
                   placeholder="••••••••"
                   className="pl-11 pr-11 h-12 rounded-xl border-2 focus:border-coral/50 transition-colors"
@@ -297,6 +337,9 @@ const AuthPage = () => {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {passwordError && (
+                <p className="text-sm text-destructive text-center">{passwordError}</p>
+              )}
               {authError && (
                 <p className="text-sm text-destructive text-center">{authError}</p>
               )}
