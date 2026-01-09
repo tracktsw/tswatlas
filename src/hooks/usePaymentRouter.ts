@@ -140,7 +140,13 @@ export const usePaymentRouter = () => {
           return { success: false, error: msg };
         }
 
-        setStatusMessage('Opening App Store…');
+        setStatusMessage(platform === 'ios' ? 'Opening App Store…' : 'Opening Play Store…');
+        
+        console.log('[PaymentRouter] Native purchase starting:', {
+          platform,
+          isOfferingsReady,
+          offeringsStatus: revenueCatContext.offeringsStatus,
+        });
 
         const result = await revenueCatContext.purchaseMonthly();
         console.log('[PaymentRouter] RevenueCat purchase result:', result);
