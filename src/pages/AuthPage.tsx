@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
-import { toast, Toaster } from 'sonner';
+import { toast } from 'sonner';
 import trackTswLogo from '@/assets/tracktsw-logo-transparent.png';
 import { usePlatform } from '@/hooks/usePlatform';
 
@@ -17,6 +17,7 @@ const AuthPage = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
+  const [authError, setAuthError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const { isAndroid } = usePlatform();
@@ -61,6 +62,9 @@ const AuthPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Clear previous errors
+    setAuthError('');
     
     // Client-side email validation first
     if (!validateEmail(email)) {
@@ -151,11 +155,11 @@ const AuthPage = () => {
         errorMessage.includes('invalid_credentials') ||
         errorMessage.includes('invalid credentials')
       ) {
-        toast.error('Incorrect email or password');
+        setAuthError('Incorrect email or password');
       } else if (errorMessage.includes('Email not confirmed')) {
-        toast.error('Please verify your email address before signing in.');
+        setAuthError('Please verify your email address before signing in.');
       } else if (errorMessage.includes('User already registered')) {
-        toast.error('An account with this email already exists. Try signing in instead.');
+        setAuthError('An account with this email already exists. Try signing in instead.');
       } else if (
         errorMessage.includes('Invalid email') ||
         errorMessage.includes('invalid email') ||
@@ -163,7 +167,7 @@ const AuthPage = () => {
       ) {
         setEmailError('Invalid email address');
       } else {
-        toast.error(errorMessage);
+        setAuthError(errorMessage);
       }
     } finally {
       setLoading(false);
@@ -275,7 +279,10 @@ const AuthPage = () => {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (authError) setAuthError('');
+                  }}
                   placeholder="••••••••"
                   className="pl-11 pr-11 h-12 rounded-xl border-2 focus:border-coral/50 transition-colors"
                   required
@@ -290,7 +297,9 @@ const AuthPage = () => {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              <Toaster position="bottom-center" />
+              {authError && (
+                <p className="text-sm text-destructive">{authError}</p>
+              )}
             </div>
           )}
 
