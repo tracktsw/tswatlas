@@ -206,9 +206,6 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
             )}
           </Button>
         </form>
-        <p className="text-[10px] text-muted-foreground text-center mt-2">
-          AI Coach provides insights, not medical advice.
-        </p>
       </div>
     </div>
   );
