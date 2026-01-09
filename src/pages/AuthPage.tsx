@@ -298,7 +298,7 @@ const AuthPage = () => {
                 </button>
               </div>
               {authError && (
-                <p className="text-sm text-destructive">{authError}</p>
+                <p className="text-sm text-destructive text-center">{authError}</p>
               )}
             </div>
           )}
