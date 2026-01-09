@@ -1,6 +1,5 @@
 import { lazy, Suspense } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Toaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
@@ -84,7 +83,6 @@ const App = () => (
               </Routes>
               </DeepLinkHandler>
             </BrowserRouter>
-            <Toaster />
           </TooltipProvider>
         </LayoutProvider>
       </IOSKeyboardProvider>
