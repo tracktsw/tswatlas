@@ -117,13 +117,13 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
               ) : (
                 <>
                   <Crown className="w-4 h-4" />
-                  Start 14-Day Free Trial · £5.99/month
+                  Start 14-Day Free Trial · {priceString}/month
                 </>
               )}
             </Button>
             
             <p className="text-xs text-muted-foreground mt-2">
-              £5.99/month after 14-day free trial. Auto-renewable. Cancel anytime.
+              {priceString}/month after 14-day free trial. Auto-renewable. Cancel anytime.
             </p>
 
             {/* Status message */}
@@ -189,13 +189,13 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
           ) : (
             <>
               <Crown className="w-4 h-4" />
-              Start 14-Day Free Trial · £5.99/month
+              Start 14-Day Free Trial · {priceString}/month
             </>
           )}
         </Button>
         
         <p className="text-xs text-muted-foreground">
-          £5.99/month after 14-day free trial. Auto-renewable. Cancel anytime.
+          {priceString}/month after 14-day free trial. Auto-renewable. Cancel anytime.
         </p>
 
         {/* Status message */}
