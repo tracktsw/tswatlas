@@ -69,13 +69,18 @@ const AuthPage = () => {
     const tld = domain.slice(lastDot + 1);
     if (tld.length === 0) return false;
     
-    // Check if it's a known valid domain OR has a valid TLD
-    const isKnownDomain = validDomains.includes(domain);
-    const hasValidTLD = validTLDs.some(validTld => 
-      domain.endsWith('.' + validTld) || domain === validTld
-    );
+    // Check if it's a known valid domain first
+    if (validDomains.includes(domain)) return true;
     
-    return isKnownDomain || hasValidTLD;
+    // Check for compound TLDs first (like co.uk, com.au)
+    const compoundTLDs = validTLDs.filter(t => t.includes('.'));
+    for (const compoundTld of compoundTLDs) {
+      if (domain.endsWith('.' + compoundTld)) return true;
+    }
+    
+    // Check if the extracted TLD is in our valid list
+    const tldLower = tld.toLowerCase();
+    return validTLDs.includes(tldLower);
   };
 
   // Password validation for signup
