@@ -2,7 +2,6 @@ import { useMemo, useRef, useState, useEffect, useLayoutEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Camera, CheckCircle, BarChart3, Users, Leaf } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
-import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -18,6 +17,7 @@ const BottomNav = () => {
   const location = useLocation();
   const platform = Capacitor.getPlatform();
   const containerRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const [indicatorStyle, setIndicatorStyle] = useState({ x: 0, width: 0 });
 
   const activeIndex = useMemo(() => {
@@ -25,19 +25,18 @@ const BottomNav = () => {
     return index >= 0 ? index : 0;
   }, [location.pathname]);
 
-  // Calculate indicator position and width in pixels
+  // Calculate indicator position based on ACTUAL element positions
   const updateIndicator = () => {
-    if (containerRef.current) {
-      const containerWidth = containerRef.current.offsetWidth;
-      const padding = 8; // px-1 = 4px each side
-      const availableWidth = containerWidth - padding;
-      const itemWidth = availableWidth / navItems.length;
-      
-      setIndicatorStyle({
-        x: 4 + activeIndex * itemWidth,
-        width: itemWidth,
-      });
-    }
+    const activeItem = itemRefs.current[activeIndex];
+    if (!activeItem || !containerRef.current) return;
+
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const itemRect = activeItem.getBoundingClientRect();
+
+    setIndicatorStyle({
+      x: itemRect.left - containerRect.left,
+      width: itemRect.width,
+    });
   };
 
   useLayoutEffect(() => {
@@ -59,28 +58,23 @@ const BottomNav = () => {
             platform === 'ios' ? "py-2.5" : "py-3"
           )}
         >
-          {/* Sliding indicator */}
-          <motion.div
-            className="absolute top-1/2 -translate-y-1/2 h-[44px] bg-anchor/8 rounded-2xl pointer-events-none"
-            initial={false}
-            animate={{
-              x: indicatorStyle.x,
-              width: indicatorStyle.width,
+          {/* Sliding indicator - Pure CSS for 60fps */}
+          <div
+            className="absolute top-1/2 h-[44px] bg-anchor/8 rounded-2xl pointer-events-none transition-all duration-300 ease-out"
+            style={{
+              transform: `translate3d(${indicatorStyle.x}px, -50%, 0)`,
+              width: `${indicatorStyle.width}px`,
+              willChange: 'transform, width',
             }}
-            transition={{
-              type: 'spring',
-              stiffness: 400,
-              damping: 30,
-            }}
-            style={{ left: 0 }}
           />
 
-          {navItems.map(({ path, icon: Icon, label }) => {
+          {navItems.map(({ path, icon: Icon, label }, index) => {
             const isActive = location.pathname === path;
             return (
               <NavLink
                 key={path}
                 to={path}
+                ref={(el) => (itemRefs.current[index] = el)}
                 className={cn(
                   'flex flex-col items-center gap-1 min-w-[56px] px-2 py-2 rounded-2xl transition-colors duration-200 z-10',
                   isActive
