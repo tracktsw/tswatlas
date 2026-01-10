@@ -7,12 +7,27 @@ interface AuthGuardProps {
   children: React.ReactNode;
 }
 
+const STORAGE_KEY_SEEN = 'hasSeenOnboarding';
+
 const AuthGuard = ({ children }: AuthGuardProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
+    const redirectUnauthenticated = () => {
+      // Check if user has seen onboarding
+      const hasSeenOnboarding = localStorage.getItem(STORAGE_KEY_SEEN) === 'true';
+      
+      if (!hasSeenOnboarding) {
+        // New user - show onboarding first
+        navigate('/onboarding');
+      } else {
+        // Returning user who has seen onboarding - go to auth
+        navigate('/auth');
+      }
+    };
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -20,7 +35,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
         setLoading(false);
         
         if (!session?.user) {
-          navigate('/auth');
+          redirectUnauthenticated();
         }
       }
     );
@@ -31,7 +46,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
       setLoading(false);
       
       if (!session?.user) {
-        navigate('/auth');
+        redirectUnauthenticated();
       }
     });
 
