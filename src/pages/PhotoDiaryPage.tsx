@@ -25,7 +25,7 @@ import { LeafIllustration, SparkleIllustration } from '@/components/illustration
 import { SparkleEffect } from '@/components/SparkleEffect';
 import { PhotoSkeleton } from '@/components/PhotoSkeleton';
 
-// Preload image utility with priority hints
+// Preload image utility with priority hints - UNIVERSAL (iOS, Android, Web)
 const preloadImage = (src: string, priority: 'high' | 'low' = 'low'): Promise<void> => {
   return new Promise((resolve, reject) => {
     // Try to use link preload for better browser prioritization
@@ -34,17 +34,19 @@ const preloadImage = (src: string, priority: 'high' | 'low' = 'low'): Promise<vo
       link.rel = 'preload';
       link.as = 'image';
       link.href = src;
+      link.fetchPriority = 'high';
       document.head.appendChild(link);
     }
     
     const img = new window.Image();
+    img.decoding = 'async';
     img.onload = () => resolve();
     img.onerror = reject;
     img.src = src;
   });
 };
 
-// Optimized progressive image component for modal
+// Optimized progressive image component with PINCH ZOOM - UNIVERSAL
 const ModalImage = ({
   thumbnailSrc,
   highResSrc,
@@ -59,13 +61,21 @@ const ModalImage = ({
   const [thumbLoaded, setThumbLoaded] = useState(false);
   const [highResLoaded, setHighResLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  
+  // Pinch zoom state
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const lastTouchDistance = useRef<number | null>(null);
+  const lastTouchPosition = useRef<{ x: number; y: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const hasThumb = typeof thumbnailSrc === "string" && thumbnailSrc.length > 0;
   const hasHighRes = typeof highResSrc === "string" && highResSrc.length > 0;
 
-  // Preload high-res once thumbnail loads
+  // Preload high-res IMMEDIATELY (don't wait for thumbnail - like ComparisonViewer)
   useEffect(() => {
-    if (!thumbLoaded || !hasHighRes) return;
+    if (!hasHighRes) return;
     
     let cancelled = false;
     // Use high priority for images in modal - user is actively viewing
@@ -80,7 +90,7 @@ const ModalImage = ({
     return () => {
       cancelled = true;
     };
-  }, [thumbLoaded, hasHighRes, highResSrc]);
+  }, [hasHighRes, highResSrc]);
 
   const handleThumbLoad = useCallback(() => {
     setThumbLoaded(true);
@@ -90,20 +100,110 @@ const ModalImage = ({
     setHasError(true);
   }, []);
 
+  const handleHighResLoad = useCallback(() => {
+    setHighResLoaded(true);
+  }, []);
+
+  const handleHighResError = useCallback(() => {
+    setHasError(true);
+  }, []);
+
+  // PINCH ZOOM: Touch handlers - UNIVERSAL (works on all platforms)
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      // Pinch start
+      const distance = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      lastTouchDistance.current = distance;
+    } else if (e.touches.length === 1 && scale > 1) {
+      // Pan start
+      setIsPanning(true);
+      lastTouchPosition.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+    }
+  }, [scale]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2 && lastTouchDistance.current !== null) {
+      // Pinch zoom
+      e.preventDefault(); // Prevent page zoom
+      const distance = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const delta = distance / lastTouchDistance.current;
+      setScale(prev => Math.min(Math.max(prev * delta, 1), 4));
+      lastTouchDistance.current = distance;
+    } else if (e.touches.length === 1 && isPanning && lastTouchPosition.current && scale > 1) {
+      // Pan
+      e.preventDefault();
+      const deltaX = e.touches[0].clientX - lastTouchPosition.current.x;
+      const deltaY = e.touches[0].clientY - lastTouchPosition.current.y;
+      setPosition(prev => ({
+        x: prev.x + deltaX,
+        y: prev.y + deltaY,
+      }));
+      lastTouchPosition.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+    }
+  }, [isPanning, scale]);
+
+  const handleTouchEnd = useCallback(() => {
+    lastTouchDistance.current = null;
+    setIsPanning(false);
+    lastTouchPosition.current = null;
+    
+    // Reset position if scale is back to 1
+    if (scale <= 1) {
+      setPosition({ x: 0, y: 0 });
+    }
+  }, [scale]);
+
+  const handleDoubleClick = useCallback(() => {
+    if (scale === 1) {
+      setScale(2);
+    } else {
+      setScale(1);
+      setPosition({ x: 0, y: 0 });
+    }
+  }, [scale]);
+
+  // Memoize transform style - GPU accelerated with translate3d (like ComparisonViewer)
+  const transformStyle = useMemo(() => ({
+    transform: `translate3d(${position.x / scale}px, ${position.y / scale}px, 0) scale(${scale})`,
+    transformOrigin: 'center center',
+    willChange: scale > 1 ? 'transform' : 'auto',
+    transition: isPanning ? 'none' : 'transform 0.2s ease-out',
+  }), [scale, position.x, position.y, isPanning]);
+
   // Memoize image classes
   const thumbClasses = useMemo(() => cn(
-    "max-w-full max-h-[70dvh] object-contain transition-all duration-300",
+    "max-w-full max-h-[70dvh] object-contain select-none",
     thumbLoaded ? "opacity-100" : "opacity-0",
-    highResLoaded ? "opacity-0 absolute blur-sm scale-105" : "blur-sm scale-105 opacity-70"
+    highResLoaded ? "opacity-0 absolute" : ""
   ), [thumbLoaded, highResLoaded]);
 
   const highResClasses = useMemo(() => cn(
-    "max-w-full max-h-[70dvh] object-contain transition-opacity duration-500",
+    "max-w-full max-h-[70dvh] object-contain select-none",
     highResLoaded ? "opacity-100" : "opacity-0 absolute"
   ), [highResLoaded]);
 
   return (
-    <div className="flex items-center justify-center bg-muted/30 w-full relative">
+    <div 
+      ref={containerRef}
+      className="relative w-full h-full flex items-center justify-center touch-none select-none"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onDoubleClick={handleDoubleClick}
+      style={{ cursor: scale > 1 ? 'move' : 'zoom-in' }}
+    >
       {/* Loading shimmer - only show if nothing loaded yet */}
       {!thumbLoaded && !hasError && (
         <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 animate-pulse">
@@ -111,8 +211,8 @@ const ModalImage = ({
         </div>
       )}
 
-      {/* Thumbnail - loads first, shows blurred while high-res loads */}
-      {hasThumb && (
+      {/* Thumbnail - only show when high-res not loaded */}
+      {hasThumb && !highResLoaded && (
         <img
           src={thumbnailSrc}
           alt={alt}
@@ -120,13 +220,19 @@ const ModalImage = ({
           decoding="async"
           onLoad={handleThumbLoad}
           onError={handleThumbError}
-          className={thumbClasses}
-          style={{ willChange: highResLoaded ? 'auto' : 'opacity, filter' }}
+          className={cn(
+            "max-w-full max-h-[70dvh] object-contain select-none transition-all duration-200",
+            thumbLoaded ? "opacity-100" : "opacity-0",
+            // Blur when zoomed and high-res not ready
+            scale > 1 && !highResLoaded && "blur-sm opacity-50"
+          )}
+          style={transformStyle}
+          draggable={false}
         />
       )}
 
       {/* Loading spinner - shows over thumbnail while high-res loads */}
-      {hasHighRes && thumbLoaded && !highResLoaded && !hasError && (
+      {hasHighRes && !highResLoaded && !hasError && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="bg-background/80 backdrop-blur-sm rounded-full p-4">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -134,14 +240,21 @@ const ModalImage = ({
         </div>
       )}
 
-      {/* High-res image - fades in over thumbnail (using preload approach) */}
-      {hasHighRes && highResLoaded && (
+      {/* High-res image - main viewing quality */}
+      {hasHighRes && (
         <img
           src={highResSrc}
           alt={alt}
           loading="eager"
           decoding="async"
-          className={highResClasses}
+          onLoad={handleHighResLoad}
+          onError={handleHighResError}
+          className={cn(
+            "max-w-full max-h-[70dvh] object-contain select-none",
+            highResLoaded ? "opacity-100 transition-opacity duration-300" : "opacity-0 absolute"
+          )}
+          style={transformStyle}
+          draggable={false}
         />
       )}
 
@@ -150,13 +263,37 @@ const ModalImage = ({
         <img
           src={thumbnailSrc}
           alt={alt}
-          className="max-w-full max-h-[70dvh] object-contain"
+          className="max-w-full max-h-[70dvh] object-contain select-none"
+          style={transformStyle}
+          draggable={false}
         />
       )}
 
       {hasError && (
         <div className="flex items-center justify-center p-8">
           <Image className="w-12 h-12 text-muted-foreground/50" />
+        </div>
+      )}
+      
+      {/* Loading indicator when zooming before high-res ready */}
+      {scale > 1 && !highResLoaded && hasHighRes && (
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2 pointer-events-none">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          <span className="text-xs text-foreground">Loading high quality...</span>
+        </div>
+      )}
+      
+      {/* Zoom percentage indicator (only when high-res loaded) */}
+      {scale > 1 && highResLoaded && (
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-white bg-black/60 px-3 py-1.5 rounded-full pointer-events-none">
+          {Math.round(scale * 100)}%
+        </div>
+      )}
+      
+      {/* Zoom hint (when not zoomed) */}
+      {scale === 1 && thumbLoaded && (
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-muted-foreground bg-background/80 px-3 py-1.5 rounded-full pointer-events-none opacity-50">
+          Pinch to zoom • Double tap
         </div>
       )}
     </div>
@@ -213,6 +350,10 @@ const PhotoDiaryPage = () => {
   const [viewingPhoto, setViewingPhoto] = useState<VirtualPhoto | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   
+  // Scroll performance: track if user is actively scrolling
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout>();
+  
   // Single photo preview state (for date confirmation)
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [detectedDate, setDetectedDate] = useState<Date | null>(null);
@@ -242,6 +383,32 @@ const PhotoDiaryPage = () => {
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  // ANDROID SCROLL OPTIMIZATION: Detect scrolling to pause expensive operations
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolling(true);
+      
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      
+      // Mark as not scrolling after 200ms of no scroll
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsScrolling(false);
+      }, 200);
+    };
+    
+    // Use passive listener for better scroll performance
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Use virtualized photos with cursor-based pagination
@@ -654,8 +821,10 @@ const PhotoDiaryPage = () => {
 
   // OPTIMIZATION: Prefetch medium URLs for visible photos in viewport
   // This makes clicking photos feel instant since they're already loaded
+  // ANDROID: Skip during scroll to prevent jank
   useEffect(() => {
     if (compareMode) return; // Don't prefetch during compare mode
+    if (isScrolling) return; // CRITICAL: Don't prefetch while scrolling (Android performance)
     if (photos.length === 0) return;
     
     // Prefetch first 6 visible photos (most likely to be clicked)
@@ -674,7 +843,7 @@ const PhotoDiaryPage = () => {
     }, 500); // Wait 500ms after render to avoid blocking initial load
     
     return () => clearTimeout(prefetchTimeout);
-  }, [photos, compareMode, prefetchMediumUrls]);
+  }, [photos, compareMode, isScrolling, prefetchMediumUrls]);
 
   // Fullscreen: fetch medium on-demand (never during scroll)
   useEffect(() => {

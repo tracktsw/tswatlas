@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Image, Columns, Rows } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Image, Columns, Rows, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -15,10 +15,21 @@ interface ComparisonViewerProps {
   onExit: () => void;
 }
 
-// Preload images in background
-const preloadImage = (src: string): Promise<void> => {
+// Preload images in background with priority - UNIVERSAL
+const preloadImage = (src: string, priority: 'high' | 'low' = 'low'): Promise<void> => {
   return new Promise((resolve, reject) => {
+    // Add link preload hint for high priority (better browser optimization)
+    if (typeof document !== 'undefined' && priority === 'high') {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = src;
+      link.fetchPriority = 'high';
+      document.head.appendChild(link);
+    }
+    
     const img = new window.Image();
+    img.decoding = 'async'; // Decode off main thread
     img.onload = () => resolve();
     img.onerror = reject;
     img.src = src;
@@ -52,12 +63,42 @@ const ZoomableImage = ({
   const hasThumb = typeof thumbnailSrc === "string" && thumbnailSrc.length > 0;
   const hasMedium = typeof mediumSrc === "string" && mediumSrc.length > 0;
 
-  // Preload medium image once thumbnail loads
+  // Memoized handlers to prevent re-renders
+  const handleThumbLoad = useCallback(() => {
+    setThumbLoaded(true);
+  }, []);
+
+  const handleThumbError = useCallback(() => {
+    setHasError(true);
+  }, []);
+
+  const handleMediumLoad = useCallback(() => {
+    setMediumLoaded(true);
+  }, []);
+
+  const handleMediumError = useCallback(() => {
+    setHasError(true);
+  }, []);
+
+  // Preload medium image IMMEDIATELY (don't wait for thumbnail)
   useEffect(() => {
-    if (thumbLoaded && hasMedium) {
-      preloadImage(mediumSrc);
-    }
-  }, [thumbLoaded, hasMedium, mediumSrc]);
+    if (!hasMedium) return;
+    
+    let cancelled = false;
+    
+    // Start loading high-quality image RIGHT AWAY
+    preloadImage(mediumSrc, 'high')
+      .then(() => {
+        if (!cancelled) setMediumLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled) setHasError(true);
+      });
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [hasMedium, mediumSrc]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 2) {
@@ -123,11 +164,13 @@ const ZoomableImage = ({
     }
   }, [scale, onTap]);
 
-  // Memoize transform style
+  // Memoize transform style - GPU accelerated with translate3d
   const transformStyle = useMemo(() => ({
-    transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
+    transform: `translate3d(${position.x / scale}px, ${position.y / scale}px, 0) scale(${scale})`,
+    transformOrigin: 'center center',
     willChange: scale > 1 ? 'transform' : 'auto',
-  }), [scale, position.x, position.y]);
+    transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+  }), [scale, position.x, position.y, isDragging]);
 
   return (
     <div 
@@ -142,37 +185,40 @@ const ZoomableImage = ({
         <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 animate-pulse" />
       )}
 
-      {hasThumb && (
+      {hasThumb && !mediumLoaded && (
         <img
           src={thumbnailSrc}
           alt={alt}
           loading={priority ? "eager" : "lazy"}
           decoding="async"
-          onLoad={() => setThumbLoaded(true)}
-          onError={() => setHasError(true)}
+          onLoad={handleThumbLoad}
+          onError={handleThumbError}
           className={cn(
-            "max-w-full max-h-full object-contain transition-all duration-200",
+            "max-w-full max-h-full object-contain transition-all duration-200 select-none",
             thumbLoaded ? "opacity-100" : "opacity-0",
-            mediumLoaded ? "opacity-0 absolute" : "",
-            scale > 1 && "blur-sm"
+            // Only blur thumbnail when zoomed AND medium not loaded yet
+            scale > 1 && !mediumLoaded && "blur-sm opacity-50"
           )}
           style={transformStyle}
+          draggable={false}
         />
       )}
 
-      {hasMedium && thumbLoaded && (
+      {hasMedium && (
         <img
           src={mediumSrc}
           alt={alt}
           loading="eager"
           decoding="async"
-          onLoad={() => setMediumLoaded(true)}
-          onError={() => setHasError(true)}
+          onLoad={handleMediumLoad}
+          onError={handleMediumError}
           className={cn(
-            "max-w-full max-h-full object-contain transition-opacity duration-300",
-            mediumLoaded ? "opacity-100" : "opacity-0 absolute"
+            "max-w-full max-h-full object-contain select-none",
+            // Smooth fade in when loaded
+            mediumLoaded ? "opacity-100 transition-opacity duration-300" : "opacity-0 absolute"
           )}
           style={transformStyle}
+          draggable={false}
         />
       )}
 
@@ -182,7 +228,17 @@ const ZoomableImage = ({
         </div>
       )}
       
-      {scale > 1 && (
+      {/* Loading indicator when zooming before medium is ready */}
+      {scale > 1 && !mediumLoaded && hasMedium && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="bg-background/90 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span className="text-xs text-foreground">Loading high quality...</span>
+          </div>
+        </div>
+      )}
+      
+      {scale > 1 && mediumLoaded && (
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded-full">
           {Math.round(scale * 100)}%
         </div>
@@ -209,14 +265,19 @@ const FullscreenViewer = ({
 
   const photo = photos[currentIndex];
 
-  // Preload adjacent images
+  // Preload adjacent images with low priority (background)
   useEffect(() => {
+    const preloadPromises: Promise<void>[] = [];
+    
     if (currentIndex > 0 && photos[currentIndex - 1].mediumUrl) {
-      preloadImage(photos[currentIndex - 1].mediumUrl);
+      preloadPromises.push(preloadImage(photos[currentIndex - 1].mediumUrl, 'low'));
     }
     if (currentIndex < photos.length - 1 && photos[currentIndex + 1].mediumUrl) {
-      preloadImage(photos[currentIndex + 1].mediumUrl);
+      preloadPromises.push(preloadImage(photos[currentIndex + 1].mediumUrl, 'low'));
     }
+    
+    // Silently fail - will retry if user navigates
+    Promise.all(preloadPromises).catch(() => {});
   }, [currentIndex, photos]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -333,15 +394,16 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
   const hasUserToggled = useRef(false);
   const [isStacked, setIsStacked] = useState(isMobile);
 
-  // Preload both comparison images immediately
+  // Preload both comparison images immediately with HIGH PRIORITY
   useEffect(() => {
-    if (photos.length === 2) {
-      photos.forEach(photo => {
-        if (photo.mediumUrl) {
-          preloadImage(photo.mediumUrl);
-        }
-      });
-    }
+    if (photos.length !== 2) return;
+    
+    const preloadPromises = photos
+      .filter(photo => photo.mediumUrl)
+      .map(photo => preloadImage(photo.mediumUrl!, 'high'));
+    
+    // Silently fail - images will load on demand if preload fails
+    Promise.all(preloadPromises).catch(() => {});
   }, [photos]);
 
   // Hide bottom nav
