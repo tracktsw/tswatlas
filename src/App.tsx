@@ -41,7 +41,16 @@ const AdminPage = lazy(() => import("@/pages/AdminPage"));
 const PWAInstallPrompt = lazy(() => import("@/components/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
 const AppUpdateBanner = lazy(() => import("@/components/AppUpdateBanner").then(m => ({ default: m.AppUpdateBanner })));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes - data stays fresh
+      gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache
+      refetchOnWindowFocus: false, // prevent unnecessary refetches
+      retry: 1, // reduce retry attempts
+    },
+  },
+});
 
 // Component that initializes deep link handling inside BrowserRouter
 const DeepLinkHandler = ({ children }: { children: React.ReactNode }) => {
