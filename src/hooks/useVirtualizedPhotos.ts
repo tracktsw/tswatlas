@@ -66,8 +66,8 @@ export const useVirtualizedPhotos = ({
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // Cursor for pagination (stable ordering)
-  const cursorRef = useRef<string | null>(null);
+  // Composite cursor for pagination (timestamp + id for stability)
+  const cursorRef = useRef<{ timestamp: string; id: string } | null>(null);
   const isLoadingMoreRef = useRef(false);
 
   /**
@@ -94,6 +94,22 @@ export const useVirtualizedPhotos = ({
     }));
   }, []);
 
+  /**
+   * Sort photos by display timestamp (takenAt preferred, then uploadedAt).
+   * Uses stable sort by ID when timestamps match.
+   */
+  const sortPhotos = useCallback((photosToSort: VirtualPhoto[], ascending: boolean): VirtualPhoto[] => {
+    return [...photosToSort].sort((a, b) => {
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
+      if (timeA !== timeB) {
+        return ascending ? timeA - timeB : timeB - timeA;
+      }
+      // Stable sort by ID when timestamps match
+      return ascending ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
+    });
+  }, []);
+
   const loadPhotos = useCallback(async () => {
     if (!userId) {
       setIsLoading(false);
@@ -105,19 +121,15 @@ export const useVirtualizedPhotos = ({
     cursorRef.current = null;
 
     try {
-      // Sort by taken_at (EXIF/capture date) first, fall back to created_at for photos without taken_at
-      // nullsFirst=false for both orders: photos with dates always come before photos without dates
       const isAscending = sortOrder === "oldest";
       
+      // Query orders by created_at (has consistent timezone) for DB-level pagination stability
+      // Client-side sorting will reorder by display timestamp (prefers taken_at)
       let query = supabase
         .from("user_photos")
         .select("id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, taken_at, notes")
         .eq("user_id", userId)
-        // Primary sort: taken_at with nulls last (photos with dates first)
-        .order("taken_at", { ascending: isAscending, nullsFirst: false })
-        // Secondary sort for tie-breaking within same taken_at or for null taken_at photos
         .order("created_at", { ascending: isAscending })
-        // Tertiary sort by id for absolute stability
         .order("id", { ascending: isAscending })
         .limit(PAGE_SIZE);
 
@@ -129,11 +141,17 @@ export const useVirtualizedPhotos = ({
       if (fetchError) throw fetchError;
 
       if (data && data.length > 0) {
-        const photosWithUrls = transformRows(data as PhotoRow[]);
-        setPhotos(photosWithUrls);
-        // Use the last photo's composite cursor for pagination
-        const lastPhoto = data[data.length - 1];
-        cursorRef.current = lastPhoto.taken_at || lastPhoto.created_at;
+        const transformedPhotos = transformRows(data as PhotoRow[]);
+        // Sort by display timestamp (takenAt preferred) for correct visual order
+        const sortedPhotos = sortPhotos(transformedPhotos, isAscending);
+        setPhotos(sortedPhotos);
+        
+        // Use composite cursor from last DB row (not sorted) for pagination
+        const lastDbRow = data[data.length - 1];
+        cursorRef.current = { 
+          timestamp: lastDbRow.created_at, 
+          id: lastDbRow.id 
+        };
         setHasMore(data.length === PAGE_SIZE);
       } else {
         setPhotos([]);
@@ -145,7 +163,7 @@ export const useVirtualizedPhotos = ({
     } finally {
       setIsLoading(false);
     }
-  }, [userId, bodyPartFilter, sortOrder, transformRows]);
+  }, [userId, bodyPartFilter, sortOrder, transformRows, sortPhotos]);
 
   const loadMore = useCallback(async () => {
     if (!userId || !hasMore || isLoadingMoreRef.current || !cursorRef.current) return;
@@ -154,22 +172,27 @@ export const useVirtualizedPhotos = ({
 
     try {
       const isAscending = sortOrder === "oldest";
+      const cursor = cursorRef.current;
       
       let query = supabase
         .from("user_photos")
         .select("id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, taken_at, notes")
         .eq("user_id", userId)
-        // Same ordering as initial load
-        .order("taken_at", { ascending: isAscending, nullsFirst: false })
         .order("created_at", { ascending: isAscending })
         .order("id", { ascending: isAscending });
 
-      // For pagination, filter based on cursor
-      // This handles both photos with taken_at and those falling back to created_at
+      // Composite cursor pagination: handles both timestamp and id for stability
+      // This prevents skipping/duplicating photos when timestamps match
       if (isAscending) {
-        query = query.or(`taken_at.gt.${cursorRef.current},and(taken_at.is.null,created_at.gt.${cursorRef.current})`);
+        query = query.or(
+          `created_at.gt.${cursor.timestamp},` +
+          `and(created_at.eq.${cursor.timestamp},id.gt.${cursor.id})`
+        );
       } else {
-        query = query.or(`taken_at.lt.${cursorRef.current},and(taken_at.is.null,created_at.lt.${cursorRef.current})`);
+        query = query.or(
+          `created_at.lt.${cursor.timestamp},` +
+          `and(created_at.eq.${cursor.timestamp},id.lt.${cursor.id})`
+        );
       }
 
       if (bodyPartFilter !== "all") {
@@ -182,10 +205,20 @@ export const useVirtualizedPhotos = ({
       if (fetchError) throw fetchError;
 
       if (data && data.length > 0) {
-        const photosWithUrls = transformRows(data as PhotoRow[]);
-        setPhotos((prev) => [...prev, ...photosWithUrls]);
-        const lastPhoto = data[data.length - 1];
-        cursorRef.current = lastPhoto.taken_at || lastPhoto.created_at;
+        const transformedPhotos = transformRows(data as PhotoRow[]);
+        
+        // Merge and re-sort to maintain correct display order
+        setPhotos((prev) => {
+          const merged = [...prev, ...transformedPhotos];
+          return sortPhotos(merged, isAscending);
+        });
+        
+        // Update composite cursor from last DB row
+        const lastDbRow = data[data.length - 1];
+        cursorRef.current = { 
+          timestamp: lastDbRow.created_at, 
+          id: lastDbRow.id 
+        };
         setHasMore(data.length === PAGE_SIZE);
       } else {
         setHasMore(false);
@@ -195,7 +228,7 @@ export const useVirtualizedPhotos = ({
     } finally {
       isLoadingMoreRef.current = false;
     }
-  }, [userId, hasMore, bodyPartFilter, sortOrder, transformRows]);
+  }, [userId, hasMore, bodyPartFilter, sortOrder, transformRows, sortPhotos]);
 
   /**
    * Get medium URL for fullscreen/compare.
