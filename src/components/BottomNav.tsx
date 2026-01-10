@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useState, useEffect, useLayoutEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Camera, CheckCircle, BarChart3, Users, Leaf } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
@@ -17,36 +17,62 @@ const navItems = [
 const BottomNav = () => {
   const location = useLocation();
   const platform = Capacitor.getPlatform();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [indicatorStyle, setIndicatorStyle] = useState({ x: 0, width: 0 });
 
   const activeIndex = useMemo(() => {
     const index = navItems.findIndex(item => item.path === location.pathname);
     return index >= 0 ? index : 0;
   }, [location.pathname]);
 
+  // Calculate indicator position and width in pixels
+  const updateIndicator = () => {
+    if (containerRef.current) {
+      const containerWidth = containerRef.current.offsetWidth;
+      const padding = 8; // px-1 = 4px each side
+      const availableWidth = containerWidth - padding;
+      const itemWidth = availableWidth / navItems.length;
+      
+      setIndicatorStyle({
+        x: 4 + activeIndex * itemWidth,
+        width: itemWidth,
+      });
+    }
+  };
+
+  useLayoutEffect(() => {
+    updateIndicator();
+  }, [activeIndex]);
+
+  useEffect(() => {
+    window.addEventListener('resize', updateIndicator);
+    return () => window.removeEventListener('resize', updateIndicator);
+  }, [activeIndex]);
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
       <div className="bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg">
-        <div className={cn(
-          "flex items-center justify-around px-1 max-w-lg mx-auto relative",
-          platform === 'ios' ? "py-2.5" : "py-3"
-        )}>
+        <div 
+          ref={containerRef}
+          className={cn(
+            "flex items-center justify-around px-1 max-w-lg mx-auto relative",
+            platform === 'ios' ? "py-2.5" : "py-3"
+          )}
+        >
           {/* Sliding indicator */}
           <motion.div
-            className="absolute top-1/2 h-[44px] bg-anchor/8 rounded-2xl pointer-events-none"
+            className="absolute top-1/2 -translate-y-1/2 h-[44px] bg-anchor/8 rounded-2xl pointer-events-none"
             initial={false}
             animate={{
-              x: `calc(${activeIndex * 100}% + ${activeIndex * 8 / navItems.length}px)`,
+              x: indicatorStyle.x,
+              width: indicatorStyle.width,
             }}
             transition={{
               type: 'spring',
               stiffness: 400,
               damping: 30,
             }}
-            style={{
-              width: `calc((100% - 8px) / ${navItems.length})`,
-              left: '4px',
-              y: '-50%',
-            }}
+            style={{ left: 0 }}
           />
 
           {navItems.map(({ path, icon: Icon, label }) => {
