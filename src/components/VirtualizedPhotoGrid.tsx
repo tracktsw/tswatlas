@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback, memo } from 'react';
+import { useRef, useEffect, useState, useCallback, memo, useMemo } from 'react';
 import { Image, Check, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -76,6 +76,11 @@ const PhotoItem = memo(({
         compareMode && 'hover:opacity-90',
         isOptimistic && 'ring-2 ring-coral/60 animate-pulse'
       )}
+      style={{
+        contain: 'layout style paint',
+        contentVisibility: 'auto',
+        containIntrinsicSize: '0 280px',
+      }}
       onClick={() => !isOptimistic && onSelect(photo)}
     >
       {/* Fixed aspect ratio container with blur placeholder */}
@@ -216,12 +221,25 @@ export const VirtualizedPhotoGrid = ({
     return () => observer.disconnect();
   }, [hasMore, onLoadMore]);
 
-  const getBodyPartLabel = useCallback((bodyPart: string) => {
-    return bodyParts.find(b => b.value === bodyPart)?.label || bodyPart;
+  // Memoize body part lookup map for O(1) access during scroll
+  const bodyPartMap = useMemo(() => {
+    const map = new Map<string, string>();
+    bodyParts.forEach(b => map.set(b.value, b.label));
+    return map;
   }, [bodyParts]);
 
+  const getBodyPartLabel = useCallback((bodyPart: string) => {
+    return bodyPartMap.get(bodyPart) || bodyPart;
+  }, [bodyPartMap]);
+
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div 
+      className="grid grid-cols-2 gap-4"
+      style={{ 
+        contain: 'layout style paint',
+        willChange: 'transform',
+      }}
+    >
       {photos.map((photo, index) => {
         const isSelected = selectedPhotos.some(p => p.id === photo.id);
         

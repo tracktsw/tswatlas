@@ -55,9 +55,9 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
       setKeyboardOverlap(overlap);
     };
 
-    // Listen for viewport changes
-    window.visualViewport.addEventListener('resize', calculateKeyboardOverlap);
-    window.visualViewport.addEventListener('scroll', calculateKeyboardOverlap);
+    // Listen for viewport changes (passive for scroll performance)
+    window.visualViewport.addEventListener('resize', calculateKeyboardOverlap, { passive: true });
+    window.visualViewport.addEventListener('scroll', calculateKeyboardOverlap, { passive: true });
     
     // Initial calculation
     calculateKeyboardOverlap();
