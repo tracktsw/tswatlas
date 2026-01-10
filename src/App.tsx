@@ -10,19 +10,32 @@ import { IOSKeyboardProvider } from "@/contexts/IOSKeyboardContext";
 import { RevenueCatProvider } from "@/contexts/RevenueCatContext";
 import AuthGuard from "@/components/AuthGuard";
 import Layout from "@/components/Layout";
-import HomePage from "@/pages/HomePage";
-import PhotoDiaryPage from "@/pages/PhotoDiaryPage";
-import CheckInPage from "@/pages/CheckInPage";
-import InsightsPage from "@/pages/InsightsPage";
-import CommunityPage from "@/pages/CommunityPage";
-import JournalPage from "@/pages/JournalPage";
-import CoachPage from "@/pages/CoachPage";
-import SettingsPage from "@/pages/SettingsPage";
 import AuthPage from "@/pages/AuthPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
-import AdminPage from "@/pages/AdminPage";
 import NotFound from "@/pages/NotFound";
 import { useDeepLink } from "@/hooks/useDeepLink";
+import {
+  HomePageSkeleton,
+  PhotoDiaryPageSkeleton,
+  CheckInPageSkeleton,
+  InsightsPageSkeleton,
+  CommunityPageSkeleton,
+  JournalPageSkeleton,
+  CoachPageSkeleton,
+  SettingsPageSkeleton,
+  GenericPageSkeleton,
+} from "@/components/skeletons/PageSkeletons";
+
+// Lazy load all page components for faster initial load
+const HomePage = lazy(() => import("@/pages/HomePage"));
+const PhotoDiaryPage = lazy(() => import("@/pages/PhotoDiaryPage"));
+const CheckInPage = lazy(() => import("@/pages/CheckInPage"));
+const InsightsPage = lazy(() => import("@/pages/InsightsPage"));
+const CommunityPage = lazy(() => import("@/pages/CommunityPage"));
+const JournalPage = lazy(() => import("@/pages/JournalPage"));
+const CoachPage = lazy(() => import("@/pages/CoachPage"));
+const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const AdminPage = lazy(() => import("@/pages/AdminPage"));
 
 // Lazy load non-critical components
 const PWAInstallPrompt = lazy(() => import("@/components/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
@@ -68,15 +81,51 @@ const App = () => (
                     </AuthGuard>
                   }
                 >
-                  <Route index element={<HomePage />} />
-                  <Route path="photos" element={<PhotoDiaryPage />} />
-                  <Route path="check-in" element={<CheckInPage />} />
-                  <Route path="insights" element={<InsightsPage />} />
-                  <Route path="community" element={<CommunityPage />} />
-                  <Route path="journal" element={<JournalPage />} />
-                  <Route path="coach" element={<CoachPage />} />
-                  <Route path="settings" element={<SettingsPage />} />
-                  <Route path="admin" element={<AdminPage />} />
+                  <Route index element={
+                    <Suspense fallback={<HomePageSkeleton />}>
+                      <HomePage />
+                    </Suspense>
+                  } />
+                  <Route path="photos" element={
+                    <Suspense fallback={<PhotoDiaryPageSkeleton />}>
+                      <PhotoDiaryPage />
+                    </Suspense>
+                  } />
+                  <Route path="check-in" element={
+                    <Suspense fallback={<CheckInPageSkeleton />}>
+                      <CheckInPage />
+                    </Suspense>
+                  } />
+                  <Route path="insights" element={
+                    <Suspense fallback={<InsightsPageSkeleton />}>
+                      <InsightsPage />
+                    </Suspense>
+                  } />
+                  <Route path="community" element={
+                    <Suspense fallback={<CommunityPageSkeleton />}>
+                      <CommunityPage />
+                    </Suspense>
+                  } />
+                  <Route path="journal" element={
+                    <Suspense fallback={<JournalPageSkeleton />}>
+                      <JournalPage />
+                    </Suspense>
+                  } />
+                  <Route path="coach" element={
+                    <Suspense fallback={<CoachPageSkeleton />}>
+                      <CoachPage />
+                    </Suspense>
+                  } />
+                  <Route path="settings" element={
+                    <Suspense fallback={<SettingsPageSkeleton />}>
+                      <SettingsPage />
+                    </Suspense>
+                  } />
+                  <Route path="admin" element={
+                    <Suspense fallback={<GenericPageSkeleton />}>
+                      <AdminPage />
+                    </Suspense>
+                  } />
                 </Route>
                 
                 <Route path="*" element={<NotFound />} />
