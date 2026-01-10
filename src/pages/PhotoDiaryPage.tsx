@@ -1100,10 +1100,10 @@ const PhotoDiaryPage = () => {
               className="w-full gap-2"
             >
               <Crown className="w-4 h-4" />
-              {isPurchasing ? 'Loading...' : 'Start 14-Day Free Trial · £5.99/month'}
+              {isPurchasing ? 'Loading...' : `Start 14-Day Free Trial · ${priceString}`}
             </Button>
             <p className="text-xs text-center text-muted-foreground">
-              £5.99/month after 14-day free trial. Auto-renewable. Cancel anytime.
+              {priceString} after 14-day free trial. Auto-renewable. Cancel anytime.
             </p>
             <p className="text-xs text-muted-foreground/70 text-center">
               By subscribing, you agree to our{' '}
@@ -1165,12 +1165,12 @@ const PhotoDiaryPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Start 14-Day Free Trial · £5.99/month
+                    Start 14-Day Free Trial · {priceString}
                   </>
                 )}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                £5.99/month after 14-day free trial. Auto-renewable. Cancel anytime.
+                {priceString} after 14-day free trial. Auto-renewable. Cancel anytime.
               </p>
               <p className="text-xs text-muted-foreground/70 text-center">
                 By subscribing, you agree to our{' '}
@@ -1283,12 +1283,12 @@ const PhotoDiaryPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Start 14-Day Free Trial · £5.99/month
+                    Start 14-Day Free Trial · {priceString}
                   </>
                 )}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                £5.99/month after 14-day free trial. Auto-renewable. Cancel anytime.
+                {priceString} after 14-day free trial. Auto-renewable. Cancel anytime.
               </p>
               <p className="text-xs text-muted-foreground/70 text-center">
                 By subscribing, you agree to our{' '}
@@ -1394,10 +1394,10 @@ const PhotoDiaryPage = () => {
               disabled={isPurchasing}
             >
               <Crown className="w-5 h-5" />
-              {isPurchasing ? 'Loading...' : 'Start 14-Day Free Trial · £5.99/month'}
+              {isPurchasing ? 'Loading...' : `Start 14-Day Free Trial · ${priceString}`}
             </Button>
             <p className="text-xs text-center text-muted-foreground">
-              £5.99/month after 14-day free trial. Auto-renewable. Cancel anytime.
+              {priceString} after 14-day free trial. Auto-renewable. Cancel anytime.
             </p>
             <p className="text-xs text-muted-foreground/70 text-center">
               By subscribing, you agree to our{' '}
