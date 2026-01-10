@@ -1,6 +1,7 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { usePaymentRouter } from '@/hooks/usePaymentRouter';
+import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
 import { Lock, Sparkles, Crown, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -14,7 +15,8 @@ interface PaywallGuardProps {
 
 const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false }: PaywallGuardProps) => {
   const navigate = useNavigate();
-  const { isPremium: isPremiumFromBackend, isAdmin, isLoading: isBackendLoading } = useSubscription();
+  const revenueCat = useRevenueCatContext();
+  const { isPremium, isAdmin, isLoading: isBackendLoading } = useSubscription();
   const {
     platform,
     isNative,
@@ -32,17 +34,19 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   
   const [upgradeAttempted, setUpgradeAttempted] = useState(false);
 
-  // Premium is enforced by backend for ALL platforms.
-  const isPremium = isAdmin || isPremiumFromBackend;
-  const isLoading = isBackendLoading;
+  const effectiveIsPremium = isAdmin || isPremium;
+
+  // Prevent a brief paywall flash on native while RevenueCat initializes/validates.
+  const isNativePending = isNative && isUserLoggedIn && !revenueCat.isInitialized;
+  const isLoading = isBackendLoading || isNativePending;
 
   // Auto-hide paywall when premium becomes active
   useEffect(() => {
-    if (isPremium && upgradeAttempted) {
+    if (effectiveIsPremium && upgradeAttempted) {
       console.log('[PaywallGuard] Premium detected, closing paywall');
       setUpgradeAttempted(false);
     }
-  }, [isPremium, upgradeAttempted]);
+  }, [effectiveIsPremium, upgradeAttempted]);
 
   const handleUpgrade = async () => {
     console.log(`[PaywallGuard] handleUpgrade on platform: ${platform}`);
@@ -71,7 +75,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   };
 
   // Loading state
-  if (isLoading && !isPremium) {
+  if (isLoading && !effectiveIsPremium) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -80,7 +84,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   }
 
   // Premium - show content
-  if (isPremium) {
+  if (effectiveIsPremium) {
     return <>{children}</>;
   }
 
