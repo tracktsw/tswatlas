@@ -22,6 +22,7 @@ import { FlareStatusBadge } from '@/components/FlareStatusBadge';
 import { severityColors, severityLabels } from '@/constants/severityColors';
 import { toast } from 'sonner';
 import { useFlareState } from '@/hooks/useFlareState';
+import { InsightsPageSkeleton } from '@/components/skeletons/PageSkeletons';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
@@ -195,6 +196,11 @@ const InsightsPage = () => {
 
   const selectedDayCheckIns = selectedDate ? getCheckInsForDate(selectedDate) : [];
   const selectedDayPhotos = selectedDate ? getPhotosForDate(selectedDate) : [];
+
+  // Show skeleton while subscription is loading to prevent premium UI flash
+  if (isSubscriptionLoading) {
+    return <InsightsPageSkeleton />;
+  }
 
   if (checkIns.length === 0) {
     return (

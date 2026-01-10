@@ -24,6 +24,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { LeafIllustration, SparkleIllustration } from '@/components/illustrations';
 import { SparkleEffect } from '@/components/SparkleEffect';
 import { PhotoSkeleton } from '@/components/PhotoSkeleton';
+import { PhotoDiaryPageSkeleton } from '@/components/skeletons/PageSkeletons';
 
 // Preload image utility with priority hints - UNIVERSAL (iOS, Android, Web)
 const preloadImage = (src: string, priority: 'high' | 'low' = 'low'): Promise<void> => {
@@ -929,6 +930,11 @@ const PhotoDiaryPage = () => {
         // keep placeholders
       });
   }, [compareMode, selectedCompareIdsKey, prefetchMediumUrls]);
+
+  // Show skeleton while subscription is loading to prevent premium UI flash
+  if (isSubscriptionLoading) {
+    return <PhotoDiaryPageSkeleton />;
+  }
 
   return (
     <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
