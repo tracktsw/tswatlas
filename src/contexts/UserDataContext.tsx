@@ -292,41 +292,53 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!userId) return;
 
     try {
-      // Fetch settings
-      const { data: settings } = await supabase
-        .from('user_settings')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+      // Fetch all data in parallel for faster loading
+      const [settingsResult, photosResult, checkInsResult, journalResult] = await Promise.all([
+        // Settings
+        supabase
+          .from('user_settings')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle(),
+        // Photos with explicit URL columns
+        supabase
+          .from('user_photos')
+          .select('id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, taken_at, notes')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false }),
+        // Check-ins
+        supabase
+          .from('user_check_ins')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false }),
+        // Journal entries
+        supabase
+          .from('user_journal_entries')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false }),
+      ]);
 
-      if (settings) {
-        setTswStartDateState(settings.tsw_start_date);
-        setCustomTreatments(settings.custom_treatments || []);
+      // Process settings
+      if (settingsResult.data) {
+        setTswStartDateState(settingsResult.data.tsw_start_date);
+        setCustomTreatments(settingsResult.data.custom_treatments || []);
         setReminderSettings({
-          enabled: settings.reminders_enabled,
-          morningTime: settings.morning_time,
-          eveningTime: settings.evening_time,
+          enabled: settingsResult.data.reminders_enabled,
+          morningTime: settingsResult.data.morning_time,
+          eveningTime: settingsResult.data.evening_time,
         });
       }
 
-      // Fetch photos with explicit URL columns (now storing public URLs directly)
-      // Include taken_at for display; created_at is the upload timestamp.
-      const { data: photosData } = await supabase
-        .from('user_photos')
-        .select('id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, taken_at, notes')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (photosData && photosData.length > 0) {
-        // Use stored URLs directly - no signing needed for public bucket
-        // timestamp = taken_at (EXIF date) if available, else created_at (upload date)
-        const photosWithUrls = photosData.map(photo => ({
+      // Process photos
+      if (photosResult.data && photosResult.data.length > 0) {
+        const photosWithUrls = photosResult.data.map(photo => ({
           id: photo.id,
           photoUrl: photo.medium_url || photo.photo_url || '',
           thumbnailUrl: photo.thumb_url || photo.medium_url || photo.photo_url || '',
           originalUrl: photo.original_url || undefined,
           bodyPart: photo.body_part as BodyPart,
-          // Display date: prefer taken_at (EXIF), fall back to created_at (upload)
           timestamp: photo.taken_at || photo.created_at,
           hasTakenAt: !!photo.taken_at,
           notes: photo.notes || undefined,
@@ -336,15 +348,9 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setPhotos([]);
       }
 
-      // Fetch check-ins
-      const { data: checkInsData } = await supabase
-        .from('user_check_ins')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (checkInsData) {
-        setCheckIns(checkInsData.map(c => ({
+      // Process check-ins
+      if (checkInsResult.data) {
+        setCheckIns(checkInsResult.data.map(c => ({
           id: c.id,
           timestamp: c.created_at,
           timeOfDay: c.time_of_day as 'morning' | 'evening',
@@ -360,15 +366,9 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         })));
       }
 
-      // Fetch journal entries
-      const { data: journalData } = await supabase
-        .from('user_journal_entries')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (journalData) {
-        setJournalEntries(journalData.map(j => ({
+      // Process journal entries
+      if (journalResult.data) {
+        setJournalEntries(journalResult.data.map(j => ({
           id: j.id,
           timestamp: j.created_at,
           content: j.content,

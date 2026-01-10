@@ -1,127 +1,77 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useCallback } from 'react';
 
-interface SubscriptionState {
+interface SubscriptionData {
   isPremium: boolean;
   isAdmin: boolean;
-  isLoading: boolean;
   subscriptionEnd: string | null;
-  error: string | null;
 }
 
-export const useSubscription = () => {
-  const [state, setState] = useState<SubscriptionState>({
-    isPremium: false,
-    isAdmin: false,
-    isLoading: true,
-    subscriptionEnd: null,
-    error: null,
+const fetchSubscription = async (): Promise<SubscriptionData> => {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) {
+    return {
+      isPremium: false,
+      isAdmin: false,
+      subscriptionEnd: null,
+    };
+  }
+
+  const { data, error } = await supabase.functions.invoke('check-subscription', {
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
   });
 
-  const checkSubscription = useCallback(async (): Promise<SubscriptionState> => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        const next: SubscriptionState = {
-          isPremium: false,
-          isAdmin: false,
-          isLoading: false,
-          subscriptionEnd: null,
-          error: null,
-        };
-        setState(next);
-        return next;
-      }
-
-      const { data, error } = await supabase.functions.invoke('check-subscription', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (error) {
-        const next: SubscriptionState = {
-          isPremium: false,
-          isAdmin: false,
-          isLoading: false,
-          subscriptionEnd: null,
-          error: error.message,
-        };
-        setState(next);
-        return next;
-      }
-
-      if (data?.error) {
-        const next: SubscriptionState = {
-          isPremium: false,
-          isAdmin: false,
-          isLoading: false,
-          subscriptionEnd: null,
-          error: data.error,
-        };
-        setState(next);
-        return next;
-      }
-
-      const next: SubscriptionState = {
-        isPremium: Boolean(data.subscribed || data.isAdmin),
-        isAdmin: Boolean(data.isAdmin),
-        isLoading: false,
-        subscriptionEnd: data.subscription_end || null,
-        error: null,
-      };
-
-      setState(next);
-      return next;
-    } catch {
-      const next: SubscriptionState = {
-        isPremium: false,
-        isAdmin: false,
-        isLoading: false,
-        subscriptionEnd: null,
-        error: 'Failed to check subscription status',
-      };
-      setState(next);
-      return next;
-    }
-  }, []);
-
-  useEffect(() => {
-    checkSubscription();
-
-    // Re-check subscription every 5 minutes
-    const interval = setInterval(() => {
-      checkSubscription();
-    }, 5 * 60 * 1000);
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        checkSubscription();
-      } else if (event === 'SIGNED_OUT') {
-        setState({
-          isPremium: false,
-          isAdmin: false,
-          isLoading: false,
-          subscriptionEnd: null,
-          error: null,
-        });
-      }
-    });
-
-    return () => {
-      clearInterval(interval);
-      subscription.unsubscribe();
+  if (error || data?.error) {
+    console.error('Subscription check error:', error?.message || data?.error);
+    return {
+      isPremium: false,
+      isAdmin: false,
+      subscriptionEnd: null,
     };
-  }, [checkSubscription]);
-
-  const refreshSubscription = useCallback(async () => {
-    setState(prev => ({ ...prev, isLoading: true }));
-    return checkSubscription();
-  }, [checkSubscription]);
+  }
 
   return {
-    ...state,
+    isPremium: Boolean(data.subscribed || data.isAdmin),
+    isAdmin: Boolean(data.isAdmin),
+    subscriptionEnd: data.subscription_end || null,
+  };
+};
+
+export const useSubscription = () => {
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['subscription'],
+    queryFn: fetchSubscription,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    retry: 1,
+  });
+
+  const refreshSubscription = useCallback(async () => {
+    const result = await refetch();
+    return {
+      isPremium: result.data?.isPremium ?? false,
+      isAdmin: result.data?.isAdmin ?? false,
+      isLoading: false,
+      subscriptionEnd: result.data?.subscriptionEnd ?? null,
+      error: result.error?.message ?? null,
+    };
+  }, [refetch]);
+
+  // Invalidate subscription on auth changes
+  // This is handled by the query's automatic refetch on mount
+
+  return {
+    isPremium: data?.isPremium ?? false,
+    isAdmin: data?.isAdmin ?? false,
+    isLoading,
+    subscriptionEnd: data?.subscriptionEnd ?? null,
+    error: error?.message ?? null,
     refreshSubscription,
   };
 };

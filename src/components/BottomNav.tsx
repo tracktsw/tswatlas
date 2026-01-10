@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useEffect, useLayoutEffect } from 'react';
+import { useMemo, useRef, useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Camera, CheckCircle, BarChart3, Users, Leaf } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
@@ -13,12 +13,23 @@ const navItems = [
   { path: '/coach', icon: Leaf, label: 'Coach' },
 ];
 
+// Map paths to lazy import functions for preloading
+const pageImports: Record<string, () => Promise<unknown>> = {
+  '/': () => import('@/pages/HomePage'),
+  '/photos': () => import('@/pages/PhotoDiaryPage'),
+  '/check-in': () => import('@/pages/CheckInPage'),
+  '/insights': () => import('@/pages/InsightsPage'),
+  '/community': () => import('@/pages/CommunityPage'),
+  '/coach': () => import('@/pages/CoachPage'),
+};
+
 const BottomNav = () => {
   const location = useLocation();
   const platform = Capacitor.getPlatform();
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const [indicatorStyle, setIndicatorStyle] = useState({ x: 0, width: 0 });
+  const preloadedRoutes = useRef<Set<string>>(new Set());
 
   const activeIndex = useMemo(() => {
     const index = navItems.findIndex(item => item.path === location.pathname);
@@ -48,6 +59,22 @@ const BottomNav = () => {
     return () => window.removeEventListener('resize', updateIndicator);
   }, [activeIndex]);
 
+  // Preload route on hover for faster navigation
+  const handleMouseEnter = useCallback((path: string) => {
+    if (preloadedRoutes.current.has(path)) return;
+    
+    const importFn = pageImports[path];
+    if (importFn) {
+      preloadedRoutes.current.add(path);
+      importFn();
+    }
+  }, []);
+
+  // Preload on touch start for mobile
+  const handleTouchStart = useCallback((path: string) => {
+    handleMouseEnter(path);
+  }, [handleMouseEnter]);
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
       <div className="bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg">
@@ -75,6 +102,8 @@ const BottomNav = () => {
                 key={path}
                 to={path}
                 ref={(el) => (itemRefs.current[index] = el)}
+                onMouseEnter={() => handleMouseEnter(path)}
+                onTouchStart={() => handleTouchStart(path)}
                 className={cn(
                   'flex flex-col items-center gap-1 min-w-[56px] px-2 py-2 rounded-2xl transition-colors duration-200 z-10',
                   isActive
