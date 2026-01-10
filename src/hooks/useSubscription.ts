@@ -53,6 +53,9 @@ export const useSubscription = () => {
   });
 
   const refreshSubscription = useCallback(async () => {
+    // Invalidate cache first to ensure ALL components see fresh data immediately
+    await queryClient.invalidateQueries({ queryKey: ['subscription'] });
+    
     const result = await refetch();
     return {
       isPremium: result.data?.isPremium ?? false,
@@ -61,7 +64,7 @@ export const useSubscription = () => {
       subscriptionEnd: result.data?.subscriptionEnd ?? null,
       error: result.error?.message ?? null,
     };
-  }, [refetch]);
+  }, [queryClient, refetch]);
 
   // Invalidate subscription on auth changes
   // This is handled by the query's automatic refetch on mount
