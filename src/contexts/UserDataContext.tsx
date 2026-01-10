@@ -13,6 +13,8 @@ export interface Photo {
   bodyPart: BodyPart;
   /** Display date: taken_at if available, otherwise created_at (upload date) */
   timestamp: string;
+  /** Actual upload date (created_at) - used for daily limit tracking */
+  createdAt: string;
   /** True if timestamp came from EXIF (taken_at), false if fallback to upload date */
   hasTakenAt: boolean;
   notes?: string;
@@ -340,6 +342,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           originalUrl: photo.original_url || undefined,
           bodyPart: photo.body_part as BodyPart,
           timestamp: photo.taken_at || photo.created_at,
+          createdAt: photo.created_at,
           hasTakenAt: !!photo.taken_at,
           notes: photo.notes || undefined,
         }));
@@ -405,6 +408,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           bodyPart: photo.body_part as BodyPart,
           // Display date: prefer taken_at (EXIF), fall back to created_at (upload)
           timestamp: photo.taken_at || photo.created_at,
+          createdAt: photo.created_at,
           hasTakenAt: !!photo.taken_at,
           notes: photo.notes || undefined,
         }));
@@ -542,6 +546,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         originalUrl: originalUrl || undefined,
         bodyPart: photo.bodyPart,
         timestamp: insertedPhoto.created_at,
+        createdAt: insertedPhoto.created_at,
         hasTakenAt: false, // addPhoto uses legacy flow, no EXIF extraction here
         notes: photo.notes,
       };
