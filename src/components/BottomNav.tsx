@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Camera, CheckCircle, BarChart3, Users, Leaf } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -30,13 +31,21 @@ const BottomNav = () => {
           platform === 'ios' ? "py-2.5" : "py-3"
         )}>
           {/* Sliding indicator */}
-          <div
+          <motion.div
             className="absolute top-1/2 h-[44px] bg-anchor/8 rounded-2xl pointer-events-none"
+            initial={false}
+            animate={{
+              x: `calc(${activeIndex * 100}% + ${activeIndex * 8 / navItems.length}px)`,
+            }}
+            transition={{
+              type: 'spring',
+              stiffness: 400,
+              damping: 30,
+            }}
             style={{
               width: `calc((100% - 8px) / ${navItems.length})`,
-              transform: `translateX(calc(${activeIndex} * 100%)) translateY(-50%)`,
               left: '4px',
-              transition: 'transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+              y: '-50%',
             }}
           />
 
