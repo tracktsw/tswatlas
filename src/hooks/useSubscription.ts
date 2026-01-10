@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 
 interface SubscriptionData {
   isPremium: boolean;
@@ -43,6 +44,7 @@ const fetchSubscription = async (): Promise<SubscriptionData> => {
 
 export const useSubscription = () => {
   const queryClient = useQueryClient();
+  const wasPremiumRef = useRef<boolean | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['subscription'],
@@ -52,13 +54,31 @@ export const useSubscription = () => {
     retry: 1,
   });
 
+  // Track previous premium status
+  if (data && wasPremiumRef.current === null) {
+    wasPremiumRef.current = data.isPremium;
+  }
+
   const refreshSubscription = useCallback(async () => {
+    const previousPremium = wasPremiumRef.current;
+    
     // Invalidate cache first to ensure ALL components see fresh data immediately
     await queryClient.invalidateQueries({ queryKey: ['subscription'] });
     
     const result = await refetch();
+    const nowPremium = result.data?.isPremium ?? false;
+    
+    // Show confirmation toast when user becomes premium
+    if (nowPremium && previousPremium === false) {
+      toast.success('Premium activated! Enjoy all features.', {
+        duration: 4000,
+      });
+    }
+    
+    wasPremiumRef.current = nowPremium;
+    
     return {
-      isPremium: result.data?.isPremium ?? false,
+      isPremium: nowPremium,
       isAdmin: result.data?.isAdmin ?? false,
       isLoading: false,
       subscriptionEnd: result.data?.subscriptionEnd ?? null,
