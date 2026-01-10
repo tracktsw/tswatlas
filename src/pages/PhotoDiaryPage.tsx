@@ -471,11 +471,12 @@ const PhotoDiaryPage = () => {
     },
   });
 
-  // Count photos uploaded today (use context photos for accurate count)
+  // Count photos uploaded today using createdAt (actual upload date, not EXIF date)
   const photosUploadedToday = useMemo(() => {
     return contextPhotos.filter(photo => {
-      const parsed = parseLocalDateTime(photo.timestamp) || new Date(photo.timestamp);
-      return isToday(parsed);
+      // Use createdAt (upload date) for limit tracking, NOT timestamp (which may be EXIF date)
+      const uploadDate = new Date(photo.createdAt);
+      return isToday(uploadDate);
     }).length;
   }, [contextPhotos]);
 
