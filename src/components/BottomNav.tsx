@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Camera, CheckCircle, BarChart3, Users, Leaf } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
-import { SafeArea } from 'capacitor-plugin-safe-area';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -18,13 +17,29 @@ const BottomNav = () => {
   const location = useLocation();
   const platform = Capacitor.getPlatform();
 
+  const activeIndex = useMemo(() => {
+    const index = navItems.findIndex(item => item.path === location.pathname);
+    return index >= 0 ? index : 0;
+  }, [location.pathname]);
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
       <div className="bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg">
         <div className={cn(
-          "flex items-center justify-around px-1 max-w-lg mx-auto",
+          "flex items-center justify-around px-1 max-w-lg mx-auto relative",
           platform === 'ios' ? "py-2.5" : "py-3"
         )}>
+          {/* Sliding indicator */}
+          <div
+            className="absolute top-1/2 h-[44px] bg-anchor/8 rounded-2xl pointer-events-none"
+            style={{
+              width: `calc((100% - 8px) / ${navItems.length})`,
+              transform: `translateX(calc(${activeIndex} * 100%)) translateY(-50%)`,
+              left: '4px',
+              transition: 'transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+            }}
+          />
+
           {navItems.map(({ path, icon: Icon, label }) => {
             const isActive = location.pathname === path;
             return (
@@ -32,10 +47,10 @@ const BottomNav = () => {
                 key={path}
                 to={path}
                 className={cn(
-                  'flex flex-col items-center gap-1 min-w-[56px] px-2 py-2 rounded-2xl transition-all duration-200',
+                  'flex flex-col items-center gap-1 min-w-[56px] px-2 py-2 rounded-2xl transition-colors duration-200 z-10',
                   isActive
-                    ? 'text-anchor bg-anchor/8'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                    ? 'text-anchor'
+                    : 'text-muted-foreground hover:text-foreground'
                 )}
               >
                 <div className={cn(
