@@ -1,7 +1,7 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { UserDataProvider } from "@/contexts/UserDataContext";
 import { LayoutProvider } from "@/contexts/LayoutContext";
@@ -25,6 +25,9 @@ import {
   SettingsPageSkeleton,
   GenericPageSkeleton,
 } from "@/components/skeletons/PageSkeletons";
+
+// Lazy load onboarding
+const OnboardingPage = lazy(() => import("@/pages/OnboardingPage"));
 
 // Lazy load all page components for faster initial load
 const HomePage = lazy(() => import("@/pages/HomePage"));
@@ -66,10 +69,15 @@ const App = () => (
           <TooltipProvider>
             <BrowserRouter>
               <DeepLinkHandler>
-                <Routes>
-                  {/* Public routes - no UserDataProvider */}
+              <Routes>
+                  {/* Public routes */}
+                  <Route path="/onboarding" element={
+                    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+                      <OnboardingPage />
+                    </Suspense>
+                  } />
                   <Route path="/auth" element={<AuthPage />} />
-                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                  <Route path="/reset-password" element={<ResetPasswordPage />} />
                 
                 {/* Protected routes - require authentication */}
                 <Route
