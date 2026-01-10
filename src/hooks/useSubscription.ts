@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 interface SubscriptionData {
@@ -9,7 +9,16 @@ interface SubscriptionData {
   subscriptionEnd: string | null;
 }
 
-const fetchSubscription = async (): Promise<SubscriptionData> => {
+const fetchSubscription = async (userId: string | null): Promise<SubscriptionData> => {
+  // No user = no premium
+  if (!userId) {
+    return {
+      isPremium: false,
+      isAdmin: false,
+      subscriptionEnd: null,
+    };
+  }
+
   const { data: { session } } = await supabase.auth.getSession();
   
   if (!session) {
@@ -45,13 +54,38 @@ const fetchSubscription = async (): Promise<SubscriptionData> => {
 export const useSubscription = () => {
   const queryClient = useQueryClient();
   const wasPremiumRef = useRef<boolean | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // Track auth state changes and clear cache on logout/login
+  useEffect(() => {
+    const getInitialUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id ?? null);
+    };
+    getInitialUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const newUserId = session?.user?.id ?? null;
+      
+      // Clear subscription cache when user changes (logout or different user login)
+      if (newUserId !== userId) {
+        queryClient.removeQueries({ queryKey: ['subscription'] });
+        wasPremiumRef.current = null;
+      }
+      
+      setUserId(newUserId);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [queryClient, userId]);
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['subscription'],
-    queryFn: fetchSubscription,
+    queryKey: ['subscription', userId],
+    queryFn: () => fetchSubscription(userId),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
     retry: 1,
+    enabled: userId !== null, // Only run query when we have a user
   });
 
   // Track previous premium status
@@ -63,7 +97,7 @@ export const useSubscription = () => {
     const previousPremium = wasPremiumRef.current;
     
     // Invalidate cache first to ensure ALL components see fresh data immediately
-    await queryClient.invalidateQueries({ queryKey: ['subscription'] });
+    await queryClient.invalidateQueries({ queryKey: ['subscription', userId] });
     
     const result = await refetch();
     const nowPremium = result.data?.isPremium ?? false;
@@ -84,15 +118,12 @@ export const useSubscription = () => {
       subscriptionEnd: result.data?.subscriptionEnd ?? null,
       error: result.error?.message ?? null,
     };
-  }, [queryClient, refetch]);
-
-  // Invalidate subscription on auth changes
-  // This is handled by the query's automatic refetch on mount
+  }, [queryClient, refetch, userId]);
 
   return {
     isPremium: data?.isPremium ?? false,
     isAdmin: data?.isAdmin ?? false,
-    isLoading,
+    isLoading: userId === null ? false : isLoading, // Not loading if no user
     subscriptionEnd: data?.subscriptionEnd ?? null,
     error: error?.message ?? null,
     refreshSubscription,
