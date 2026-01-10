@@ -61,6 +61,65 @@ const getRevenueCatKey = () => {
 // CRITICAL: The entitlement identifier MUST match exactly what's in RevenueCat dashboard
 const PREMIUM_ENTITLEMENT_ID = 'premium';
 
+// LocalStorage cache for instant premium UI on native app load
+const RC_CACHE_KEY = 'revenuecat_cache';
+const RC_CACHE_VERSION = 1;
+
+interface CachedRevenueCatState {
+  userId: string;
+  isPremium: boolean;
+  originalAppUserId: string | null;
+  cachedAt: number;
+  version: number;
+}
+
+const getCachedRCState = (userId: string): { isPremium: boolean } | null => {
+  try {
+    const cached = localStorage.getItem(RC_CACHE_KEY);
+    if (!cached) return null;
+    
+    const data: CachedRevenueCatState = JSON.parse(cached);
+    
+    // Validate: must match user ID and version
+    if (data.userId !== userId || data.version !== RC_CACHE_VERSION) {
+      return null;
+    }
+    
+    // Cache valid for 24 hours (safety net)
+    const maxAge = 24 * 60 * 60 * 1000;
+    if (Date.now() - data.cachedAt > maxAge) {
+      return null;
+    }
+    
+    return { isPremium: data.isPremium };
+  } catch {
+    return null;
+  }
+};
+
+const setCachedRCState = (userId: string, isPremium: boolean, originalAppUserId: string | null) => {
+  try {
+    const cached: CachedRevenueCatState = {
+      userId,
+      isPremium,
+      originalAppUserId,
+      cachedAt: Date.now(),
+      version: RC_CACHE_VERSION,
+    };
+    localStorage.setItem(RC_CACHE_KEY, JSON.stringify(cached));
+  } catch {
+    // Ignore storage errors
+  }
+};
+
+const clearCachedRCState = () => {
+  try {
+    localStorage.removeItem(RC_CACHE_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+};
+
 // Get the correct offering identifier based on platform
 const getOfferingIdentifier = () => {
   if (getIsNativeIOS()) return 'default';
@@ -159,6 +218,11 @@ export const useRevenueCat = () => {
       const isPremium = checkPremiumFromCustomerInfo(info);
       setIsPremiumFromRC(isPremium);
       
+      // Cache the refreshed state
+      if (boundUserIdRef.current) {
+        setCachedRCState(boundUserIdRef.current, isPremium, info?.originalAppUserId || null);
+      }
+      
       // Get app user ID for debugging
       const appUserIdResult = await Purchases.getAppUserID();
       setAppUserId(appUserIdResult?.appUserID || null);
@@ -195,6 +259,13 @@ export const useRevenueCat = () => {
     if (!userId) {
       console.error('[RevenueCat] SECURITY: Cannot initialize without user ID!');
       return;
+    }
+
+    // Read cached state for instant premium UI (optimistic)
+    const cachedState = getCachedRCState(userId);
+    if (cachedState?.isPremium) {
+      console.log('[RevenueCat] Using cached premium status for instant UI');
+      setIsPremiumFromRC(true); // Optimistic - will be validated by actual fetch
     }
 
     // If already initialized with the same user, just refresh
@@ -272,6 +343,9 @@ export const useRevenueCat = () => {
         setLastCustomerInfoRefresh(new Date());
         const isPremium = checkPremiumFromCustomerInfo(info, userId);
         setIsPremiumFromRC(isPremium);
+        
+        // Cache the validated premium state
+        setCachedRCState(userId, isPremium, info?.originalAppUserId || null);
       }
       
       // Get app user ID for debugging
@@ -305,6 +379,9 @@ export const useRevenueCat = () => {
     setMonthlyPackage(null);
     setOfferingsStatus('idle');
     setOfferingsError(null);
+    
+    // Clear localStorage cache on logout
+    clearCachedRCState();
     
     if (!getIsNativeMobile()) {
       console.log('[RevenueCat] Not native mobile, state cleared');
@@ -467,6 +544,11 @@ export const useRevenueCat = () => {
       const isPremiumNow = checkPremiumFromCustomerInfo(resultCustomerInfo, boundUserIdRef.current || undefined);
       setIsPremiumFromRC(isPremiumNow);
       
+      // Cache post-purchase state
+      if (boundUserIdRef.current) {
+        setCachedRCState(boundUserIdRef.current, isPremiumNow, resultCustomerInfo?.originalAppUserId || null);
+      }
+      
       console.log('[RevenueCat] Post-purchase state:', {
         isPremiumNow,
         activeEntitlements: Object.keys(resultCustomerInfo?.entitlements?.active || {}),
@@ -565,6 +647,11 @@ export const useRevenueCat = () => {
       // Check premium status (with user ID validation)
       const isPremiumNow = checkPremiumFromCustomerInfo(restoredCustomerInfo, currentUserId);
       setIsPremiumFromRC(isPremiumNow);
+      
+      // Cache post-restore state
+      if (currentUserId) {
+        setCachedRCState(currentUserId, isPremiumNow, originalAppUserId || null);
+      }
       
       console.log('[RevenueCat] Post-restore state:', {
         isPremiumNow,
