@@ -2,13 +2,15 @@ import { Crown, Loader2, RefreshCw, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
 import { usePaymentRouter } from '@/hooks/usePaymentRouter';
+import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 
 const SubscriptionCard = () => {
   const navigate = useNavigate();
-  const { isPremium: isPremiumFromBackend, isAdmin, isLoading: isBackendLoading, subscriptionEnd, refreshSubscription } = useSubscription();
+  const revenueCat = useRevenueCatContext();
+  const { isPremium, isAdmin, isLoading: isBackendLoading, subscriptionEnd, refreshSubscription } = useSubscription();
   const {
     platform,
     isNative,
@@ -24,9 +26,9 @@ const SubscriptionCard = () => {
     isRevenueCatLoading,
   } = usePaymentRouter();
   
-  // Premium is enforced by backend for ALL platforms.
-  const isPremium = isAdmin || isPremiumFromBackend;
-  const isLoading = isBackendLoading;
+  // Prevent a brief non-premium flash on native while RevenueCat initializes/validates.
+  const isNativePending = isNative && isUserLoggedIn && !revenueCat.isInitialized;
+  const isLoading = isBackendLoading || isNativePending;
 
   const handleUpgrade = async () => {
     console.log(`[SubscriptionCard] handleUpgrade on platform: ${platform}`);

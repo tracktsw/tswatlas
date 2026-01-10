@@ -2,6 +2,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCallback, useRef, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { Capacitor } from '@capacitor/core';
+import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
 
 interface SubscriptionData {
   isPremium: boolean;
@@ -118,6 +120,8 @@ const fetchSubscription = async (userId: string | null): Promise<SubscriptionDat
 
 export const useSubscription = () => {
   const queryClient = useQueryClient();
+  const revenueCat = useRevenueCatContext();
+  const isNative = Capacitor.isNativePlatform();
   const wasPremiumRef = useRef<boolean | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -197,9 +201,14 @@ export const useSubscription = () => {
     };
   }, [queryClient, refetch, userId]);
 
+  const effectiveIsPremium = (data?.isPremium ?? false) || (isNative && revenueCat.isPremiumFromRC);
+  const effectiveIsAdmin = data?.isAdmin ?? false;
+
   return {
-    isPremium: data?.isPremium ?? false,
-    isAdmin: data?.isAdmin ?? false,
+    // IMPORTANT: On native mobile, premium can be determined by RevenueCat entitlements
+    // to prevent paywall/UI flash while backend subscription status syncs.
+    isPremium: effectiveIsPremium,
+    isAdmin: effectiveIsAdmin,
     isLoading: userId === null ? false : isLoading, // Not loading if no user
     subscriptionEnd: data?.subscriptionEnd ?? null,
     error: error?.message ?? null,
