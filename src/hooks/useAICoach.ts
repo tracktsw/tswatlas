@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useUserData } from '@/contexts/UserDataContext';
 import { prepareCoachContext } from '@/utils/prepareCoachContext';
 import { useToast } from '@/hooks/use-toast';
@@ -9,13 +9,67 @@ export interface ChatMessage {
   content: string;
 }
 
+interface StoredChat {
+  messages: ChatMessage[];
+  createdAt: number;
+}
+
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-coach`;
+const STORAGE_KEY = 'ai-coach-chat';
+const EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function loadStoredChat(): ChatMessage[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return [];
+    
+    const parsed: StoredChat = JSON.parse(stored);
+    const now = Date.now();
+    
+    // Check if chat has expired
+    if (now - parsed.createdAt > EXPIRY_MS) {
+      localStorage.removeItem(STORAGE_KEY);
+      return [];
+    }
+    
+    return parsed.messages;
+  } catch {
+    return [];
+  }
+}
+
+function saveChat(messages: ChatMessage[]) {
+  if (messages.length === 0) {
+    localStorage.removeItem(STORAGE_KEY);
+    return;
+  }
+  
+  // Get existing timestamp or create new one
+  let createdAt = Date.now();
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed: StoredChat = JSON.parse(stored);
+      createdAt = parsed.createdAt; // Preserve original timestamp
+    }
+  } catch {
+    // Use new timestamp
+  }
+  
+  const data: StoredChat = { messages, createdAt };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
 
 export function useAICoach() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => loadStoredChat());
   const [isLoading, setIsLoading] = useState(false);
   const { checkIns, journalEntries, photos, tswStartDate } = useUserData();
   const { toast } = useToast();
+
+  // Persist messages whenever they change
+  useEffect(() => {
+    saveChat(messages);
+  }, [messages]);
 
   const sendMessage = useCallback(async (input: string) => {
     const userMessage: ChatMessage = {
@@ -131,6 +185,7 @@ export function useAICoach() {
 
   const clearChat = useCallback(() => {
     setMessages([]);
+    localStorage.removeItem(STORAGE_KEY);
   }, []);
 
   return {
