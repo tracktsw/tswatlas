@@ -1123,7 +1123,7 @@ const PhotoDiaryPage = () => {
               <p className="text-sm text-muted-foreground">Your limit resets tomorrow</p>
             </div>
             <div className="space-y-2">
-              <Button 
+                <Button 
                 onClick={handleUpgrade} 
                 disabled={isPurchasing || (isNative && !isOfferingsReady)} 
                 variant="gold" 
@@ -1142,12 +1142,32 @@ const PhotoDiaryPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Unlock · {priceString}/month
+                    Start 14-Day Free Trial · £5.99/month
                   </>
                 )}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                14 day free trial · {priceString}/month after · Cancel anytime
+                £5.99/month after 14-day free trial. Auto-renewable. Cancel anytime.
+              </p>
+              <p className="text-xs text-muted-foreground/70 text-center">
+                By subscribing, you agree to our{' '}
+                <a 
+                  href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="underline hover:text-foreground transition-colors"
+                >
+                  Terms of Use
+                </a>{' '}
+                and{' '}
+                <a 
+                  href="https://tracktsw.com/privacy" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="underline hover:text-foreground transition-colors"
+                >
+                  Privacy Policy
+                </a>.
               </p>
 
               {/* Native: Retry button if offerings failed */}
@@ -1240,12 +1260,32 @@ const PhotoDiaryPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Unlock · {priceString}/month
+                    Start 14-Day Free Trial · £5.99/month
                   </>
                 )}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                14 day free trial · {priceString}/month after · Cancel anytime
+                £5.99/month after 14-day free trial. Auto-renewable. Cancel anytime.
+              </p>
+              <p className="text-xs text-muted-foreground/70 text-center">
+                By subscribing, you agree to our{' '}
+                <a 
+                  href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="underline hover:text-foreground transition-colors"
+                >
+                  Terms of Use
+                </a>{' '}
+                and{' '}
+                <a 
+                  href="https://tracktsw.com/privacy" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="underline hover:text-foreground transition-colors"
+                >
+                  Privacy Policy
+                </a>.
               </p>
 
               {/* Native: Retry button if offerings failed */}
