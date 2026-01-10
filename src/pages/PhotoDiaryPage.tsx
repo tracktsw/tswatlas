@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogContentFullscreen, DialogDescription, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
 import { format, isToday } from 'date-fns';
@@ -24,126 +24,129 @@ import { supabase } from '@/integrations/supabase/client';
 import { LeafIllustration, SparkleIllustration } from '@/components/illustrations';
 import { SparkleEffect } from '@/components/SparkleEffect';
 import { PhotoSkeleton } from '@/components/PhotoSkeleton';
-import { Camera as CapCamera, CameraResultType, CameraSource } from '@capacitor/camera';
-import { Capacitor } from '@capacitor/core';
 
-/**
- * Android-safe file reader that handles content:// URIs and ensures file is accessible
- * Converts files to proper File objects with correct MIME types
- */
-const prepareAndroidFile = async (file: File): Promise<File> => {
-  console.log('[AndroidFileHelper] Processing file:', file.name, 'type:', file.type, 'size:', file.size);
-  
-  try {
-    // Android sometimes returns files with size 0 or missing type - need to force read
-    if (file.size === 0) {
-      console.warn('[AndroidFileHelper] File has size 0, attempting to read anyway');
+// Preload image utility with priority hints
+const preloadImage = (src: string, priority: 'high' | 'low' = 'low'): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    // Try to use link preload for better browser prioritization
+    if (typeof document !== 'undefined' && priority === 'high') {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = src;
+      document.head.appendChild(link);
     }
     
-    // Force read the file to catch permission/access issues early
-    // This converts content:// URIs to actual data
-    const arrayBuffer = await file.arrayBuffer();
-    
-    if (arrayBuffer.byteLength === 0) {
-      throw new Error('File is empty or inaccessible');
-    }
-    
-    console.log('[AndroidFileHelper] Successfully read file, size:', arrayBuffer.byteLength);
-    
-    // Determine proper MIME type if missing
-    let mimeType = file.type;
-    if (!mimeType || mimeType === '') {
-      // Try to infer from extension
-      const ext = file.name.toLowerCase().split('.').pop();
-      const mimeMap: Record<string, string> = {
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'png': 'image/png',
-        'gif': 'image/gif',
-        'webp': 'image/webp',
-        'heic': 'image/heic',
-        'heif': 'image/heif',
-      };
-      mimeType = mimeMap[ext || ''] || 'image/jpeg';
-      console.log('[AndroidFileHelper] Inferred MIME type from extension:', mimeType);
-    }
-    
-    // Create new File object with proper type and the actual data
-    const properFile = new File([arrayBuffer], file.name, {
-      type: mimeType,
-      lastModified: file.lastModified || Date.now(),
-    });
-    
-    console.log('[AndroidFileHelper] File prepared successfully:', properFile.name, 'type:', properFile.type, 'size:', properFile.size);
-    return properFile;
-    
-  } catch (error) {
-    console.error('[AndroidFileHelper] Failed to prepare file:', error);
-    throw new Error(`Cannot access photo: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+    const img = new window.Image();
+    img.onload = () => resolve();
+    img.onerror = reject;
+    img.src = src;
+  });
 };
 
-// Progressive image component for modal - shows thumb placeholder, then loads medium/original
+// Optimized progressive image component for modal
 const ModalImage = ({
   thumbnailSrc,
   highResSrc,
   alt,
+  priority = false,
 }: {
   thumbnailSrc?: string;
   highResSrc?: string;
   alt: string;
+  priority?: boolean;
 }) => {
+  const [thumbLoaded, setThumbLoaded] = useState(false);
   const [highResLoaded, setHighResLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
   const hasThumb = typeof thumbnailSrc === "string" && thumbnailSrc.length > 0;
   const hasHighRes = typeof highResSrc === "string" && highResSrc.length > 0;
 
+  // Preload high-res once thumbnail loads
+  useEffect(() => {
+    if (!thumbLoaded || !hasHighRes) return;
+    
+    let cancelled = false;
+    // Use high priority for images in modal - user is actively viewing
+    preloadImage(highResSrc, 'high')
+      .then(() => {
+        if (!cancelled) setHighResLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled) setHasError(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [thumbLoaded, hasHighRes, highResSrc]);
+
+  const handleThumbLoad = useCallback(() => {
+    setThumbLoaded(true);
+  }, []);
+
+  const handleThumbError = useCallback(() => {
+    setHasError(true);
+  }, []);
+
+  // Memoize image classes
+  const thumbClasses = useMemo(() => cn(
+    "max-w-full max-h-[70dvh] object-contain transition-all duration-300",
+    thumbLoaded ? "opacity-100" : "opacity-0",
+    highResLoaded ? "opacity-0 absolute blur-sm scale-105" : "blur-sm scale-105 opacity-70"
+  ), [thumbLoaded, highResLoaded]);
+
+  const highResClasses = useMemo(() => cn(
+    "max-w-full max-h-[70dvh] object-contain transition-opacity duration-500",
+    highResLoaded ? "opacity-100" : "opacity-0 absolute"
+  ), [highResLoaded]);
+
   return (
     <div className="flex items-center justify-center bg-muted/30 w-full relative">
-      {/* Loading shimmer - shows while no image is ready */}
-      {!highResLoaded && !hasError && (
+      {/* Loading shimmer - only show if nothing loaded yet */}
+      {!thumbLoaded && !hasError && (
         <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 animate-pulse">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-background/10 to-transparent animate-shimmer" />
         </div>
       )}
 
-      {/* Thumbnail placeholder - blurred, shows immediately while high-res loads */}
-      {hasThumb && !highResLoaded && !hasError && (
+      {/* Thumbnail - loads first, shows blurred while high-res loads */}
+      {hasThumb && (
         <img
           src={thumbnailSrc}
           alt={alt}
-          className="max-w-full max-h-[70dvh] object-contain blur-sm scale-105 opacity-70"
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
+          onLoad={handleThumbLoad}
+          onError={handleThumbError}
+          className={thumbClasses}
+          style={{ willChange: highResLoaded ? 'auto' : 'opacity, filter' }}
         />
       )}
 
       {/* Loading spinner - shows over thumbnail while high-res loads */}
-      {hasHighRes && !highResLoaded && !hasError && (
-        <div className="absolute inset-0 flex items-center justify-center">
+      {hasHighRes && thumbLoaded && !highResLoaded && !hasError && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="bg-background/80 backdrop-blur-sm rounded-full p-4">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         </div>
       )}
 
-      {/* High-res image - fades in over thumbnail */}
-      {hasHighRes && (
+      {/* High-res image - fades in over thumbnail (using preload approach) */}
+      {hasHighRes && highResLoaded && (
         <img
           src={highResSrc}
           alt={alt}
           loading="eager"
           decoding="async"
-          onLoad={() => setHighResLoaded(true)}
-          onError={() => setHasError(true)}
-          className={cn(
-            "max-w-full max-h-[70dvh] object-contain transition-opacity duration-300",
-            highResLoaded ? "opacity-100" : "opacity-0 absolute"
-          )}
+          className={highResClasses}
         />
       )}
 
-      {/* Fallback if no high-res available - show thumb at full size */}
-      {!hasHighRes && hasThumb && (
+      {/* Fallback if no high-res - show thumb at full quality */}
+      {!hasHighRes && hasThumb && thumbLoaded && (
         <img
           src={thumbnailSrc}
           alt={alt}
@@ -159,6 +162,7 @@ const ModalImage = ({
     </div>
   );
 };
+
 
 
 const bodyParts: { value: BodyPart; label: string }[] = [
@@ -191,9 +195,6 @@ const PhotoDiaryPage = () => {
     isUserLoggedIn,
     isRevenueCatLoading,
   } = usePaymentRouter();
-
-  // Detect if running as native app (iOS/Android) or web
-  const isNativePlatform = Capacitor.isNativePlatform();
 
   // Premium is enforced by backend for ALL platforms.
   const isPremium = isAdmin || isPremiumFromBackend;
@@ -347,220 +348,33 @@ const PhotoDiaryPage = () => {
     }
   };
 
-  // Handle camera capture - platform-aware (Capacitor for native, HTML5 for web)
-  const handleCameraCapture = async (e?: React.ChangeEvent<HTMLInputElement>) => {
-    // Native platform (iOS/Android) - use Capacitor Camera
-    if (isNativePlatform) {
-      try {
-        if (import.meta.env.DEV) {
-          console.log('[PhotoDiary] Opening camera via Capacitor (native platform)...');
-          console.log('[PhotoDiary] Platform:', Capacitor.getPlatform());
-        }
+  // Handle camera capture - use device time immediately (no EXIF dependency)
+  const handleCameraCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    
+    if (!file) return;
 
-        // Request camera with proper configuration
-        const image = await CapCamera.getPhoto({
-          quality: 90,
-          allowEditing: false,
-          resultType: CameraResultType.Uri,
-          source: CameraSource.Camera, // Force camera, not gallery
-          saveToGallery: false,
-          correctOrientation: true,
-          width: 1920, // Reasonable size to avoid memory issues
-        });
+    // Capture the device time IMMEDIATELY at the moment user takes the photo
+    const captureTime = new Date();
 
-        if (!image || !image.webPath) {
-          console.error('[PhotoDiary] No image path returned from camera');
-          toast.error('Failed to capture photo. Please try again.');
-          return;
-        }
-
-        if (import.meta.env.DEV) {
-          console.log('[PhotoDiary] Camera photo captured via Capacitor:', image.webPath);
-          console.log('[PhotoDiary] Image format:', image.format);
-        }
-
-        // Convert URI to File object
-        try {
-          const response = await fetch(image.webPath);
-          
-          if (!response.ok) {
-            throw new Error(`Failed to fetch image: ${response.statusText}`);
-          }
-          
-          const blob = await response.blob();
-          
-          if (blob.size === 0) {
-            throw new Error('Image file is empty');
-          }
-          
-          const file = new File([blob], `camera-${Date.now()}.jpg`, { 
-            type: blob.type || 'image/jpeg' 
-          });
-
-          if (import.meta.env.DEV) {
-            console.log('[PhotoDiary] Camera file created:', file.name, 'size:', file.size, 'type:', file.type);
-          }
-
-          // Capture the device time IMMEDIATELY at the moment user takes the photo
-          const captureTime = new Date();
-
-          if (import.meta.env.DEV) {
-            console.log('[PhotoDiary] Setting taken_at to device capture time:', captureTime.toISOString());
-          }
-
-          // For camera photos: use device time, don't rely on EXIF
-          setDetectedDate(captureTime);
-          setSelectedDate(captureTime);
-          setIsExifDate(true); // Treat as "reliable date" so it gets stored
-          setDidUserAdjustDate(false);
-          setDateSource('camera_capture');
-
-          setPendingFile(file);
-          // Keep modal open to show date confirmation
-        } catch (fetchError) {
-          console.error('[PhotoDiary] Failed to process camera image:', fetchError);
-          toast.error('Failed to process photo. Please try again.');
-        }
-      } catch (error) {
-        console.error('[PhotoDiary] Camera capture failed:', error);
-        
-        // User cancelled - don't show error
-        if (error instanceof Error) {
-          const errorMsg = error.message.toLowerCase();
-          if (errorMsg.includes('cancel') || errorMsg.includes('cancelled')) {
-            if (import.meta.env.DEV) {
-              console.log('[PhotoDiary] User cancelled camera');
-            }
-            return;
-          }
-          
-          // Permission denied
-          if (errorMsg.includes('permission') || errorMsg.includes('denied')) {
-            toast.error('Camera permission denied. Please enable camera access in Settings.');
-            return;
-          }
-          
-          // Camera not available
-          if (errorMsg.includes('not available') || errorMsg.includes('unavailable')) {
-            toast.error('Camera is not available. Please check if another app is using it.');
-            return;
-          }
-        }
-        
-        // Generic error
-        toast.error('Failed to open camera. Please try the gallery instead.');
-      }
-    } 
-    // Web platform - use HTML5 file input
-    else {
-      if (!e) return;
-      
-      const file = e.target.files?.[0];
-      e.target.value = '';
-      
-      if (!file) return;
-
-      // Capture the device time IMMEDIATELY at the moment user takes the photo
-      const captureTime = new Date();
-
-      if (import.meta.env.DEV) {
-        console.log('[PhotoDiary] Camera capture (HTML5):', file.name, 'type:', file.type, 'size:', file.size);
-        console.log('[PhotoDiary] Setting taken_at to device capture time:', captureTime.toISOString());
-      }
-
-      // For camera photos: use device time, don't rely on EXIF
-      setDetectedDate(captureTime);
-      setSelectedDate(captureTime);
-      setIsExifDate(true); // Treat as "reliable date" so it gets stored
-      setDidUserAdjustDate(false);
-      setDateSource('camera_capture');
-
-      setPendingFile(file);
-      // Keep modal open to show date confirmation
+    if (import.meta.env.DEV) {
+      console.log('[PhotoDiary] Camera capture:', file.name, 'type:', file.type, 'size:', file.size);
+      console.log('[PhotoDiary] Setting taken_at to device capture time:', captureTime.toISOString());
     }
+
+    // For camera photos: use device time, don't rely on EXIF
+    setDetectedDate(captureTime);
+    setSelectedDate(captureTime);
+    setIsExifDate(true); // Treat as "reliable date" so it gets stored
+    setDidUserAdjustDate(false);
+    setDateSource('camera_capture');
+
+    setPendingFile(file);
+    // Keep modal open to show date confirmation
   };
 
-  // Handle gallery selection via Capacitor (native platforms)
-  const handleGallerySelectNative = async () => {
-    try {
-      if (import.meta.env.DEV) {
-        console.log('[PhotoDiary] Opening gallery via Capacitor (native platform)...');
-      }
-
-      const image = await CapCamera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.Uri,
-        source: CameraSource.Photos, // Force gallery
-      });
-
-      if (!image.webPath) {
-        console.error('[PhotoDiary] No image path returned from gallery');
-        toast.error('Failed to select photo. Please try again.');
-        return;
-      }
-
-      if (import.meta.env.DEV) {
-        console.log('[PhotoDiary] Gallery photo selected via Capacitor:', image.webPath);
-      }
-
-      // Convert URI to File object
-      const response = await fetch(image.webPath);
-      const blob = await response.blob();
-      const file = new File([blob], image.path || `photo-${Date.now()}.jpg`, { 
-        type: blob.type || 'image/jpeg' 
-      });
-
-      // Prepare the file for Android
-      const preparedFile = await prepareAndroidFile(file);
-      
-      if (import.meta.env.DEV) {
-        console.log('[PhotoDiary] File prepared, extracting EXIF...');
-      }
-
-      // Extract EXIF date for preview
-      const exifResult = await extractExifDateWithSource(preparedFile);
-      setDidUserAdjustDate(false);
-
-      if (import.meta.env.DEV) {
-        console.log('[PhotoDiary] EXIF extraction result:', exifResult);
-      }
-
-      if (exifResult.date && exifResult.source === 'exif') {
-        const parsed = parseLocalDateTime(exifResult.date);
-        if (parsed) {
-          setDetectedDate(parsed);
-          setSelectedDate(parsed);
-          setIsExifDate(true);
-          setDateSource('exif');
-          if (import.meta.env.DEV) {
-            console.log('[PhotoDiary] Using EXIF date:', parsed);
-          }
-        } else {
-          console.warn('[PhotoDiary] EXIF date string present but could not be parsed:', exifResult.date);
-          setDetectedDate(null);
-          setSelectedDate(new Date());
-          setIsExifDate(false);
-          setDateSource('upload_fallback');
-        }
-      } else {
-        console.warn('[PhotoDiary] No EXIF date found; source:', exifResult.source);
-        setDetectedDate(null);
-        setSelectedDate(new Date());
-        setIsExifDate(false);
-        setDateSource('upload_fallback');
-      }
-
-      setPendingFile(preparedFile);
-    } catch (error) {
-      console.error('[PhotoDiary] Gallery selection failed:', error);
-      if (error instanceof Error && error.message !== 'User cancelled photos app') {
-        toast.error('Failed to access gallery.');
-      }
-    }
-  };
-
-  // Handle gallery file selection - extract EXIF date (HTML5 for web)
+  // Handle gallery file selection - extract EXIF date
   const handleGallerySelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -571,58 +385,44 @@ const PhotoDiaryPage = () => {
       console.log('[PhotoDiary] Gallery file selected:', file.name, 'type:', file.type, 'size:', file.size);
     }
 
-    try {
-      // Android-safe file preparation - ensures file is readable
-      const preparedFile = await prepareAndroidFile(file);
-      
-      if (import.meta.env.DEV) {
-        console.log('[PhotoDiary] File prepared, extracting EXIF...');
-      }
+    // Extract EXIF date for preview (timezone-less local date string)
+    // Use extractExifDateWithSource for detailed logging
+    const exifResult = await extractExifDateWithSource(file);
+    setDidUserAdjustDate(false);
 
-      // Extract EXIF date for preview (timezone-less local date string)
-      // Use extractExifDateWithSource for detailed logging
-      const exifResult = await extractExifDateWithSource(preparedFile);
-      setDidUserAdjustDate(false);
+    if (import.meta.env.DEV) {
+      console.log('[PhotoDiary] EXIF extraction result:', exifResult);
+    }
 
-      if (import.meta.env.DEV) {
-        console.log('[PhotoDiary] EXIF extraction result:', exifResult);
-      }
-
-      if (exifResult.date && exifResult.source === 'exif') {
-        const parsed = parseLocalDateTime(exifResult.date);
-        if (parsed) {
-          setDetectedDate(parsed);
-          setSelectedDate(parsed);
-          setIsExifDate(true);
-          setDateSource('exif');
-          if (import.meta.env.DEV) {
-            console.log('[PhotoDiary] Using EXIF date:', parsed);
-          }
-        } else {
-          // EXIF present but unparsable (log + predictable fallback)
-          console.warn('[PhotoDiary] EXIF date string present but could not be parsed:', exifResult.date);
-          setDetectedDate(null);
-          setSelectedDate(new Date());
-          setIsExifDate(false);
-          setDateSource('upload_fallback');
+    if (exifResult.date && exifResult.source === 'exif') {
+      const parsed = parseLocalDateTime(exifResult.date);
+      if (parsed) {
+        setDetectedDate(parsed);
+        setSelectedDate(parsed);
+        setIsExifDate(true);
+        setDateSource('exif');
+        if (import.meta.env.DEV) {
+          console.log('[PhotoDiary] Using EXIF date:', parsed);
         }
       } else {
-        // Common for images exported/sent via apps (e.g. WhatsApp) where EXIF is stripped.
-        console.warn('[PhotoDiary] No EXIF date found; source:', exifResult.source, '- will fall back to upload date unless user selects one');
+        // EXIF present but unparsable (log + predictable fallback)
+        console.warn('[PhotoDiary] EXIF date string present but could not be parsed:', exifResult.date);
         setDetectedDate(null);
         setSelectedDate(new Date());
         setIsExifDate(false);
         setDateSource('upload_fallback');
       }
-
-      // Use the PREPARED file, not the original
-      setPendingFile(preparedFile);
-      // Keep modal open to show date confirmation
-    } catch (error) {
-      console.error('[PhotoDiary] Gallery selection failed:', error);
-      toast.error(error instanceof Error ? error.message : 'Cannot access photo. Please try again.');
-      return;
+    } else {
+      // Common for images exported/sent via apps (e.g. WhatsApp) where EXIF is stripped.
+      console.warn('[PhotoDiary] No EXIF date found; source:', exifResult.source, '- will fall back to upload date unless user selects one');
+      setDetectedDate(null);
+      setSelectedDate(new Date());
+      setIsExifDate(false);
+      setDateSource('upload_fallback');
     }
+
+    setPendingFile(file);
+    // Keep modal open to show date confirmation
   };
 
   // Confirm and upload the pending file
@@ -723,6 +523,12 @@ const PhotoDiaryPage = () => {
       console.log('[BatchUpload] File input change event fired');
       console.log('[BatchUpload] FileList:', fileList);
       console.log('[BatchUpload] Number of files:', fileList?.length ?? 0);
+      
+      if (fileList && fileList.length > 0) {
+        Array.from(fileList).forEach((f, i) => {
+          console.log(`[BatchUpload] File ${i + 1}:`, f.name, 'type:', f.type, 'size:', f.size);
+        });
+      }
     }
     
     if (!fileList || fileList.length === 0) {
@@ -733,80 +539,44 @@ const PhotoDiaryPage = () => {
       return;
     }
     
-    try {
-      // Convert FileList to array
-      const filesArray = Array.from(fileList);
-      
-      if (import.meta.env.DEV) {
-        console.log('[BatchUpload] Preparing', filesArray.length, 'files for Android...');
-      }
-      
-      // Prepare all files for Android (handle content:// URIs)
-      const preparedFiles: File[] = [];
-      for (let i = 0; i < filesArray.length; i++) {
-        const file = filesArray[i];
-        try {
-          const prepared = await prepareAndroidFile(file);
-          preparedFiles.push(prepared);
-          
-          if (import.meta.env.DEV) {
-            console.log(`[BatchUpload] File ${i + 1}/${filesArray.length} prepared:`, prepared.name);
-          }
-        } catch (error) {
-          console.error('[BatchUpload] Failed to prepare file:', file.name, error);
-          toast.error(`Cannot access ${file.name}. Skipping this photo.`);
-          // Continue with other files
-        }
-      }
-      
-      if (preparedFiles.length === 0) {
-        toast.error('Could not access any of the selected photos. Please try again.');
+    // Convert FileList to array
+    const filesArray = Array.from(fileList);
+
+    let filesToUpload: File[];
+
+    // Check upload limits for free users
+    if (!isPremium) {
+      const allowedCount = Math.max(0, remainingUploads);
+      if (allowedCount === 0) {
+        setShowUpgradePrompt(true);
         return;
       }
-      
-      if (preparedFiles.length < filesArray.length) {
-        toast.info(`${filesArray.length - preparedFiles.length} photo(s) could not be accessed and were skipped.`);
-      }
-
-      let filesToUpload: File[];
-
-      // Check upload limits for free users
-      if (!isPremium) {
-        const allowedCount = Math.max(0, remainingUploads);
-        if (allowedCount === 0) {
-          setShowUpgradePrompt(true);
-          return;
-        }
-        if (preparedFiles.length > allowedCount) {
-          toast.info(`Only ${allowedCount} photo${allowedCount !== 1 ? 's' : ''} can be uploaded today. Upgrade for unlimited.`);
-          filesToUpload = preparedFiles.slice(0, allowedCount);
-        } else {
-          filesToUpload = preparedFiles;
-        }
+      if (filesArray.length > allowedCount) {
+        toast.info(`Only ${allowedCount} photo${allowedCount !== 1 ? 's' : ''} can be uploaded today. Upgrade for unlimited.`);
+        filesToUpload = filesArray.slice(0, allowedCount);
       } else {
-        filesToUpload = preparedFiles;
+        filesToUpload = filesArray;
       }
+    } else {
+      filesToUpload = filesArray;
+    }
 
-      // Close add photo modal if open
-      setIsCapturing(false);
-      
-      // Set default body part from current filter if applicable
-      if (selectedBodyPart !== 'all') {
-        batchUpload.setBodyPart(selectedBodyPart);
-      } else {
-        batchUpload.setBodyPart(newPhotoBodyPart);
-      }
+    // Close add photo modal if open
+    setIsCapturing(false);
+    
+    // Set default body part from current filter if applicable
+    if (selectedBodyPart !== 'all') {
+      batchUpload.setBodyPart(selectedBodyPart);
+    } else {
+      batchUpload.setBodyPart(newPhotoBodyPart);
+    }
 
-      // Store PREPARED files and show modal - DON'T start upload yet, let user confirm body part
-      setBatchFiles(filesToUpload);
-      setShowBatchUpload(true);
-      
-      if (import.meta.env.DEV) {
-        console.log('[BatchUpload] Modal opened with', filesToUpload.length, 'files. Waiting for user to start upload.');
-      }
-    } catch (error) {
-      console.error('[BatchUpload] Batch file selection failed:', error);
-      toast.error('Failed to process selected photos. Please try again.');
+    // Store files and show modal - DON'T start upload yet, let user confirm body part
+    setBatchFiles(filesToUpload);
+    setShowBatchUpload(true);
+    
+    if (import.meta.env.DEV) {
+      console.log('[BatchUpload] Modal opened with', filesToUpload.length, 'files. Waiting for user to start upload.');
     }
   };
 
@@ -861,11 +631,50 @@ const PhotoDiaryPage = () => {
       if (compareMode) {
         togglePhotoSelection(photo);
       } else {
+        // OPTIMIZATION: Start fetching medium URL IMMEDIATELY on click
+        // Don't wait for dialog to open - this makes it feel instant
+        if (!photo.mediumUrl) {
+          fetchMediumUrl(photo.id).then((url) => {
+            // Update the photo in the list with medium URL
+            setViewingPhoto((prev) => {
+              if (prev?.id === photo.id) {
+                return { ...prev, mediumUrl: url };
+              }
+              return prev;
+            });
+          }).catch(() => {
+            // Silently fail - will retry when dialog opens
+          });
+        }
         setViewingPhoto(photo);
       }
     },
-    [compareMode, togglePhotoSelection]
+    [compareMode, togglePhotoSelection, fetchMediumUrl]
   );
+
+  // OPTIMIZATION: Prefetch medium URLs for visible photos in viewport
+  // This makes clicking photos feel instant since they're already loaded
+  useEffect(() => {
+    if (compareMode) return; // Don't prefetch during compare mode
+    if (photos.length === 0) return;
+    
+    // Prefetch first 6 visible photos (most likely to be clicked)
+    const visiblePhotos = photos.slice(0, 6);
+    const idsToFetch = visiblePhotos
+      .filter(p => !p.mediumUrl) // Only fetch if not already loaded
+      .map(p => p.id);
+    
+    if (idsToFetch.length === 0) return;
+    
+    // Prefetch in background with low priority
+    const prefetchTimeout = setTimeout(() => {
+      prefetchMediumUrls(idsToFetch).catch(() => {
+        // Silently fail - will retry on click
+      });
+    }, 500); // Wait 500ms after render to avoid blocking initial load
+    
+    return () => clearTimeout(prefetchTimeout);
+  }, [photos, compareMode, prefetchMediumUrls]);
 
   // Fullscreen: fetch medium on-demand (never during scroll)
   useEffect(() => {
@@ -890,6 +699,34 @@ const PhotoDiaryPage = () => {
       cancelled = true;
     };
   }, [viewingPhoto, fetchMediumUrl]);
+
+  // OPTIMIZATION: Prefetch adjacent photos when viewing a photo
+  // Makes swiping to next/previous photo instant
+  useEffect(() => {
+    if (!viewingPhoto) return;
+    
+    const currentIndex = photos.findIndex(p => p.id === viewingPhoto.id);
+    if (currentIndex === -1) return;
+    
+    const adjacentIds: string[] = [];
+    
+    // Previous photo
+    if (currentIndex > 0 && !photos[currentIndex - 1].mediumUrl) {
+      adjacentIds.push(photos[currentIndex - 1].id);
+    }
+    
+    // Next photo
+    if (currentIndex < photos.length - 1 && !photos[currentIndex + 1].mediumUrl) {
+      adjacentIds.push(photos[currentIndex + 1].id);
+    }
+    
+    if (adjacentIds.length === 0) return;
+    
+    // Prefetch adjacent photos in background
+    prefetchMediumUrls(adjacentIds).catch(() => {
+      // Silently fail
+    });
+  }, [viewingPhoto, photos, prefetchMediumUrls]);
 
   const selectedCompareIdsKey = useMemo(
     () => selectedPhotos.map((p) => p.id).join('|'),
@@ -1092,30 +929,10 @@ const PhotoDiaryPage = () => {
             className="w-full gap-2"
           >
             <Crown className="w-4 h-4" />
-            {isPurchasing ? 'Loading...' : `Start 14-Day Free Trial · ${priceString}/month`}
+            {isPurchasing ? 'Loading...' : `Unlock · ${priceString}/month`}
           </Button>
           <p className="text-xs text-center text-muted-foreground">
-            {priceString}/month after 14-day free trial. Auto-renewable. Cancel anytime.
-          </p>
-          <p className="text-xs text-center text-muted-foreground mt-1">
-            By subscribing, you agree to our{' '}
-            <a 
-              href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="underline text-primary"
-            >
-              Terms of Use
-            </a>{' '}
-            and{' '}
-            <a 
-              href="https://docs.google.com/document/d/1qFfvOp8s6k5Wul4G6VYzJSw1V0asApM_2foT1bC80t0/edit" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="underline text-primary"
-            >
-              Privacy Policy
-            </a>.
+            14 day free trial · {priceString}/month after · Cancel anytime
           </p>
         </div>
       )}
@@ -1156,32 +973,12 @@ const PhotoDiaryPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Start 14-Day Free Trial · {priceString}/month
+                    Unlock · {priceString}/month
                   </>
                 )}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                {priceString}/month after 14-day free trial. Auto-renewable. Cancel anytime.
-              </p>
-              <p className="text-xs text-muted-foreground text-center mt-1">
-                By subscribing, you agree to our{' '}
-                <a 
-                  href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="underline text-primary"
-                >
-                  Terms of Use
-                </a>{' '}
-                and{' '}
-                <a 
-                  href="https://docs.google.com/document/d/1qFfvOp8s6k5Wul4G6VYzJSw1V0asApM_2foT1bC80t0/edit" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="underline text-primary"
-                >
-                  Privacy Policy
-                </a>.
+                14 day free trial · {priceString}/month after · Cancel anytime
               </p>
 
               {/* Native: Retry button if offerings failed */}
@@ -1274,32 +1071,12 @@ const PhotoDiaryPage = () => {
                 ) : (
                   <>
                     <Crown className="w-4 h-4" />
-                    Start 14-Day Free Trial · {priceString}/month
+                    Unlock · {priceString}/month
                   </>
                 )}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                {priceString}/month after 14-day free trial. Auto-renewable. Cancel anytime.
-              </p>
-              <p className="text-xs text-muted-foreground text-center mt-1">
-                By subscribing, you agree to our{' '}
-                <a 
-                  href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="underline text-primary"
-                >
-                  Terms of Use
-                </a>{' '}
-                and{' '}
-                <a 
-                  href="https://docs.google.com/document/d/1qFfvOp8s6k5Wul4G6VYzJSw1V0asApM_2foT1bC80t0/edit" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="underline text-primary"
-                >
-                  Privacy Policy
-                </a>.
+                14 day free trial · {priceString}/month after · Cancel anytime
               </p>
 
               {/* Native: Retry button if offerings failed */}
@@ -1408,7 +1185,7 @@ const PhotoDiaryPage = () => {
             <div className="space-y-4">
               <div className="p-3 bg-muted/50 rounded-xl text-center">
                 <p className="text-sm font-medium mb-1">
-                  {isExifDate ? 'Date detected from photo:' : 'Photo Date'}
+                  {isExifDate ? 'Date detected from photo:' : 'No metadata date found'}
                 </p>
                 <p className={cn("text-sm", !isExifDate && "text-muted-foreground")}>
                   {isExifDate
@@ -1429,12 +1206,12 @@ const PhotoDiaryPage = () => {
                   <PopoverContent 
                     className="w-auto p-0 z-[100]" 
                     align="center"
-                    side="top"
-                    sideOffset={8}
-                    avoidCollisions={true}
+                    side="bottom"
+                    sideOffset={4}
+                    avoidCollisions={false}
                   >
                     <div className="w-[310px] min-h-[340px]">
-                      <CalendarComponent
+                      <Calendar
                         mode="single"
                         selected={selectedDate}
                         onSelect={(date) => {
@@ -1485,28 +1262,13 @@ const PhotoDiaryPage = () => {
                   className="rounded-xl border-2 resize-none"
                 />
               </div>
-              {/* HTML5 file inputs - only for web platform */}
-              {!isNativePlatform && (
-                <>
-                  <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleCameraCapture} className="hidden" />
-                  <input type="file" accept="image/*,image/heic,image/heif,image/vnd.android.heic,.heic,.heif" ref={galleryInputRef} onChange={handleGallerySelect} className="hidden" />
-                </>
-              )}
+              <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleCameraCapture} className="hidden" />
+              <input type="file" accept="image/*,image/heic,image/heif,image/vnd.android.heic,.heic,.heif" ref={galleryInputRef} onChange={handleGallerySelect} className="hidden" />
               <div className="grid grid-cols-2 gap-3">
-                <Button 
-                  variant="default" 
-                  className="h-11 gap-2" 
-                  onClick={() => isNativePlatform ? handleCameraCapture() : cameraInputRef.current?.click()} 
-                  disabled={singleUpload.isUploading}
-                >
+                <Button variant="default" className="h-11 gap-2" onClick={() => cameraInputRef.current?.click()} disabled={singleUpload.isUploading}>
                   <Camera className="w-5 h-5" />Take Photo
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="h-11 gap-2" 
-                  onClick={() => isNativePlatform ? handleGallerySelectNative() : galleryInputRef.current?.click()} 
-                  disabled={singleUpload.isUploading}
-                >
+                <Button variant="outline" className="h-11 gap-2" onClick={() => galleryInputRef.current?.click()} disabled={singleUpload.isUploading}>
                   <ImagePlus className="w-5 h-5" />Gallery
                 </Button>
               </div>
@@ -1575,7 +1337,7 @@ const PhotoDiaryPage = () => {
                   <div className="text-sm text-muted-foreground">
                     <span>{format(parseLocalDateTime(viewingPhoto.timestamp) || new Date(viewingPhoto.timestamp), 'MMM d, yyyy')}</span>
                     {!viewingPhoto.takenAt && (
-                      <span className="text-xs ml-1 opacity-70">(date not available)</span>
+                      <span className="text-xs ml-1 opacity-70">(uploaded)</span>
                     )}
                   </div>
                 </div>

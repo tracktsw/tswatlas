@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { X, ChevronLeft, ChevronRight, Image, Columns, Rows } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -15,17 +15,29 @@ interface ComparisonViewerProps {
   onExit: () => void;
 }
 
+// Preload images in background
+const preloadImage = (src: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.onload = () => resolve();
+    img.onerror = reject;
+    img.src = src;
+  });
+};
+
 // Pinch-to-zoom image component
 const ZoomableImage = ({
   thumbnailSrc,
   mediumSrc,
   alt,
   onTap,
+  priority = false,
 }: {
   thumbnailSrc?: string;
   mediumSrc?: string;
   alt: string;
   onTap: () => void;
+  priority?: boolean;
 }) => {
   const [thumbLoaded, setThumbLoaded] = useState(false);
   const [mediumLoaded, setMediumLoaded] = useState(false);
@@ -40,7 +52,14 @@ const ZoomableImage = ({
   const hasThumb = typeof thumbnailSrc === "string" && thumbnailSrc.length > 0;
   const hasMedium = typeof mediumSrc === "string" && mediumSrc.length > 0;
 
-  const handleTouchStart = (e: React.TouchEvent) => {
+  // Preload medium image once thumbnail loads
+  useEffect(() => {
+    if (thumbLoaded && hasMedium) {
+      preloadImage(mediumSrc);
+    }
+  }, [thumbLoaded, hasMedium, mediumSrc]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 2) {
       // Pinch start
       const distance = Math.hypot(
@@ -56,9 +75,9 @@ const ZoomableImage = ({
         y: e.touches[0].clientY,
       };
     }
-  };
+  }, [scale]);
 
-  const handleTouchMove = (e: React.TouchEvent) => {
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 2 && lastTouchDistance.current !== null) {
       // Pinch zoom
       const distance = Math.hypot(
@@ -81,9 +100,9 @@ const ZoomableImage = ({
         y: e.touches[0].clientY,
       };
     }
-  };
+  }, [isDragging, scale]);
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     lastTouchDistance.current = null;
     setIsDragging(false);
     lastTouchPosition.current = null;
@@ -92,9 +111,9 @@ const ZoomableImage = ({
     if (scale <= 1) {
       setPosition({ x: 0, y: 0 });
     }
-  };
+  }, [scale]);
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     if (scale === 1) {
       onTap();
     } else {
@@ -102,7 +121,13 @@ const ZoomableImage = ({
       setScale(1);
       setPosition({ x: 0, y: 0 });
     }
-  };
+  }, [scale, onTap]);
+
+  // Memoize transform style
+  const transformStyle = useMemo(() => ({
+    transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
+    willChange: scale > 1 ? 'transform' : 'auto',
+  }), [scale, position.x, position.y]);
 
   return (
     <div 
@@ -121,7 +146,8 @@ const ZoomableImage = ({
         <img
           src={thumbnailSrc}
           alt={alt}
-          loading="eager"
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
           onLoad={() => setThumbLoaded(true)}
           onError={() => setHasError(true)}
           className={cn(
@@ -130,9 +156,7 @@ const ZoomableImage = ({
             mediumLoaded ? "opacity-0 absolute" : "",
             scale > 1 && "blur-sm"
           )}
-          style={{
-            transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
-          }}
+          style={transformStyle}
         />
       )}
 
@@ -141,15 +165,14 @@ const ZoomableImage = ({
           src={mediumSrc}
           alt={alt}
           loading="eager"
+          decoding="async"
           onLoad={() => setMediumLoaded(true)}
           onError={() => setHasError(true)}
           className={cn(
             "max-w-full max-h-full object-contain transition-opacity duration-300",
             mediumLoaded ? "opacity-100" : "opacity-0 absolute"
           )}
-          style={{
-            transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
-          }}
+          style={transformStyle}
         />
       )}
 
@@ -186,13 +209,23 @@ const FullscreenViewer = ({
 
   const photo = photos[currentIndex];
 
-  const handleTouchStart = (e: React.TouchEvent) => {
+  // Preload adjacent images
+  useEffect(() => {
+    if (currentIndex > 0 && photos[currentIndex - 1].mediumUrl) {
+      preloadImage(photos[currentIndex - 1].mediumUrl);
+    }
+    if (currentIndex < photos.length - 1 && photos[currentIndex + 1].mediumUrl) {
+      preloadImage(photos[currentIndex + 1].mediumUrl);
+    }
+  }, [currentIndex, photos]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       touchStartX.current = e.touches[0].clientX;
     }
-  };
+  }, []);
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     if (touchStartX.current === null) return;
     
     const touchEndX = e.changedTouches[0].clientX;
@@ -207,7 +240,13 @@ const FullscreenViewer = ({
     }
     
     touchStartX.current = null;
-  };
+  }, [currentIndex, photos.length]);
+
+  // Memoize date formatting
+  const formattedDate = useMemo(() => 
+    format(parseLocalDateTime(photo.timestamp) || new Date(photo.timestamp), 'MMM d, yyyy'),
+    [photo.timestamp]
+  );
 
   return (
     <div 
@@ -220,7 +259,7 @@ const FullscreenViewer = ({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Header - uses safe-area + extra offset to guarantee clearing Dynamic Island */}
+      {/* Header */}
       <div 
         className="flex items-center justify-between px-4 py-3 bg-black/50 backdrop-blur-sm"
         style={isAndroid ? undefined : { 
@@ -228,9 +267,7 @@ const FullscreenViewer = ({
         }}
       >
         <div className="flex items-center gap-1">
-          <span className="text-sm text-white/80">
-            {format(parseLocalDateTime(photo.timestamp) || new Date(photo.timestamp), 'MMM d, yyyy')}
-          </span>
+          <span className="text-sm text-white/80">{formattedDate}</span>
           {!photo.takenAt && (
             <span className="text-xs text-white/50">(uploaded)</span>
           )}
@@ -250,6 +287,7 @@ const FullscreenViewer = ({
           mediumSrc={photo.mediumUrl}
           alt={`Photo ${currentIndex + 1}`}
           onTap={onClose}
+          priority
         />
       </div>
 
@@ -292,30 +330,39 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
   const isMobile = useIsMobile();
   const { setHideBottomNav } = useLayout();
   const { isAndroid } = usePlatform();
-  // Track if user has manually toggled the layout
   const hasUserToggled = useRef(false);
-  // Layout state: stacked (true) or side-by-side (false)
   const [isStacked, setIsStacked] = useState(isMobile);
 
-  // Hide bottom nav when compare view is active
+  // Preload both comparison images immediately
+  useEffect(() => {
+    if (photos.length === 2) {
+      photos.forEach(photo => {
+        if (photo.mediumUrl) {
+          preloadImage(photo.mediumUrl);
+        }
+      });
+    }
+  }, [photos]);
+
+  // Hide bottom nav
   useEffect(() => {
     setHideBottomNav(true);
     return () => setHideBottomNav(false);
   }, [setHideBottomNav]);
 
-  // Sync layout with screen size changes, unless user has manually toggled
+  // Sync layout with screen size
   useEffect(() => {
     if (!hasUserToggled.current) {
       setIsStacked(isMobile);
     }
   }, [isMobile]);
 
-  const handleLayoutToggle = () => {
+  const handleLayoutToggle = useCallback(() => {
     hasUserToggled.current = true;
     setIsStacked(prev => !prev);
-  };
+  }, []);
 
-  // Lock body scroll when compare mode is active
+  // Lock body scroll
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     const originalPosition = document.body.style.position;
@@ -323,14 +370,12 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
     const originalWidth = document.body.style.width;
     const scrollY = window.scrollY;
 
-    // Lock scroll - works on iOS and Android
     document.body.style.overflow = 'hidden';
     document.body.style.position = 'fixed';
     document.body.style.top = `-${scrollY}px`;
     document.body.style.width = '100%';
 
     return () => {
-      // Restore scroll position and styles
       document.body.style.overflow = originalOverflow;
       document.body.style.position = originalPosition;
       document.body.style.top = originalTop;
@@ -339,11 +384,19 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
     };
   }, []);
 
+  // Memoize formatted dates
+  const formattedDates = useMemo(() => 
+    photos.map(photo => 
+      format(parseLocalDateTime(photo.timestamp) || new Date(photo.timestamp), 'MMM d, yyyy')
+    ),
+    [photos]
+  );
+
   if (photos.length !== 2) return null;
 
   return (
     <>
-      {/* Immersive comparison view - fixed position with full height and safe areas */}
+      {/* Comparison view */}
       <div 
         className="fixed inset-0 z-40 bg-background flex flex-col overscroll-none"
         style={isAndroid ? { height: '100dvh' } : { 
@@ -354,11 +407,10 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
           paddingRight: 'env(safe-area-inset-right)',
         }}
       >
-        {/* Minimal header */}
+        {/* Header */}
         <div className="flex items-center justify-between px-4 py-2 bg-background/95 backdrop-blur-sm border-b border-border/30">
           <span className="text-sm font-medium text-muted-foreground">Comparing</span>
           <div className="flex items-center gap-1">
-            {/* Layout toggle button */}
             <Button
               variant="ghost"
               size="sm"
@@ -387,7 +439,7 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
           </div>
         </div>
 
-        {/* Comparison grid - fills remaining space */}
+        {/* Comparison grid */}
         <div 
           className={cn(
             "flex-1 gap-1 p-1 min-h-0",
@@ -411,19 +463,20 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
               <div className={cn(
                 "relative bg-muted/30 rounded-lg overflow-hidden",
                 isStacked 
-                  ? "w-full max-h-[42vh]"  // Constrain height so both fit on mobile
-                  : "flex-1 min-h-0"        // Fill space in grid
+                  ? "w-full max-h-[42vh]"
+                  : "flex-1 min-h-0"
               )}>
                 <ZoomableImage
                   thumbnailSrc={photo.thumbnailUrl}
                   mediumSrc={photo.mediumUrl}
                   alt={`Comparison ${idx + 1}`}
                   onTap={() => setFullscreenIndex(idx)}
+                  priority={idx === 0}
                 />
               </div>
-              {/* Date label - minimal */}
+              {/* Date label */}
               <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-xs text-foreground/90 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1">
-                <span>{format(parseLocalDateTime(photo.timestamp) || new Date(photo.timestamp), 'MMM d, yyyy')}</span>
+                <span>{formattedDates[idx]}</span>
                 {!photo.takenAt && (
                   <span className="text-[10px] opacity-70">(uploaded)</span>
                 )}
@@ -438,7 +491,7 @@ export const ComparisonViewer = ({ photos, onExit }: ComparisonViewerProps) => {
         </div>
       </div>
 
-      {/* Fullscreen single image viewer */}
+      {/* Fullscreen viewer */}
       {fullscreenIndex !== null && (
         <FullscreenViewer
           photos={photos}
