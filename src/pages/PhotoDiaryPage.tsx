@@ -1091,18 +1091,40 @@ const PhotoDiaryPage = () => {
           </div>
           
           {/* Upgrade Button */}
-          <Button 
-            onClick={handleUpgrade} 
-            disabled={isPurchasing} 
-            variant="gold" 
-            className="w-full gap-2"
-          >
-            <Crown className="w-4 h-4" />
-            {isPurchasing ? 'Loading...' : `Unlock · ${priceString}/month`}
-          </Button>
-          <p className="text-xs text-center text-muted-foreground">
-            14 day free trial · {priceString}/month after · Cancel anytime
-          </p>
+          <div className="space-y-2">
+            <Button 
+              onClick={handleUpgrade} 
+              disabled={isPurchasing} 
+              variant="gold" 
+              className="w-full gap-2"
+            >
+              <Crown className="w-4 h-4" />
+              {isPurchasing ? 'Loading...' : 'Start 14-Day Free Trial · £5.99/month'}
+            </Button>
+            <p className="text-xs text-center text-muted-foreground">
+              £5.99/month after 14-day free trial. Auto-renewable. Cancel anytime.
+            </p>
+            <p className="text-xs text-muted-foreground/70 text-center">
+              By subscribing, you agree to our{' '}
+              <a 
+                href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="underline hover:text-foreground transition-colors"
+              >
+                Terms of Use
+              </a>{' '}
+              and{' '}
+              <a 
+                href="https://tracktsw.com/privacy" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="underline hover:text-foreground transition-colors"
+              >
+                Privacy Policy
+              </a>.
+            </p>
+          </div>
         </div>
       )}
 
@@ -1363,7 +1385,7 @@ const PhotoDiaryPage = () => {
         
         {/* Upgrade CTA when limit reached */}
         {!isSubscriptionLoading && !isPremium && !canUploadMore && (
-          <div className="space-y-1">
+          <div className="space-y-2">
             <Button 
               variant="gold" 
               className="w-full gap-2 h-12"
@@ -1371,10 +1393,30 @@ const PhotoDiaryPage = () => {
               disabled={isPurchasing}
             >
               <Crown className="w-5 h-5" />
-              {isPurchasing ? 'Loading...' : `Unlock · ${priceString}/month`}
+              {isPurchasing ? 'Loading...' : 'Start 14-Day Free Trial · £5.99/month'}
             </Button>
             <p className="text-xs text-center text-muted-foreground">
-              14 day free trial · {priceString}/month after · Cancel anytime
+              £5.99/month after 14-day free trial. Auto-renewable. Cancel anytime.
+            </p>
+            <p className="text-xs text-muted-foreground/70 text-center">
+              By subscribing, you agree to our{' '}
+              <a 
+                href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="underline hover:text-foreground transition-colors"
+              >
+                Terms of Use
+              </a>{' '}
+              and{' '}
+              <a 
+                href="https://tracktsw.com/privacy" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="underline hover:text-foreground transition-colors"
+              >
+                Privacy Policy
+              </a>.
             </p>
           </div>
         )}
