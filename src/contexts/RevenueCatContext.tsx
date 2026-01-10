@@ -67,6 +67,7 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
   const revenueCat = useRevenueCat();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   // Retry initialization - useful if initial load failed
   const retryInitialization = useCallback(async () => {
@@ -109,6 +110,9 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
         setCurrentUserId(null);
         setIsUserLoggedIn(false);
       }
+
+      // Mark auth as resolved (prevents a brief free UI flash before RevenueCat initializes)
+      setAuthChecked(true);
     };
 
     initializeWithUser();
@@ -121,6 +125,7 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
         console.log('[RevenueCatProvider] User signed in, initializing RevenueCat with user:', session.user.id);
         setCurrentUserId(session.user.id);
         setIsUserLoggedIn(true);
+        setAuthChecked(true);
         // Initialize RevenueCat with the new user's ID
         // This will fetch entitlements and set premium status based on THIS user's subscription
         await revenueCat.initialize(session.user.id);
@@ -128,6 +133,7 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
         await revenueCat.fetchOfferings();
       } else if (event === 'SIGNED_OUT') {
         console.log('[RevenueCatProvider] User signed out - CLEARING ALL SUBSCRIPTION STATE');
+        setAuthChecked(true);
         // CRITICAL: Clear local state FIRST
         setCurrentUserId(null);
         setIsUserLoggedIn(false);
@@ -135,6 +141,7 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
         // This ensures a new account on the same device does NOT inherit any subscription
         await revenueCat.logout();
       } else if (event === 'TOKEN_REFRESHED' && session?.user?.id) {
+        setAuthChecked(true);
         // Token refresh - ensure we're still initialized with the same user
         if (currentUserId !== session.user.id) {
           console.log('[RevenueCatProvider] User ID changed on token refresh, re-initializing');
@@ -177,6 +184,16 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
     getDebugInfo: revenueCat.getDebugInfo,
     retryInitialization,
   };
+
+  // On native, block rendering until we've resolved auth at least once.
+  // This prevents a brief "free" UI flash before RevenueCat initializes and/or cache is applied.
+  if (getIsNativeMobile() && !authChecked) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <RevenueCatContext.Provider value={value}>
