@@ -123,41 +123,49 @@ export const useSubscription = () => {
   const revenueCat = useRevenueCatContext();
   const isNative = Capacitor.isNativePlatform();
   const wasPremiumRef = useRef<boolean | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
+
+  // `undefined` means "auth not resolved yet" (prevents free UI flash on first paint)
+  const [userId, setUserId] = useState<string | null | undefined>(undefined);
+  const currentUserIdRef = useRef<string | null | undefined>(undefined);
 
   // Track auth state changes and clear cache on logout/login
   useEffect(() => {
     const getInitialUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id ?? null);
+      const initialUserId = user?.id ?? null;
+      currentUserIdRef.current = initialUserId;
+      setUserId(initialUserId);
     };
     getInitialUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const newUserId = session?.user?.id ?? null;
-      
+      const prevUserId = currentUserIdRef.current;
+
       // Clear subscription cache when user changes (logout or different user login)
-      if (newUserId !== userId) {
+      if (newUserId !== prevUserId) {
         queryClient.removeQueries({ queryKey: ['subscription'] });
         wasPremiumRef.current = null;
-        clearCachedSubscription(); // Clear localStorage cache on user change
+        clearCachedSubscription();
       }
-      
+
+      currentUserIdRef.current = newUserId;
       setUserId(newUserId);
     });
 
     return () => subscription.unsubscribe();
-  }, [queryClient, userId]);
+  }, [queryClient]);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['subscription', userId],
-    queryFn: () => fetchSubscription(userId),
+    queryFn: () => fetchSubscription(userId ?? null),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
     retry: 1,
-    enabled: userId !== null,
+    // Only run query once auth has been resolved (userId is null or a string)
+    enabled: userId !== undefined,
     // Use cached data as initial value for instant premium UI
-    initialData: () => userId ? getCachedSubscription(userId) ?? undefined : undefined,
+    initialData: () => (typeof userId === 'string' ? getCachedSubscription(userId) ?? undefined : undefined),
     // Mark initial data as stale so it refetches in background
     initialDataUpdatedAt: 0,
   });
@@ -209,7 +217,8 @@ export const useSubscription = () => {
     // to prevent paywall/UI flash while backend subscription status syncs.
     isPremium: effectiveIsPremium,
     isAdmin: effectiveIsAdmin,
-    isLoading: userId === null ? false : isLoading, // Not loading if no user
+    // While auth is resolving (userId === undefined) we stay "loading" to avoid a free UI flash.
+    isLoading: userId === undefined ? true : isLoading,
     subscriptionEnd: data?.subscriptionEnd ?? null,
     error: error?.message ?? null,
     refreshSubscription,
