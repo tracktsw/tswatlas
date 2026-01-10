@@ -15,11 +15,14 @@ const AuthPage = () => {
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [authError, setAuthError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
   const { isAndroid } = usePlatform();
 
@@ -103,6 +106,7 @@ const AuthPage = () => {
     // Clear previous errors
     setAuthError('');
     setPasswordError('');
+    setConfirmPasswordError('');
     setEmailError('');
     
     // Client-side email validation first
@@ -114,6 +118,12 @@ const AuthPage = () => {
     // Password validation for signup only
     if (mode === 'signup' && !validatePassword(password)) {
       setPasswordError('Password must be at least 6 characters');
+      return;
+    }
+    
+    // Confirm password validation for signup only
+    if (mode === 'signup' && password !== confirmPassword) {
+      setConfirmPasswordError('Passwords do not match');
       return;
     }
     
@@ -344,6 +354,7 @@ const AuthPage = () => {
                     setPassword(e.target.value);
                     if (authError) setAuthError('');
                     if (passwordError) setPasswordError('');
+                    if (confirmPasswordError) setConfirmPasswordError('');
                   }}
                   placeholder="••••••••"
                   className="pl-11 pr-11 h-12 rounded-xl border-2 focus:border-coral/50 transition-colors"
@@ -364,6 +375,39 @@ const AuthPage = () => {
               )}
               {authError && (
                 <p className="text-sm text-destructive text-center">{authError}</p>
+              )}
+            </div>
+          )}
+
+          {mode === 'signup' && (
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="font-semibold">Confirm Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    if (confirmPasswordError) setConfirmPasswordError('');
+                  }}
+                  placeholder="••••••••"
+                  className={`pl-11 pr-11 h-12 rounded-xl border-2 transition-colors ${confirmPasswordError ? 'border-destructive focus:border-destructive' : 'focus:border-coral/50'}`}
+                  required
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {confirmPasswordError && (
+                <p className="text-sm text-destructive">{confirmPasswordError}</p>
               )}
             </div>
           )}
