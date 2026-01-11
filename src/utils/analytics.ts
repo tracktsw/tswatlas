@@ -71,15 +71,20 @@ export function hasPendingOnboardingSurvey(): boolean {
  */
 export function sendPendingOnboardingSurvey(userId: string): void {
   const stored = localStorage.getItem(PENDING_ONBOARDING_KEY);
-  if (!stored) return;
+  if (!stored) {
+    console.log('[PostHog] No pending onboarding survey to send');
+    return;
+  }
   
   try {
     const payload = JSON.parse(stored) as OnboardingSurveyPayload;
     
     // Identify user first
+    console.log('[PostHog] Identifying user:', userId);
     posthog.identify(userId);
     
     // Send the onboarding survey event
+    console.log('[PostHog] Firing event: onboarding_survey_submitted', payload);
     posthog.capture('onboarding_survey_submitted', {
       tsw_impact: payload.tsw_impact,
       hardest_issue: payload.hardest_issue,
@@ -88,6 +93,7 @@ export function sendPendingOnboardingSurvey(userId: string): void {
     
     // Remove from localStorage immediately after sending
     localStorage.removeItem(PENDING_ONBOARDING_KEY);
+    console.log('[PostHog] onboarding_survey_submitted sent successfully');
   } catch (error) {
     console.error('[Analytics] Failed to send onboarding survey:', error);
     // Remove corrupted data
@@ -100,6 +106,7 @@ export function sendPendingOnboardingSurvey(userId: string): void {
  * Called when user logs in and there's no pending survey.
  */
 export function identifyUser(userId: string): void {
+  console.log('[PostHog] Identifying user (no survey):', userId);
   posthog.identify(userId);
 }
 
@@ -110,6 +117,7 @@ type CoachContext = 'general' | 'flare' | 'sleep' | 'symptoms' | 'triggers';
  * Track AI coach message sent (after successful API response).
  */
 export function trackAICoachMessage(messageLength: number, context: CoachContext = 'general'): void {
+  console.log('[PostHog] Firing event: ai_coach_message_sent', { message_length: messageLength, context });
   posthog.capture('ai_coach_message_sent', {
     message_length: messageLength,
     context,
@@ -124,6 +132,7 @@ type PhotoSource = 'camera' | 'library';
  * Does NOT send image URL or metadata.
  */
 export function trackPhotoLogged(photoType: string, source: PhotoSource): void {
+  console.log('[PostHog] Firing event: photo_logged', { photo_type: photoType, source });
   posthog.capture('photo_logged', {
     photo_type: photoType,
     source,
@@ -135,6 +144,7 @@ export function trackPhotoLogged(photoType: string, source: PhotoSource): void {
  * Does NOT send check-in content.
  */
 export function trackCheckInCompleted(checkinType: string = 'daily'): void {
+  console.log('[PostHog] Firing event: check_in_completed', { checkin_type: checkinType });
   posthog.capture('check_in_completed', {
     checkin_type: checkinType,
   });
@@ -144,6 +154,7 @@ export function trackCheckInCompleted(checkinType: string = 'daily'): void {
  * Track insights card/screen opened.
  */
 export function trackInsightsClicked(insightId: string, location: string): void {
+  console.log('[PostHog] Firing event: insights_clicked', { insight_id: insightId, location });
   posthog.capture('insights_clicked', {
     insight_id: insightId,
     location,
