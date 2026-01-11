@@ -6,7 +6,7 @@ import { Capacitor } from '@capacitor/core';
 import { SafeArea } from 'capacitor-plugin-safe-area';
 
 // Initialize PostHog analytics (once at app startup)
-posthog.init('PASTE_MY_API_KEY_HERE', {
+posthog.init('phc_ioqVGTp9J1lA0SMfDVKEAibkUVtZTaWuwDR8n81zWhx', {
   api_host: 'https://app.posthog.com',
   capture_pageview: true,
   persistence: 'localStorage',
