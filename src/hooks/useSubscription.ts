@@ -156,7 +156,7 @@ export const useSubscription = () => {
     return () => subscription.unsubscribe();
   }, [queryClient]);
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ['subscription', userId],
     queryFn: () => fetchSubscription(userId ?? null),
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -168,6 +168,8 @@ export const useSubscription = () => {
     initialData: () => (typeof userId === 'string' ? getCachedSubscription(userId) ?? undefined : undefined),
     // Mark initial data as stale so it refetches in background
     initialDataUpdatedAt: 0,
+    // OPTIMIZED: Show cached data immediately, don't wait for background refresh
+    placeholderData: (previousData) => previousData,
   });
 
   // Cache subscription data when successfully fetched
@@ -217,8 +219,9 @@ export const useSubscription = () => {
     // to prevent paywall/UI flash while backend subscription status syncs.
     isPremium: effectiveIsPremium,
     isAdmin: effectiveIsAdmin,
-    // While auth is resolving (userId === undefined) we stay "loading" to avoid a free UI flash.
-    isLoading: userId === undefined ? true : isLoading,
+    // OPTIMIZED: Only show loading when auth is resolving OR we have no data at all
+    // If we have cached data, show it immediately (isFetching handles background refresh)
+    isLoading: userId === undefined ? true : (isLoading && !data),
     subscriptionEnd: data?.subscriptionEnd ?? null,
     error: error?.message ?? null,
     refreshSubscription,

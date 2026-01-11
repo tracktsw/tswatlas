@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
@@ -13,22 +13,24 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
+    // Prevent double initialization in StrictMode
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+
     const redirectUnauthenticated = () => {
-      // Check if user has seen onboarding
       const hasSeenOnboarding = localStorage.getItem(STORAGE_KEY_SEEN) === 'true';
-      
       if (!hasSeenOnboarding) {
-        // New user - show onboarding first
-        navigate('/onboarding');
+        navigate('/onboarding', { replace: true });
       } else {
-        // Returning user who has seen onboarding - go to auth
-        navigate('/auth');
+        navigate('/auth', { replace: true });
       }
     };
 
-    // Set up auth state listener FIRST
+    // SINGLE auth listener - onAuthStateChange fires immediately with current session
+    // No need for separate getSession() call - this eliminates the waterfall
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setUser(session?.user ?? null);
@@ -39,16 +41,6 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
         }
       }
     );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-      
-      if (!session?.user) {
-        redirectUnauthenticated();
-      }
-    });
 
     return () => subscription.unsubscribe();
   }, [navigate]);

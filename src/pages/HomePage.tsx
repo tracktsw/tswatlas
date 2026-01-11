@@ -137,16 +137,9 @@ const HomePage = () => {
     },
   ];
 
-  if (isLoading) {
-    return (
-      <div className="px-4 py-6 flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto text-sage" />
-          <p className="text-muted-foreground">Loading your data...</p>
-        </div>
-      </div>
-    );
-  }
+  // OPTIMIZED: Removed full-page loading spinner
+  // Page now renders progressively - skeleton sections handle individual loading states
+  // This provides a much faster perceived load time
 
   return (
     <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
@@ -266,26 +259,40 @@ const HomePage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Today's Status */}
+      {/* Today's Status - Progressive loading with skeleton */}
       <div className="glass-card-elevated p-5 animate-slide-up" style={{ animationDelay: '0.15s' }}>
         <h3 className="font-display font-bold text-lg text-anchor mb-4">Today's Status</h3>
         <div className="grid grid-cols-4 gap-2">
           <div className="text-center p-3 rounded-2xl bg-muted/50">
-            <p className="text-2xl font-bold text-foreground">{photos.length}</p>
+            {isLoading ? (
+              <Skeleton className="h-8 w-8 mx-auto mb-1" />
+            ) : (
+              <p className="text-2xl font-bold text-foreground">{photos.length}</p>
+            )}
             <p className="text-xs text-muted-foreground font-medium mt-1">Photos</p>
           </div>
           <div className="text-center p-3 rounded-2xl bg-sage/8">
-            <p className="text-2xl font-bold text-sage">{todayCheckIns.length}/2</p>
+            {isLoading ? (
+              <Skeleton className="h-8 w-10 mx-auto mb-1" />
+            ) : (
+              <p className="text-2xl font-bold text-sage">{todayCheckIns.length}/2</p>
+            )}
             <p className="text-xs text-muted-foreground font-medium mt-1">Check-ins</p>
           </div>
           <div className="text-center p-3 rounded-2xl bg-muted/50">
-            <p className="text-2xl font-bold text-foreground">{journalEntries.length}</p>
+            {isLoading ? (
+              <Skeleton className="h-8 w-8 mx-auto mb-1" />
+            ) : (
+              <p className="text-2xl font-bold text-foreground">{journalEntries.length}</p>
+            )}
             <p className="text-xs text-muted-foreground font-medium mt-1">Journal</p>
           </div>
           <div className="text-center p-3 rounded-2xl bg-streak/8">
-            <div className="flex items-center justify-center gap-1">
+            {isLoading ? (
+              <Skeleton className="h-8 w-8 mx-auto mb-1" />
+            ) : (
               <p className="text-2xl font-bold text-streak">{checkInStreak}</p>
-            </div>
+            )}
             <p className="text-xs text-muted-foreground font-medium mt-1">Streak</p>
           </div>
         </div>
