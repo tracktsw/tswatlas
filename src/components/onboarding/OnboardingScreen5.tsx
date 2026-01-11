@@ -226,10 +226,10 @@ export const OnboardingScreen5: React.FC = () => {
         >
           <Button 
             onClick={handleContinue}
-            className="w-full h-14 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
+            className="w-full h-14 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50"
             disabled={!isComplete}
           >
-            Create Account To Begin Tracking
+            {isComplete ? 'Create Account To Begin Tracking' : 'Answer all questions to continue'}
           </Button>
         </motion.div>
       </div>
