@@ -171,3 +171,67 @@ export function trackInsightsClicked(insightId: string, location: string): void 
     location,
   });
 }
+
+// ============ Paywall Funnel Events ============
+
+type PaywallLocation = 'coach' | 'insights' | 'photos' | 'journal' | 'community' | 'settings' | 'other';
+type PaymentPlatform = 'web' | 'ios' | 'android';
+
+/**
+ * Track when a paywall is displayed to the user.
+ */
+export function trackPaywallShown(feature: string, location: PaywallLocation): void {
+  safeCapture('paywall_shown', {
+    feature,
+    location,
+  });
+}
+
+/**
+ * Track when user clicks the upgrade/subscribe button.
+ */
+export function trackUpgradeClicked(feature: string, location: PaywallLocation, priceString: string): void {
+  safeCapture('upgrade_clicked', {
+    feature,
+    location,
+    price_string: priceString,
+  });
+}
+
+/**
+ * Track when the purchase flow actually starts (after validation).
+ */
+export function trackPurchaseStarted(platform: PaymentPlatform, priceString: string): void {
+  safeCapture('purchase_started', {
+    platform,
+    price_string: priceString,
+  });
+}
+
+/**
+ * Track when purchase completes successfully.
+ */
+export function trackPurchaseCompleted(platform: PaymentPlatform): void {
+  safeCapture('purchase_completed', {
+    platform,
+  });
+}
+
+/**
+ * Track when purchase fails (not cancelled).
+ */
+export function trackPurchaseFailed(platform: PaymentPlatform, error: string): void {
+  safeCapture('purchase_failed', {
+    platform,
+    error,
+  });
+}
+
+/**
+ * Track when user cancels purchase (distinct from failure).
+ */
+export function trackPurchaseCancelled(platform: PaymentPlatform): void {
+  safeCapture('purchase_cancelled', {
+    platform,
+  });
+}
