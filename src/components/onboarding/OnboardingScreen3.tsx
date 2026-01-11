@@ -143,23 +143,19 @@ export const OnboardingScreen3: React.FC = () => {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -50 }}
                   transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  className="space-y-3"
                 >
-                  {/* Graphic card with fixed aspect ratio */}
-                  <div className="relative aspect-[4/5] w-full rounded-2xl overflow-hidden shadow-xl bg-gradient-to-b from-muted/50 to-muted border border-border">
-                    {/* Headline overlay at top */}
-                    <div className="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-background/90 to-transparent">
-                      <h3 className="text-base font-bold text-foreground text-center leading-snug">
-                        {slides[currentSlide].headline}
-                      </h3>
-                    </div>
-                    
-                    {/* Screenshot image */}
-                    <img
-                      src={slides[currentSlide].image}
-                      alt={slides[currentSlide].headline}
-                      className="absolute inset-0 w-full h-full object-cover object-top"
-                    />
-                  </div>
+                  {/* Headline */}
+                  <h3 className="text-base font-bold text-foreground text-center leading-snug">
+                    {slides[currentSlide].headline}
+                  </h3>
+                  
+                  {/* Screenshot - natural size */}
+                  <img
+                    src={slides[currentSlide].image}
+                    alt={slides[currentSlide].headline}
+                    className="w-full h-auto rounded-2xl shadow-xl border border-border"
+                  />
                 </motion.div>
               </AnimatePresence>
             </div>
