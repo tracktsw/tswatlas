@@ -6,7 +6,6 @@ import {
   OnboardingScreen3,
   OnboardingScreen4,
   OnboardingScreen5,
-  OnboardingScreen6,
 } from '@/components/onboarding';
 
 const OnboardingContent: React.FC = () => {
@@ -23,8 +22,6 @@ const OnboardingContent: React.FC = () => {
       return <OnboardingScreen4 />;
     case 5:
       return <OnboardingScreen5 />;
-    case 6:
-      return <OnboardingScreen6 />;
     default:
       return <OnboardingScreen1 />;
   }

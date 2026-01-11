@@ -1,66 +1,38 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Sun } from 'lucide-react';
+import { ArrowLeft, Sparkles, Moon, Frown, Smile, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Slider } from '@/components/ui/slider';
-import { Input } from '@/components/ui/input';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { OnboardingProgress } from './OnboardingProgress';
-import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 const moodEmojis = ['😢', '😟', '😐', '🙂', '😊'];
-const moodLabels = ['Very bad', 'Bad', 'Okay', 'Good', 'Great'];
 
 export const OnboardingScreen5: React.FC = () => {
-  const { nextScreen, prevScreen, skipOnboarding, setFirstLog } = useOnboarding();
+  const { prevScreen, completeOnboarding, data } = useOnboarding();
   const navigate = useNavigate();
-  const { impact, selectionChanged } = useHapticFeedback();
-
-  const [skin, setSkin] = useState(5);
-  const [sleep, setSleep] = useState(3);
-  const [pain, setPain] = useState(5);
-  const [mood, setMood] = useState(3);
-  const [triggers, setTriggers] = useState('');
-
-  const handleSkip = async () => {
-    await impact('light');
-    skipOnboarding();
-    navigate('/auth');
-  };
+  const { impact, notification } = useHapticFeedback();
 
   const handleBack = async () => {
     await impact('light');
     prevScreen();
   };
 
-  const handleMoodSelect = async (value: number) => {
-    await selectionChanged();
-    setMood(value);
-  };
-
-  const handleSleepSelect = async (value: number) => {
-    await selectionChanged();
-    setSleep(value);
-  };
-
   const handleContinue = async () => {
-    await impact('medium');
-    setFirstLog({
-      skin,
-      sleep,
-      pain,
-      mood,
-      triggers,
-    });
-    nextScreen();
+    await notification('success');
+    completeOnboarding();
+    navigate('/auth');
   };
+
+  const firstLog = data.firstLog;
+  const today = format(new Date(), 'MMMM d, yyyy');
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background relative overflow-hidden">
-      {/* Header with back and skip */}
+      {/* Header with back only (no skip on final screen) */}
       <div 
         className="flex items-center justify-between px-4 pt-4"
         style={{ paddingTop: 'calc(var(--safe-top) + 1rem)' }}
@@ -68,186 +40,124 @@ export const OnboardingScreen5: React.FC = () => {
         <button
           onClick={handleBack}
           className="p-2 rounded-xl hover:bg-muted transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-          aria-label="Go back"
+          aria-label="Go back to edit"
         >
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
-        <button
-          onClick={handleSkip}
-          className="text-muted-foreground text-sm font-medium px-3 py-2 hover:text-foreground transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-          aria-label="Skip onboarding"
-        >
-          Skip
-        </button>
+        <div className="w-11" /> {/* Spacer for alignment */}
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col px-6 pb-8 overflow-y-auto">
+      <div className="flex-1 flex flex-col justify-center px-6 pb-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
-          className="space-y-5 py-4"
+          className="space-y-6"
         >
+          {/* Success animation */}
+          <motion.div 
+            className="flex justify-center"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+          >
+            <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.4, type: 'spring', stiffness: 200 }}
+              >
+                <CheckCircle2 className="w-10 h-10 text-primary" />
+              </motion.div>
+            </div>
+          </motion.div>
+
           {/* Headlines */}
-          <div className="space-y-1">
+          <div className="text-center space-y-2">
             <motion.h1 
               className="font-display text-2xl md:text-3xl font-bold text-foreground leading-tight"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.4 }}
+              transition={{ delay: 0.3, duration: 0.4 }}
             >
-              Log your first day
+              Here's your first entry! 🌱
             </motion.h1>
-            <motion.div 
-              className="flex items-center gap-2 text-muted-foreground"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.4 }}
-            >
-              <Sun className="w-4 h-4 text-healing" />
-              <span className="text-sm">Takes 30 seconds</span>
-            </motion.div>
           </div>
 
-          {/* Skin condition slider */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.4 }}
-          >
-            <Card className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-foreground">Skin condition</span>
-                <span className="text-lg font-bold text-foreground">{skin}/10</span>
-              </div>
-              <Slider
-                value={[skin]}
-                onValueChange={([v]) => setSkin(v)}
-                min={1}
-                max={10}
-                step={1}
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Worst</span>
-                <span>Best</span>
-              </div>
-            </Card>
-          </motion.div>
-
-          {/* Sleep quality */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25, duration: 0.4 }}
-          >
-            <Card className="p-4 space-y-3">
-              <span className="text-sm font-medium text-foreground">Sleep quality</span>
-              <div className="flex justify-between gap-2">
-                {[1, 2, 3, 4, 5].map((value) => (
-                  <button
-                    key={value}
-                    onClick={() => handleSleepSelect(value)}
-                    className={cn(
-                      'flex-1 py-2 rounded-lg text-lg transition-all min-h-[44px]',
-                      sleep === value
-                        ? 'bg-primary text-primary-foreground scale-105'
-                        : 'bg-muted hover:bg-muted/80'
-                    )}
-                  >
-                    {'⭐'.repeat(value)}
-                  </button>
-                ))}
-              </div>
-            </Card>
-          </motion.div>
-
-          {/* Pain level slider */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.4 }}
-          >
-            <Card className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-foreground">Pain level</span>
-                <span className="text-lg font-bold text-foreground">{pain}/10</span>
-              </div>
-              <Slider
-                value={[pain]}
-                onValueChange={([v]) => setPain(v)}
-                min={1}
-                max={10}
-                step={1}
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>None</span>
-                <span>Severe</span>
-              </div>
-            </Card>
-          </motion.div>
-
-          {/* Mood selector */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35, duration: 0.4 }}
-          >
-            <Card className="p-4 space-y-3">
-              <span className="text-sm font-medium text-foreground">Mood</span>
-              <div className="flex justify-between gap-2">
-                {moodEmojis.map((emoji, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleMoodSelect(i + 1)}
-                    className={cn(
-                      'flex-1 py-2 rounded-lg text-2xl transition-all min-h-[44px]',
-                      mood === i + 1
-                        ? 'bg-primary/20 scale-110 ring-2 ring-primary'
-                        : 'bg-muted hover:bg-muted/80'
-                    )}
-                    aria-label={moodLabels[i]}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </Card>
-          </motion.div>
-
-          {/* Triggers input */}
+          {/* Entry summary card */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.4 }}
           >
-            <Card className="p-4 space-y-2">
-              <span className="text-sm font-medium text-foreground">Any triggers today? (optional)</span>
-              <Input
-                value={triggers}
-                onChange={(e) => setTriggers(e.target.value)}
-                placeholder="e.g., dairy, stress, weather"
-                className="h-12"
-              />
+            <Card className="p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-foreground">Day 1</span>
+                <span className="text-sm text-muted-foreground">{today}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-muted/50 rounded-xl p-3 text-center">
+                  <div className="text-xs text-muted-foreground mb-1">Skin</div>
+                  <div className="text-lg font-bold text-foreground">{firstLog?.skin ?? '-'}/10</div>
+                </div>
+                <div className="bg-muted/50 rounded-xl p-3 text-center">
+                  <div className="text-xs text-muted-foreground mb-1">Pain</div>
+                  <div className="text-lg font-bold text-foreground">{firstLog?.pain ?? '-'}/10</div>
+                </div>
+                <div className="bg-muted/50 rounded-xl p-3 text-center">
+                  <div className="text-xs text-muted-foreground mb-1 flex items-center justify-center gap-1">
+                    <Moon className="w-3 h-3" /> Sleep
+                  </div>
+                  <div className="text-lg font-bold text-foreground">{'⭐'.repeat(firstLog?.sleep ?? 0)}</div>
+                </div>
+                <div className="bg-muted/50 rounded-xl p-3 text-center">
+                  <div className="text-xs text-muted-foreground mb-1">Mood</div>
+                  <div className="text-2xl">{firstLog?.mood ? moodEmojis[firstLog.mood - 1] : '-'}</div>
+                </div>
+              </div>
+
+              {firstLog?.triggers && (
+                <div className="bg-muted/50 rounded-xl p-3">
+                  <div className="text-xs text-muted-foreground mb-1">Triggers</div>
+                  <div className="text-sm text-foreground">{firstLog.triggers}</div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-border">
+                <Sparkles className="w-3 h-3 text-amber-500" />
+                <span>29 more days to unlock full pattern insights</span>
+              </div>
             </Card>
           </motion.div>
+
+          {/* Encouraging message */}
+          <motion.p
+            className="text-center text-muted-foreground"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.4 }}
+          >
+            You're on your way to understanding your TSW journey!
+          </motion.p>
         </motion.div>
       </div>
 
       {/* Footer with progress and CTA */}
       <div className="px-6 pb-6 space-y-4" style={{ paddingBottom: 'calc(var(--safe-bottom) + 1.5rem)' }}>
-        <OnboardingProgress current={4} total={5} />
+        <OnboardingProgress current={4} total={4} />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.4 }}
+          transition={{ delay: 0.6, duration: 0.4 }}
         >
           <Button 
             onClick={handleContinue}
             className="w-full h-14 text-base font-semibold"
             variant="action"
           >
-            Save Day 1
+            Create Account to Continue
           </Button>
         </motion.div>
       </div>
