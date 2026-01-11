@@ -49,7 +49,7 @@ export const OnboardingScreen5: React.FC = () => {
   const handleSkip = async () => {
     await impact('light');
     skipOnboarding();
-    navigate('/auth');
+    navigate('/auth?mode=signup');
   };
 
   const handleBack = async () => {
@@ -76,7 +76,7 @@ export const OnboardingScreen5: React.FC = () => {
     if (!isComplete) return;
     await notification('success');
     completeOnboarding();
-    navigate('/auth');
+    navigate('/auth?mode=signup');
   };
 
   return (
