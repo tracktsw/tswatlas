@@ -5,6 +5,7 @@ import { BodyPart } from '@/contexts/UserDataContext';
 import { isHeicFile, prepareFileForUpload } from '@/utils/heicConverter';
 import { extractExifDate } from '@/utils/exifExtractor';
 import { startOfDay, endOfDay } from 'date-fns';
+import { trackPhotoLogged } from '@/utils/analytics';
 
 const FREE_DAILY_PHOTO_LIMIT = 2;
 
@@ -204,6 +205,9 @@ export const useBatchUpload = (options: UseBatchUploadOptions = {}) => {
           exif_present: !!exifDate,
         });
       }
+
+      // Track successful photo upload (after DB insert succeeds)
+      trackPhotoLogged(bodyPart, 'library');
 
       updateItem(item.id, { status: 'success', progress: 100, photoId: insertedPhoto.id });
       onPhotoUploaded?.(insertedPhoto.id);
