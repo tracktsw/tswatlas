@@ -131,7 +131,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       // Load data when we have a user, otherwise stop loading
       if (newUserId) {
-        loadUserData();
+        loadUserData(newUserId);
       } else {
         setIsLoading(false);
       }
@@ -140,8 +140,8 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => subscription.unsubscribe();
   }, []);
 
-  const loadUserData = async () => {
-    if (!userId) return;
+  const loadUserData = async (uid: string) => {
+    if (!uid) return;
     
     setIsLoading(true);
     try {
@@ -149,15 +149,15 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const { data: settings } = await supabase
         .from('user_settings')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', uid)
         .maybeSingle();
 
       if (!settings) {
         // First login - migrate localStorage data to cloud
-        await migrateLocalStorageToCloud();
+        await migrateLocalStorageToCloud(uid);
       } else {
         // Load from cloud
-        await fetchCloudData();
+        await fetchCloudData(uid);
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -171,8 +171,8 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const migrateLocalStorageToCloud = async () => {
-    if (!userId) return;
+  const migrateLocalStorageToCloud = async (uid: string) => {
+    if (!uid) return;
     
     setIsSyncing(true);
     try {
@@ -196,7 +196,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       // Create user settings
       await supabase.from('user_settings').insert({
-        user_id: userId,
+        user_id: uid,
         tsw_start_date: storedTswStartDate || null,
         custom_treatments: localCustomTreatments,
         reminders_enabled: localReminderSettings.enabled,
@@ -207,7 +207,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Upload photos to storage and create records
       for (const photo of localPhotos) {
         if (photo.dataUrl) {
-          const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(2)}.jpg`;
+          const fileName = `${uid}/${Date.now()}-${Math.random().toString(36).substring(2)}.jpg`;
           const base64Data = photo.dataUrl.split(',')[1];
           const byteCharacters = atob(base64Data);
           const byteNumbers = new Array(byteCharacters.length);
@@ -223,7 +223,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
           if (!uploadError) {
             await supabase.from('user_photos').insert({
-              user_id: userId,
+              user_id: uid,
               body_part: photo.bodyPart,
               photo_url: fileName,
               notes: photo.notes || null,
@@ -236,7 +236,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Migrate check-ins
       for (const checkIn of localCheckIns) {
         await supabase.from('user_check_ins').insert({
-          user_id: userId,
+          user_id: uid,
           time_of_day: checkIn.timeOfDay,
           treatments: checkIn.treatments,
           mood: checkIn.mood,
@@ -249,7 +249,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Migrate journal entries
       for (const entry of localJournalEntries) {
         await supabase.from('user_journal_entries').insert({
-          user_id: userId,
+          user_id: uid,
           content: entry.content,
           mood: entry.mood || null,
           photo_ids: entry.photoIds || null,
@@ -271,7 +271,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       });
 
       // Load the migrated data
-      await fetchCloudData();
+      await fetchCloudData(uid);
     } catch (error) {
       console.error('Migration error:', error);
       toast({
@@ -284,8 +284,8 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const fetchCloudData = async () => {
-    if (!userId) return;
+  const fetchCloudData = async (uid: string) => {
+    if (!uid) return;
 
     try {
       // Fetch all data in parallel for faster loading
@@ -294,25 +294,25 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         supabase
           .from('user_settings')
           .select('*')
-          .eq('user_id', userId)
+          .eq('user_id', uid)
           .maybeSingle(),
         // Photos with explicit URL columns
         supabase
           .from('user_photos')
           .select('id, photo_url, thumb_url, medium_url, original_url, body_part, created_at, taken_at, notes')
-          .eq('user_id', userId)
+          .eq('user_id', uid)
           .order('created_at', { ascending: false }),
         // Check-ins
         supabase
           .from('user_check_ins')
           .select('*')
-          .eq('user_id', userId)
+          .eq('user_id', uid)
           .order('created_at', { ascending: false }),
         // Journal entries
         supabase
           .from('user_journal_entries')
           .select('*')
-          .eq('user_id', userId)
+          .eq('user_id', uid)
           .order('created_at', { ascending: false }),
       ]);
 
