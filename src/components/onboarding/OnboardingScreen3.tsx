@@ -16,7 +16,7 @@ export const OnboardingScreen3: React.FC = () => {
   const { impact } = useHapticFeedback();
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  const slides = [
+  const screenshots = [
     {
       image: improvementImage,
       headline: "Turn 'good days' into a repeatable strategy.",
@@ -25,6 +25,12 @@ export const OnboardingScreen3: React.FC = () => {
       image: triggersImage,
       headline: "The flares are loud. The data is louder.",
     },
+  ];
+
+  // Slides for carousel - first slide contains both screenshots, more can be added later
+  const slides = [
+    { type: 'screenshots' as const },
+    // Add more slides here later
   ];
 
   const goToSlide = useCallback(async (index: number) => {
@@ -111,74 +117,28 @@ export const OnboardingScreen3: React.FC = () => {
             </motion.h1>
           </div>
 
-          {/* Carousel */}
+          {/* Screenshots stacked */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.4 }}
-            className="relative"
+            className="space-y-6"
           >
-            {/* Carousel navigation arrows */}
-            <button
-              onClick={prevSlide}
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-background/80 hover:bg-background shadow-md transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-              aria-label="Previous slide"
-            >
-              <ChevronLeft className="w-5 h-5 text-foreground" />
-            </button>
-            <button
-              onClick={nextSlide}
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-background/80 hover:bg-background shadow-md transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-              aria-label="Next slide"
-            >
-              <ChevronRight className="w-5 h-5 text-foreground" />
-            </button>
-
-            {/* Slides */}
-            <div className="overflow-hidden px-8">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentSlide}
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -50 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
-                  className="space-y-3"
-                >
-                  {/* Headline */}
-                  <h3 className="text-base font-bold text-foreground text-center leading-snug">
-                    {slides[currentSlide].headline}
-                  </h3>
-                  
-                  {/* Screenshot - natural size */}
-                  <img
-                    src={slides[currentSlide].image}
-                    alt={slides[currentSlide].headline}
-                    className="w-full h-auto rounded-2xl shadow-xl border border-border"
-                  />
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            {/* Dots indicator */}
-            <div className="flex items-center justify-center gap-2 mt-4">
-              {slides.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => goToSlide(index)}
-                  className="min-h-[44px] min-w-[44px] flex items-center justify-center"
-                  aria-label={`Go to slide ${index + 1}`}
-                >
-                  <span 
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      index === currentSlide 
-                        ? 'bg-primary w-4' 
-                        : 'bg-muted-foreground/30 w-2'
-                    }`}
-                  />
-                </button>
-              ))}
-            </div>
+            {screenshots.map((screenshot, index) => (
+              <div key={index} className="space-y-2">
+                {/* Headline */}
+                <h3 className="text-base font-bold text-foreground text-center leading-snug">
+                  {screenshot.headline}
+                </h3>
+                
+                {/* Screenshot - natural size */}
+                <img
+                  src={screenshot.image}
+                  alt={screenshot.headline}
+                  className="w-full h-auto rounded-2xl shadow-xl border border-border"
+                />
+              </div>
+            ))}
           </motion.div>
         </motion.div>
       </div>
