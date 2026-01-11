@@ -10,6 +10,7 @@ import { useSafeArea } from '@/hooks/useSafeArea';
 import { OnboardingProgress } from './OnboardingProgress';
 import { FloatingLeaf } from './FloatingLeaf';
 import { cn } from '@/lib/utils';
+import { storePendingOnboardingSurvey } from '@/utils/analytics';
 
 const impactOptions = [
   { value: 'mild', label: 'Mild inconvenience' },
@@ -76,7 +77,10 @@ export const OnboardingScreen5: React.FC = () => {
   };
 
   const handleContinue = async () => {
-    if (!isComplete) return;
+    if (!isComplete || !impactLevel || !hardest || !hoping) return;
+    
+    // Store survey answers in localStorage for sending after auth
+    storePendingOnboardingSurvey(impactLevel, hardest, hoping);
     
     await notification('success');
     completeOnboarding();

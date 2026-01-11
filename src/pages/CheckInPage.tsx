@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { HeartIllustration, SunIllustration, LeafIllustration } from '@/components/illustrations';
 import { SparkleEffect } from '@/components/SparkleEffect';
 import { severityColors, severityLabels } from '@/constants/severityColors';
+import { trackCheckInCompleted } from '@/utils/analytics';
 
 const treatments = [
   { id: 'nmt', label: 'NMT', description: 'No Moisture Treatment' },
@@ -299,6 +300,9 @@ const CheckInPage = () => {
 
         setShowSparkles(true);
         toast.success('Check-in saved successfully');
+        
+        // Track successful check-in (after DB insert succeeds)
+        trackCheckInCompleted('daily');
         
         // Generate new clientRequestId for next check-in (only on success)
         setClientRequestId(crypto.randomUUID());
