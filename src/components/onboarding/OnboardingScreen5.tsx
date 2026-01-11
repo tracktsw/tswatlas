@@ -74,9 +74,20 @@ export const OnboardingScreen5: React.FC = () => {
   };
 
   const handleContinue = async () => {
-    if (!isComplete) return;
+    console.log('[OnboardingScreen5] handleContinue called');
+    console.log('[OnboardingScreen5] isComplete:', isComplete);
+    console.log('[OnboardingScreen5] values:', { impactLevel, hardest, hoping });
+    
+    if (!isComplete) {
+      console.log('[OnboardingScreen5] Not complete, returning early');
+      return;
+    }
+    
+    console.log('[OnboardingScreen5] Calling notification and completeOnboarding');
     await notification('success');
     completeOnboarding();
+    
+    console.log('[OnboardingScreen5] Navigating to /auth?mode=signup');
     navigate('/auth?mode=signup');
   };
 
