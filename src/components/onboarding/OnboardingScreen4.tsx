@@ -45,7 +45,7 @@ export const OnboardingScreen4: React.FC = () => {
     <div className="min-h-[100dvh] flex flex-col bg-background relative overflow-hidden">
       {/* Header with back and skip */}
       <div 
-        className="flex items-center justify-between px-4 pt-4"
+        className="flex items-center justify-between px-4 pt-4 shrink-0"
         style={{ paddingTop: 'calc(var(--safe-top) + 1rem)' }}
       >
         <button
@@ -64,23 +64,24 @@ export const OnboardingScreen4: React.FC = () => {
         </button>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col px-6 pb-8 overflow-y-auto">
+      {/* Main content - scrollable */}
+      <div className="flex-1 flex flex-col px-6 overflow-y-auto min-h-0">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
-          className="space-y-6 py-4"
+          className="space-y-4 py-4"
         >
           {/* Headlines */}
           <div className="space-y-2">
             <motion.h1 
-              className="font-display text-2xl md:text-3xl font-bold text-primary leading-tight"
+              className="font-display text-2xl md:text-3xl font-bold leading-tight"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.4 }}
             >
-              TSW Affects Everything.
+              <span className="text-foreground">TSW Affects </span>
+              <span className="text-primary">Everything.</span>
             </motion.h1>
           </div>
 
@@ -89,20 +90,20 @@ export const OnboardingScreen4: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.4 }}
-            className="space-y-6"
+            className="space-y-4"
           >
             {screenshots.map((screenshot, index) => (
-              <div key={index} className="space-y-2">
+              <div key={index} className="space-y-1.5">
                 {/* Headline */}
-                <h3 className="text-base font-bold text-primary text-center leading-snug">
+                <h3 className="text-sm font-bold text-foreground text-center leading-snug">
                   {screenshot.headline}
                 </h3>
                 
-                {/* Screenshot - natural size */}
+                {/* Screenshot - reduced size */}
                 <img
                   src={screenshot.image}
                   alt={screenshot.headline}
-                  className="w-full h-auto rounded-2xl shadow-xl border border-primary/20"
+                  className="w-[90%] mx-auto h-auto rounded-xl shadow-lg border border-border"
                 />
               </div>
             ))}
@@ -110,8 +111,8 @@ export const OnboardingScreen4: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* Footer with progress and CTA */}
-      <div className="px-6 pb-6 space-y-4" style={{ paddingBottom: 'calc(var(--safe-bottom) + 1.5rem)' }}>
+      {/* Footer with progress and CTA - fixed at bottom */}
+      <div className="px-6 pb-6 space-y-4 shrink-0" style={{ paddingBottom: 'calc(var(--safe-bottom) + 1.5rem)' }}>
         <OnboardingProgress current={3} total={4} />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
