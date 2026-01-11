@@ -22,7 +22,7 @@ const hardestOptions = [
   { value: 'sleep', label: 'Sleep disruption' },
   { value: 'pain', label: 'Pain / burning' },
   { value: 'itch', label: 'Itch' },
-  { value: 'appearance', label: 'Appearance / visibility' },
+  { value: 'appearance', label: 'Appearance' },
   { value: 'mental', label: 'Mental health impact' },
   { value: 'flares', label: 'Unpredictable flares' },
   { value: 'triggers', label: 'Not knowing my triggers' },
