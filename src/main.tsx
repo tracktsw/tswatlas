@@ -10,6 +10,7 @@ posthog.init('phc_ioqVGTp9J1lA0SMfDVKEAibkUVtZTaWuwDR8n81zWhx', {
   api_host: 'https://eu.i.posthog.com',
   person_profiles: 'identified_only',
   capture_pageview: true,
+  autocapture: false,
   persistence: 'localStorage',
 });
 
