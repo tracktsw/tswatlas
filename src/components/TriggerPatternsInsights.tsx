@@ -161,7 +161,7 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     const activePatterns: TriggerStat[] = [];
     const resolvedTriggers: ResolvedTrigger[] = [];
 
-    // Helper to generate label for triggers, including specific food items
+    // Helper to generate label for triggers, including specific food items and new products
     const getLabel = (triggerId: string): string => {
       if (triggerId.startsWith('food:')) {
         const foodName = triggerId.slice(5).trim();
@@ -173,6 +173,17 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
       }
       if (triggerId === 'food') {
         return 'Food (general)';
+      }
+      if (triggerId.startsWith('new_product:')) {
+        const productName = triggerId.slice(12).trim();
+        if (!productName) return 'New Product (general)';
+        // Capitalize first letter of each word
+        return `New Product: ${productName.split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ')}`;
+      }
+      if (triggerId === 'new_product') {
+        return 'New Product (general)';
       }
       return triggersList.find(t => t.id === triggerId)?.label || triggerId;
     };

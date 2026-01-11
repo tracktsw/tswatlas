@@ -75,6 +75,7 @@ const CheckInPage = () => {
   const [selectedSymptoms, setSelectedSymptoms] = useState<SymptomEntry[]>([]);
   const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
   const [foodTriggerText, setFoodTriggerText] = useState('');
+  const [newProductText, setNewProductText] = useState('');
   const [painScore, setPainScore] = useState<number | null>(null);
   const [sleepScore, setSleepScore] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
@@ -112,12 +113,24 @@ const CheckInPage = () => {
           return [...prev, 'food'];
         }
       });
+    } else if (id === 'new_product') {
+      // For new_product, toggle the selection but don't clear the text immediately
+      setSelectedTriggers((prev) => {
+        if (prev.some(t => t === 'new_product' || t.startsWith('new_product:'))) {
+          // Deselecting new_product - clear the text too
+          setNewProductText('');
+          return prev.filter((t) => t !== 'new_product' && !t.startsWith('new_product:'));
+        } else {
+          return [...prev, 'new_product'];
+        }
+      });
     } else {
       setSelectedTriggers((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
     }
   };
 
   const isFoodSelected = selectedTriggers.some(t => t === 'food' || t.startsWith('food:'));
+  const isNewProductSelected = selectedTriggers.some(t => t === 'new_product' || t.startsWith('new_product:'));
 
   const toggleSymptom = (symptom: string) => {
     if (isSaving) return;
@@ -193,6 +206,13 @@ const CheckInPage = () => {
     } else {
       setFoodTriggerText('');
     }
+    // Extract new_product text from triggers if present
+    const newProductTrigger = triggers.find(t => t.startsWith('new_product:'));
+    if (newProductTrigger) {
+      setNewProductText(newProductTrigger.replace('new_product:', ''));
+    } else {
+      setNewProductText('');
+    }
     setSelectedTriggers(triggers);
     setPainScore(checkIn.painScore ?? null);
     setSleepScore(checkIn.sleepScore ?? null);
@@ -209,6 +229,7 @@ const CheckInPage = () => {
     setSelectedSymptoms([]);
     setSelectedTriggers([]);
     setFoodTriggerText('');
+    setNewProductText('');
     setPainScore(null);
     setSleepScore(null);
     setNotes('');
@@ -237,11 +258,14 @@ const CheckInPage = () => {
 
     setIsSaving(true);
 
-    // Process triggers: replace 'food' with 'food:text' if text is provided
+    // Process triggers: replace 'food' with 'food:text' and 'new_product' with 'new_product:text' if text is provided
     const processedTriggers = selectedTriggers
       .filter(t => t !== 'food') // Remove plain 'food' entry
       .filter(t => !t.startsWith('food:')) // Remove any existing food:xxx entries
-      .concat(isFoodSelected && foodTriggerText.trim() ? [`food:${foodTriggerText.trim()}`] : isFoodSelected ? ['food'] : []);
+      .filter(t => t !== 'new_product') // Remove plain 'new_product' entry
+      .filter(t => !t.startsWith('new_product:')) // Remove any existing new_product:xxx entries
+      .concat(isFoodSelected && foodTriggerText.trim() ? [`food:${foodTriggerText.trim()}`] : isFoodSelected ? ['food'] : [])
+      .concat(isNewProductSelected && newProductText.trim() ? [`new_product:${newProductText.trim()}`] : isNewProductSelected ? ['new_product'] : []);
 
     try {
       if (editingCheckIn) {
@@ -288,6 +312,7 @@ const CheckInPage = () => {
       setSelectedSymptoms([]);
       setSelectedTriggers([]);
       setFoodTriggerText('');
+      setNewProductText('');
       setPainScore(null);
       setSleepScore(null);
       setNotes('');
@@ -575,8 +600,8 @@ const CheckInPage = () => {
               </p>
             </div>
             <div className="grid grid-cols-2 gap-1.5">
-              {triggersList.map(({ id, label }) => {
-                const isSelected = id === 'food' ? isFoodSelected : selectedTriggers.includes(id);
+            {triggersList.map(({ id, label }) => {
+                const isSelected = id === 'food' ? isFoodSelected : id === 'new_product' ? isNewProductSelected : selectedTriggers.includes(id);
                 return (
                   <button
                     key={id}
@@ -600,6 +625,17 @@ const CheckInPage = () => {
                   placeholder="What food? (e.g., dairy, gluten)"
                   value={foodTriggerText}
                   onChange={(e) => setFoodTriggerText(e.target.value)}
+                  className="h-10 rounded-xl border-2"
+                />
+              </div>
+            )}
+            {/* New Product input field - shown when New Product is selected */}
+            {isNewProductSelected && (
+              <div className="mt-2">
+                <Input
+                  placeholder="Which product? (e.g., new lotion, sunscreen)"
+                  value={newProductText}
+                  onChange={(e) => setNewProductText(e.target.value)}
                   className="h-10 rounded-xl border-2"
                 />
               </div>
