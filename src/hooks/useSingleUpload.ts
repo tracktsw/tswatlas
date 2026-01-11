@@ -5,6 +5,7 @@ import { BodyPart } from '@/contexts/UserDataContext';
 import { prepareFileForUpload } from '@/utils/heicConverter';
 import { extractExifDate } from '@/utils/exifExtractor';
 import { startOfDay, endOfDay } from 'date-fns';
+import { trackPhotoLogged } from '@/utils/analytics';
 
 const FREE_DAILY_PHOTO_LIMIT = 2;
 
@@ -15,6 +16,8 @@ interface UploadOptions {
   takenAtOverride?: string | null;
   /** Skip the daily limit check (for premium users) */
   skipLimitCheck?: boolean;
+  /** Source of the photo: camera or library */
+  source?: 'camera' | 'library';
 }
 
 /** Full photo data returned after successful upload */
@@ -75,7 +78,7 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
     file: File,
     uploadOptions: UploadOptions
   ): Promise<UploadedPhoto | null> => {
-    const { bodyPart, notes, takenAtOverride, skipLimitCheck } = uploadOptions;
+    const { bodyPart, notes, takenAtOverride, skipLimitCheck, source = 'library' } = uploadOptions;
 
     // Always log upload attempts for debugging Android issues
     console.log('[SingleUpload] Starting upload:', file.name, 'type:', file.type, 'size:', file.size);
@@ -243,6 +246,9 @@ export const useSingleUpload = (options: UseSingleUploadOptions = {}) => {
           had_override: takenAtOverride !== undefined,
         });
       }
+
+      // Track successful photo upload (after DB insert succeeds)
+      trackPhotoLogged(bodyPart, source);
 
       onSuccess?.(uploadedPhoto);
       return uploadedPhoto;

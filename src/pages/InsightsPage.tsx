@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles, Eye, Pencil, Crown, Loader2, Flame, Activity, CalendarDays, Moon, Wand2, Trash2, RotateCcw, RefreshCw } from 'lucide-react';
 import { useUserData, BodyPart, CheckIn } from '@/contexts/UserDataContext';
@@ -23,6 +23,7 @@ import { severityColors, severityLabels } from '@/constants/severityColors';
 import { toast } from 'sonner';
 import { useFlareState } from '@/hooks/useFlareState';
 import { InsightsPageSkeleton } from '@/components/skeletons/PageSkeletons';
+import { trackInsightsClicked } from '@/utils/analytics';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
@@ -75,6 +76,15 @@ const InsightsPage = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [demoEditDate, setDemoEditDate] = useState<Date | null>(null);
+  
+  // Track insights page view (once per session)
+  const hasTrackedRef = useRef(false);
+  useEffect(() => {
+    if (!hasTrackedRef.current && !isBackendLoading && realCheckIns.length > 0) {
+      trackInsightsClicked('insights_page', 'navigation');
+      hasTrackedRef.current = true;
+    }
+  }, [isBackendLoading, realCheckIns.length]);
 
   // Premium is enforced by backend for ALL platforms.
   const isPremium = isAdmin || isPremiumFromBackend;

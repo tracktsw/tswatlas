@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import trackTswLogo from '@/assets/tracktsw-logo-transparent.png';
 import { usePlatform } from '@/hooks/usePlatform';
 import { useOnboardingSubmit } from '@/hooks/useOnboardingSubmit';
+import { hasPendingOnboardingSurvey, sendPendingOnboardingSurvey, identifyUser } from '@/utils/analytics';
 
 type AuthMode = 'login' | 'signup' | 'forgot';
 
@@ -172,11 +173,22 @@ const AuthPage = () => {
         setMode('login');
         setEmail('');
       } else if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
+        
+        // Identify user for analytics after successful login
+        if (data?.user?.id) {
+          // Check for pending onboarding survey (edge case: signup interrupted before survey sent)
+          if (hasPendingOnboardingSurvey()) {
+            sendPendingOnboardingSurvey(data.user.id);
+          } else {
+            identifyUser(data.user.id);
+          }
+        }
+        
         toast.success('Welcome back!');
         navigate('/');
       } else {
@@ -191,6 +203,13 @@ const AuthPage = () => {
         
         // IMPORTANT: Only after successful signup, save onboarding data to backend
         if (data?.user?.id) {
+          // Send pending onboarding survey to PostHog (identifies user first)
+          if (hasPendingOnboardingSurvey()) {
+            sendPendingOnboardingSurvey(data.user.id);
+          } else {
+            identifyUser(data.user.id);
+          }
+          
           // Submit onboarding data first (if any exists from the onboarding flow)
           // This is the ONLY place where onboarding data gets persisted to backend
           if (hasPendingOnboardingData()) {

@@ -1,7 +1,8 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useUserData } from '@/contexts/UserDataContext';
 import { prepareCoachContext } from '@/utils/prepareCoachContext';
 import { useToast } from '@/hooks/use-toast';
+import { trackAICoachMessage } from '@/utils/analytics';
 
 export interface ChatMessage {
   id: string;
@@ -169,6 +170,22 @@ export function useAICoach() {
           } catch { /* ignore */ }
         }
       }
+      
+      // Track successful message after streaming completes
+      // Determine context based on user's message keywords
+      const lowerInput = input.toLowerCase();
+      let context: 'general' | 'flare' | 'sleep' | 'symptoms' | 'triggers' = 'general';
+      if (lowerInput.includes('flare') || lowerInput.includes('flaring')) {
+        context = 'flare';
+      } else if (lowerInput.includes('sleep') || lowerInput.includes('insomnia') || lowerInput.includes('tired')) {
+        context = 'sleep';
+      } else if (lowerInput.includes('symptom') || lowerInput.includes('itch') || lowerInput.includes('burn') || lowerInput.includes('pain')) {
+        context = 'symptoms';
+      } else if (lowerInput.includes('trigger') || lowerInput.includes('cause')) {
+        context = 'triggers';
+      }
+      
+      trackAICoachMessage(input.length, context);
     } catch (error) {
       console.error('AI Coach error:', error);
       toast({
