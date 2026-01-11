@@ -7,8 +7,8 @@ import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { OnboardingProgress } from './OnboardingProgress';
-import improvementImage from '@/assets/onboarding-improvement.png';
-import triggersImage from '@/assets/onboarding-triggers.png';
+import { OnboardingImprovementCard } from './OnboardingImprovementCard';
+import { OnboardingTriggersCard } from './OnboardingTriggersCard';
 
 export const OnboardingScreen3: React.FC = () => {
   const { nextScreen, prevScreen, skipOnboarding } = useOnboarding();
@@ -18,11 +18,11 @@ export const OnboardingScreen3: React.FC = () => {
 
   const slides = [
     {
-      image: improvementImage,
+      component: <OnboardingImprovementCard />,
       headline: "Turn 'good days' into a repeatable strategy.",
     },
     {
-      image: triggersImage,
+      component: <OnboardingTriggersCard />,
       headline: "The flares are loud. The data is louder.",
     },
   ];
@@ -155,13 +155,9 @@ export const OnboardingScreen3: React.FC = () => {
                       {slides[currentSlide].headline}
                     </h3>
                     
-                    {/* Slide image */}
+                    {/* Slide component */}
                     <div className="rounded-lg overflow-hidden">
-                      <img
-                        src={slides[currentSlide].image}
-                        alt={slides[currentSlide].headline}
-                        className="w-full h-auto object-contain"
-                      />
+                      {slides[currentSlide].component}
                     </div>
                   </motion.div>
                 </AnimatePresence>
