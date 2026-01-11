@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Activity, Heart, Sparkles } from 'lucide-react';
+import { ArrowLeft, Activity, Heart, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useOnboarding } from '@/contexts/OnboardingContext';
@@ -187,7 +187,7 @@ export const OnboardingScreen5: React.FC = () => {
             transition={{ delay: 0.4, duration: 0.4 }}
           >
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-muted-foreground" />
+              <Target className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm font-medium text-foreground">What are you hoping this app will help you with most?</span>
             </div>
             <Select value={hoping || undefined} onValueChange={handleHopingChange}>
