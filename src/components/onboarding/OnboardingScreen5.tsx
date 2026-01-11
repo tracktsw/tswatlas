@@ -203,6 +203,16 @@ export const OnboardingScreen5: React.FC = () => {
               </SelectContent>
             </Select>
           </motion.div>
+
+          {/* Helper text */}
+          <motion.p
+            className="text-xs text-muted-foreground text-center px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.4 }}
+          >
+            Your answers help us understand what you need so we can build features that are actually useful for you.
+          </motion.p>
         </motion.div>
       </div>
 
