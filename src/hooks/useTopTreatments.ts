@@ -14,19 +14,22 @@ export const useTopTreatments = (limit = 3) => {
   return useQuery({
     queryKey: ['top-treatments', limit],
     queryFn: async (): Promise<TopTreatment[]> => {
-      // Fetch treatments and their vote counts
-      const { data: treatments, error: treatmentsError } = await supabase
-        .from('treatments')
-        .select('id, name, category')
-        .eq('is_approved', true);
+      // OPTIMIZED: Fetch treatments and vote counts in PARALLEL
+      const [treatmentsResult, voteCountsResult] = await Promise.all([
+        supabase
+          .from('treatments')
+          .select('id, name, category')
+          .eq('is_approved', true),
+        supabase
+          .from('treatment_vote_counts')
+          .select('*'),
+      ]);
 
-      if (treatmentsError) throw treatmentsError;
+      if (treatmentsResult.error) throw treatmentsResult.error;
+      if (voteCountsResult.error) throw voteCountsResult.error;
 
-      const { data: voteCounts, error: voteCountsError } = await supabase
-        .from('treatment_vote_counts')
-        .select('*');
-
-      if (voteCountsError) throw voteCountsError;
+      const treatments = treatmentsResult.data;
+      const voteCounts = voteCountsResult.data;
 
       // Combine treatments with vote counts
       const treatmentsWithVotes = treatments?.map(treatment => {

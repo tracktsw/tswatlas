@@ -122,29 +122,23 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [userId, setUserId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Get current user
+  // OPTIMIZED: Single auth listener - onAuthStateChange fires immediately with current session
+  // No separate getUser() call needed - eliminates auth waterfall
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id || null);
-    };
-    getUser();
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUserId(session?.user?.id || null);
+      const newUserId = session?.user?.id || null;
+      setUserId(newUserId);
+      
+      // Load data when we have a user, otherwise stop loading
+      if (newUserId) {
+        loadUserData();
+      } else {
+        setIsLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
-
-  // Load data when user changes
-  useEffect(() => {
-    if (userId) {
-      loadUserData();
-    } else {
-      setIsLoading(false);
-    }
-  }, [userId]);
 
   const loadUserData = async () => {
     if (!userId) return;
