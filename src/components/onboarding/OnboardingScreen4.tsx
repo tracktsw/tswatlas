@@ -1,41 +1,29 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Target, TrendingUp, Zap, Search, Clock } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Slider } from '@/components/ui/slider';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { OnboardingProgress } from './OnboardingProgress';
-import { cn } from '@/lib/utils';
-
-const durationOptions = [
-  { value: '<3 months', label: 'Less than 3 months' },
-  { value: '3-6 months', label: '3-6 months' },
-  { value: '6-12 months', label: '6-12 months' },
-  { value: '1+ year', label: '1+ year' },
-];
-
-const goalOptions = [
-  { value: 'triggers', label: 'Identify triggers', icon: Search },
-  { value: 'progress', label: 'Track progress', icon: TrendingUp },
-  { value: 'relief', label: 'Find relief', icon: Zap },
-  { value: 'patterns', label: 'Understand patterns', icon: Target },
-];
-
-const severityEmojis = ['😢', '😟', '😕', '😐', '🙂', '😌', '🙂', '😊', '😄', '🥳'];
+import symptomsImage from '@/assets/onboarding-symptoms.png';
+import sleepImage from '@/assets/onboarding-sleep.png';
 
 export const OnboardingScreen4: React.FC = () => {
-  const { nextScreen, prevScreen, skipOnboarding, data, setTswDuration, setGoal, setInitialSeverity } = useOnboarding();
+  const { nextScreen, prevScreen, skipOnboarding } = useOnboarding();
   const navigate = useNavigate();
-  const { impact, selectionChanged } = useHapticFeedback();
+  const { impact } = useHapticFeedback();
 
-  const [duration, setDuration] = useState<string | null>(data.tswDuration);
-  const [goal, setGoalLocal] = useState<string | null>(data.goal);
-  const [severity, setSeverity] = useState<number>(data.initialSeverity ?? 5);
-
-  const isComplete = duration !== null && goal !== null;
+  const screenshots = [
+    {
+      image: symptomsImage,
+      headline: "Your symptoms are real. Your data makes them undeniable.",
+    },
+    {
+      image: sleepImage,
+      headline: "Your Flares Are Stealing Your Sleep.",
+    },
+  ];
 
   const handleSkip = async () => {
     await impact('light');
@@ -48,25 +36,7 @@ export const OnboardingScreen4: React.FC = () => {
     prevScreen();
   };
 
-  const handleDurationSelect = async (value: string) => {
-    await selectionChanged();
-    setDuration(value);
-    setTswDuration(value);
-  };
-
-  const handleGoalSelect = async (value: string) => {
-    await selectionChanged();
-    setGoalLocal(value);
-    setGoal(value);
-  };
-
-  const handleSeverityChange = (value: number[]) => {
-    setSeverity(value[0]);
-    setInitialSeverity(value[0]);
-  };
-
   const handleContinue = async () => {
-    if (!isComplete) return;
     await impact('light');
     nextScreen();
   };
@@ -105,102 +75,37 @@ export const OnboardingScreen4: React.FC = () => {
           {/* Headlines */}
           <div className="space-y-2">
             <motion.h1 
-              className="font-display text-2xl md:text-3xl font-bold text-foreground leading-tight"
+              className="font-display text-2xl md:text-3xl font-bold text-primary leading-tight"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.4 }}
             >
-              Let's personalize your experience
+              TSW Affects Everything.
             </motion.h1>
           </div>
 
-          {/* Question 1: Duration */}
+          {/* Screenshots stacked */}
           <motion.div
-            className="space-y-3"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.4 }}
+            className="space-y-6"
           >
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">How long have you been experiencing TSW?</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {durationOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => handleDurationSelect(option.value)}
-                  className={cn(
-                    'p-3 rounded-xl border-2 text-sm font-medium transition-all min-h-[44px]',
-                    duration === option.value
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border bg-card text-foreground hover:border-primary/50'
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Question 2: Goal */}
-          <motion.div
-            className="space-y-3"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.4 }}
-          >
-            <div className="flex items-center gap-2">
-              <Target className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">What's your main goal?</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {goalOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => handleGoalSelect(option.value)}
-                  className={cn(
-                    'p-3 rounded-xl border-2 text-sm font-medium transition-all flex flex-col items-center gap-2 min-h-[72px]',
-                    goal === option.value
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border bg-card text-foreground hover:border-primary/50'
-                  )}
-                >
-                  <option.icon className="w-5 h-5" />
-                  <span>{option.label}</span>
-                </button>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Question 3: Severity */}
-          <motion.div
-            className="space-y-4"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.4 }}
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-foreground">How severe are your symptoms today?</span>
-            </div>
-            <Card className="p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-2xl">{severityEmojis[severity - 1]}</span>
-                <span className="text-lg font-bold text-foreground">{severity}/10</span>
+            {screenshots.map((screenshot, index) => (
+              <div key={index} className="space-y-2">
+                {/* Headline */}
+                <h3 className="text-base font-bold text-primary text-center leading-snug">
+                  {screenshot.headline}
+                </h3>
+                
+                {/* Screenshot - natural size */}
+                <img
+                  src={screenshot.image}
+                  alt={screenshot.headline}
+                  className="w-full h-auto rounded-2xl shadow-xl border border-primary/20"
+                />
               </div>
-              <Slider
-                value={[severity]}
-                onValueChange={handleSeverityChange}
-                min={1}
-                max={10}
-                step={1}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>😢 Worst</span>
-                <span>Best 😊</span>
-              </div>
-            </Card>
+            ))}
           </motion.div>
         </motion.div>
       </div>
@@ -211,13 +116,11 @@ export const OnboardingScreen4: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.4 }}
+          transition={{ delay: 0.6, duration: 0.4 }}
         >
           <Button 
             onClick={handleContinue}
-            className="w-full h-14 text-base font-semibold"
-            variant="action"
-            disabled={!isComplete}
+            className="w-full h-14 text-base font-semibold bg-primary hover:bg-primary/90"
           >
             Continue
           </Button>
