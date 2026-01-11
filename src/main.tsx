@@ -1,8 +1,16 @@
 import { createRoot } from "react-dom/client";
+import posthog from 'posthog-js';
 import App from "./App.tsx";
 import "./index.css";
 import { Capacitor } from '@capacitor/core';
 import { SafeArea } from 'capacitor-plugin-safe-area';
+
+// Initialize PostHog analytics (once at app startup)
+posthog.init('PASTE_MY_API_KEY_HERE', {
+  api_host: 'https://app.posthog.com',
+  capture_pageview: true,
+  persistence: 'localStorage',
+});
 
 // Initialize safe area insets for both iOS and Android
 if (Capacitor.isNativePlatform()) {
