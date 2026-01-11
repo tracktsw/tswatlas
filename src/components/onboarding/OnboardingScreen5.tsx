@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Target, TrendingUp, Zap, Search, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Slider } from '@/components/ui/slider';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
@@ -24,16 +22,13 @@ const goalOptions = [
   { value: 'patterns', label: 'Understand patterns', icon: Target },
 ];
 
-const severityEmojis = ['😢', '😟', '😕', '😐', '🙂', '😌', '🙂', '😊', '😄', '🥳'];
-
 export const OnboardingScreen5: React.FC = () => {
-  const { prevScreen, skipOnboarding, completeOnboarding, data, setTswDuration, setGoal, setInitialSeverity } = useOnboarding();
+  const { prevScreen, skipOnboarding, completeOnboarding, data, setTswDuration, setGoal } = useOnboarding();
   const navigate = useNavigate();
   const { impact, selectionChanged, notification } = useHapticFeedback();
 
   const [duration, setDuration] = useState<string | null>(data.tswDuration);
   const [goal, setGoalLocal] = useState<string | null>(data.goal);
-  const [severity, setSeverity] = useState<number>(data.initialSeverity ?? 5);
 
   const isComplete = duration !== null && goal !== null;
 
@@ -58,11 +53,6 @@ export const OnboardingScreen5: React.FC = () => {
     await selectionChanged();
     setGoalLocal(value);
     setGoal(value);
-  };
-
-  const handleSeverityChange = (value: number[]) => {
-    setSeverity(value[0]);
-    setInitialSeverity(value[0]);
   };
 
   const handleContinue = async () => {
@@ -172,36 +162,6 @@ export const OnboardingScreen5: React.FC = () => {
                 </button>
               ))}
             </div>
-          </motion.div>
-
-          {/* Question 3: Severity */}
-          <motion.div
-            className="space-y-4"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.4 }}
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-foreground">How severe are your symptoms today?</span>
-            </div>
-            <Card className="p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-2xl">{severityEmojis[severity - 1]}</span>
-                <span className="text-lg font-bold text-foreground">{severity}/10</span>
-              </div>
-              <Slider
-                value={[severity]}
-                onValueChange={handleSeverityChange}
-                min={1}
-                max={10}
-                step={1}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>😢 Worst</span>
-                <span>Best 😊</span>
-              </div>
-            </Card>
           </motion.div>
         </motion.div>
       </div>
