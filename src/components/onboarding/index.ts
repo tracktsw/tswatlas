@@ -4,3 +4,4 @@ export { OnboardingScreen3 } from './OnboardingScreen3';
 export { OnboardingScreen4 } from './OnboardingScreen4';
 export { OnboardingScreen5 } from './OnboardingScreen5';
 export { OnboardingProgress } from './OnboardingProgress';
+export { FloatingLeaf } from './FloatingLeaf';
