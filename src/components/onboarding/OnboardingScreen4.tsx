@@ -207,7 +207,7 @@ export const OnboardingScreen4: React.FC = () => {
 
       {/* Footer with progress and CTA */}
       <div className="px-6 pb-6 space-y-4" style={{ paddingBottom: 'calc(var(--safe-bottom) + 1.5rem)' }}>
-        <OnboardingProgress current={3} total={5} />
+        <OnboardingProgress current={3} total={4} />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
