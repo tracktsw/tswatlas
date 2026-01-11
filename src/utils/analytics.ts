@@ -38,6 +38,24 @@ interface OnboardingSurveyPayload {
   primary_goal: string;
 }
 
+function safeIdentify(userId: string) {
+  try {
+    console.log('[PostHog] Identifying user:', userId);
+    posthog.identify(userId);
+  } catch (e) {
+    console.error('[PostHog] identify failed:', e);
+  }
+}
+
+function safeCapture(event: string, properties?: Record<string, unknown>) {
+  try {
+    console.log(`[PostHog] Firing event: ${event}`, properties ?? {});
+    posthog.capture(event, properties);
+  } catch (e) {
+    console.error(`[PostHog] capture failed (${event}):`, e);
+  }
+}
+
 /**
  * Store onboarding survey answers in localStorage.
  * Maps UI values to analytics enum values.
@@ -53,7 +71,7 @@ export function storePendingOnboardingSurvey(
     hardest_issue: HARDEST_ISSUE_MAP[hardest] || hardest,
     primary_goal: PRIMARY_GOAL_MAP[hoping] || hoping,
   };
-  
+
   localStorage.setItem(PENDING_ONBOARDING_KEY, JSON.stringify(payload));
 }
 
@@ -75,22 +93,20 @@ export function sendPendingOnboardingSurvey(userId: string): void {
     console.log('[PostHog] No pending onboarding survey to send');
     return;
   }
-  
+
   try {
     const payload = JSON.parse(stored) as OnboardingSurveyPayload;
-    
+
     // Identify user first
-    console.log('[PostHog] Identifying user:', userId);
-    posthog.identify(userId);
-    
+    safeIdentify(userId);
+
     // Send the onboarding survey event
-    console.log('[PostHog] Firing event: onboarding_survey_submitted', payload);
-    posthog.capture('onboarding_survey_submitted', {
+    safeCapture('onboarding_survey_submitted', {
       tsw_impact: payload.tsw_impact,
       hardest_issue: payload.hardest_issue,
       primary_goal: payload.primary_goal,
     });
-    
+
     // Remove from localStorage immediately after sending
     localStorage.removeItem(PENDING_ONBOARDING_KEY);
     console.log('[PostHog] onboarding_survey_submitted sent successfully');
@@ -106,8 +122,7 @@ export function sendPendingOnboardingSurvey(userId: string): void {
  * Called when user logs in and there's no pending survey.
  */
 export function identifyUser(userId: string): void {
-  console.log('[PostHog] Identifying user (no survey):', userId);
-  posthog.identify(userId);
+  safeIdentify(userId);
 }
 
 // Context types for AI coach messages
@@ -117,8 +132,7 @@ type CoachContext = 'general' | 'flare' | 'sleep' | 'symptoms' | 'triggers';
  * Track AI coach message sent (after successful API response).
  */
 export function trackAICoachMessage(messageLength: number, context: CoachContext = 'general'): void {
-  console.log('[PostHog] Firing event: ai_coach_message_sent', { message_length: messageLength, context });
-  posthog.capture('ai_coach_message_sent', {
+  safeCapture('ai_coach_message_sent', {
     message_length: messageLength,
     context,
   });
@@ -132,8 +146,7 @@ type PhotoSource = 'camera' | 'library';
  * Does NOT send image URL or metadata.
  */
 export function trackPhotoLogged(photoType: string, source: PhotoSource): void {
-  console.log('[PostHog] Firing event: photo_logged', { photo_type: photoType, source });
-  posthog.capture('photo_logged', {
+  safeCapture('photo_logged', {
     photo_type: photoType,
     source,
   });
@@ -144,8 +157,7 @@ export function trackPhotoLogged(photoType: string, source: PhotoSource): void {
  * Does NOT send check-in content.
  */
 export function trackCheckInCompleted(checkinType: string = 'daily'): void {
-  console.log('[PostHog] Firing event: check_in_completed', { checkin_type: checkinType });
-  posthog.capture('check_in_completed', {
+  safeCapture('check_in_completed', {
     checkin_type: checkinType,
   });
 }
@@ -154,8 +166,7 @@ export function trackCheckInCompleted(checkinType: string = 'daily'): void {
  * Track insights card/screen opened.
  */
 export function trackInsightsClicked(insightId: string, location: string): void {
-  console.log('[PostHog] Firing event: insights_clicked', { insight_id: insightId, location });
-  posthog.capture('insights_clicked', {
+  safeCapture('insights_clicked', {
     insight_id: insightId,
     location,
   });
