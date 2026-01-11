@@ -118,75 +118,67 @@ export const OnboardingScreen3: React.FC = () => {
             transition={{ delay: 0.2, duration: 0.4 }}
             className="relative"
           >
-            <Card className="p-4 overflow-hidden">
-              {/* Carousel navigation arrows */}
-              <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10">
-                <button
-                  onClick={prevSlide}
-                  className="p-2 rounded-full bg-background/80 hover:bg-background shadow-md transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-                  aria-label="Previous slide"
-                >
-                  <ChevronLeft className="w-5 h-5 text-foreground" />
-                </button>
-              </div>
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 z-10">
-                <button
-                  onClick={nextSlide}
-                  className="p-2 rounded-full bg-background/80 hover:bg-background shadow-md transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-                  aria-label="Next slide"
-                >
-                  <ChevronRight className="w-5 h-5 text-foreground" />
-                </button>
-              </div>
+            {/* Carousel navigation arrows */}
+            <button
+              onClick={prevSlide}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-background/80 hover:bg-background shadow-md transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Previous slide"
+            >
+              <ChevronLeft className="w-5 h-5 text-foreground" />
+            </button>
+            <button
+              onClick={nextSlide}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-background/80 hover:bg-background shadow-md transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Next slide"
+            >
+              <ChevronRight className="w-5 h-5 text-foreground" />
+            </button>
 
-              {/* Slides */}
-              <div className="relative overflow-hidden">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={currentSlide}
-                    initial={{ opacity: 0, x: 50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -50 }}
-                    transition={{ duration: 0.3, ease: 'easeInOut' }}
-                    className="space-y-3"
-                  >
-                    {/* Slide headline */}
-                    <h3 className="text-sm font-semibold text-foreground text-center px-8">
-                      {slides[currentSlide].headline}
-                    </h3>
-                    
-                    {/* Slide image */}
-                    <div className="rounded-lg overflow-hidden">
-                      <img
-                        src={slides[currentSlide].image}
-                        alt={slides[currentSlide].headline}
-                        className="w-full h-auto object-contain"
-                      />
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
-              </div>
+            {/* Slides */}
+            <div className="overflow-hidden px-8">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentSlide}
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -50 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  className="space-y-3"
+                >
+                  {/* Slide headline */}
+                  <h3 className="text-sm font-semibold text-foreground text-center">
+                    {slides[currentSlide].headline}
+                  </h3>
+                  
+                  {/* Screenshot image */}
+                  <img
+                    src={slides[currentSlide].image}
+                    alt={slides[currentSlide].headline}
+                    className="w-full h-auto rounded-xl shadow-lg"
+                  />
+                </motion.div>
+              </AnimatePresence>
+            </div>
 
-              {/* Dots indicator */}
-              <div className="flex items-center justify-center gap-2 mt-4">
-                {slides.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => goToSlide(index)}
-                    className={`w-2 h-2 rounded-full transition-all duration-300 min-h-[44px] min-w-[44px] flex items-center justify-center`}
-                    aria-label={`Go to slide ${index + 1}`}
-                  >
-                    <span 
-                      className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                        index === currentSlide 
-                          ? 'bg-primary w-4' 
-                          : 'bg-muted-foreground/30'
-                      }`}
-                    />
-                  </button>
-                ))}
-              </div>
-            </Card>
+            {/* Dots indicator */}
+            <div className="flex items-center justify-center gap-2 mt-4">
+              {slides.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => goToSlide(index)}
+                  className="min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  aria-label={`Go to slide ${index + 1}`}
+                >
+                  <span 
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      index === currentSlide 
+                        ? 'bg-primary w-4' 
+                        : 'bg-muted-foreground/30 w-2'
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
           </motion.div>
         </motion.div>
       </div>
