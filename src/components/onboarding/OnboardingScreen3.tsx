@@ -1,17 +1,55 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { ArrowLeft, TrendingUp, Moon, Droplets, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { OnboardingProgress } from './OnboardingProgress';
+import improvementImage from '@/assets/onboarding-improvement.png';
+import triggersImage from '@/assets/onboarding-triggers.png';
 
 export const OnboardingScreen3: React.FC = () => {
   const { nextScreen, prevScreen, skipOnboarding } = useOnboarding();
   const navigate = useNavigate();
   const { impact } = useHapticFeedback();
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const slides = [
+    {
+      image: improvementImage,
+      headline: "Turn 'good days' into a repeatable strategy.",
+    },
+    {
+      image: triggersImage,
+      headline: "The flares are loud. The data is louder.",
+    },
+  ];
+
+  const goToSlide = useCallback(async (index: number) => {
+    await impact('light');
+    setCurrentSlide(index);
+  }, [impact]);
+
+  const nextSlide = useCallback(async () => {
+    await impact('light');
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+  }, [impact, slides.length]);
+
+  const prevSlide = useCallback(async () => {
+    await impact('light');
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  }, [impact, slides.length]);
+
+  // Auto-advance carousel every 8 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 8000);
+
+    return () => clearInterval(timer);
+  }, [slides.length]);
 
   const handleSkip = async () => {
     await impact('light');
@@ -28,37 +66,6 @@ export const OnboardingScreen3: React.FC = () => {
     await impact('light');
     nextScreen();
   };
-
-  const handleCardTap = async () => {
-    await impact('light');
-  };
-
-  // Sample demo insights
-  const sampleInsights = [
-    {
-      icon: Droplets,
-      iconBg: 'bg-blue-100 dark:bg-blue-900/30',
-      iconColor: 'text-blue-600 dark:text-blue-400',
-      text: 'Your worst flares happen 2 days after dairy consumption',
-    },
-    {
-      icon: Moon,
-      iconBg: 'bg-indigo-100 dark:bg-indigo-900/30',
-      iconColor: 'text-indigo-600 dark:text-indigo-400',
-      text: 'Symptoms improve 40% on days you sleep 7+ hours',
-    },
-  ];
-
-  // Demo chart data
-  const chartData = [
-    { day: 'Mon', skin: 3, sleep: 4 },
-    { day: 'Tue', skin: 2, sleep: 2 },
-    { day: 'Wed', skin: 4, sleep: 5 },
-    { day: 'Thu', skin: 3, sleep: 3 },
-    { day: 'Fri', skin: 5, sleep: 5 },
-    { day: 'Sat', skin: 4, sleep: 4 },
-    { day: 'Sun', skin: 5, sleep: 5 },
-  ];
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background relative overflow-hidden">
@@ -99,85 +106,88 @@ export const OnboardingScreen3: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.4 }}
             >
-              Here's what you'll discover
+              You have a life to get back.{' '}
+              <span className="text-primary">Time to get out of TSW.</span>
             </motion.h1>
           </div>
 
-          {/* Demo chart */}
+          {/* Carousel */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.4 }}
+            className="relative"
           >
-            <Card className="p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium text-foreground">Skin vs Sleep Quality</span>
+            <Card className="p-4 overflow-hidden">
+              {/* Carousel navigation arrows */}
+              <div className="absolute left-2 top-1/2 -translate-y-1/2 z-10">
+                <button
+                  onClick={prevSlide}
+                  className="p-2 rounded-full bg-background/80 hover:bg-background shadow-md transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  aria-label="Previous slide"
+                >
+                  <ChevronLeft className="w-5 h-5 text-foreground" />
+                </button>
               </div>
-              
-              {/* Simple bar chart */}
-              <div className="flex items-end justify-between gap-2 h-32 px-2">
-                {chartData.map((data, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                    <div className="flex items-end gap-0.5 h-24 w-full">
-                      <motion.div
-                        className="flex-1 bg-primary rounded-t"
-                        initial={{ height: 0 }}
-                        animate={{ height: `${(data.skin / 5) * 100}%` }}
-                        transition={{ delay: 0.3 + i * 0.05, duration: 0.4 }}
-                      />
-                      <motion.div
-                        className="flex-1 bg-indigo-400/60 rounded-t"
-                        initial={{ height: 0 }}
-                        animate={{ height: `${(data.sleep / 5) * 100}%` }}
-                        transition={{ delay: 0.35 + i * 0.05, duration: 0.4 }}
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 z-10">
+                <button
+                  onClick={nextSlide}
+                  className="p-2 rounded-full bg-background/80 hover:bg-background shadow-md transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  aria-label="Next slide"
+                >
+                  <ChevronRight className="w-5 h-5 text-foreground" />
+                </button>
+              </div>
+
+              {/* Slides */}
+              <div className="relative overflow-hidden">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentSlide}
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -50 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    className="space-y-3"
+                  >
+                    {/* Slide headline */}
+                    <h3 className="text-sm font-semibold text-foreground text-center px-8">
+                      {slides[currentSlide].headline}
+                    </h3>
+                    
+                    {/* Slide image */}
+                    <div className="rounded-lg overflow-hidden">
+                      <img
+                        src={slides[currentSlide].image}
+                        alt={slides[currentSlide].headline}
+                        className="w-full h-auto object-contain"
                       />
                     </div>
-                    <span className="text-[10px] text-muted-foreground">{data.day}</span>
-                  </div>
-                ))}
+                  </motion.div>
+                </AnimatePresence>
               </div>
-              
-              {/* Legend */}
-              <div className="flex items-center justify-center gap-4 mt-3 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded bg-primary" />
-                  <span>Skin</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded bg-indigo-400/60" />
-                  <span>Sleep</span>
-                </div>
+
+              {/* Dots indicator */}
+              <div className="flex items-center justify-center gap-2 mt-4">
+                {slides.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => goToSlide(index)}
+                    className={`w-2 h-2 rounded-full transition-all duration-300 min-h-[44px] min-w-[44px] flex items-center justify-center`}
+                    aria-label={`Go to slide ${index + 1}`}
+                  >
+                    <span 
+                      className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                        index === currentSlide 
+                          ? 'bg-primary w-4' 
+                          : 'bg-muted-foreground/30'
+                      }`}
+                    />
+                  </button>
+                ))}
               </div>
             </Card>
           </motion.div>
-
-          {/* Sample insight cards */}
-          <div className="space-y-3">
-            {sampleInsights.map((insight, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 + i * 0.1, duration: 0.4 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleCardTap}
-              >
-                <Card className="p-4 flex items-start gap-3 cursor-pointer active:bg-muted/50 transition-colors">
-                  <div className={`w-10 h-10 rounded-xl ${insight.iconBg} flex items-center justify-center flex-shrink-0`}>
-                    <insight.icon className={`w-5 h-5 ${insight.iconColor}`} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Sparkles className="w-3 h-3 text-amber-500" />
-                      <span className="text-xs font-medium text-amber-600 dark:text-amber-400">AI Insight</span>
-                    </div>
-                    <p className="text-foreground text-sm leading-relaxed">{insight.text}</p>
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
         </motion.div>
       </div>
 
@@ -191,8 +201,7 @@ export const OnboardingScreen3: React.FC = () => {
         >
           <Button 
             onClick={handleContinue}
-            className="w-full h-14 text-base font-semibold"
-            variant="action"
+            className="w-full h-14 text-base font-semibold bg-primary hover:bg-primary/90"
           >
             I Want This For My Journey
           </Button>
