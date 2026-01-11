@@ -80,8 +80,8 @@ export const OnboardingScreen4: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.4 }}
             >
-              <span className="text-foreground">TSW Affects </span>
-              <span className="text-primary">Everything.</span>
+              <span className="text-foreground">TSW affects </span>
+              <span className="text-primary">everything.</span>
             </motion.h1>
           </div>
 
