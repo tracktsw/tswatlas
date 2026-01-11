@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
+import { useSafeArea } from '@/hooks/useSafeArea';
 import { OnboardingProgress } from './OnboardingProgress';
 import { FloatingLeaf } from './FloatingLeaf';
 import improvementImage from '@/assets/onboarding-improvement.png';
@@ -15,6 +16,7 @@ export const OnboardingScreen3: React.FC = () => {
   const { nextScreen, prevScreen, skipOnboarding } = useOnboarding();
   const navigate = useNavigate();
   const { impact } = useHapticFeedback();
+  const safeArea = useSafeArea();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const screenshots = [
@@ -28,10 +30,8 @@ export const OnboardingScreen3: React.FC = () => {
     },
   ];
 
-  // Slides for carousel - first slide contains both screenshots, more can be added later
   const slides = [
     { type: 'screenshots' as const },
-    // Add more slides here later
   ];
 
   const goToSlide = useCallback(async (index: number) => {
@@ -49,7 +49,6 @@ export const OnboardingScreen3: React.FC = () => {
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
   }, [impact, slides.length]);
 
-  // Auto-advance carousel every 8 seconds
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -75,13 +74,23 @@ export const OnboardingScreen3: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background relative overflow-hidden">
+    <div 
+      className="flex flex-col bg-background relative box-border overflow-hidden"
+      style={{ 
+        height: '100svh',
+        paddingTop: 'var(--safe-top, 0px)',
+        paddingBottom: 'var(--safe-bottom, 0px)'
+      }}
+    >
       {/* Floating leaf animation */}
       <FloatingLeaf />
+      
       {/* Header with back and skip */}
-      <div 
-        className="flex items-center justify-between px-4 pt-4"
-        style={{ paddingTop: 'calc(var(--safe-top) + 1rem)' }}
+      <motion.div 
+        className="flex items-center justify-between px-4 pt-4 shrink-0"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
       >
         <button
           onClick={handleBack}
@@ -97,10 +106,10 @@ export const OnboardingScreen3: React.FC = () => {
         >
           Skip
         </button>
-      </div>
+      </motion.div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col px-6 pb-8 overflow-y-auto">
+      <div className="flex-1 flex flex-col px-6 overflow-y-auto min-h-0">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -129,16 +138,15 @@ export const OnboardingScreen3: React.FC = () => {
           >
             {screenshots.map((screenshot, index) => (
               <div key={index} className="space-y-2">
-                {/* Headline */}
                 <h3 className="text-base font-bold text-foreground text-center leading-snug">
                   {screenshot.headline}
                 </h3>
                 
-                {/* Screenshot - natural size */}
                 <img
                   src={screenshot.image}
                   alt={screenshot.headline}
                   className="w-full h-auto rounded-2xl shadow-xl border border-border"
+                  style={{ maxHeight: '28vh', objectFit: 'contain' }}
                 />
               </div>
             ))}
@@ -147,7 +155,7 @@ export const OnboardingScreen3: React.FC = () => {
       </div>
 
       {/* Footer with progress and CTA */}
-      <div className="px-6 pb-6 space-y-4" style={{ paddingBottom: 'calc(var(--safe-bottom) + 1.5rem)' }}>
+      <div className="px-6 pb-6 space-y-4 shrink-0">
         <OnboardingProgress current={2} total={4} />
         <motion.div
           initial={{ opacity: 0, y: 20 }}

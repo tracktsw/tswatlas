@@ -3,8 +3,9 @@ import { motion } from 'framer-motion';
 import { Leaf, ArrowLeft, HelpCircle, Users, Shuffle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useOnboarding } from '@/contexts/OnboardingContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate} from 'react-router-dom';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
+import { useSafeArea } from '@/hooks/useSafeArea';
 import { OnboardingProgress } from './OnboardingProgress';
 import { FloatingLeaf } from './FloatingLeaf';
 
@@ -12,6 +13,7 @@ export const OnboardingScreen2: React.FC = () => {
   const { nextScreen, prevScreen, skipOnboarding } = useOnboarding();
   const navigate = useNavigate();
   const { impact } = useHapticFeedback();
+  const safeArea = useSafeArea();
 
   const handleSkip = async () => {
     await impact('light');
@@ -51,14 +53,23 @@ export const OnboardingScreen2: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background relative overflow-hidden">
+    <div 
+      className="flex flex-col bg-background relative box-border overflow-hidden"
+      style={{ 
+        height: '100svh',
+        paddingTop: 'var(--safe-top, 0px)',
+        paddingBottom: 'var(--safe-bottom, 0px)'
+      }}
+    >
       {/* Floating leaf animation */}
       <FloatingLeaf />
 
       {/* Header with back and skip */}
-      <div 
-        className="flex items-center justify-between px-4 pt-4"
-        style={{ paddingTop: 'calc(var(--safe-top) + 1rem)' }}
+      <motion.div 
+        className="flex items-center justify-between px-4 pt-4 shrink-0"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
       >
         <button
           onClick={handleBack}
@@ -74,10 +85,10 @@ export const OnboardingScreen2: React.FC = () => {
         >
           Skip
         </button>
-      </div>
+      </motion.div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col justify-center px-6 pb-8">
+      <div className="flex-1 flex flex-col justify-center px-6 min-h-0">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -135,7 +146,7 @@ export const OnboardingScreen2: React.FC = () => {
       </div>
 
       {/* Footer with progress and CTA */}
-      <div className="px-6 pb-6 space-y-4" style={{ paddingBottom: 'calc(var(--safe-bottom) + 1.5rem)' }}>
+      <div className="px-6 pb-6 space-y-4 shrink-0">
         <OnboardingProgress current={1} total={4} />
         <motion.div
           initial={{ opacity: 0, y: 20 }}

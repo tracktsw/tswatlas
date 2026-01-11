@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
+import { useSafeArea } from '@/hooks/useSafeArea';
 import { OnboardingProgress } from './OnboardingProgress';
 import { FloatingLeaf } from './FloatingLeaf';
 import { cn } from '@/lib/utils';
@@ -40,6 +41,7 @@ export const OnboardingScreen5: React.FC = () => {
   const { prevScreen, skipOnboarding, completeOnboarding } = useOnboarding();
   const navigate = useNavigate();
   const { impact, selectionChanged, notification } = useHapticFeedback();
+  const safeArea = useSafeArea();
 
   const [impactLevel, setImpactLevel] = useState<string | null>(null);
   const [hardest, setHardest] = useState<string | null>(null);
@@ -74,31 +76,31 @@ export const OnboardingScreen5: React.FC = () => {
   };
 
   const handleContinue = async () => {
-    console.log('[OnboardingScreen5] handleContinue called');
-    console.log('[OnboardingScreen5] isComplete:', isComplete);
-    console.log('[OnboardingScreen5] values:', { impactLevel, hardest, hoping });
+    if (!isComplete) return;
     
-    if (!isComplete) {
-      console.log('[OnboardingScreen5] Not complete, returning early');
-      return;
-    }
-    
-    console.log('[OnboardingScreen5] Calling notification and completeOnboarding');
     await notification('success');
     completeOnboarding();
-    
-    console.log('[OnboardingScreen5] Navigating to /auth?mode=signup');
     navigate('/auth?mode=signup');
   };
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background relative overflow-hidden">
+    <div 
+      className="flex flex-col bg-background relative box-border overflow-hidden"
+      style={{ 
+        height: '100svh',
+        paddingTop: 'var(--safe-top, 0px)',
+        paddingBottom: 'var(--safe-bottom, 0px)'
+      }}
+    >
       {/* Floating leaf animation */}
       <FloatingLeaf />
+      
       {/* Header with back and skip */}
-      <div 
-        className="flex items-center justify-between px-4 pt-4"
-        style={{ paddingTop: 'calc(var(--safe-top) + 1rem)' }}
+      <motion.div 
+        className="flex items-center justify-between px-4 pt-4 shrink-0"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
       >
         <button
           onClick={handleBack}
@@ -114,15 +116,15 @@ export const OnboardingScreen5: React.FC = () => {
         >
           Skip
         </button>
-      </div>
+      </motion.div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col px-6 pb-8 overflow-y-auto">
+      {/* Main content - centered like other screens */}
+      <div className="flex-1 flex flex-col justify-center px-6 min-h-0 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
-          className="space-y-6 py-4"
+          className="space-y-4 py-2"
         >
           {/* Headlines */}
           <div className="space-y-2">
@@ -138,7 +140,7 @@ export const OnboardingScreen5: React.FC = () => {
 
           {/* Question 1: Impact Level */}
           <motion.div
-            className="space-y-3"
+            className="space-y-2"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.4 }}
@@ -165,9 +167,9 @@ export const OnboardingScreen5: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Question 2: Hardest to deal with - Dropdown */}
+          {/* Question 2: Hardest to deal with */}
           <motion.div
-            className="space-y-3"
+            className="space-y-2"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.4 }}
@@ -190,9 +192,9 @@ export const OnboardingScreen5: React.FC = () => {
             </Select>
           </motion.div>
 
-          {/* Question 3: Hoping for - Dropdown */}
+          {/* Question 3: Hoping for */}
           <motion.div
-            className="space-y-3"
+            className="space-y-2"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.4 }}
@@ -228,7 +230,7 @@ export const OnboardingScreen5: React.FC = () => {
       </div>
 
       {/* Footer with progress and CTA */}
-      <div className="px-6 pb-6 space-y-4" style={{ paddingBottom: 'calc(var(--safe-bottom) + 1.5rem)' }}>
+      <div className="px-6 pb-6 space-y-3 shrink-0">
         <OnboardingProgress current={4} total={4} />
         <motion.div
           initial={{ opacity: 0, y: 20 }}

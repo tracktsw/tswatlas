@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
+import { useSafeArea } from '@/hooks/useSafeArea';
 import { OnboardingProgress } from './OnboardingProgress';
 import { FloatingLeaf } from './FloatingLeaf';
 import symptomsImage from '@/assets/onboarding-symptoms.png';
@@ -14,6 +15,7 @@ export const OnboardingScreen4: React.FC = () => {
   const { nextScreen, prevScreen, skipOnboarding } = useOnboarding();
   const navigate = useNavigate();
   const { impact } = useHapticFeedback();
+  const safeArea = useSafeArea();
 
   const screenshots = [
     {
@@ -43,13 +45,23 @@ export const OnboardingScreen4: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background relative overflow-hidden">
+    <div 
+      className="flex flex-col bg-background relative box-border overflow-hidden"
+      style={{ 
+        height: '100svh',
+        paddingTop: 'var(--safe-top, 0px)',
+        paddingBottom: 'var(--safe-bottom, 0px)'
+      }}
+    >
       {/* Floating leaf animation */}
       <FloatingLeaf />
+      
       {/* Header with back and skip */}
-      <div 
+      <motion.div 
         className="flex items-center justify-between px-4 pt-4 shrink-0"
-        style={{ paddingTop: 'calc(var(--safe-top) + 1rem)' }}
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
       >
         <button
           onClick={handleBack}
@@ -65,15 +77,15 @@ export const OnboardingScreen4: React.FC = () => {
         >
           Skip
         </button>
-      </div>
+      </motion.div>
 
-      {/* Main content - scrollable */}
-      <div className="flex-1 flex flex-col px-6 overflow-y-auto min-h-0">
+      {/* Main content - centered like other screens */}
+      <div className="flex-1 flex flex-col justify-center px-6 min-h-0 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
-          className="space-y-4 py-4"
+          className="space-y-4 py-2"
         >
           {/* Headlines */}
           <div className="space-y-2">
@@ -88,7 +100,7 @@ export const OnboardingScreen4: React.FC = () => {
             </motion.h1>
           </div>
 
-          {/* Screenshots stacked */}
+          {/* Screenshots stacked - height responsive */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -97,16 +109,15 @@ export const OnboardingScreen4: React.FC = () => {
           >
             {screenshots.map((screenshot, index) => (
               <div key={index} className="space-y-1.5">
-                {/* Headline */}
                 <h3 className="text-sm font-bold text-foreground text-center leading-snug">
                   {screenshot.headline}
                 </h3>
                 
-                {/* Screenshot - reduced size */}
                 <img
                   src={screenshot.image}
                   alt={screenshot.headline}
                   className="w-[90%] mx-auto h-auto rounded-xl shadow-lg border border-border"
+                  style={{ maxHeight: '25vh', objectFit: 'contain' }}
                 />
               </div>
             ))}
@@ -115,7 +126,7 @@ export const OnboardingScreen4: React.FC = () => {
       </div>
 
       {/* Footer with progress and CTA - fixed at bottom */}
-      <div className="px-6 pb-6 space-y-4 shrink-0" style={{ paddingBottom: 'calc(var(--safe-bottom) + 1.5rem)' }}>
+      <div className="px-6 pb-6 space-y-4 shrink-0">
         <OnboardingProgress current={3} total={4} />
         <motion.div
           initial={{ opacity: 0, y: 20 }}

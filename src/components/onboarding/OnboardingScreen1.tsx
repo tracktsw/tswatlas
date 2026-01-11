@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
+import { useSafeArea } from '@/hooks/useSafeArea';
 import trackTswLogo from '@/assets/tracktsw-logo-transparent.png';
 import { FloatingLeaf } from './FloatingLeaf';
 
@@ -12,6 +13,7 @@ export const OnboardingScreen1: React.FC = () => {
   const { nextScreen, skipOnboarding } = useOnboarding();
   const navigate = useNavigate();
   const { impact } = useHapticFeedback();
+  const safeArea = useSafeArea();
 
   const handleSkip = async () => {
     await impact('light');
@@ -25,11 +27,28 @@ export const OnboardingScreen1: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background relative overflow-hidden">
+    <div 
+      className="flex flex-col bg-background relative box-border overflow-hidden"
+      style={{ 
+        height: '100svh',
+        paddingTop: 'var(--safe-top, 0px)',
+        paddingBottom: 'var(--safe-bottom, 0px)'
+      }}
+    >
       {/* Floating leaf animation */}
       <FloatingLeaf />
-      {/* Skip button */}
-      <div className="absolute top-4 right-4 z-10" style={{ paddingTop: 'var(--safe-top)' }}>
+      
+      {/* Header with logo and skip button */}
+      <motion.div 
+        className="flex items-center justify-between px-4 pt-4 shrink-0"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+      >
+        <div className="flex items-center gap-2">
+          <img src={trackTswLogo} alt="TrackTSW" className="w-10 h-10 object-contain" />
+          <span className="font-display font-semibold text-anchor">TrackTSW</span>
+        </div>
         <button
           onClick={handleSkip}
           className="text-muted-foreground text-sm font-medium px-3 py-2 hover:text-foreground transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
@@ -37,18 +56,10 @@ export const OnboardingScreen1: React.FC = () => {
         >
           Skip
         </button>
-      </div>
-
-      {/* Logo */}
-      <div className="pt-6 px-6" style={{ paddingTop: 'calc(var(--safe-top) + 1.5rem)' }}>
-        <div className="flex items-center gap-2">
-          <img src={trackTswLogo} alt="TrackTSW" className="w-10 h-10 object-contain" />
-          <span className="font-display font-semibold text-anchor">TrackTSW</span>
-        </div>
-      </div>
+      </motion.div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col justify-center px-6 pb-8">
+      <div className="flex-1 flex flex-col justify-center px-6 min-h-0">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -110,7 +121,7 @@ export const OnboardingScreen1: React.FC = () => {
       </div>
 
       {/* CTA Button */}
-      <div className="px-6 pb-6" style={{ paddingBottom: 'calc(var(--safe-bottom) + 1.5rem)' }}>
+      <div className="px-6 pb-6 shrink-0">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
