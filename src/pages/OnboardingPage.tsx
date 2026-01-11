@@ -1,7 +1,5 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
 import { useOnboarding, OnboardingProvider } from '@/contexts/OnboardingContext';
-import { usePlatform } from '@/hooks/usePlatform';
 import {
   OnboardingScreen1,
   OnboardingScreen2,
@@ -12,21 +10,9 @@ import {
 
 const OnboardingContent: React.FC = () => {
   const { currentScreen } = useOnboarding();
-  const { isNative } = usePlatform();
-  const navigate = useNavigate();
 
-  // Redirect web users to auth page - onboarding is mobile-only
-  useEffect(() => {
-    if (!isNative) {
-      navigate('/auth', { replace: true });
-    }
-  }, [isNative, navigate]);
-
-  // Don't render anything for web users while redirecting
-  if (!isNative) {
-    return <div className="min-h-screen bg-background" />;
-  }
-
+  // Render based on current screen - no platform check here
+  // The navigation itself will handle redirecting to /auth
   switch (currentScreen) {
     case 1:
       return <OnboardingScreen1 />;

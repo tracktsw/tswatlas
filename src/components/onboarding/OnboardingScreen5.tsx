@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Activity, Heart, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
@@ -164,7 +165,7 @@ export const OnboardingScreen5: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Question 2: Hardest to deal with */}
+          {/* Question 2: Hardest to deal with - Dropdown */}
           <motion.div
             className="space-y-3"
             initial={{ opacity: 0, y: 10 }}
@@ -175,25 +176,21 @@ export const OnboardingScreen5: React.FC = () => {
               <Heart className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm font-medium text-foreground">What feels hardest to deal with right now?</span>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {hardestOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => handleHardestChange(option.value)}
-                  className={cn(
-                    'p-3 rounded-xl border-2 text-sm font-medium transition-all min-h-[44px]',
-                    hardest === option.value
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border bg-card text-foreground hover:border-primary/50'
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+            <Select value={hardest || undefined} onValueChange={handleHardestChange}>
+              <SelectTrigger className="w-full h-12 bg-card border-2 border-border rounded-xl">
+                <SelectValue placeholder="Select what's hardest..." />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border z-[100]">
+                {hardestOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </motion.div>
 
-          {/* Question 3: Hoping for */}
+          {/* Question 3: Hoping for - Dropdown */}
           <motion.div
             className="space-y-3"
             initial={{ opacity: 0, y: 10 }}
@@ -204,22 +201,18 @@ export const OnboardingScreen5: React.FC = () => {
               <Target className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm font-medium text-foreground">What are you hoping this app will help you with most?</span>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {hopingOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => handleHopingChange(option.value)}
-                  className={cn(
-                    'p-3 rounded-xl border-2 text-sm font-medium transition-all min-h-[44px]',
-                    hoping === option.value
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border bg-card text-foreground hover:border-primary/50'
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+            <Select value={hoping || undefined} onValueChange={handleHopingChange}>
+              <SelectTrigger className="w-full h-12 bg-card border-2 border-border rounded-xl">
+                <SelectValue placeholder="Select your main goal..." />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border z-[100]">
+                {hopingOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </motion.div>
 
           {/* Helper text */}
