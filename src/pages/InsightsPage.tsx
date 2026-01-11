@@ -80,11 +80,11 @@ const InsightsPage = () => {
   // Track insights page view (once per session)
   const hasTrackedRef = useRef(false);
   useEffect(() => {
-    if (!hasTrackedRef.current && !isBackendLoading && realCheckIns.length > 0) {
+    if (!hasTrackedRef.current && !isBackendLoading) {
       trackInsightsClicked('insights_page', 'navigation');
       hasTrackedRef.current = true;
     }
-  }, [isBackendLoading, realCheckIns.length]);
+  }, [isBackendLoading]);
 
   // Premium is enforced by backend for ALL platforms.
   const isPremium = isAdmin || isPremiumFromBackend;
