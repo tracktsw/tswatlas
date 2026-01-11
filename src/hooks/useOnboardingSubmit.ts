@@ -1,80 +1,105 @@
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useOnboarding, OnboardingData } from '@/contexts/OnboardingContext';
 
 const ONBOARDING_VERSION = '1.0';
 
+// Keep these in sync with src/contexts/OnboardingContext.tsx
+const STORAGE_KEY_SEEN = 'hasSeenOnboarding';
+const STORAGE_KEY_DATA = 'onboardingData';
+
+type LocalOnboardingData = {
+  tswDuration: string | null;
+  goal: string | null;
+  initialSeverity: number | null;
+  firstLog: {
+    skin: number;
+    sleep: number;
+    pain: number;
+    mood: number;
+    triggers: string;
+  } | null;
+};
+
+const readLocalOnboardingData = (): LocalOnboardingData | null => {
+  const stored = localStorage.getItem(STORAGE_KEY_DATA);
+  if (!stored) return null;
+  try {
+    return JSON.parse(stored) as LocalOnboardingData;
+  } catch {
+    return null;
+  }
+};
+
+const clearLocalOnboardingData = () => {
+  localStorage.removeItem(STORAGE_KEY_DATA);
+};
+
+const markOnboardingSeen = () => {
+  localStorage.setItem(STORAGE_KEY_SEEN, 'true');
+};
+
 /**
- * Hook to handle submitting onboarding data ONLY after successful account creation.
- * 
- * IMPORTANT: This implements strict gating - onboarding answers are stored locally
- * during the onboarding flow and ONLY sent to the backend after account creation succeeds.
- * 
- * If signup fails or user abandons, NO data is persisted to the backend.
+ * Submits onboarding data ONLY after successful account creation.
+ *
+ * Boundary enforcement:
+ * - Before signup: answers live only in localStorage (STORAGE_KEY_DATA).
+ * - After signup success: we send to backend, then clear localStorage.
  */
 export const useOnboardingSubmit = () => {
-  const { getOnboardingData, clearOnboardingData, completeOnboarding } = useOnboarding();
-
-  /**
-   * Submit onboarding data to the backend.
-   * Should ONLY be called after successful account creation.
-   * 
-   * @param userId - The authenticated user's ID
-   * @returns Promise<boolean> - true if successful, false otherwise
-   */
   const submitOnboardingData = useCallback(async (userId: string): Promise<boolean> => {
-    const onboardingData = getOnboardingData();
-    
-    // If no onboarding data exists (user skipped or none collected), just complete
-    if (!onboardingData || (!onboardingData.tswDuration && !onboardingData.goal && !onboardingData.firstLog)) {
-      console.log('[useOnboardingSubmit] No onboarding data to submit');
-      completeOnboarding();
-      clearOnboardingData();
+    const onboardingData = readLocalOnboardingData();
+
+    // If no onboarding data exists, just clean up local state.
+    if (!onboardingData) {
+      markOnboardingSeen();
+      clearLocalOnboardingData();
+      return true;
+    }
+
+    const hasAnyAnswers =
+      !!onboardingData.tswDuration ||
+      !!onboardingData.goal ||
+      onboardingData.initialSeverity !== null ||
+      !!onboardingData.firstLog;
+
+    if (!hasAnyAnswers) {
+      markOnboardingSeen();
+      clearLocalOnboardingData();
       return true;
     }
 
     try {
-      console.log('[useOnboardingSubmit] Submitting onboarding data for user:', userId);
-      
-      const { data, error } = await supabase.functions.invoke('save-onboarding', {
+      const { error } = await supabase.functions.invoke('save-onboarding', {
         body: {
           onboardingData,
           onboardingVersion: ONBOARDING_VERSION,
         },
       });
 
+      // Whether or not backend save succeeds, we should NOT block account creation.
+      // We still clear local answers to avoid accidental later submission.
+      markOnboardingSeen();
+      clearLocalOnboardingData();
+
       if (error) {
         console.error('[useOnboardingSubmit] Failed to save onboarding data:', error);
-        // Don't block the user - onboarding save failure shouldn't prevent account creation
-        // We still clear local data and complete onboarding
-        completeOnboarding();
-        clearOnboardingData();
         return false;
       }
 
-      console.log('[useOnboardingSubmit] Successfully saved onboarding data:', data);
-      
-      // Clear local storage after successful backend save
-      completeOnboarding();
-      clearOnboardingData();
-      
       return true;
-    } catch (error) {
-      console.error('[useOnboardingSubmit] Unexpected error:', error);
-      // Don't block the user
-      completeOnboarding();
-      clearOnboardingData();
+    } catch (err) {
+      console.error('[useOnboardingSubmit] Unexpected error:', err);
+      markOnboardingSeen();
+      clearLocalOnboardingData();
       return false;
     }
-  }, [getOnboardingData, clearOnboardingData, completeOnboarding]);
+  }, []);
 
-  /**
-   * Check if there's pending onboarding data to submit.
-   */
   const hasPendingOnboardingData = useCallback((): boolean => {
-    const data = getOnboardingData();
-    return !!(data && (data.tswDuration || data.goal || data.firstLog));
-  }, [getOnboardingData]);
+    const data = readLocalOnboardingData();
+    if (!data) return false;
+    return !!(data.tswDuration || data.goal || data.initialSeverity !== null || data.firstLog);
+  }, []);
 
   return {
     submitOnboardingData,
