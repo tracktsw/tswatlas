@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import trackTswLogo from '@/assets/tracktsw-logo-transparent.png';
 import { usePlatform } from '@/hooks/usePlatform';
+import { useOnboardingSubmit } from '@/hooks/useOnboardingSubmit';
 
 type AuthMode = 'login' | 'signup' | 'forgot';
 
@@ -27,6 +28,7 @@ const AuthPage = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
   const { isAndroid } = usePlatform();
+  const { submitOnboardingData, hasPendingOnboardingData } = useOnboardingSubmit();
 
   // Common valid email domains
   const validDomains = [
@@ -187,8 +189,15 @@ const AuthPage = () => {
         });
         if (error) throw error;
         
-        // Send welcome email for new users only (check if user was just created)
+        // IMPORTANT: Only after successful signup, save onboarding data to backend
         if (data?.user?.id) {
+          // Submit onboarding data first (if any exists from the onboarding flow)
+          // This is the ONLY place where onboarding data gets persisted to backend
+          if (hasPendingOnboardingData()) {
+            console.log('[AUTH] Submitting onboarding data after successful signup');
+            await submitOnboardingData(data.user.id);
+          }
+          
           // Create user settings and send welcome email
           const { data: existingSettings } = await supabase
             .from('user_settings')
