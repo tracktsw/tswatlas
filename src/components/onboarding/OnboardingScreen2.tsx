@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Leaf, ArrowLeft, HelpCircle, Users, Shuffle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,55 @@ export const OnboardingScreen2: React.FC = () => {
   const { nextScreen, prevScreen, skipOnboarding, currentScreen, totalScreens } = useOnboarding();
   const navigate = useNavigate();
   const { impact } = useHapticFeedback();
+
+  // Bouncing leaf animation state
+  const [leafPosition, setLeafPosition] = useState({ x: 20, y: 20 });
+  const [leafVelocity, setLeafVelocity] = useState({ x: 1.2, y: 0.9 });
+  const [leafRotation, setLeafRotation] = useState(0);
+
+  useEffect(() => {
+    let animationFrameId: number;
+    let position = { x: 20, y: 20 };
+    let velocity = { x: 1.2, y: 0.9 };
+    let rotation = 0;
+
+    const animateLeaf = () => {
+      // Update position
+      position.x += velocity.x;
+      position.y += velocity.y;
+      
+      // Get window dimensions
+      const maxX = window.innerWidth - 40; // leaf size
+      const maxY = window.innerHeight - 40;
+      
+      // Bounce off edges
+      if (position.x <= 0 || position.x >= maxX) {
+        velocity.x = -velocity.x;
+        position.x = Math.max(0, Math.min(position.x, maxX));
+      }
+      if (position.y <= 0 || position.y >= maxY) {
+        velocity.y = -velocity.y;
+        position.y = Math.max(0, Math.min(position.y, maxY));
+      }
+      
+      // Slowly rotate the leaf
+      rotation = (rotation + 0.5) % 360;
+      
+      // Update state
+      setLeafPosition({ x: position.x, y: position.y });
+      setLeafRotation(rotation);
+      
+      animationFrameId = requestAnimationFrame(animateLeaf);
+    };
+
+    animationFrameId = requestAnimationFrame(animateLeaf);
+    
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, []);
 
   const handleSkip = async () => {
     await impact('light');
@@ -51,6 +100,16 @@ export const OnboardingScreen2: React.FC = () => {
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background relative overflow-hidden">
+      {/* Bouncing leaf background animation */}
+      <div
+        className="absolute pointer-events-none z-0 will-change-transform"
+        style={{
+          transform: `translate3d(${leafPosition.x}px, ${leafPosition.y}px, 0) rotate(${leafRotation}deg)`,
+        }}
+      >
+        <Leaf className="w-10 h-10 text-primary/20" strokeWidth={1.5} />
+      </div>
+
       {/* Header with back and skip */}
       <div 
         className="flex items-center justify-between px-4 pt-4"
@@ -140,8 +199,7 @@ export const OnboardingScreen2: React.FC = () => {
         >
           <Button 
             onClick={handleContinue}
-            className="w-full h-14 text-base font-semibold"
-            variant="action"
+            className="w-full h-14 text-base font-semibold bg-primary hover:bg-primary/90"
           >
             Show Me My Insights
           </Button>

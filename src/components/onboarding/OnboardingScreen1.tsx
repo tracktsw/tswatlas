@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Sun, TrendingUp } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
@@ -52,16 +52,6 @@ export const OnboardingScreen1: React.FC = () => {
           transition={{ duration: 0.5, ease: 'easeOut' }}
           className="space-y-6"
         >
-          {/* Sun icon greeting */}
-          <motion.div 
-            className="w-16 h-16 rounded-full bg-healing-light flex items-center justify-center"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.4 }}
-          >
-            <Sun className="w-8 h-8 text-healing" />
-          </motion.div>
-
           {/* Headlines */}
           <div className="space-y-3">
             <motion.h1 
@@ -96,15 +86,19 @@ export const OnboardingScreen1: React.FC = () => {
                 {[30, 45, 35, 55, 50, 70, 85].map((height, i) => (
                   <motion.div
                     key={i}
-                    className="w-6 rounded-t-lg bg-gradient-to-t from-primary/40 to-primary"
-                    initial={{ height: 0 }}
-                    animate={{ height: `${height}%` }}
-                    transition={{ delay: 0.6 + i * 0.1, duration: 0.4, ease: 'easeOut' }}
+                    className="w-6 rounded-t-lg bg-gradient-to-t from-[#F4C753]/40 to-[#F4C753]"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: `${height}%`, opacity: 1 }}
+                    transition={{ 
+                      delay: 0.6 + i * 0.15, 
+                      duration: 0.5, 
+                      ease: 'easeOut' 
+                    }}
                   />
                 ))}
               </div>
               <div className="flex items-center justify-center gap-2 mt-4 text-muted-foreground text-sm">
-                <TrendingUp className="w-4 h-4 text-primary" />
+                <TrendingUp className="w-4 h-4 text-[#F4C753]" />
                 <span>Your healing journey, visualized</span>
               </div>
             </div>
@@ -121,8 +115,7 @@ export const OnboardingScreen1: React.FC = () => {
         >
           <Button 
             onClick={handleContinue}
-            className="w-full h-14 text-base font-semibold"
-            variant="action"
+            className="w-full h-14 text-base font-semibold bg-primary hover:bg-primary/90"
           >
             See How It Works
           </Button>
