@@ -121,7 +121,7 @@ export const OnboardingScreen5: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.4 }}
             >
-              Let's personalize your experience
+              Help us understand how TSW affects you
             </motion.h1>
           </div>
 
