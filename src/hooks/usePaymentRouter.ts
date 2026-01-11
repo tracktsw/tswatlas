@@ -19,6 +19,12 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
 import { useSubscription } from '@/hooks/useSubscription';
+import {
+  trackPurchaseStarted,
+  trackPurchaseCompleted,
+  trackPurchaseFailed,
+  trackPurchaseCancelled,
+} from '@/utils/analytics';
 
 export type PaymentPlatform = 'web' | 'ios' | 'android';
 
@@ -148,22 +154,28 @@ export const usePaymentRouter = () => {
           offeringsStatus: revenueCatContext.offeringsStatus,
         });
 
+        // Track purchase started
+        trackPurchaseStarted(platform, priceString);
+
         const result = await revenueCatContext.purchaseMonthly();
         console.log('[PaymentRouter] RevenueCat purchase result:', result);
 
         if (result.success) {
+          trackPurchaseCompleted(platform);
           setStatusMessage('Purchase successful!');
           toast.success('Purchase successful!');
           await refreshSubscription();
           setIsPurchasing(false);
           return { success: true };
         } else if (result.error) {
+          trackPurchaseFailed(platform, result.error);
           setStatusMessage(`Error: ${result.error}`);
           toast.error(result.error);
           setIsPurchasing(false);
           return { success: false, error: result.error };
         } else {
           // User cancelled
+          trackPurchaseCancelled(platform);
           setStatusMessage(null);
           setIsPurchasing(false);
           return { success: false, cancelled: true };
@@ -183,17 +195,22 @@ export const usePaymentRouter = () => {
         return { success: false, error: 'Not signed in' };
       }
 
+      // Track purchase started for web
+      trackPurchaseStarted('web', priceString);
+
       // Get Stripe payment link - this function validates platform === 'web'
       const stripePaymentLink = getStripePaymentLink();
       const paymentUrl = `${stripePaymentLink}?prefilled_email=${encodeURIComponent(session.user.email)}`;
       window.location.assign(paymentUrl);
       
       // Note: isPurchasing stays true as we're navigating away
+      // purchase_completed will be tracked on success page if needed
       return { success: true }; // Redirecting to Stripe checkout
 
     } catch (err: any) {
       console.error('[PaymentRouter] Purchase error:', err);
       const errorMsg = err.message || 'Purchase failed';
+      trackPurchaseFailed(platform, errorMsg);
       setStatusMessage(`Error: ${errorMsg}`);
       toast.error(errorMsg);
       setIsPurchasing(false);
@@ -204,6 +221,7 @@ export const usePaymentRouter = () => {
     platform,
     isNative,
     isOfferingsReady,
+    priceString,
     revenueCatContext,
     refreshSubscription,
     navigate

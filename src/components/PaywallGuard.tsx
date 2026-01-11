@@ -1,11 +1,12 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, useState, useEffect, useRef } from 'react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { usePaymentRouter } from '@/hooks/usePaymentRouter';
 import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
 import { Lock, Sparkles, Crown, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { trackPaywallShown, trackUpgradeClicked } from '@/utils/analytics';
 
 interface PaywallGuardProps {
   children: ReactNode;
@@ -13,8 +14,20 @@ interface PaywallGuardProps {
   showBlurred?: boolean;
 }
 
+// Map route paths to paywall locations
+const getPaywallLocation = (pathname: string): 'coach' | 'insights' | 'photos' | 'journal' | 'community' | 'settings' | 'other' => {
+  if (pathname.includes('coach')) return 'coach';
+  if (pathname.includes('insights')) return 'insights';
+  if (pathname.includes('photo')) return 'photos';
+  if (pathname.includes('journal')) return 'journal';
+  if (pathname.includes('community')) return 'community';
+  if (pathname.includes('settings')) return 'settings';
+  return 'other';
+};
+
 const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false }: PaywallGuardProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const revenueCat = useRevenueCatContext();
   const { isPremium, isAdmin, isLoading: isBackendLoading } = useSubscription();
   const {
@@ -33,12 +46,22 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   } = usePaymentRouter();
   
   const [upgradeAttempted, setUpgradeAttempted] = useState(false);
+  const hasTrackedPaywallRef = useRef(false);
 
   const effectiveIsPremium = isAdmin || isPremium;
+  const paywallLocation = getPaywallLocation(location.pathname);
 
   // Prevent a brief paywall flash on native while RevenueCat initializes/validates.
   const isNativePending = isNative && isUserLoggedIn && !revenueCat.isInitialized;
   const isLoading = isBackendLoading || isNativePending;
+
+  // Track paywall_shown once when paywall is actually displayed
+  useEffect(() => {
+    if (!isLoading && !effectiveIsPremium && !hasTrackedPaywallRef.current) {
+      trackPaywallShown(feature, paywallLocation);
+      hasTrackedPaywallRef.current = true;
+    }
+  }, [isLoading, effectiveIsPremium, feature, paywallLocation]);
 
   // Auto-hide paywall when premium becomes active
   useEffect(() => {
@@ -50,6 +73,10 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
 
   const handleUpgrade = async () => {
     console.log(`[PaywallGuard] handleUpgrade on platform: ${platform}`);
+    
+    // Track upgrade button click
+    trackUpgradeClicked(feature, paywallLocation, priceString);
+    
     setUpgradeAttempted(true);
 
     // On native, check if user is logged in first
