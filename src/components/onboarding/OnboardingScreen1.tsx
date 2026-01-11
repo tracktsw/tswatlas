@@ -6,6 +6,7 @@ import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import trackTswLogo from '@/assets/tracktsw-logo-transparent.png';
+import { FloatingLeaf } from './FloatingLeaf';
 
 export const OnboardingScreen1: React.FC = () => {
   const { nextScreen, skipOnboarding } = useOnboarding();
@@ -25,6 +26,8 @@ export const OnboardingScreen1: React.FC = () => {
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background relative overflow-hidden">
+      {/* Floating leaf animation */}
+      <FloatingLeaf />
       {/* Skip button */}
       <div className="absolute top-4 right-4 z-10" style={{ paddingTop: 'var(--safe-top)' }}>
         <button

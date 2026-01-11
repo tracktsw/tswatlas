@@ -7,6 +7,7 @@ import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { OnboardingProgress } from './OnboardingProgress';
+import { FloatingLeaf } from './FloatingLeaf';
 import { cn } from '@/lib/utils';
 
 const impactOptions = [
@@ -81,6 +82,8 @@ export const OnboardingScreen5: React.FC = () => {
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background relative overflow-hidden">
+      {/* Floating leaf animation */}
+      <FloatingLeaf />
       {/* Header with back and skip */}
       <div 
         className="flex items-center justify-between px-4 pt-4"
