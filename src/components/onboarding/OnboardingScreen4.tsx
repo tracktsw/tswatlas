@@ -22,7 +22,7 @@ export const OnboardingScreen4: React.FC = () => {
     },
     {
       image: sleepImage,
-      headline: "Your Flares Are Stealing Your Sleep.",
+      headline: "Your flares are stealing your sleep.",
     },
   ];
 
