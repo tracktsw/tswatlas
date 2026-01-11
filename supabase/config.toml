@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.send-password-reset]
 verify_jwt = false
+
+[functions.save-onboarding]
+verify_jwt = false

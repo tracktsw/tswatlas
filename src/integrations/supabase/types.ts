@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      onboarding_responses: {
+        Row: {
+          created_at: string
+          first_log: Json | null
+          goal: string | null
+          id: string
+          initial_severity: number | null
+          onboarding_version: string
+          tsw_duration: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          first_log?: Json | null
+          goal?: string | null
+          id?: string
+          initial_severity?: number | null
+          onboarding_version?: string
+          tsw_duration?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          first_log?: Json | null
+          goal?: string | null
+          id?: string
+          initial_severity?: number | null
+          onboarding_version?: string
+          tsw_duration?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       treatment_suggestions: {
         Row: {
           category: string
