@@ -123,7 +123,7 @@ export const OnboardingScreen4: React.FC = () => {
             onClick={handleContinue}
             className="w-full h-14 text-base font-semibold bg-primary hover:bg-primary/90"
           >
-            Continue
+            Let's Get Started
           </Button>
         </motion.div>
       </div>
