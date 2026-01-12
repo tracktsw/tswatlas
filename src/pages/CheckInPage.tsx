@@ -334,7 +334,7 @@ const CheckInPage = () => {
     }
   };
   return (
-    <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
+    <div className="px-4 md:px-6 py-6 space-y-6 max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto relative">
       {/* Sparkle celebration effect */}
       <SparkleEffect isActive={showSparkles} onComplete={() => setShowSparkles(false)} />
       

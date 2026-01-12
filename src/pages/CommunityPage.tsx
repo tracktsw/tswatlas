@@ -198,7 +198,7 @@ const CommunityPage = () => {
   };
 
   return (
-    <div className="py-6 space-y-6 w-full max-w-lg mx-auto px-safe">
+    <div className="py-6 space-y-6 w-full max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto px-safe">
       {/* Decorative elements */}
       <div className="decorative-blob w-36 h-36 bg-terracotta/25 -top-10 -right-10 fixed" />
       <div className="decorative-blob w-44 h-44 bg-primary/20 bottom-32 -left-16 fixed" />

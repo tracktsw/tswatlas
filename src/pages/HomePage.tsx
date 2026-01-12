@@ -142,7 +142,7 @@ const HomePage = () => {
   // This provides a much faster perceived load time
 
   return (
-    <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
+    <div className="px-4 md:px-6 py-6 space-y-6 max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto relative">
       {/* Sync indicator */}
       {isSyncing && (
         <div className="fixed top-4 right-4 bg-sage/10 text-sage text-xs px-3 py-1.5 rounded-full flex items-center gap-2 z-50">
@@ -260,9 +260,9 @@ const HomePage = () => {
       </Dialog>
 
       {/* Today's Status - Progressive loading with skeleton */}
-      <div className="glass-card-elevated p-5 animate-slide-up" style={{ animationDelay: '0.15s' }}>
-        <h3 className="font-display font-bold text-lg text-anchor mb-4">Today's Status</h3>
-        <div className="grid grid-cols-4 gap-2">
+      <div className="glass-card-elevated p-5 md:p-6 animate-slide-up" style={{ animationDelay: '0.15s' }}>
+        <h3 className="font-display font-bold text-lg md:text-xl text-anchor mb-4">Today's Status</h3>
+        <div className="grid grid-cols-4 gap-2 md:gap-4">
           <div className="text-center p-3 rounded-2xl bg-muted/50">
             {isLoading ? (
               <Skeleton className="h-8 w-8 mx-auto mb-1" />
@@ -366,8 +366,8 @@ const HomePage = () => {
 
       {/* Quick Actions */}
       <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
-        <h3 className="font-display font-bold text-lg text-anchor">Quick Actions</h3>
-        <div className="grid grid-cols-2 gap-3">
+        <h3 className="font-display font-bold text-lg md:text-xl text-anchor">Quick Actions</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {quickActions.map(({ path, icon: Icon, label, description, bgClass, iconColor, isAction }, index) => (
             <Link
               key={path}

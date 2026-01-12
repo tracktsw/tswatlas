@@ -234,7 +234,7 @@ export const VirtualizedPhotoGrid = ({
 
   return (
     <div 
-      className="grid grid-cols-2 gap-4"
+      className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5"
       style={{ 
         contain: 'layout style paint',
         willChange: 'transform',
@@ -259,10 +259,10 @@ export const VirtualizedPhotoGrid = ({
       
       {/* Infinite scroll trigger */}
       {hasMore && (
-        <div ref={loadMoreRef} className="col-span-2 h-20 flex items-center justify-center">
-          <div className="grid grid-cols-2 gap-4 w-full">
-            {[0, 1].map(i => (
-              <div key={i} className="glass-card overflow-hidden">
+        <div ref={loadMoreRef} className="col-span-2 md:col-span-3 lg:col-span-4 h-20 flex items-center justify-center">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 w-full">
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className={cn("glass-card overflow-hidden", i >= 2 && "hidden md:block", i >= 3 && "hidden lg:block")}>
                 <div className="w-full aspect-square bg-muted animate-pulse">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-background/10 to-transparent animate-shimmer" />
                 </div>
