@@ -80,10 +80,10 @@ const BottomNav = () => {
       <div className="bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg">
         <div 
           ref={containerRef}
-          className={cn(
-            "flex items-center justify-around px-1 max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto relative",
-            platform === 'ios' ? "py-2.5 md:py-3" : "py-3"
-          )}
+        className={cn(
+          "flex items-center justify-around px-1 max-w-lg md:max-w-none md:px-8 lg:px-12 mx-auto relative",
+          platform === 'ios' ? "py-2.5 md:py-3" : "py-3"
+        )}
         >
           {/* Sliding indicator - Pure CSS for 60fps */}
           <div

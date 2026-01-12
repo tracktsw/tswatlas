@@ -214,7 +214,7 @@ const InsightsPage = () => {
 
   if (checkIns.length === 0) {
     return (
-      <div className="px-4 md:px-6 py-6 space-y-6 max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto relative">
+      <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto relative">
         {/* Decorative elements */}
         <div className="decorative-blob w-36 h-36 bg-honey/25 -top-10 -right-10 fixed" />
         <div className="decorative-blob w-44 h-44 bg-primary/20 bottom-32 -left-16 fixed" />
@@ -241,7 +241,7 @@ const InsightsPage = () => {
   }
 
   return (
-    <div className="px-4 md:px-6 py-6 space-y-6 max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto relative">
+    <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto relative">
       {/* Decorative elements */}
       <div className="decorative-blob w-36 h-36 bg-honey/25 -top-10 -right-10 fixed" />
       <div className="decorative-blob w-44 h-44 bg-primary/20 bottom-32 -left-16 fixed" />

@@ -142,7 +142,7 @@ const HomePage = () => {
   // This provides a much faster perceived load time
 
   return (
-    <div className="px-4 md:px-6 py-6 space-y-6 max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto relative">
+    <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto relative">
       {/* Sync indicator */}
       {isSyncing && (
         <div className="fixed top-4 right-4 bg-sage/10 text-sage text-xs px-3 py-1.5 rounded-full flex items-center gap-2 z-50">
