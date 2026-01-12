@@ -81,8 +81,8 @@ const BottomNav = () => {
         <div 
           ref={containerRef}
           className={cn(
-            "flex items-center justify-around px-1 max-w-lg mx-auto relative",
-            platform === 'ios' ? "py-2.5" : "py-3"
+            "flex items-center justify-around px-1 max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto relative",
+            platform === 'ios' ? "py-2.5 md:py-3" : "py-3"
           )}
         >
           {/* Sliding indicator - Pure CSS for 60fps */}
@@ -105,19 +105,19 @@ const BottomNav = () => {
                 onMouseEnter={() => handleMouseEnter(path)}
                 onTouchStart={() => handleTouchStart(path)}
                 className={cn(
-                  'flex flex-col items-center gap-1 min-w-[56px] px-2 py-2 rounded-2xl transition-colors duration-200 z-10',
+                  'flex flex-col items-center gap-1 min-w-[56px] md:min-w-[72px] px-2 md:px-3 py-2 rounded-2xl transition-colors duration-200 z-10',
                   isActive
                     ? 'text-anchor'
                     : 'text-muted-foreground hover:text-foreground'
                 )}
               >
                 <div className={cn(
-                  'p-1.5 rounded-xl transition-all duration-200',
+                  'p-1.5 md:p-2 rounded-xl transition-all duration-200',
                   isActive && 'bg-anchor/10'
                 )}>
-                  <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+                  <Icon className="w-5 h-5 md:w-6 md:h-6" strokeWidth={isActive ? 2.5 : 2} />
                 </div>
-                <span className="text-[10px] font-semibold whitespace-nowrap">{label}</span>
+                <span className="text-[10px] md:text-xs font-semibold whitespace-nowrap">{label}</span>
               </NavLink>
             );
           })}
