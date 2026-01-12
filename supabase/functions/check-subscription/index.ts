@@ -193,6 +193,29 @@ serve(async (req) => {
       });
     }
 
+    // Check for manual/database subscription (for gifted/promo subscriptions)
+    const { data: dbSubscription } = await supabaseClient
+      .from('user_subscriptions')
+      .select('status, current_period_end')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .gt('current_period_end', new Date().toISOString())
+      .maybeSingle();
+
+    if (dbSubscription) {
+      logStep("User has active database subscription", { 
+        endDate: dbSubscription.current_period_end 
+      });
+      return new Response(JSON.stringify({
+        subscribed: true,
+        isAdmin: false,
+        subscription_end: dbSubscription.current_period_end,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
     // Check RevenueCat subscription first (for iOS IAP users)
     const revenueCatResult = await checkRevenueCat(user.id);
     if (revenueCatResult.subscribed) {
