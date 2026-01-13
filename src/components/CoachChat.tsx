@@ -118,14 +118,14 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
   return (
     <div
       className={cn(
-        "relative flex-1 min-h-0 bg-background overflow-hidden",
+        "flex-1 min-h-0 bg-background overflow-hidden",
         isAndroid && "android-flex-fill"
       )}
       style={{ overscrollBehavior: 'contain' }}
     >
       {/* Scrollable chat area */}
       <ScrollArea
-        className="absolute inset-0 px-4 bg-background"
+        className="h-full w-full px-4 bg-background"
         ref={scrollRef}
         style={{ overscrollBehavior: 'contain' }}
       >
@@ -185,9 +185,9 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
         </div>
       </ScrollArea>
 
-      {/* Input Area - absolutely positioned at bottom */}
+      {/* Input Area - fixed to viewport bottom */}
       <div
-        className="absolute left-0 right-0 border-t border-border p-4 bg-background"
+        className="fixed left-0 right-0 border-t border-border p-4 bg-background z-20"
         style={{
           // Position above nav bar on Android, or above keyboard when open
           bottom: isAndroid ? (keyboardOffset > 0 ? `${keyboardOffset}px` : `${navBarHeight}px`) : 0,

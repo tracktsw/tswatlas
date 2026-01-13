@@ -26,12 +26,9 @@ const CoachPage = () => {
 
   return (
     <PaywallGuard feature="AI Coach">
-      <div 
-        className={cn(
-          "flex flex-col h-full relative bg-background overflow-hidden",
-          isAndroid && "android-page-height"
-        )}
-        style={{ 
+      <div
+        className="flex flex-col h-full relative bg-background overflow-hidden"
+        style={{
           overscrollBehavior: 'none',
           touchAction: 'pan-x pan-y',
         }}
