@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Activity, Lock, ChevronDown, TrendingUp } from 'lucide-react';
 import { CheckIn } from '@/contexts/UserDataContext';
-import { format, subDays, startOfDay, eachWeekOfInterval, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
+import { format, subDays, startOfDay, eachWeekOfInterval, startOfWeek, endOfWeek, isWithinInterval, eachDayOfInterval, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
@@ -128,60 +128,133 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
     );
   }, [filteredCheckIns]);
 
-  // Weekly average severity trend per symptom
-  const weeklySeverityTrend = useMemo(() => {
+  // Severity trend per symptom - adapts granularity based on time range
+  const severityTrend = useMemo(() => {
     const now = new Date();
-    let startDate: Date;
+    
+    if (timeRange === '7') {
+      // Daily granularity for 7 days
+      const startDate = subDays(startOfDay(now), 6);
+      const days = eachDayOfInterval({ start: startDate, end: now });
+      
+      return days
+        .map((day) => {
+          const dayStart = startOfDay(day);
+          const dayEnd = new Date(dayStart);
+          dayEnd.setHours(23, 59, 59, 999);
+          
+          const dayCheckIns = filteredCheckIns.filter((c) => {
+            const d = new Date(c.timestamp);
+            return isWithinInterval(d, { start: dayStart, end: dayEnd });
+          });
 
-    if (timeRange === 'all' && checkIns.length > 0) {
+          if (dayCheckIns.length === 0) return null;
+
+          const symptomSeverities: Record<string, { sum: number; count: number }> = {};
+          dayCheckIns.forEach((c) => {
+            (c.symptomsExperienced || []).forEach((entry) => {
+              if (!symptomSeverities[entry.symptom]) {
+                symptomSeverities[entry.symptom] = { sum: 0, count: 0 };
+              }
+              symptomSeverities[entry.symptom].sum += entry.severity || 2;
+              symptomSeverities[entry.symptom].count += 1;
+            });
+          });
+
+          const avgSeverities: Record<string, number> = {};
+          Object.entries(symptomSeverities).forEach(([s, data]) => {
+            avgSeverities[s] = data.count > 0 ? data.sum / data.count : 0;
+          });
+
+          return {
+            label: format(day, 'EEE'),
+            avgSeverities,
+          };
+        })
+        .filter((d): d is NonNullable<typeof d> => Boolean(d));
+    } else if (timeRange === '30') {
+      // Weekly granularity for 30 days
+      const startDate = startOfWeek(subDays(now, 29), { weekStartsOn: 0 });
+      const weeks = eachWeekOfInterval({ start: startDate, end: now }, { weekStartsOn: 0 });
+      
+      return weeks
+        .map((weekStart) => {
+          const weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 });
+          const weekCheckIns = filteredCheckIns.filter((c) => {
+            const d = new Date(c.timestamp);
+            return isWithinInterval(d, { start: weekStart, end: weekEnd });
+          });
+
+          if (weekCheckIns.length === 0) return null;
+
+          const symptomSeverities: Record<string, { sum: number; count: number }> = {};
+          weekCheckIns.forEach((c) => {
+            (c.symptomsExperienced || []).forEach((entry) => {
+              if (!symptomSeverities[entry.symptom]) {
+                symptomSeverities[entry.symptom] = { sum: 0, count: 0 };
+              }
+              symptomSeverities[entry.symptom].sum += entry.severity || 2;
+              symptomSeverities[entry.symptom].count += 1;
+            });
+          });
+
+          const avgSeverities: Record<string, number> = {};
+          Object.entries(symptomSeverities).forEach(([s, data]) => {
+            avgSeverities[s] = data.count > 0 ? data.sum / data.count : 0;
+          });
+
+          return {
+            label: format(weekStart, 'MMM d'),
+            avgSeverities,
+          };
+        })
+        .filter((w): w is NonNullable<typeof w> => Boolean(w));
+    } else {
+      // Monthly granularity for all time (max 12 months)
+      if (checkIns.length === 0) return [];
+      
       const oldest = checkIns.reduce((min, c) => {
         const d = new Date(c.timestamp);
         return d < min ? d : min;
       }, new Date());
-      startDate = startOfWeek(oldest, { weekStartsOn: 0 });
-    } else {
-      const daysBack = timeRange === '7' ? 6 : 29;
-      startDate = startOfWeek(subDays(now, daysBack), { weekStartsOn: 0 });
-    }
-
-    const weeks = eachWeekOfInterval({ start: startDate, end: now }, { weekStartsOn: 0 });
-    const recentWeeks = weeks.slice(-8);
-
-    return recentWeeks
-      .map((weekStart) => {
-        const weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 });
-        const weekCheckIns = filteredCheckIns.filter((c) => {
-          const d = new Date(c.timestamp);
-          return isWithinInterval(d, { start: weekStart, end: weekEnd });
-        });
-
-        if (weekCheckIns.length === 0) return null;
-
-        // Calculate average severity per symptom this week
-        const symptomSeverities: Record<string, { sum: number; count: number }> = {};
-
-        weekCheckIns.forEach((c) => {
-          const symptoms = c.symptomsExperienced || [];
-          symptoms.forEach((entry) => {
-            if (!symptomSeverities[entry.symptom]) {
-              symptomSeverities[entry.symptom] = { sum: 0, count: 0 };
-            }
-            symptomSeverities[entry.symptom].sum += entry.severity || 2;
-            symptomSeverities[entry.symptom].count += 1;
+      
+      const startDate = startOfMonth(oldest);
+      const months = eachMonthOfInterval({ start: startDate, end: now });
+      const recentMonths = months.slice(-12); // Max 12 months for readability
+      
+      return recentMonths
+        .map((monthStart) => {
+          const monthEnd = endOfMonth(monthStart);
+          const monthCheckIns = filteredCheckIns.filter((c) => {
+            const d = new Date(c.timestamp);
+            return isWithinInterval(d, { start: monthStart, end: monthEnd });
           });
-        });
 
-        const avgSeverities: Record<string, number> = {};
-        Object.entries(symptomSeverities).forEach(([s, data]) => {
-          avgSeverities[s] = data.count > 0 ? data.sum / data.count : 0;
-        });
+          if (monthCheckIns.length === 0) return null;
 
-        return {
-          weekLabel: format(weekStart, 'MMM d'),
-          avgSeverities,
-        };
-      })
-      .filter((w): w is NonNullable<typeof w> => Boolean(w));
+          const symptomSeverities: Record<string, { sum: number; count: number }> = {};
+          monthCheckIns.forEach((c) => {
+            (c.symptomsExperienced || []).forEach((entry) => {
+              if (!symptomSeverities[entry.symptom]) {
+                symptomSeverities[entry.symptom] = { sum: 0, count: 0 };
+              }
+              symptomSeverities[entry.symptom].sum += entry.severity || 2;
+              symptomSeverities[entry.symptom].count += 1;
+            });
+          });
+
+          const avgSeverities: Record<string, number> = {};
+          Object.entries(symptomSeverities).forEach(([s, data]) => {
+            avgSeverities[s] = data.count > 0 ? data.sum / data.count : 0;
+          });
+
+          return {
+            label: format(monthStart, 'MMM yy'),
+            avgSeverities,
+          };
+        })
+        .filter((m): m is NonNullable<typeof m> => Boolean(m));
+    }
   }, [filteredCheckIns, checkIns, timeRange]);
 
 
@@ -421,7 +494,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
             ) : hasEnoughDataForTrend ? (
               <div className="pt-4 border-t border-border/50">
                 {/* Collapsible severity trends section */}
-                {weeklySeverityTrend.length >= 2 && (
+                {severityTrend.length >= 2 && (
                   <Collapsible open={severityTrendOpen} onOpenChange={setSeverityTrendOpen} className="mt-4">
                     <CollapsibleTrigger asChild>
                       <button className="flex items-center justify-between w-full py-2 px-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
@@ -489,15 +562,15 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                           <svg 
                             className="w-full h-32 relative z-10"
                             preserveAspectRatio="none"
-                            viewBox={`0 -10 ${weeklySeverityTrend.length * 100} 120`}
+                            viewBox={`0 -10 ${severityTrend.length * 100} 120`}
                           >
                             {chartSymptoms.map(symptom => {
                               const isHidden = hiddenSymptoms.has(symptom);
                               if (isHidden) return null;
                               
-                              const points = weeklySeverityTrend
-                                .map((week, i) => {
-                                  const sev = week.avgSeverities[symptom];
+                              const points = severityTrend
+                                .map((period, i) => {
+                                  const sev = period.avgSeverities[symptom];
                                   if (!sev) return null;
                                   // Map severity 1-3 to y-position (3=top=5, 1=bottom=95) with padding
                                   const y = 5 + ((3 - sev) / 2) * 90;
@@ -551,10 +624,10 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                           
                           {/* X-axis labels */}
                           <div className="flex">
-                            {weeklySeverityTrend.map((week) => (
-                              <div key={week.weekLabel} className="flex-1 text-center">
+                            {severityTrend.map((period) => (
+                              <div key={period.label} className="flex-1 text-center">
                                 <span className="text-[9px] text-muted-foreground truncate">
-                                  {week.weekLabel}
+                                  {period.label}
                                 </span>
                               </div>
                             ))}
@@ -563,7 +636,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                       </div>
                       
                       <p className="text-[10px] text-muted-foreground/70 mt-2 text-center italic">
-                        Average severity per symptom each week (Mild=1, Mod=2, Severe=3)
+                        Average severity per symptom {timeRange === '7' ? 'each day' : timeRange === '30' ? 'each week' : 'each month'} (Mild=1, Mod=2, Severe=3)
                       </p>
                     </CollapsibleContent>
                   </Collapsible>
