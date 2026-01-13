@@ -27,10 +27,12 @@ const CoachPage = () => {
   return (
     <PaywallGuard feature="AI Coach">
       <div
-        className="flex flex-col h-full relative bg-background overflow-hidden"
+        className="flex flex-col h-full relative bg-background"
         style={{
+          overflow: 'hidden',
           overscrollBehavior: 'none',
           touchAction: 'pan-x pan-y',
+          height: '100%',
         }}
       >
         {/* Header - fixed, never scrolls */}

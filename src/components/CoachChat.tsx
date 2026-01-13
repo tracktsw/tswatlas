@@ -115,21 +115,32 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
   const navBarHeight = getNavBarHeight();
   const keyboardOffset = getKeyboardOffset();
 
+  // Calculate the height for ScrollArea and input bar positioning
+  const inputBarTotalHeight = messages.length > 0 ? 120 : 80;
+
   return (
     <div
       className={cn(
-        "flex-1 min-h-0 bg-background overflow-hidden",
+        "relative h-full w-full bg-background",
         isAndroid && "android-flex-fill"
       )}
-      style={{ overscrollBehavior: 'contain' }}
+      style={{
+        overflow: 'hidden',
+        overscrollBehavior: 'contain',
+        height: '100%',
+      }}
     >
       {/* Scrollable chat area */}
       <ScrollArea
-        className="h-full w-full px-4 bg-background"
+        className="absolute left-0 right-0 top-0 px-4 bg-background"
         ref={scrollRef}
-        style={{ overscrollBehavior: 'contain' }}
+        style={{
+          overscrollBehavior: 'contain',
+          // Bottom should account for input bar height + nav bar on Android
+          bottom: isAndroid ? `${inputBarTotalHeight + navBarHeight}px` : `${inputBarTotalHeight}px`,
+        }}
       >
-        <div style={{ paddingBottom: messages.length > 0 ? '140px' : '100px' }}>
+        <div style={{ paddingBottom: '16px' }}>
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center py-8">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -185,11 +196,11 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
         </div>
       </ScrollArea>
 
-      {/* Input Area - fixed to viewport bottom */}
+      {/* Input Area - absolutely positioned at bottom */}
       <div
-        className="fixed left-0 right-0 border-t border-border p-4 bg-background z-20"
+        className="absolute left-0 right-0 border-t border-border p-4 bg-background z-10"
         style={{
-          // Position above nav bar on Android, or above keyboard when open
+          // Position above nav bar on Android, or lift above keyboard when open
           bottom: isAndroid ? (keyboardOffset > 0 ? `${keyboardOffset}px` : `${navBarHeight}px`) : 0,
           transition: 'bottom 0.2s ease-out',
         }}
