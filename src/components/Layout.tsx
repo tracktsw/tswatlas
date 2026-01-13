@@ -11,7 +11,7 @@ import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils';
 
 const Layout = () => {
-  const { hideBottomNav } = useLayout();
+  const { hideBottomNav, disableMainScroll } = useLayout();
   const { reminderSettings, checkIns, userId, isLoading } = useUserData();
   const { isKeyboardOpen, isIOS } = useIOSKeyboardContext();
   const navigate = useNavigate();
@@ -65,8 +65,8 @@ const Layout = () => {
       <main
         className={cn(
           "flex-1 min-h-0 overscroll-contain",
-          !hideBottomNav && "pb-20",
-          isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto"
+          !hideBottomNav && !disableMainScroll && "pb-20",
+          isIOS && isKeyboardOpen ? "overflow-hidden" : !disableMainScroll ? "overflow-y-auto" : "overflow-hidden"
         )}
       >
         <Outlet />

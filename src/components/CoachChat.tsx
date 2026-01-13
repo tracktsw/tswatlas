@@ -106,13 +106,26 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
     return Math.max(0, keyboardOverlap - navHeight);
   };
 
-  const keyboardOffset = getKeyboardOffset();
+  // Calculate bottom spacing for input bar
+  const getInputBottomSpacing = () => {
+    if (!isAndroid) return 0;
 
-  // Calculate the input bar height (approximately)
-  const inputBarHeight = messages.length > 0 ? 120 : 80; // With or without clear button
+    const keyboardOffset = getKeyboardOffset();
+    if (keyboardOffset > 0) {
+      // Keyboard is open, use keyboard offset
+      return keyboardOffset;
+    } else {
+      // Keyboard is closed, add space for nav bar
+      const safeBottom = getCssPxVar('--safe-bottom');
+      const navHeight = BOTTOM_NAV_CONTENT_HEIGHT + safeBottom;
+      return navHeight;
+    }
+  };
+
+  const inputBottomSpacing = getInputBottomSpacing();
 
   return (
-    <div 
+    <div
       className={cn(
         "flex flex-col flex-1 min-h-0 bg-background overflow-hidden",
         isAndroid && "android-flex-fill"
@@ -125,7 +138,7 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
         ref={scrollRef}
         style={{ overscrollBehavior: 'contain' }}
       >
-        <div style={{ paddingBottom: `${inputBarHeight + 16}px` }}>
+        <div style={{ paddingBottom: '16px' }}>
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center py-8">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -185,8 +198,8 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
       <div
         className="shrink-0 border-t border-border p-4 bg-background"
         style={{
-          // Only add offset when Android keyboard is open
-          marginBottom: keyboardOffset > 0 ? `${keyboardOffset}px` : undefined,
+          // Add bottom spacing for nav bar or keyboard on Android
+          marginBottom: isAndroid && inputBottomSpacing > 0 ? `${inputBottomSpacing}px` : undefined,
           transition: 'margin-bottom 0.2s ease-out',
         }}
       >

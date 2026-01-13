@@ -1,15 +1,28 @@
 // CoachPage.tsx
+import { useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
 import { CoachChat } from '@/components/CoachChat';
 import { useAICoach } from '@/hooks/useAICoach';
 import PaywallGuard from '@/components/PaywallGuard';
 import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils';
+import { useLayout } from '@/contexts/LayoutContext';
 
 const CoachPage = () => {
   const { messages, isLoading, sendMessage, clearChat } = useAICoach();
+  const { setDisableMainScroll } = useLayout();
   const platform = Capacitor.getPlatform();
   const isAndroid = platform === 'android';
+
+  // On Android, disable main scroll so only the chat messages scroll
+  useEffect(() => {
+    if (isAndroid) {
+      setDisableMainScroll(true);
+      return () => {
+        setDisableMainScroll(false);
+      };
+    }
+  }, [isAndroid, setDisableMainScroll]);
 
   return (
     <PaywallGuard feature="AI Coach">
