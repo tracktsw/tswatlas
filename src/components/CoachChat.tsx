@@ -117,11 +117,13 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
         "flex flex-col flex-1 min-h-0 bg-background overflow-hidden",
         isAndroid && "android-flex-fill"
       )}
+      style={{ overscrollBehavior: 'contain' }}
     >
       {/* Scrollable chat area */}
       <ScrollArea
         className="flex-1 min-h-0 px-4 bg-background"
         ref={scrollRef}
+        style={{ overscrollBehavior: 'contain' }}
       >
         <div style={{ paddingBottom: `${inputBarHeight + 16}px` }}>
           {messages.length === 0 ? (
