@@ -127,12 +127,12 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
       </ScrollArea>
 
       {/* Input Area - shrink-0 keeps it at natural height, never scrolls */}
+      {/* No bottom padding here - Layout's pb-20 already reserves space above BottomNav */}
       <div 
         className={cn(
           "shrink-0 border-t border-border bg-background",
-          isAndroid ? "px-3 pt-2" : "p-4"
+          isAndroid ? "px-3 py-2" : "p-4"
         )}
-        style={isAndroid ? { paddingBottom: 'var(--safe-bottom, 0px)' } : undefined}
       >
         {messages.length > 0 && (
           <div className="flex justify-end mb-2">
