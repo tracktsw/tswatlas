@@ -9,6 +9,7 @@ import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { Capacitor } from '@capacitor/core';
 import trackTswLogo from '@/assets/tracktsw-logo-transparent.png';
 import { FloatingLeaf } from './FloatingLeaf';
+import { cn } from '@/lib/utils';
 
 export const OnboardingScreen1: React.FC = () => {
   const { nextScreen, skipOnboarding } = useOnboarding();
@@ -27,8 +28,17 @@ export const OnboardingScreen1: React.FC = () => {
     nextScreen();
   };
 
+  // E) Fix onboarding squish: Use measured viewport height on Android, 100svh on iOS
+  const isAndroid = platform === 'android';
+
   return (
-    <div className="flex flex-col bg-background relative box-border overflow-hidden" style={{ height: '100svh' }}>
+    <div 
+      className={cn(
+        "flex flex-col bg-background relative box-border overflow-hidden",
+        isAndroid && "android-full-height"
+      )}
+      style={!isAndroid ? { height: '100svh' } : undefined}
+    >
       <FloatingLeaf />
 
       {/* Header */}

@@ -10,6 +10,7 @@ import { OnboardingProgress } from './OnboardingProgress';
 import { FloatingLeaf } from './FloatingLeaf';
 import symptomsImage from '@/assets/onboarding-symptoms.png';
 import sleepImage from '@/assets/onboarding-sleep.png';
+import { cn } from '@/lib/utils';
 
 export const OnboardingScreen4: React.FC = () => {
   const { nextScreen, prevScreen, skipOnboarding } = useOnboarding();
@@ -44,8 +45,17 @@ export const OnboardingScreen4: React.FC = () => {
     nextScreen();
   };
 
+  // E) Fix onboarding squish: Use measured viewport height on Android, 100svh on iOS
+  const isAndroid = platform === 'android';
+
   return (
-    <div className="flex flex-col bg-background relative box-border overflow-hidden" style={{ height: '100svh' }}>
+    <div 
+      className={cn(
+        "flex flex-col bg-background relative box-border overflow-hidden",
+        isAndroid && "android-full-height"
+      )}
+      style={!isAndroid ? { height: '100svh' } : undefined}
+    >
       {/* Floating leaf animation */}
       <FloatingLeaf />
       

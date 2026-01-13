@@ -86,8 +86,17 @@ export const OnboardingScreen5: React.FC = () => {
     navigate('/auth?mode=signup');
   };
 
+  // E) Fix onboarding squish: Use measured viewport height on Android, 100svh on iOS
+  const isAndroid = platform === 'android';
+
   return (
-    <div className="flex flex-col bg-background relative box-border overflow-hidden" style={{ height: '100svh' }}>
+    <div 
+      className={cn(
+        "flex flex-col bg-background relative box-border overflow-hidden",
+        isAndroid && "android-full-height"
+      )}
+      style={!isAndroid ? { height: '100svh' } : undefined}
+    >
       <FloatingLeaf />
 
       {/* Header (standardized) */}

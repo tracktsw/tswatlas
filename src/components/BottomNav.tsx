@@ -26,6 +26,7 @@ const pageImports: Record<string, () => Promise<unknown>> = {
 const BottomNav = () => {
   const location = useLocation();
   const platform = Capacitor.getPlatform();
+  const isAndroid = platform === 'android';
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const [indicatorStyle, setIndicatorStyle] = useState({ x: 0, width: 0 });
@@ -67,7 +68,9 @@ const BottomNav = () => {
     }
   }, []);
 
-  // Optional iOS shave: reduce perceived empty space under the bar while keeping gesture safety.
+  // D) Fix bottom navigation grey strip
+  // iOS: reduce perceived empty space under the bar while keeping gesture safety
+  // Android: extend background through system nav area using padding
   const paddingBottom =
     platform === 'ios'
       ? 'max(calc(var(--safe-bottom, 0px) - 8px), 0px)'
@@ -75,11 +78,17 @@ const BottomNav = () => {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg"
+      className={cn(
+        "fixed bottom-0 left-0 right-0 z-50 bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg",
+        // Add Android-specific class for background extension via pseudo-element
+        isAndroid && "bottom-nav-android-extend"
+      )}
       style={{
         paddingBottom,
         paddingLeft: 'var(--safe-area-inset-left, 0px)',
         paddingRight: 'var(--safe-area-inset-right, 0px)',
+        // Android: ensure solid background color for the inset area
+        ...(isAndroid && { backgroundColor: 'hsl(var(--card) / 0.98)' }),
       }}
     >
       <div
