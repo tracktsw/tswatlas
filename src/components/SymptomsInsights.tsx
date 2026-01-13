@@ -210,7 +210,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
         })
         .filter((w): w is NonNullable<typeof w> => Boolean(w));
     } else {
-      // Monthly granularity for all time (max 12 months)
+      // Monthly granularity for all time (no limit - supports scrolling)
       if (checkIns.length === 0) return [];
       
       const oldest = checkIns.reduce((min, c) => {
@@ -220,9 +220,8 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
       
       const startDate = startOfMonth(oldest);
       const months = eachMonthOfInterval({ start: startDate, end: now });
-      const recentMonths = months.slice(-12); // Max 12 months for readability
       
-      return recentMonths
+      return months
         .map((monthStart) => {
           const monthEnd = endOfMonth(monthStart);
           const monthCheckIns = filteredCheckIns.filter((c) => {
@@ -540,100 +539,127 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                         })}
                       </div>
 
-                      {/* Severity line chart */}
+                      {/* Severity line chart with horizontal scroll for many data points */}
                       <div className="flex">
-                        {/* Y-axis */}
-                        <div className="flex flex-col justify-between h-32 pr-2 text-right">
+                        {/* Y-axis - fixed */}
+                        <div className="flex flex-col justify-between h-32 pr-2 text-right shrink-0">
                           <span className="text-[10px] text-muted-foreground leading-none">Severe</span>
                           <span className="text-[10px] text-muted-foreground leading-none">Moderate</span>
                           <span className="text-[10px] text-muted-foreground leading-none">Mild</span>
                         </div>
                         
-                        {/* Chart area */}
-                        <div className="flex-1 relative">
-                          {/* Horizontal grid lines */}
-                          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-                            <div className="border-t border-red-300/30" />
-                            <div className="border-t border-orange-300/30" />
-                            <div className="border-t border-amber-300/30" />
-                          </div>
-                          
-                          {/* SVG lines for trends */}
-                          <svg 
-                            className="w-full h-32 relative z-10"
-                            preserveAspectRatio="none"
-                            viewBox={`0 -10 ${severityTrend.length * 100} 120`}
+                        {/* Scrollable chart area */}
+                        <div 
+                          className={cn(
+                            "flex-1 relative",
+                            timeRange === 'all' && severityTrend.length > 12 && "overflow-x-auto pb-2"
+                          )}
+                        >
+                          {/* Inner container with minimum width for scrolling */}
+                          <div 
+                            className="relative"
+                            style={{ 
+                              minWidth: timeRange === 'all' && severityTrend.length > 12 
+                                ? `${Math.max(severityTrend.length * 50, 300)}px` 
+                                : '100%' 
+                            }}
                           >
-                            {chartSymptoms.map(symptom => {
-                              const isHidden = hiddenSymptoms.has(symptom);
-                              if (isHidden) return null;
-                              
-                              const points = severityTrend
-                                .map((period, i) => {
-                                  const sev = period.avgSeverities[symptom];
-                                  if (!sev) return null;
-                                  // Map severity 1-3 to y-position (3=top=5, 1=bottom=95) with padding
-                                  const y = 5 + ((3 - sev) / 2) * 90;
-                                  const x = i * 100 + 50;
-                                  return { x, y, sev };
-                                })
-                                .filter((p): p is { x: number; y: number; sev: number } => p !== null);
-                              
-                              if (points.length < 2) return null;
-                              
-                              const pathD = points
-                                .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
-                                .join(' ');
-                              
-                              const colorMap: Record<string, string> = {
-                                'Burning': '#f97316',
-                                'Itching': '#3b82f6',
-                                'Thermodysregulation': '#a855f7',
-                                'Flaking': '#06b6d4',
-                                'Oozing': '#eab308',
-                                'Swelling': '#22c55e',
-                                'Redness': '#f43f5e',
-                                'Insomnia': '#1f2937',
-                              };
-                              
-                              return (
-                                <g key={symptom}>
-                                  <path
-                                    d={pathD}
-                                    fill="none"
-                                    stroke={colorMap[symptom] || '#9ca3af'}
-                                    strokeWidth="2.5"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="transition-opacity duration-300"
-                                  />
-                                  {points.map((p, i) => (
-                                    <circle
-                                      key={i}
-                                      cx={p.x}
-                                      cy={p.y}
-                                      r="4"
-                                      fill={colorMap[symptom] || '#9ca3af'}
+                            {/* Horizontal grid lines */}
+                            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none h-32">
+                              <div className="border-t border-red-300/30" />
+                              <div className="border-t border-orange-300/30" />
+                              <div className="border-t border-amber-300/30" />
+                            </div>
+                            
+                            {/* SVG lines for trends */}
+                            <svg 
+                              className="w-full h-32 relative z-10"
+                              preserveAspectRatio="none"
+                              viewBox={`0 -10 ${severityTrend.length * 100} 120`}
+                            >
+                              {chartSymptoms.map(symptom => {
+                                const isHidden = hiddenSymptoms.has(symptom);
+                                if (isHidden) return null;
+                                
+                                const points = severityTrend
+                                  .map((period, i) => {
+                                    const sev = period.avgSeverities[symptom];
+                                    if (!sev) return null;
+                                    // Map severity 1-3 to y-position (3=top=5, 1=bottom=95) with padding
+                                    const y = 5 + ((3 - sev) / 2) * 90;
+                                    const x = i * 100 + 50;
+                                    return { x, y, sev };
+                                  })
+                                  .filter((p): p is { x: number; y: number; sev: number } => p !== null);
+                                
+                                if (points.length < 2) return null;
+                                
+                                const pathD = points
+                                  .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
+                                  .join(' ');
+                                
+                                const colorMap: Record<string, string> = {
+                                  'Burning': '#f97316',
+                                  'Itching': '#3b82f6',
+                                  'Thermodysregulation': '#a855f7',
+                                  'Flaking': '#06b6d4',
+                                  'Oozing': '#eab308',
+                                  'Swelling': '#22c55e',
+                                  'Redness': '#f43f5e',
+                                  'Insomnia': '#1f2937',
+                                };
+                                
+                                return (
+                                  <g key={symptom}>
+                                    <path
+                                      d={pathD}
+                                      fill="none"
+                                      stroke={colorMap[symptom] || '#9ca3af'}
+                                      strokeWidth="2.5"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
                                       className="transition-opacity duration-300"
                                     />
-                                  ))}
-                                </g>
-                              );
-                            })}
-                          </svg>
-                          
-                          {/* X-axis labels */}
-                          <div className="flex">
-                            {severityTrend.map((period) => (
-                              <div key={period.label} className="flex-1 text-center">
-                                <span className="text-[9px] text-muted-foreground truncate">
-                                  {period.label}
-                                </span>
-                              </div>
-                            ))}
+                                    {points.map((p, i) => (
+                                      <circle
+                                        key={i}
+                                        cx={p.x}
+                                        cy={p.y}
+                                        r="4"
+                                        fill={colorMap[symptom] || '#9ca3af'}
+                                        className="transition-opacity duration-300"
+                                      />
+                                    ))}
+                                  </g>
+                                );
+                              })}
+                            </svg>
+                            
+                            {/* X-axis labels */}
+                            <div className="flex">
+                              {severityTrend.map((period) => (
+                                <div key={period.label} className="flex-1 text-center">
+                                  <span className="text-[9px] text-muted-foreground whitespace-nowrap">
+                                    {period.label}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
+                          
+                          {/* Scroll hint for all time with many months */}
+                          {timeRange === 'all' && severityTrend.length > 12 && (
+                            <div className="absolute right-0 top-0 bottom-4 w-8 bg-gradient-to-l from-card to-transparent pointer-events-none z-20" />
+                          )}
                         </div>
                       </div>
+                      
+                      {/* Scroll hint text */}
+                      {timeRange === 'all' && severityTrend.length > 12 && (
+                        <p className="text-[9px] text-muted-foreground/60 text-center mt-1">
+                          ← Scroll to see all {severityTrend.length} months →
+                        </p>
+                      )}
                       
                       <p className="text-[10px] text-muted-foreground/70 mt-2 text-center italic">
                         Average severity per symptom {timeRange === '7' ? 'each day' : timeRange === '30' ? 'each week' : 'each month'} (Mild=1, Mod=2, Severe=3)
