@@ -1,52 +1,19 @@
 // CoachPage.tsx
-import { useState, useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
 import { CoachChat } from '@/components/CoachChat';
 import { useAICoach } from '@/hooks/useAICoach';
 import PaywallGuard from '@/components/PaywallGuard';
 import { Capacitor } from '@capacitor/core';
-import { cn } from '@/lib/utils';
 
 const CoachPage = () => {
   const { messages, isLoading, sendMessage, clearChat } = useAICoach();
   const platform = Capacitor.getPlatform();
-  const isAndroid = platform === 'android';
-
-  // Android: track visualViewport.height so the container never exceeds the visible area
-  const [vvHeight, setVvHeight] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!isAndroid || typeof window.visualViewport === 'undefined') return;
-
-    const update = () => {
-      if (window.visualViewport) {
-        setVvHeight(window.visualViewport.height);
-      }
-    };
-
-    update();
-
-    window.visualViewport.addEventListener('resize', update, { passive: true });
-    window.visualViewport.addEventListener('scroll', update, { passive: true });
-
-    return () => {
-      window.visualViewport?.removeEventListener('resize', update);
-      window.visualViewport?.removeEventListener('scroll', update);
-    };
-  }, [isAndroid]);
 
   return (
     <PaywallGuard feature="AI Coach">
       <div 
-        className={cn(
-          "flex flex-col h-full relative bg-background",
-          isAndroid && "android-page-height"
-        )}
-        style={{ 
-          height: isAndroid && vvHeight ? `${vvHeight}px` : '100%',
-          overflow: 'hidden',
-          overscrollBehavior: 'none',
-        }}
+        className="flex flex-col h-full relative bg-background overflow-hidden"
+        style={{ overscrollBehavior: 'none' }}
       >
         {/* Header - fixed, never scrolls */}
         <div

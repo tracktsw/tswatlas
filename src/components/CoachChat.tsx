@@ -1,11 +1,10 @@
-// CoachChat.tsx (input bar updated for safe-bottom + nav height)
+// CoachChat.tsx - Simple flex layout for both iOS and Android
 import { useState, useRef, useEffect } from 'react';
 import { Send, Sparkles, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Capacitor } from '@capacitor/core';
 import type { ChatMessage } from '@/hooks/useAICoach';
 
 interface CoachChatProps {
@@ -16,58 +15,18 @@ interface CoachChatProps {
 }
 
 const quickSuggestions = [
-  { label: 'Analyze my week', prompt: 'Analyze my check-ins...eek. What patterns do you see in my mood and skin condition?' },
+  { label: 'Analyze my week', prompt: 'Analyze my check-ins from this week. What patterns do you see in my mood and skin condition?' },
   { label: "What's helping?", prompt: 'Based on my data, which treatments seem to correlate with better skin days?' },
   { label: 'Show trends', prompt: 'What are the trends in my skin condition and mood over the past 2 weeks?' },
   { label: 'Daily summary', prompt: 'Give me a brief summary of my most recent check-ins and any notable observations.' },
 ];
 
-const BOTTOM_NAV_CONTENT_HEIGHT = 64; // content height only; safe-bottom added dynamically
-
-const getCssPxVar = (name: string) => {
-  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  const n = parseFloat(raw);
-  return Number.isFinite(n) ? n : 0;
-};
-
 export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: CoachChatProps) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [keyboardOverlap, setKeyboardOverlap] = useState(0);
-  const platform = Capacitor.getPlatform();
-  const isAndroid = platform === 'android';
 
-  useEffect(() => {
-    if (!isAndroid || typeof window.visualViewport === 'undefined') return;
-
-    const calculateKeyboardOverlap = () => {
-      if (!window.visualViewport) return;
-
-      const vv = window.visualViewport;
-      const vvBottom = vv.offsetTop + vv.height;
-      const layoutBottom = window.innerHeight;
-      const rawOverlap = Math.max(0, layoutBottom - vvBottom);
-
-      // Android 15+ edge-to-edge can report a non-zero offset even with no keyboard.
-      // Treat it as "keyboard" only when the viewport shrinks meaningfully.
-      const heightDelta = Math.max(0, window.innerHeight - vv.height);
-      const isKeyboardLikelyOpen = heightDelta > 120;
-
-      setKeyboardOverlap(isKeyboardLikelyOpen ? rawOverlap : 0);
-    };
-
-    window.visualViewport.addEventListener('resize', calculateKeyboardOverlap, { passive: true });
-    window.visualViewport.addEventListener('scroll', calculateKeyboardOverlap, { passive: true });
-
-    calculateKeyboardOverlap();
-
-    return () => {
-      window.visualViewport?.removeEventListener('resize', calculateKeyboardOverlap);
-      window.visualViewport?.removeEventListener('scroll', calculateKeyboardOverlap);
-    };
-  }, [isAndroid]);
-
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
     const root = scrollRef.current;
     const viewport = root?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement | null;
@@ -97,35 +56,18 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
     }
   };
 
-  // For keyboard, we need to lift the input bar above it
-  const getKeyboardOffset = () => {
-    if (!isAndroid || keyboardOverlap <= 0) return 0;
-    // When keyboard is open, we need to offset by keyboard minus nav bar (since nav hides)
-    const safeBottom = getCssPxVar('--safe-bottom');
-    const navHeight = BOTTOM_NAV_CONTENT_HEIGHT + safeBottom;
-    return Math.max(0, keyboardOverlap - navHeight);
-  };
-
-  const keyboardOffset = getKeyboardOffset();
-
-  // Calculate the input bar height (approximately)
-  const inputBarHeight = messages.length > 0 ? 120 : 80; // With or without clear button
-
   return (
     <div 
-      className={cn(
-        "flex flex-col flex-1 min-h-0 bg-background overflow-hidden",
-        isAndroid && "android-flex-fill"
-      )}
+      className="flex flex-col flex-1 min-h-0 bg-background overflow-hidden"
       style={{ overscrollBehavior: 'contain' }}
     >
-      {/* Scrollable chat area */}
+      {/* Scrollable chat area - flex-1 takes remaining space */}
       <ScrollArea
         className="flex-1 min-h-0 px-4 bg-background"
         ref={scrollRef}
         style={{ overscrollBehavior: 'contain' }}
       >
-        <div style={{ paddingBottom: `${inputBarHeight + 16}px` }}>
+        <div className="pb-4">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center py-8">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -181,19 +123,8 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
         </div>
       </ScrollArea>
 
-      {/* Input Area - fixed to viewport bottom (resilient to any body/document scroll) */}
-      <div
-        className="shrink-0 border-t border-border p-4 bg-background"
-        style={{
-          position: 'fixed',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 50,
-          transform: keyboardOffset > 0 ? `translateY(-${keyboardOffset}px)` : undefined,
-          transition: 'transform 0.2s ease-out',
-        }}
-      >
+      {/* Input Area - shrink-0 keeps it at natural height, never scrolls */}
+      <div className="shrink-0 border-t border-border p-4 bg-background">
         {messages.length > 0 && (
           <div className="flex justify-end mb-2">
             <Button
