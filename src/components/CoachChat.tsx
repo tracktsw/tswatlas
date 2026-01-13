@@ -181,16 +181,17 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
         </div>
       </ScrollArea>
 
-      {/* Input Area - sticky at bottom, always visible */}
+      {/* Input Area - fixed to viewport bottom (resilient to any body/document scroll) */}
       <div
         className="shrink-0 border-t border-border p-4 bg-background"
         style={{
-          position: 'sticky',
+          position: 'fixed',
+          left: 0,
+          right: 0,
           bottom: 0,
-          zIndex: 10,
-          // Only add offset when Android keyboard is open
-          marginBottom: keyboardOffset > 0 ? `${keyboardOffset}px` : undefined,
-          transition: 'margin-bottom 0.2s ease-out',
+          zIndex: 50,
+          transform: keyboardOffset > 0 ? `translateY(-${keyboardOffset}px)` : undefined,
+          transition: 'transform 0.2s ease-out',
         }}
       >
         {messages.length > 0 && (
