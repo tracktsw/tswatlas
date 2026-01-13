@@ -26,6 +26,8 @@ const AndroidDebugPanel = () => {
         safeBottom: computed.getPropertyValue('--safe-bottom').trim() || 'not set',
         appInsetTop: computed.getPropertyValue('--app-inset-top').trim() || 'not set',
         appInsetBottom: computed.getPropertyValue('--app-inset-bottom').trim() || 'not set',
+        hasNavBar: computed.getPropertyValue('--android-has-nav-bar').trim() || 'not set',
+        noNavBarClass: root.classList.contains('no-nav-bar') ? 'yes' : 'no',
       });
     };
 

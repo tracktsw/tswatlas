@@ -70,11 +70,12 @@ const BottomNav = () => {
 
   // D) Fix bottom navigation grey strip
   // iOS: reduce perceived empty space under the bar while keeping gesture safety
-  // Android: extend background through system nav area using padding
+  // Android with nav bar: extend background through system nav area using padding
+  // Android without nav bar (gesture nav): use minimal padding, background extends via CSS
   const paddingBottom =
     platform === 'ios'
       ? 'max(calc(var(--safe-bottom, 0px) - 8px), 0px)'
-      : 'var(--safe-bottom, 0px)';
+      : 'var(--safe-bottom, 0px)'; // Works for both nav bar and gesture nav cases
 
   return (
     <nav
