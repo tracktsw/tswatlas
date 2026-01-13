@@ -1,5 +1,5 @@
 // CoachPage.tsx
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
 import { CoachChat } from '@/components/CoachChat';
 import { useAICoach } from '@/hooks/useAICoach';
@@ -12,38 +12,26 @@ const CoachPage = () => {
   const platform = Capacitor.getPlatform();
   const isAndroid = platform === 'android';
 
-  // Android WebView: hard-lock document scrolling while this page is mounted.
-  // Uses the "body position: fixed" technique so the chat input never gets pushed off-screen.
+  // Android: track visualViewport.height so the container never exceeds the visible area
+  const [vvHeight, setVvHeight] = useState<number | null>(null);
+
   useEffect(() => {
-    if (!isAndroid) return;
+    if (!isAndroid || typeof window.visualViewport === 'undefined') return;
 
-    const scrollY = window.scrollY;
-
-    const prev = {
-      position: document.body.style.position,
-      top: document.body.style.top,
-      left: document.body.style.left,
-      right: document.body.style.right,
-      width: document.body.style.width,
-      overflow: document.body.style.overflow,
+    const update = () => {
+      if (window.visualViewport) {
+        setVvHeight(window.visualViewport.height);
+      }
     };
 
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.left = '0';
-    document.body.style.right = '0';
-    document.body.style.width = '100%';
-    document.body.style.overflow = 'hidden';
+    update();
+
+    window.visualViewport.addEventListener('resize', update, { passive: true });
+    window.visualViewport.addEventListener('scroll', update, { passive: true });
 
     return () => {
-      document.body.style.position = prev.position;
-      document.body.style.top = prev.top;
-      document.body.style.left = prev.left;
-      document.body.style.right = prev.right;
-      document.body.style.width = prev.width;
-      document.body.style.overflow = prev.overflow;
-
-      window.scrollTo(0, scrollY);
+      window.visualViewport?.removeEventListener('resize', update);
+      window.visualViewport?.removeEventListener('scroll', update);
     };
   }, [isAndroid]);
 
@@ -51,12 +39,13 @@ const CoachPage = () => {
     <PaywallGuard feature="AI Coach">
       <div 
         className={cn(
-          "flex flex-col h-full relative bg-background overflow-hidden",
+          "flex flex-col h-full relative bg-background",
           isAndroid && "android-page-height"
         )}
         style={{ 
+          height: isAndroid && vvHeight ? `${vvHeight}px` : '100%',
+          overflow: 'hidden',
           overscrollBehavior: 'none',
-          touchAction: 'pan-x pan-y',
         }}
       >
         {/* Header - fixed, never scrolls */}
