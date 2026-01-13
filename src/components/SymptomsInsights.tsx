@@ -276,14 +276,14 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
 
   // Colors for symptoms - distinct palette
   const symptomColors: Record<string, string> = {
-    'Burning': 'bg-red-500',
+    'Burning': 'bg-orange-500',
     'Itching': 'bg-blue-500',
     'Thermodysregulation': 'bg-purple-500',
     'Flaking': 'bg-cyan-500',
     'Oozing': 'bg-yellow-500',
     'Swelling': 'bg-green-500',
     'Redness': 'bg-rose-500',
-    'Insomnia': 'bg-indigo-500',
+    'Insomnia': 'bg-gray-900',
   };
 
   return (
@@ -513,14 +513,14 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                                 .join(' ');
                               
                               const colorMap: Record<string, string> = {
-                                'Burning': '#ef4444',
+                                'Burning': '#f97316',
                                 'Itching': '#3b82f6',
                                 'Thermodysregulation': '#a855f7',
                                 'Flaking': '#06b6d4',
                                 'Oozing': '#eab308',
                                 'Swelling': '#22c55e',
                                 'Redness': '#f43f5e',
-                                'Insomnia': '#6366f1',
+                                'Insomnia': '#1f2937',
                               };
                               
                               return (
