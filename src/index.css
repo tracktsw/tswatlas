@@ -446,6 +446,8 @@ body {
 :root.platform-android {
   --app-inset-top: var(--safe-area-inset-top, 0px);
   --app-inset-bottom: var(--safe-area-inset-bottom, 0px);
+  /* Flag for whether device has a nav bar (set via JS) */
+  --android-has-nav-bar: 0;
 }
 
 /* D) Ensure background paints through system nav area on Android */
@@ -455,20 +457,29 @@ body.platform-android {
 }
 
 /* D) Bottom nav background extension for Android - pseudo-element approach */
+/* Only extends when there's actually a bottom inset (nav bar present) */
 .platform-android .bottom-nav-android-extend {
   position: relative;
 }
 
+/* The ::after pseudo-element automatically has 0 height when --safe-bottom is 0px,
+   so it naturally handles devices without a nav bar */
 .platform-android .bottom-nav-android-extend::after {
   content: '';
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  height: var(--safe-bottom, 0px);
+  /* Use max() to ensure we never get negative values */
+  height: max(var(--safe-bottom, 0px), 0px);
   background: inherit;
   transform: translateY(100%);
   pointer-events: none;
+}
+
+/* When nav bar is hidden (gesture nav), ensure no extra space */
+.platform-android.no-nav-bar .bottom-nav-android-extend::after {
+  display: none;
 }
 
 @keyframes fadeIn {

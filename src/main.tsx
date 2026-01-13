@@ -55,6 +55,24 @@ if (Capacitor.isNativePlatform()) {
     root.style.setProperty('--safe-left', `${insets.left}px`);
     root.style.setProperty('--safe-right', `${insets.right}px`);
     
+    // Android: detect if device has a nav bar or uses full gesture navigation
+    // Nav bar typically has inset >= 48px, gesture nav has 0-24px
+    if (platform === 'android') {
+      const hasNavBar = insets.bottom >= 48;
+      root.style.setProperty('--android-has-nav-bar', hasNavBar ? '1' : '0');
+      
+      // Add class for CSS targeting
+      if (!hasNavBar) {
+        root.classList.add('no-nav-bar');
+        document.body.classList.add('no-nav-bar');
+      } else {
+        root.classList.remove('no-nav-bar');
+        document.body.classList.remove('no-nav-bar');
+      }
+      
+      console.log('Android nav bar detection - hasNavBar:', hasNavBar, 'bottomInset:', insets.bottom);
+    }
+    
     console.log('CSS variables set - bottom:', root.style.getPropertyValue('--safe-bottom'));
   }).catch((error) => {
     console.error('SafeArea plugin error:', error);
@@ -74,6 +92,20 @@ if (Capacitor.isNativePlatform()) {
     root.style.setProperty('--safe-bottom', `${data.insets.bottom}px`);
     root.style.setProperty('--safe-left', `${data.insets.left}px`);
     root.style.setProperty('--safe-right', `${data.insets.right}px`);
+    
+    // Android: update nav bar detection on orientation change
+    if (platform === 'android') {
+      const hasNavBar = data.insets.bottom >= 48;
+      root.style.setProperty('--android-has-nav-bar', hasNavBar ? '1' : '0');
+      
+      if (!hasNavBar) {
+        root.classList.add('no-nav-bar');
+        document.body.classList.add('no-nav-bar');
+      } else {
+        root.classList.remove('no-nav-bar');
+        document.body.classList.remove('no-nav-bar');
+      }
+    }
   });
 }
 
