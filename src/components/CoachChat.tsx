@@ -112,12 +112,15 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
   const bottomPosition = calculateBottom();
 
   return (
-    <div className={cn(
-      "flex flex-col h-full bg-background",
-      isAndroid && "android-flex-fill"
-    )}>
+    <div 
+      className={cn(
+        "flex flex-col flex-1 min-h-0 bg-background overflow-hidden",
+        isAndroid && "android-flex-fill"
+      )}
+      style={{ touchAction: 'none' }}
+    >
       <ScrollArea
-        className="flex-1 px-4 bg-background"
+        className="flex-1 min-h-0 px-4 bg-background"
         ref={scrollRef}
         style={{
           paddingBottom: `${bottomPosition + 120}px`,
