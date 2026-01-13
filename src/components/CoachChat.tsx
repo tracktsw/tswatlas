@@ -111,80 +111,80 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
 
   const bottomPosition = calculateBottom();
 
+  // Calculate the input bar height (approximately)
+  const inputBarHeight = messages.length > 0 ? 120 : 80; // With or without clear button
+
   return (
     <div 
       className={cn(
-        "flex flex-col flex-1 min-h-0 bg-background overflow-hidden",
+        "flex flex-col flex-1 min-h-0 bg-background overflow-hidden relative",
         isAndroid && "android-flex-fill"
       )}
-      style={{ touchAction: 'none' }}
     >
       <ScrollArea
         className="flex-1 min-h-0 px-4 bg-background"
         ref={scrollRef}
-        style={{
-          paddingBottom: `${bottomPosition + 120}px`,
-        }}
       >
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center py-8">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-              <Sparkles className="w-8 h-8 text-primary" />
-            </div>
+        <div style={{ paddingBottom: `${bottomPosition + inputBarHeight}px` }}>
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center py-8">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <Sparkles className="w-8 h-8 text-primary" />
+              </div>
 
-            <h2 className="font-display font-semibold text-lg mb-2">Ask your AI Coach</h2>
-            <p className="text-sm text-muted-foreground mb-6 max-w-xs">
-              Get insights from your check-ins, photos, and trends.
-            </p>
+              <h2 className="font-display font-semibold text-lg mb-2">Ask your AI Coach</h2>
+              <p className="text-sm text-muted-foreground mb-6 max-w-xs">
+                Get insights from your check-ins, photos, and trends.
+              </p>
 
-            <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
-              {quickSuggestions.map((s) => (
-                <button
-                  key={s.label}
-                  onClick={() => handleSuggestionClick(s.prompt)}
-                  className="text-left p-3 rounded-2xl bg-card/70 border border-border/60 hover:bg-card transition-colors"
-                >
-                  <div className="text-sm font-semibold">{s.label}</div>
-                </button>
-              ))}
+              <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
+                {quickSuggestions.map((s) => (
+                  <button
+                    key={s.label}
+                    onClick={() => handleSuggestionClick(s.prompt)}
+                    className="text-left p-3 rounded-2xl bg-card/70 border border-border/60 hover:bg-card transition-colors"
+                  >
+                    <div className="text-sm font-semibold">{s.label}</div>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="py-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn('flex mb-3', message.role === 'user' ? 'justify-end' : 'justify-start')}
-              >
+          ) : (
+            <div className="py-4">
+              {messages.map((message) => (
                 <div
-                  className={cn(
-                    'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm',
-                    message.role === 'user'
-                      ? 'bg-primary text-primary-foreground rounded-br-md'
-                      : 'bg-muted rounded-bl-md'
-                  )}
+                  key={message.id}
+                  className={cn('flex mb-3', message.role === 'user' ? 'justify-end' : 'justify-start')}
                 >
-                  <p className="whitespace-pre-wrap">{message.content}</p>
+                  <div
+                    className={cn(
+                      'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm',
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground rounded-br-md'
+                        : 'bg-muted rounded-bl-md'
+                    )}
+                  >
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            {isLoading && messages[messages.length - 1]?.role === 'user' && (
-              <div className="flex justify-start">
-                <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-2.5">
-                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              {isLoading && messages[messages.length - 1]?.role === 'user' && (
+                <div className="flex justify-start">
+                  <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-2.5">
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </div>
       </ScrollArea>
 
       {/* Input Area */}
       <div
-        className="fixed left-0 right-0 border-t border-border p-4 bg-background"
+        className="absolute left-0 right-0 border-t border-border p-4 bg-background"
         style={{
-          // Uses safe-bottom + tab bar height (and on Android, keyboard overlap)
           bottom: `${bottomPosition}px`,
           zIndex: 50,
           transition: 'bottom 0.2s ease-out',
