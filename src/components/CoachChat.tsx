@@ -97,26 +97,19 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
     }
   };
 
-  // Calculate bottom position for Android fixed input bar
-  const getAndroidBottomPosition = () => {
+  // For keyboard, we need to lift the input bar above it
+  const getKeyboardOffset = () => {
+    if (!isAndroid || keyboardOverlap <= 0) return 0;
+    // When keyboard is open, we need to offset by keyboard minus nav bar (since nav hides)
     const safeBottom = getCssPxVar('--safe-bottom');
-    const navPlusSafe = BOTTOM_NAV_CONTENT_HEIGHT + safeBottom + 16;
-
-    if (keyboardOverlap > 0) {
-      return Math.max(keyboardOverlap, navPlusSafe);
-    }
-    return navPlusSafe;
+    const navHeight = BOTTOM_NAV_CONTENT_HEIGHT + safeBottom;
+    return Math.max(0, keyboardOverlap - navHeight);
   };
 
-  const androidBottomPosition = isAndroid ? getAndroidBottomPosition() : 0;
+  const keyboardOffset = getKeyboardOffset();
 
   // Calculate the input bar height (approximately)
   const inputBarHeight = messages.length > 0 ? 120 : 80; // With or without clear button
-
-  // On Android, we need extra padding to account for fixed input bar + nav
-  const scrollPaddingBottom = isAndroid 
-    ? androidBottomPosition + inputBarHeight 
-    : inputBarHeight + 16;
 
   return (
     <div 
@@ -132,7 +125,7 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
         ref={scrollRef}
         style={{ overscrollBehavior: 'contain' }}
       >
-        <div style={{ paddingBottom: `${scrollPaddingBottom}px` }}>
+        <div style={{ paddingBottom: `${inputBarHeight + 16}px` }}>
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center py-8">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -188,17 +181,14 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
         </div>
       </ScrollArea>
 
-      {/* Input Area - fixed on Android, flex child on iOS */}
+      {/* Input Area - positioned at bottom of this flex container */}
       <div
-        className={cn(
-          "border-t border-border p-4 bg-background",
-          isAndroid ? "fixed left-0 right-0" : "shrink-0"
-        )}
-        style={isAndroid ? {
-          bottom: `${androidBottomPosition}px`,
-          zIndex: 50,
-          transition: 'bottom 0.2s ease-out',
-        } : undefined}
+        className="shrink-0 border-t border-border p-4 bg-background"
+        style={{
+          // Only add offset when Android keyboard is open
+          marginBottom: keyboardOffset > 0 ? `${keyboardOffset}px` : undefined,
+          transition: 'margin-bottom 0.2s ease-out',
+        }}
       >
         {messages.length > 0 && (
           <div className="flex justify-end mb-2">
