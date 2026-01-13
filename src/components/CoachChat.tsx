@@ -97,19 +97,16 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
     }
   };
 
-  const calculateBottom = () => {
+  // For keyboard, we need to lift the input bar above it
+  const getKeyboardOffset = () => {
+    if (!isAndroid || keyboardOverlap <= 0) return 0;
+    // When keyboard is open, we need to offset by keyboard minus nav bar (since nav hides)
     const safeBottom = getCssPxVar('--safe-bottom');
-    const navPlusSafe = BOTTOM_NAV_CONTENT_HEIGHT + safeBottom + 16;
-
-    if (!isAndroid) return navPlusSafe;
-
-    if (keyboardOverlap > 0) {
-      return Math.max(keyboardOverlap, navPlusSafe);
-    }
-    return navPlusSafe;
+    const navHeight = BOTTOM_NAV_CONTENT_HEIGHT + safeBottom;
+    return Math.max(0, keyboardOverlap - navHeight);
   };
 
-  const bottomPosition = calculateBottom();
+  const keyboardOffset = getKeyboardOffset();
 
   // Calculate the input bar height (approximately)
   const inputBarHeight = messages.length > 0 ? 120 : 80; // With or without clear button
@@ -117,15 +114,16 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
   return (
     <div 
       className={cn(
-        "flex flex-col flex-1 min-h-0 bg-background overflow-hidden relative",
+        "flex flex-col flex-1 min-h-0 bg-background overflow-hidden",
         isAndroid && "android-flex-fill"
       )}
     >
+      {/* Scrollable chat area */}
       <ScrollArea
         className="flex-1 min-h-0 px-4 bg-background"
         ref={scrollRef}
       >
-        <div style={{ paddingBottom: `${bottomPosition + inputBarHeight}px` }}>
+        <div style={{ paddingBottom: `${inputBarHeight + 16}px` }}>
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center py-8">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -181,13 +179,13 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
         </div>
       </ScrollArea>
 
-      {/* Input Area */}
+      {/* Input Area - positioned at bottom of this flex container */}
       <div
-        className="absolute left-0 right-0 border-t border-border p-4 bg-background"
+        className="shrink-0 border-t border-border p-4 bg-background"
         style={{
-          bottom: `${bottomPosition}px`,
-          zIndex: 50,
-          transition: 'bottom 0.2s ease-out',
+          // Only add offset when Android keyboard is open
+          marginBottom: keyboardOffset > 0 ? `${keyboardOffset}px` : undefined,
+          transition: 'margin-bottom 0.2s ease-out',
         }}
       >
         {messages.length > 0 && (
