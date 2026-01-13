@@ -14,11 +14,32 @@ posthog.init('phc_ioqVGTp9J1lA0SMfDVKEAibkUVtZTaWuwDR8n81zWhx', {
   persistence: 'localStorage',
 });
 
+const platform = Capacitor.getPlatform();
+
+// A) Add Android platform class to document
+if (platform === 'android') {
+  document.documentElement.classList.add('platform-android');
+  document.body.classList.add('platform-android');
+}
+
+// B) Create robust viewport height CSS variable for Android only
+// Uses visualViewport API when available for accurate measurement
+if (platform === 'android') {
+  const updateAppVh = () => {
+    const vh = (window.visualViewport?.height ?? window.innerHeight) * 0.01;
+    document.documentElement.style.setProperty('--app-vh', `${vh}px`);
+  };
+  
+  updateAppVh();
+  window.addEventListener('resize', updateAppVh);
+  window.visualViewport?.addEventListener('resize', updateAppVh);
+}
+
 // Initialize safe area insets for both iOS and Android
 if (Capacitor.isNativePlatform()) {
   SafeArea.getSafeAreaInsets().then(({ insets }) => {
     console.log('SafeArea insets - top:', insets.top, 'bottom:', insets.bottom, 'left:', insets.left, 'right:', insets.right);
-    console.log('Platform:', Capacitor.getPlatform());
+    console.log('Platform:', platform);
     
     const root = document.documentElement;
     

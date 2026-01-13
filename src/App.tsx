@@ -46,6 +46,9 @@ const AdminPage = lazy(() => import("@/pages/AdminPage"));
 const PWAInstallPrompt = lazy(() => import("@/components/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
 const AppUpdateBanner = lazy(() => import("@/components/AppUpdateBanner").then(m => ({ default: m.AppUpdateBanner })));
 
+// F) Android debug panel - lazy loaded, shown only with ?insetsDebug=1 on Android
+const AndroidDebugPanel = lazy(() => import("@/components/AndroidDebugPanel"));
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -120,6 +123,10 @@ const App = () => (
         <IOSKeyboardProvider>
           <LayoutProvider>
             <TooltipProvider>
+              {/* F) Android Debug Panel - visible only with ?insetsDebug=1 on Android */}
+              <Suspense fallback={null}>
+                <AndroidDebugPanel />
+              </Suspense>
               <BrowserRouter>
                 <DeepLinkHandler>
                   <Routes>

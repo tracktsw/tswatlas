@@ -426,6 +426,49 @@ body {
   .safe-area-bottom { padding-bottom: var(--safe-bottom); }
   .safe-area-top-offset { top: var(--safe-top); }
   .safe-area-bottom-offset { bottom: var(--safe-bottom); }
+
+  /* =========================================================
+     ANDROID 15/16 EDGE-TO-EDGE FIXES
+     Applied ONLY when platform-android class is present
+     ========================================================= */
+  
+  /* B) Android-only: reliable viewport height using measured --app-vh */
+  .android-full-height {
+    height: calc(var(--app-vh, 1vh) * 100);
+  }
+  
+  .android-min-full-height {
+    min-height: calc(var(--app-vh, 1vh) * 100);
+  }
+}
+
+/* C) Android inset normalization - single source of truth */
+:root.platform-android {
+  --app-inset-top: var(--safe-area-inset-top, 0px);
+  --app-inset-bottom: var(--safe-area-inset-bottom, 0px);
+}
+
+/* D) Ensure background paints through system nav area on Android */
+html.platform-android,
+body.platform-android {
+  background-color: hsl(var(--background));
+}
+
+/* D) Bottom nav background extension for Android - pseudo-element approach */
+.platform-android .bottom-nav-android-extend {
+  position: relative;
+}
+
+.platform-android .bottom-nav-android-extend::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--safe-bottom, 0px);
+  background: inherit;
+  transform: translateY(100%);
+  pointer-events: none;
 }
 
 @keyframes fadeIn {

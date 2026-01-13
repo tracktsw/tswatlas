@@ -8,6 +8,7 @@ import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { OnboardingProgress } from './OnboardingProgress';
 import { FloatingLeaf } from './FloatingLeaf';
 import { Capacitor } from '@capacitor/core';
+import { cn } from '@/lib/utils';
 
 export const OnboardingScreen2: React.FC = () => {
   const { nextScreen, prevScreen, skipOnboarding } = useOnboarding();
@@ -58,8 +59,17 @@ export const OnboardingScreen2: React.FC = () => {
     },
   ];
 
+  // E) Fix onboarding squish: Use measured viewport height on Android, 100svh on iOS
+  const isAndroid = platform === 'android';
+
   return (
-    <div className="flex flex-col bg-background relative box-border overflow-hidden" style={{ height: '100svh' }}>
+    <div 
+      className={cn(
+        "flex flex-col bg-background relative box-border overflow-hidden",
+        isAndroid && "android-full-height"
+      )}
+      style={!isAndroid ? { height: '100svh' } : undefined}
+    >
       <FloatingLeaf />
 
       {/* Header */}
