@@ -181,10 +181,13 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
         </div>
       </ScrollArea>
 
-      {/* Input Area - positioned at bottom of this flex container */}
+      {/* Input Area - sticky at bottom, always visible */}
       <div
         className="shrink-0 border-t border-border p-4 bg-background"
         style={{
+          position: 'sticky',
+          bottom: 0,
+          zIndex: 10,
           // Only add offset when Android keyboard is open
           marginBottom: keyboardOffset > 0 ? `${keyboardOffset}px` : undefined,
           transition: 'margin-bottom 0.2s ease-out',
