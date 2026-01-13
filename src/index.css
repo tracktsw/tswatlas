@@ -432,15 +432,6 @@ body {
      Applied ONLY when platform-android class is present
      ========================================================= */
   
-  /* B) Android-only: reliable viewport height using measured --app-vh */
-  .android-full-height {
-    height: calc(var(--app-vh, 1vh) * 100);
-  }
-  
-  .android-min-full-height {
-    min-height: calc(var(--app-vh, 1vh) * 100);
-  }
-
   /* Android page height - accounts for safe areas and nav bar */
   .android-page-height {
     height: calc(var(--app-vh, 1vh) * 100);
@@ -452,6 +443,35 @@ body {
     flex: 1;
     min-height: 0;
   }
+}
+
+/* =========================================================
+   ANDROID ONBOARDING LAYOUT FIXES (Android 15/16)
+   Uses 100dvh for reliable dynamic viewport height.
+   Applied ONLY via .platform-android class on <html>.
+   ========================================================= */
+
+/* Android onboarding container: use 100dvh for proper sizing */
+.platform-android .android-onboarding-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+/* Android onboarding content: flex-1 with scroll when needed */
+.platform-android .android-onboarding-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Android onboarding header/footer: no shrink */
+.platform-android .android-onboarding-fixed {
+  flex-shrink: 0;
 }
 
 /* C) Android inset normalization - single source of truth */

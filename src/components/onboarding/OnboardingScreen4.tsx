@@ -51,8 +51,8 @@ export const OnboardingScreen4: React.FC = () => {
   return (
     <div 
       className={cn(
-        "flex flex-col bg-background relative box-border overflow-hidden",
-        isAndroid && "android-full-height"
+        "flex flex-col bg-background relative box-border",
+        isAndroid ? "android-onboarding-root" : "overflow-hidden"
       )}
       style={!isAndroid ? { height: '100svh' } : undefined}
     >
@@ -61,7 +61,10 @@ export const OnboardingScreen4: React.FC = () => {
       
       {/* Header with back and skip - with safe area padding */}
       <motion.div 
-        className="flex items-center justify-between px-4 shrink-0"
+        className={cn(
+          "flex items-center justify-between px-4 shrink-0",
+          isAndroid && "android-onboarding-fixed"
+        )}
         style={{
           paddingTop:
             platform === 'ios'
@@ -89,7 +92,10 @@ export const OnboardingScreen4: React.FC = () => {
       </motion.div>
 
       {/* Main content - centered like other screens */}
-      <div className="flex-1 flex flex-col justify-center px-6 min-h-0 overflow-y-auto">
+      <div className={cn(
+        "flex-1 flex flex-col justify-center px-6 min-h-0 overflow-y-auto",
+        isAndroid && "android-onboarding-content"
+      )}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -136,7 +142,7 @@ export const OnboardingScreen4: React.FC = () => {
 
       {/* Footer with progress and CTA - with safe area padding */}
       <div
-        className="px-6 shrink-0 space-y-4"
+        className={cn("px-6 shrink-0 space-y-4", isAndroid && "android-onboarding-fixed")}
         style={{
           paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 24px)',
         }}

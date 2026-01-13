@@ -65,8 +65,8 @@ export const OnboardingScreen2: React.FC = () => {
   return (
     <div 
       className={cn(
-        "flex flex-col bg-background relative box-border overflow-hidden",
-        isAndroid && "android-full-height"
+        "flex flex-col bg-background relative box-border",
+        isAndroid ? "android-onboarding-root" : "overflow-hidden"
       )}
       style={!isAndroid ? { height: '100svh' } : undefined}
     >
@@ -74,7 +74,10 @@ export const OnboardingScreen2: React.FC = () => {
 
       {/* Header */}
       <motion.div
-        className="flex items-center justify-between px-4 shrink-0"
+        className={cn(
+          "flex items-center justify-between px-4 shrink-0",
+          isAndroid && "android-onboarding-fixed"
+        )}
         style={{
           paddingTop:
             platform === 'ios'
@@ -103,7 +106,10 @@ export const OnboardingScreen2: React.FC = () => {
       </motion.div>
 
       {/* Main content (standardized: left-aligned, consistent start) */}
-      <div className="flex-1 flex flex-col px-6 min-h-0 overflow-y-auto">
+      <div className={cn(
+        "flex-1 flex flex-col px-6 min-h-0 overflow-y-auto",
+        isAndroid && "android-onboarding-content"
+      )}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -152,7 +158,7 @@ export const OnboardingScreen2: React.FC = () => {
       </div>
 
       {/* Footer */}
-      <div className="px-6 space-y-4 shrink-0" style={{ paddingBottom: 'calc(var(--safe-bottom, 0px) + 16px)' }}>
+      <div className={cn("px-6 space-y-4 shrink-0", isAndroid && "android-onboarding-fixed")} style={{ paddingBottom: 'calc(var(--safe-bottom, 0px) + 16px)' }}>
         <OnboardingProgress current={1} total={4} />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
