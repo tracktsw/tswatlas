@@ -434,8 +434,9 @@ body {
   
   /* Android page height - accounts for safe areas and nav bar */
   .android-page-height {
-    height: calc(var(--app-vh, 1vh) * 100);
-    max-height: calc(var(--app-vh, 1vh) * 100);
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
   }
 
   /* Android flex fill - for flex children that should fill available space */

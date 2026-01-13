@@ -1,4 +1,5 @@
 // CoachPage.tsx
+import { useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
 import { CoachChat } from '@/components/CoachChat';
 import { useAICoach } from '@/hooks/useAICoach';
@@ -10,6 +11,22 @@ const CoachPage = () => {
   const { messages, isLoading, sendMessage, clearChat } = useAICoach();
   const platform = Capacitor.getPlatform();
   const isAndroid = platform === 'android';
+
+  // Prevent document/body scrolling on Android to keep input visible
+  useEffect(() => {
+    if (!isAndroid) return;
+
+    const prevOverflow = document.body.style.overflow;
+    const prevHeight = document.body.style.height;
+
+    document.body.style.overflow = 'hidden';
+    document.body.style.height = '100dvh';
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.height = prevHeight;
+    };
+  }, [isAndroid]);
 
   return (
     <PaywallGuard feature="AI Coach">
