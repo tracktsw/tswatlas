@@ -65,7 +65,7 @@ const Layout = () => {
       <main
         className={cn(
           "flex-1 min-h-0 overscroll-contain",
-          !hideBottomNav && "pb-14",
+          !hideBottomNav && "pb-20",
           isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto"
         )}
       >
