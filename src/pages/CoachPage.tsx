@@ -13,20 +13,26 @@ const CoachPage = () => {
 
   return (
     <PaywallGuard feature="AI Coach">
-      <div className={cn(
-        "flex flex-col h-full relative bg-background overflow-hidden",
-        isAndroid && "android-page-height"
-      )}>
+      <div 
+        className={cn(
+          "flex flex-col h-full relative bg-background overflow-hidden",
+          isAndroid && "android-page-height"
+        )}
+        style={{ 
+          overscrollBehavior: 'none',
+          touchAction: 'pan-x pan-y',
+        }}
+      >
         {/* Header - fixed, never scrolls */}
         <div
           className="px-4 border-b border-border/60 bg-card/50 backdrop-blur-sm shrink-0 z-10"
           style={{
-            // iOS already has a large safe top; don't over-add extra spacing.
             paddingTop:
               platform === 'ios'
                 ? 'calc(var(--safe-top, 0px) + 2px)'
                 : 'calc(var(--safe-top, 0px) + 8px)',
             paddingBottom: '12px',
+            touchAction: 'none',
           }}
         >
           <div className="flex items-center gap-3">
