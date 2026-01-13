@@ -129,7 +129,7 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
       {/* Input Area - shrink-0 keeps it at natural height, never scrolls */}
       <div className={cn(
         "shrink-0 border-t border-border bg-background",
-        isAndroid ? "px-3 py-2" : "p-4"
+        isAndroid ? "px-3 pt-2 pb-1" : "p-4"
       )}>
         {messages.length > 0 && (
           <div className="flex justify-end mb-2">
