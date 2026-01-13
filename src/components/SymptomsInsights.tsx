@@ -274,16 +274,16 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
     return max;
   }, [weeklyTrend]);
 
-  // Colors for symptoms
+  // Colors for symptoms - distinct palette
   const symptomColors: Record<string, string> = {
-    'Burning': 'bg-red-400',
-    'Itching': 'bg-orange-400',
-    'Thermodysregulation': 'bg-purple-400',
-    'Flaking': 'bg-amber-400',
+    'Burning': 'bg-red-500',
+    'Itching': 'bg-blue-500',
+    'Thermodysregulation': 'bg-purple-500',
+    'Flaking': 'bg-cyan-500',
     'Oozing': 'bg-yellow-500',
-    'Swelling': 'bg-pink-400',
-    'Redness': 'bg-rose-400',
-    'Insomnia': 'bg-indigo-400',
+    'Swelling': 'bg-green-500',
+    'Redness': 'bg-rose-500',
+    'Insomnia': 'bg-indigo-500',
   };
 
   return (
@@ -513,14 +513,14 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                                 .join(' ');
                               
                               const colorMap: Record<string, string> = {
-                                'Burning': '#f87171',
-                                'Itching': '#fb923c',
+                                'Burning': '#ef4444',
+                                'Itching': '#3b82f6',
                                 'Thermodysregulation': '#a855f7',
-                                'Flaking': '#fbbf24',
+                                'Flaking': '#06b6d4',
                                 'Oozing': '#eab308',
-                                'Swelling': '#f472b6',
-                                'Redness': '#fb7185',
-                                'Insomnia': '#818cf8',
+                                'Swelling': '#22c55e',
+                                'Redness': '#f43f5e',
+                                'Insomnia': '#6366f1',
                               };
                               
                               return (
