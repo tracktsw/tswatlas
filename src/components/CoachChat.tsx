@@ -118,18 +118,14 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
   return (
     <div
       className={cn(
-        "flex flex-col flex-1 min-h-0 bg-background overflow-hidden",
+        "relative flex-1 min-h-0 bg-background overflow-hidden",
         isAndroid && "android-flex-fill"
       )}
-      style={{
-        overscrollBehavior: 'contain',
-        // Add padding at bottom for nav bar on Android (only when keyboard is closed)
-        paddingBottom: isAndroid && keyboardOffset === 0 ? `${navBarHeight}px` : undefined,
-      }}
+      style={{ overscrollBehavior: 'contain' }}
     >
       {/* Scrollable chat area */}
       <ScrollArea
-        className="flex-1 min-h-0 px-4 bg-background"
+        className="absolute inset-0 px-4 bg-background"
         ref={scrollRef}
         style={{ overscrollBehavior: 'contain' }}
       >
@@ -189,13 +185,13 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
         </div>
       </ScrollArea>
 
-      {/* Input Area - positioned at bottom of this flex container */}
+      {/* Input Area - absolutely positioned at bottom */}
       <div
-        className="shrink-0 border-t border-border p-4 bg-background"
+        className="absolute left-0 right-0 border-t border-border p-4 bg-background"
         style={{
-          // Only lift above keyboard when keyboard is open on Android
-          marginBottom: isAndroid && keyboardOffset > 0 ? `${keyboardOffset}px` : undefined,
-          transition: 'margin-bottom 0.2s ease-out',
+          // Position above nav bar on Android, or above keyboard when open
+          bottom: isAndroid ? (keyboardOffset > 0 ? `${keyboardOffset}px` : `${navBarHeight}px`) : 0,
+          transition: 'bottom 0.2s ease-out',
         }}
       >
         {messages.length > 0 && (
