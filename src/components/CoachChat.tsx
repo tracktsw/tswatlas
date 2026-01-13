@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { usePlatform } from '@/hooks/usePlatform';
 import type { ChatMessage } from '@/hooks/useAICoach';
 
 interface CoachChatProps {
@@ -25,6 +26,8 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { platform } = usePlatform();
+  const isAndroid = platform === 'android';
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -124,7 +127,10 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
       </ScrollArea>
 
       {/* Input Area - shrink-0 keeps it at natural height, never scrolls */}
-      <div className="shrink-0 border-t border-border p-4 bg-background">
+      <div className={cn(
+        "shrink-0 border-t border-border bg-background",
+        isAndroid ? "px-3 py-2" : "p-4"
+      )}>
         {messages.length > 0 && (
           <div className="flex justify-end mb-2">
             <Button
@@ -146,11 +152,16 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask about your TSW journey..."
-            className="min-h-[44px] max-h-32 resize-none"
+            className={isAndroid ? "min-h-[36px] max-h-28 resize-none py-2 text-sm" : "min-h-[44px] max-h-32 resize-none"}
             rows={1}
             disabled={isLoading}
           />
-          <Button type="submit" size="icon" disabled={!input.trim() || isLoading} className="shrink-0">
+          <Button 
+            type="submit" 
+            size="icon" 
+            disabled={!input.trim() || isLoading} 
+            className={isAndroid ? "h-9 w-9 shrink-0" : "shrink-0"}
+          >
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </Button>
         </form>
