@@ -106,9 +106,12 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
   const bottomPosition = calculateBottom();
 
   return (
-    <div className="flex flex-col h-full">
+    <div className={cn(
+      "flex flex-col h-full bg-background",
+      isAndroid && "android-flex-fill"
+    )}>
       <ScrollArea
-        className="flex-1 px-4"
+        className="flex-1 px-4 bg-background"
         ref={scrollRef}
         style={{
           paddingBottom: `${bottomPosition + 120}px`,
@@ -170,9 +173,9 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
 
       {/* Input Area */}
       <div
-        className="fixed left-0 right-0 border-t border-border p-4 bg-background"
+        className="fixed left-0 right-0 border-t border-border p-4 bg-card"
         style={{
-          bottom: `${bottomPosition}px`,
+          bottom: isAndroid ? `calc(var(--safe-bottom, 0px) + 64px + 16px)` : `${bottomPosition}px`,
           zIndex: 50,
           transition: 'bottom 0.2s ease-out',
         }}
