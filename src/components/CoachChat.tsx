@@ -44,11 +44,17 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
     const calculateKeyboardOverlap = () => {
       if (!window.visualViewport) return;
 
-      const vvBottom = window.visualViewport.offsetTop + window.visualViewport.height;
+      const vv = window.visualViewport;
+      const vvBottom = vv.offsetTop + vv.height;
       const layoutBottom = window.innerHeight;
-      const overlap = Math.max(0, layoutBottom - vvBottom);
+      const rawOverlap = Math.max(0, layoutBottom - vvBottom);
 
-      setKeyboardOverlap(overlap);
+      // Android 15+ edge-to-edge can report a non-zero offset even with no keyboard.
+      // Treat it as "keyboard" only when the viewport shrinks meaningfully.
+      const heightDelta = Math.max(0, window.innerHeight - vv.height);
+      const isKeyboardLikelyOpen = heightDelta > 120;
+
+      setKeyboardOverlap(isKeyboardLikelyOpen ? rawOverlap : 0);
     };
 
     window.visualViewport.addEventListener('resize', calculateKeyboardOverlap, { passive: true });
@@ -173,9 +179,10 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
 
       {/* Input Area */}
       <div
-        className="fixed left-0 right-0 border-t border-border p-4 bg-card"
+        className="fixed left-0 right-0 border-t border-border p-4 bg-background"
         style={{
-          bottom: isAndroid ? `calc(var(--safe-bottom, 0px) + 64px + 16px)` : `${bottomPosition}px`,
+          // Uses safe-bottom + tab bar height (and on Android, keyboard overlap)
+          bottom: `${bottomPosition}px`,
           zIndex: 50,
           transition: 'bottom 0.2s ease-out',
         }}
