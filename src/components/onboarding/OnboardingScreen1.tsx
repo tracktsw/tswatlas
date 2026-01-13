@@ -1,3 +1,4 @@
+// OnboardingScreen1.tsx
 import React from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp } from 'lucide-react';
@@ -5,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
-import { useSafeArea } from '@/hooks/useSafeArea';
+import { Capacitor } from '@capacitor/core';
 import trackTswLogo from '@/assets/tracktsw-logo-transparent.png';
 import { FloatingLeaf } from './FloatingLeaf';
 
@@ -13,7 +14,7 @@ export const OnboardingScreen1: React.FC = () => {
   const { nextScreen, skipOnboarding } = useOnboarding();
   const navigate = useNavigate();
   const { impact } = useHapticFeedback();
-  const safeArea = useSafeArea();
+  const platform = Capacitor.getPlatform();
 
   const handleSkip = async () => {
     await impact('light');
@@ -27,20 +28,18 @@ export const OnboardingScreen1: React.FC = () => {
   };
 
   return (
-    <div 
-      className="flex flex-col bg-background relative box-border overflow-hidden"
-      style={{ 
-        height: '100svh',
-        paddingTop: 'var(--safe-top, 0px)',
-        paddingBottom: 'var(--safe-bottom, 0px)'
-      }}
-    >
-      {/* Floating leaf animation */}
+    <div className="flex flex-col bg-background relative box-border overflow-hidden" style={{ height: '100svh' }}>
       <FloatingLeaf />
-      
-      {/* Header with logo and skip button */}
-      <motion.div 
-        className="flex items-center justify-between px-4 pt-4 shrink-0"
+
+      {/* Header */}
+      <motion.div
+        className="flex items-center justify-between px-4 shrink-0"
+        style={{
+          paddingTop:
+            platform === 'ios'
+              ? 'calc(var(--safe-top, 0px) + 6px)'
+              : 'calc(var(--safe-top, 0px) + 12px)',
+        }}
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
@@ -66,19 +65,17 @@ export const OnboardingScreen1: React.FC = () => {
           transition={{ duration: 0.5, ease: 'easeOut' }}
           className="space-y-6"
         >
-          {/* Headlines */}
           <div className="space-y-3">
-            <motion.h1 
+            <motion.h1
               className="font-display text-3xl md:text-4xl font-bold text-foreground leading-tight"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.4 }}
             >
-              Stop Guessing.{' '}
-              <span className="text-anchor">Start Healing.</span>
+              Stop Guessing. <span className="text-anchor">Start Healing.</span>
             </motion.h1>
-            
-            <motion.p 
+
+            <motion.p
               className="text-muted-foreground text-lg leading-relaxed"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -88,8 +85,7 @@ export const OnboardingScreen1: React.FC = () => {
             </motion.p>
           </div>
 
-          {/* Visual illustration - minimalist upward trend */}
-          <motion.div 
+          <motion.div
             className="py-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -103,10 +99,10 @@ export const OnboardingScreen1: React.FC = () => {
                     className="w-6 rounded-t-lg bg-gradient-to-t from-[#F4C753]/40 to-[#F4C753]"
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: `${height}%`, opacity: 1 }}
-                    transition={{ 
-                      delay: 0.6 + i * 0.15, 
-                      duration: 0.5, 
-                      ease: 'easeOut' 
+                    transition={{
+                      delay: 0.6 + i * 0.15,
+                      duration: 0.5,
+                      ease: 'easeOut',
                     }}
                   />
                 ))}
@@ -120,17 +116,19 @@ export const OnboardingScreen1: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* CTA Button */}
-      <div className="px-6 pb-6 shrink-0">
+      {/* CTA */}
+      <div
+        className="px-6 shrink-0"
+        style={{
+          paddingBottom: 'calc(var(--safe-bottom, 0px) + 16px)',
+        }}
+      >
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8, duration: 0.4 }}
         >
-          <Button 
-            onClick={handleContinue}
-            className="w-full h-14 text-base font-semibold bg-primary hover:bg-primary/90"
-          >
+          <Button onClick={handleContinue} className="w-full h-14 text-base font-semibold bg-primary hover:bg-primary/90">
             See How It Works
           </Button>
         </motion.div>

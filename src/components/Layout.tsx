@@ -13,9 +13,8 @@ import { cn } from '@/lib/utils';
 const Layout = () => {
   const { hideBottomNav } = useLayout();
   const { reminderSettings, checkIns, userId, isLoading } = useUserData();
-  const { isKeyboardOpen, isIOS, isAndroid } = useIOSKeyboardContext();
+  const { isKeyboardOpen, isIOS } = useIOSKeyboardContext();
   const navigate = useNavigate();
-  const platform = Capacitor.getPlatform();
 
   const {
     shouldShowReminder,
@@ -53,17 +52,8 @@ const Layout = () => {
   }, [reminderSettings, userId, isLoading]);
 
   return (
-    <div 
-      className={cn(
-        "h-[100dvh] bg-background flex flex-col overflow-hidden"
-      )}
-      style={
-        platform === 'ios' 
-          ? { paddingTop: 'var(--safe-top,0px)', paddingBottom: 'var(--safe-bottom,0px)' }
-          : undefined
-      }
-    >
-      {/* Reminder banner - shows when due and user hasn't checked in */}
+    <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
+      {/* Reminder banner */}
       {!isLoading && shouldShowReminder && reminderType && (
         <ReminderBanner
           reminderType={reminderType}
@@ -71,15 +61,17 @@ const Layout = () => {
           onSnooze={snoozeReminder}
         />
       )}
-      
-      <main className={cn(
-        "flex-1 min-h-0 overscroll-contain",
-        !hideBottomNav && "pb-20",
-        // On iOS when keyboard is open, prevent scrolling to stop page jump
-        isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto"
-      )}>
+
+      <main
+        className={cn(
+          "flex-1 min-h-0 overscroll-contain",
+          !hideBottomNav && "pb-20",
+          isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto"
+        )}
+      >
         <Outlet />
       </main>
+
       {!hideBottomNav && <BottomNav />}
     </div>
   );

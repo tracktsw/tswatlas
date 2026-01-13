@@ -1,3 +1,4 @@
+// BottomNav.tsx
 import { useMemo, useRef, useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Camera, CheckCircle, BarChart3, Users, Leaf } from 'lucide-react';
@@ -13,7 +14,6 @@ const navItems = [
   { path: '/coach', icon: Leaf, label: 'Coach' },
 ];
 
-// Map paths to lazy import functions for preloading
 const pageImports: Record<string, () => Promise<unknown>> = {
   '/': () => import('@/pages/HomePage'),
   '/photos': () => import('@/pages/PhotoDiaryPage'),
@@ -36,7 +36,6 @@ const BottomNav = () => {
     return index >= 0 ? index : 0;
   }, [location.pathname]);
 
-  // Calculate indicator position based on ACTUAL element positions
   const updateIndicator = () => {
     const activeItem = itemRefs.current[activeIndex];
     if (!activeItem || !containerRef.current) return;
@@ -59,10 +58,8 @@ const BottomNav = () => {
     return () => window.removeEventListener('resize', updateIndicator);
   }, [activeIndex]);
 
-  // Preload route on hover for faster navigation
-  const handleMouseEnter = useCallback((path: string) => {
+  const handlePreload = useCallback((path: string) => {
     if (preloadedRoutes.current.has(path)) return;
-    
     const importFn = pageImports[path];
     if (importFn) {
       preloadedRoutes.current.add(path);
@@ -70,58 +67,68 @@ const BottomNav = () => {
     }
   }, []);
 
-  // Preload on touch start for mobile
-  const handleTouchStart = useCallback((path: string) => {
-    handleMouseEnter(path);
-  }, [handleMouseEnter]);
+  // Optional iOS shave: reduce perceived empty space under the bar while keeping gesture safety.
+  const paddingBottom =
+    platform === 'ios'
+      ? 'max(calc(var(--safe-bottom, 0px) - 8px), 0px)'
+      : 'var(--safe-bottom, 0px)';
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50">
-      <div className="bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg">
-        <div 
-          ref={containerRef}
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg"
+      style={{
+        paddingBottom,
+        paddingLeft: 'var(--safe-area-inset-left, 0px)',
+        paddingRight: 'var(--safe-area-inset-right, 0px)',
+      }}
+    >
+      <div
+        ref={containerRef}
         className={cn(
           "flex items-center justify-around px-1 max-w-lg md:max-w-none md:px-8 lg:px-12 mx-auto relative",
-          platform === 'ios' ? "py-2.5 md:py-3" : "py-3"
+          // iOS: compact content height; Android: keep current
+          platform === 'ios' ? "py-1" : "py-1 sm:py-1.5"
         )}
-        >
-          {/* Sliding indicator - Pure CSS for 60fps */}
-          <div
-            className="absolute top-1/2 h-[44px] bg-anchor/8 rounded-2xl pointer-events-none transition-all duration-300 ease-out"
-            style={{
-              transform: `translate3d(${indicatorStyle.x}px, -50%, 0)`,
-              width: `${indicatorStyle.width}px`,
-              willChange: 'transform, width',
-            }}
-          />
+      >
+        <div
+          className="absolute top-1/2 h-[32px] bg-anchor/8 rounded-2xl pointer-events-none transition-all duration-300 ease-out"
+          style={{
+            transform: `translate3d(${indicatorStyle.x}px, -50%, 0)`,
+            width: `${indicatorStyle.width}px`,
+            willChange: 'transform, width',
+          }}
+        />
 
-          {navItems.map(({ path, icon: Icon, label }, index) => {
-            const isActive = location.pathname === path;
-            return (
-              <NavLink
-                key={path}
-                to={path}
-                ref={(el) => (itemRefs.current[index] = el)}
-                onMouseEnter={() => handleMouseEnter(path)}
-                onTouchStart={() => handleTouchStart(path)}
+        {navItems.map(({ path, icon: Icon, label }, index) => {
+          const isActive = location.pathname === path;
+          return (
+            <NavLink
+              key={path}
+              to={path}
+              ref={(el) => (itemRefs.current[index] = el)}
+              onMouseEnter={() => handlePreload(path)}
+              onTouchStart={() => handlePreload(path)}
+              className={cn(
+                platform === 'ios'
+                  ? 'flex flex-col items-center gap-0.5 min-w-[56px] md:min-w-[72px] px-2 md:px-3 py-1 rounded-2xl transition-colors duration-200 z-10'
+                  : 'flex flex-col items-center gap-0.5 min-w-[56px] md:min-w-[72px] px-2 md:px-3 py-1.5 sm:py-2 rounded-2xl transition-colors duration-200 z-10',
+                isActive ? 'text-anchor' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <div
                 className={cn(
-                  'flex flex-col items-center gap-1 min-w-[56px] md:min-w-[72px] px-2 md:px-3 py-2 rounded-2xl transition-colors duration-200 z-10',
-                  isActive
-                    ? 'text-anchor'
-                    : 'text-muted-foreground hover:text-foreground'
+                  platform === 'ios'
+                    ? 'p-1 rounded-xl transition-all duration-200'
+                    : 'p-1 sm:p-1.5 md:p-2 rounded-xl transition-all duration-200',
+                  isActive && 'bg-anchor/10'
                 )}
               >
-                <div className={cn(
-                  'p-1.5 md:p-2 rounded-xl transition-all duration-200',
-                  isActive && 'bg-anchor/10'
-                )}>
-                  <Icon className="w-5 h-5 md:w-6 md:h-6" strokeWidth={isActive ? 2.5 : 2} />
-                </div>
-                <span className="text-[10px] md:text-xs font-semibold whitespace-nowrap">{label}</span>
-              </NavLink>
-            );
-          })}
-        </div>
+                <Icon className="w-5 h-5 md:w-6 md:h-6" strokeWidth={isActive ? 2.5 : 2} />
+              </div>
+              <span className="text-[10px] md:text-xs font-semibold whitespace-nowrap">{label}</span>
+            </NavLink>
+          );
+        })}
       </div>
     </nav>
   );

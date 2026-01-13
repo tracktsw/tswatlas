@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
-import { useSafeArea } from '@/hooks/useSafeArea';
+import { Capacitor } from '@capacitor/core';
 import { OnboardingProgress } from './OnboardingProgress';
 import { FloatingLeaf } from './FloatingLeaf';
 import symptomsImage from '@/assets/onboarding-symptoms.png';
@@ -15,7 +15,7 @@ export const OnboardingScreen4: React.FC = () => {
   const { nextScreen, prevScreen, skipOnboarding } = useOnboarding();
   const navigate = useNavigate();
   const { impact } = useHapticFeedback();
-  const safeArea = useSafeArea();
+  const platform = Capacitor.getPlatform();
 
   const screenshots = [
     {
@@ -45,20 +45,19 @@ export const OnboardingScreen4: React.FC = () => {
   };
 
   return (
-    <div 
-      className="flex flex-col bg-background relative box-border overflow-hidden"
-      style={{ 
-        height: '100svh',
-        paddingTop: 'var(--safe-top, 0px)',
-        paddingBottom: 'var(--safe-bottom, 0px)'
-      }}
-    >
+    <div className="flex flex-col bg-background relative box-border overflow-hidden" style={{ height: '100svh' }}>
       {/* Floating leaf animation */}
       <FloatingLeaf />
       
-      {/* Header with back and skip */}
+      {/* Header with back and skip - with safe area padding */}
       <motion.div 
-        className="flex items-center justify-between px-4 pt-4 shrink-0"
+        className="flex items-center justify-between px-4 shrink-0"
+        style={{
+          paddingTop:
+            platform === 'ios'
+              ? 'calc(var(--safe-area-inset-top, 0px) + 6px)'
+              : 'calc(var(--safe-area-inset-top, 0px) + 12px)',
+        }}
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
@@ -125,8 +124,13 @@ export const OnboardingScreen4: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* Footer with progress and CTA - fixed at bottom */}
-      <div className="px-6 pb-6 space-y-4 shrink-0">
+      {/* Footer with progress and CTA - with safe area padding */}
+      <div
+        className="px-6 shrink-0 space-y-4"
+        style={{
+          paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 24px)',
+        }}
+      >
         <OnboardingProgress current={3} total={4} />
         <motion.div
           initial={{ opacity: 0, y: 20 }}

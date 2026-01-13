@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
-import { useSafeArea } from '@/hooks/useSafeArea';
+import { Capacitor } from '@capacitor/core';
 import { OnboardingProgress } from './OnboardingProgress';
 import { FloatingLeaf } from './FloatingLeaf';
 import { cn } from '@/lib/utils';
@@ -32,7 +32,7 @@ const hardestOptions = [
 const hopingOptions = [
   { value: 'triggers', label: 'Understand my triggers' },
   { value: 'track', label: 'Track symptoms properly' },
-  { value: 'improving', label: 'See if I\'m improving' },
+  { value: 'improving', label: "See if I'm improving" },
   { value: 'control', label: 'Feel more in control' },
   { value: 'reduce', label: 'Reduce flare frequency' },
   { value: 'exploring', label: 'Just exploring for now' },
@@ -42,7 +42,7 @@ export const OnboardingScreen5: React.FC = () => {
   const { prevScreen, skipOnboarding, completeOnboarding } = useOnboarding();
   const navigate = useNavigate();
   const { impact, selectionChanged, notification } = useHapticFeedback();
-  const safeArea = useSafeArea();
+  const platform = Capacitor.getPlatform();
 
   const [impactLevel, setImpactLevel] = useState<string | null>(null);
   const [hardest, setHardest] = useState<string | null>(null);
@@ -78,30 +78,27 @@ export const OnboardingScreen5: React.FC = () => {
 
   const handleContinue = async () => {
     if (!isComplete || !impactLevel || !hardest || !hoping) return;
-    
-    // Store survey answers in localStorage for sending after auth
+
     storePendingOnboardingSurvey(impactLevel, hardest, hoping);
-    
+
     await notification('success');
     completeOnboarding();
     navigate('/auth?mode=signup');
   };
 
   return (
-    <div 
-      className="flex flex-col bg-background relative box-border overflow-hidden"
-      style={{ 
-        height: '100svh',
-        paddingTop: 'var(--safe-top, 0px)',
-        paddingBottom: 'var(--safe-bottom, 0px)'
-      }}
-    >
-      {/* Floating leaf animation */}
+    <div className="flex flex-col bg-background relative box-border overflow-hidden" style={{ height: '100svh' }}>
       <FloatingLeaf />
-      
-      {/* Header with back and skip */}
-      <motion.div 
-        className="flex items-center justify-between px-4 pt-4 shrink-0"
+
+      {/* Header (standardized) */}
+      <motion.div
+        className="flex items-center justify-between px-4 shrink-0"
+        style={{
+          paddingTop:
+            platform === 'ios'
+              ? 'calc(var(--safe-top, 0px) + 4px)'
+              : 'calc(var(--safe-top, 0px) + 12px)',
+        }}
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
@@ -113,6 +110,7 @@ export const OnboardingScreen5: React.FC = () => {
         >
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
+
         <button
           onClick={handleSkip}
           className="text-muted-foreground text-sm font-medium px-3 py-2 hover:text-foreground transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
@@ -122,17 +120,17 @@ export const OnboardingScreen5: React.FC = () => {
         </button>
       </motion.div>
 
-      {/* Main content - centered like other screens */}
-      <div className="flex-1 flex flex-col justify-center px-6 min-h-0 overflow-y-auto">
+      {/* Main content (standardized wrapper) */}
+      <div className="flex-1 flex flex-col px-6 min-h-0 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
-          className="space-y-4 py-2"
+          className="py-4 space-y-6"
         >
-          {/* Headlines */}
+          {/* Headline (standardized) */}
           <div className="space-y-2">
-            <motion.h1 
+            <motion.h1
               className="font-display text-2xl md:text-3xl font-bold text-foreground leading-tight"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -142,7 +140,7 @@ export const OnboardingScreen5: React.FC = () => {
             </motion.h1>
           </div>
 
-          {/* Question 1: Impact Level */}
+          {/* Q1 */}
           <motion.div
             className="space-y-2"
             initial={{ opacity: 0, y: 10 }}
@@ -151,8 +149,11 @@ export const OnboardingScreen5: React.FC = () => {
           >
             <div className="flex items-center gap-2">
               <Activity className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">How much is TSW affecting your life right now?</span>
+              <span className="text-sm font-medium text-foreground">
+                How much is TSW affecting your life right now?
+              </span>
             </div>
+
             <div className="grid grid-cols-2 gap-2">
               {impactOptions.map((option) => (
                 <button
@@ -171,7 +172,7 @@ export const OnboardingScreen5: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Question 2: Hardest to deal with */}
+          {/* Q2 */}
           <motion.div
             className="space-y-2"
             initial={{ opacity: 0, y: 10 }}
@@ -180,8 +181,11 @@ export const OnboardingScreen5: React.FC = () => {
           >
             <div className="flex items-center gap-2">
               <Heart className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">What feels hardest to deal with right now?</span>
+              <span className="text-sm font-medium text-foreground">
+                What feels hardest to deal with right now?
+              </span>
             </div>
+
             <Select value={hardest || undefined} onValueChange={handleHardestChange}>
               <SelectTrigger className="w-full h-12 bg-card border-2 border-border rounded-xl">
                 <SelectValue placeholder="Select what's hardest..." />
@@ -196,7 +200,7 @@ export const OnboardingScreen5: React.FC = () => {
             </Select>
           </motion.div>
 
-          {/* Question 3: Hoping for */}
+          {/* Q3 */}
           <motion.div
             className="space-y-2"
             initial={{ opacity: 0, y: 10 }}
@@ -205,8 +209,11 @@ export const OnboardingScreen5: React.FC = () => {
           >
             <div className="flex items-center gap-2">
               <Target className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">What are you hoping this app will help you with most?</span>
+              <span className="text-sm font-medium text-foreground">
+                What are you hoping this app will help you with most?
+              </span>
             </div>
+
             <Select value={hoping || undefined} onValueChange={handleHopingChange}>
               <SelectTrigger className="w-full h-12 bg-card border-2 border-border rounded-xl">
                 <SelectValue placeholder="Select your main goal..." />
@@ -221,7 +228,6 @@ export const OnboardingScreen5: React.FC = () => {
             </Select>
           </motion.div>
 
-          {/* Helper text */}
           <motion.p
             className="text-xs text-muted-foreground text-center px-4"
             initial={{ opacity: 0 }}
@@ -233,15 +239,16 @@ export const OnboardingScreen5: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* Footer with progress and CTA */}
-      <div className="px-6 pb-6 space-y-3 shrink-0">
+      {/* Footer (standardized) */}
+      <div className="px-6 space-y-3 shrink-0" style={{ paddingBottom: 'calc(var(--safe-bottom, 0px) + 16px)' }}>
         <OnboardingProgress current={4} total={4} />
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.4 }}
         >
-          <Button 
+          <Button
             onClick={handleContinue}
             className="w-full h-14 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50"
             disabled={!isComplete}

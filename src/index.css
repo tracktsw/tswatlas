@@ -3,7 +3,9 @@
 @tailwind utilities;
 
 /* App shell - prevent body scrolling, content scrolls inside main */
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   overflow: hidden;
 }
@@ -12,10 +14,32 @@ body {
   overscroll-behavior: none;
 }
 
-/* Safe area and iOS-specific offsets */
+/* =========================================================
+   Safe area (single, coherent strategy)
+   - Base from env()
+   - Plugins can override by setting the same vars at runtime
+   - Use --safe-top/--safe-bottom/--safe-left/--safe-right in app code
+   ========================================================= */
 :root {
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Base fallback (iOS Safari / browser). 0px elsewhere. */
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+
+  /*
+    capacitor-plugin-safe-area (and similar) injects:
+    --safe-area-inset-top/bottom/left/right
+    Those injected values automatically override the env() defaults above.
+  */
+
+  /* Aliases used throughout your code */
+  --safe-top: var(--safe-area-inset-top);
+  --safe-bottom: var(--safe-area-inset-bottom);
+  --safe-left: var(--safe-area-inset-left);
+  --safe-right: var(--safe-area-inset-right);
+
+  /* Optional: only keep if used by your components */
   --ios-header-extra: 16px;
   --ios-dialog-header-extra: 0px;
 }
@@ -23,40 +47,24 @@ body {
 /* Legacy iOS fallback using constant() */
 @supports (padding-top: constant(safe-area-inset-top)) {
   :root {
-    --safe-top: constant(safe-area-inset-top);
-    --safe-bottom: constant(safe-area-inset-bottom);
+    --safe-area-inset-top: constant(safe-area-inset-top);
+    --safe-area-inset-bottom: constant(safe-area-inset-bottom);
+    --safe-area-inset-left: constant(safe-area-inset-left);
+    --safe-area-inset-right: constant(safe-area-inset-right);
+
+    --safe-top: var(--safe-area-inset-top);
+    --safe-bottom: var(--safe-area-inset-bottom);
+    --safe-left: var(--safe-area-inset-left);
+    --safe-right: var(--safe-area-inset-right);
   }
 }
 
-/* iOS-only: push header down significantly to clear Dynamic Island */
+/* iOS-only: header tuning vars (ONLY matters if you reference these vars somewhere) */
 @supports (-webkit-touch-callout: none) {
   :root {
     --ios-header-extra: 56px;
     --ios-dialog-header-extra: 88px;
   }
-}
-
-/* Android edge-to-edge: remove ALL safe-area padding for Android devices */
-.android-edge {
-  --safe-top: 0px !important;
-  --safe-bottom: 0px !important;
-  --ios-header-extra: 0px !important;
-  --ios-dialog-header-extra: 0px !important;
-}
-
-/* Override safe-area utility classes when android-edge is active */
-.android-edge .safe-area-inset-bottom,
-.android-edge .safe-area-inset-top,
-.android-edge .safe-area-top,
-.android-edge .safe-area-bottom {
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-}
-
-.android-edge .safe-area-top-offset,
-.android-edge .safe-area-bottom-offset {
-  top: 0 !important;
-  bottom: 0 !important;
 }
 
 @layer base {
@@ -236,34 +244,34 @@ body {
   * {
     @apply border-border;
   }
-  
+
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
-    /* Simplified, calmer background - subtle dot pattern instead of noise */
-    background-image: 
+
+    /* Simplified, calmer background */
+    background-image:
       radial-gradient(ellipse at 20% 0%, hsl(var(--sage-light) / 0.3) 0%, transparent 45%),
       radial-gradient(ellipse at 80% 100%, hsl(var(--cream-dark) / 0.4) 0%, transparent 45%);
     background-size: 100% 100%;
     background-attachment: fixed;
   }
-  
+
   /* iOS: Disable fixed background to prevent keyboard scroll issues */
   html.ios body {
     background-attachment: scroll;
   }
-  
+
   html {
-    /* scroll-behavior: smooth disabled - causes jank on Android flick-scroll */
+    /* smooth scrolling disabled to reduce Android jank */
     scroll-behavior: auto;
   }
-  
+
   h1, h2, h3, h4, h5, h6 {
     font-family: "Quicksand", system-ui, sans-serif;
     @apply tracking-tight;
   }
-  
-  /* Anchor headings for key content */
+
   .heading-anchor {
     font-family: "Quicksand", system-ui, sans-serif;
     @apply text-anchor font-bold;
@@ -271,54 +279,47 @@ body {
 }
 
 @layer components {
-  /* Standard card */
   .glass-card {
     @apply bg-card/95 backdrop-blur-sm border border-border/50 rounded-2xl;
-    box-shadow: 
+    box-shadow:
       0 2px 12px -3px hsl(var(--shadow-warm) / 0.06),
       0 1px 2px hsl(var(--shadow-warm) / 0.03);
   }
-  
-  /* Elevated card for progress/metrics */
+
   .glass-card-elevated {
     @apply bg-card backdrop-blur-sm border border-border/60 rounded-2xl;
-    box-shadow: 
+    box-shadow:
       0 4px 16px -4px hsl(var(--shadow-warm) / 0.1),
       0 2px 4px hsl(var(--shadow-warm) / 0.04),
       inset 0 1px 0 hsl(40 50% 98% / 0.4);
   }
-  
-  /* Legacy alias */
+
   .glass-card-warm {
     @apply glass-card-elevated;
   }
-  
-  /* Progress/milestone card */
+
   .progress-card {
     @apply bg-gradient-to-br from-card via-card to-sage-light/30 backdrop-blur-sm border border-sage/20 rounded-2xl;
-    box-shadow: 
+    box-shadow:
       0 4px 20px -6px hsl(var(--sage) / 0.12),
       0 2px 4px hsl(var(--shadow-warm) / 0.04);
   }
-  
-  /* Flare state card - cooler tones */
+
   .flare-card {
     @apply bg-gradient-to-br from-flare-light to-card border border-flare/15 rounded-2xl;
     box-shadow: 0 2px 12px -3px hsl(var(--flare) / 0.08);
   }
-  
-  /* Healing state card - warmer tones */
+
   .healing-card {
     @apply bg-gradient-to-br from-healing-light to-card border border-healing/15 rounded-2xl;
     box-shadow: 0 2px 12px -3px hsl(var(--healing) / 0.1);
   }
-  
-  /* Subtle decorative patterns */
+
   .decorative-dots {
     background-image: radial-gradient(hsl(var(--sage) / 0.08) 1px, transparent 1px);
     background-size: 16px 16px;
   }
-  
+
   .decorative-lines {
     background-image: repeating-linear-gradient(
       90deg,
@@ -328,39 +329,34 @@ body {
       transparent 24px
     );
   }
-  
-  /* Action button - for CTAs only */
+
   .btn-action {
     @apply bg-action text-action-foreground font-semibold;
     box-shadow: 0 2px 8px -2px hsl(var(--action) / 0.35);
     transition: all 0.2s ease;
   }
-  
+
   .btn-action:hover {
     box-shadow: 0 4px 12px -2px hsl(var(--action) / 0.4);
     transform: translateY(-1px);
   }
-  
-  /* Legacy warm button */
+
   .btn-warm {
     @apply btn-action;
   }
-  
-  /* Metric/stat display */
+
   .metric-value {
     @apply text-anchor font-bold;
   }
-  
+
   .metric-label {
     @apply text-muted-foreground text-xs font-medium;
   }
-  
-  /* Streak indicator */
+
   .streak-badge {
     @apply bg-gradient-to-r from-streak/15 to-streak/5 text-streak font-semibold rounded-full px-3 py-1 text-sm;
   }
-  
-  /* Decorative blob - optimized for performance */
+
   .decorative-blob {
     position: absolute;
     border-radius: 50%;
@@ -370,15 +366,13 @@ body {
     will-change: transform;
     transform: translateZ(0);
   }
-  
-  /* Reduce blur on mobile for better performance */
+
   @media (max-width: 640px) {
     .decorative-blob {
       filter: blur(40px);
     }
   }
-  
-  /* Disable animations for users who prefer reduced motion */
+
   @media (prefers-reduced-motion: reduce) {
     .decorative-blob,
     .animate-fade-in,
@@ -395,31 +389,43 @@ body {
   .animate-fade-in {
     animation: fadeIn 0.4s ease-out forwards;
   }
-  
+
   .animate-slide-up {
     animation: slideUp 0.4s ease-out forwards;
   }
-  
+
   .animate-scale-in {
     animation: scaleIn 0.3s ease-out forwards;
   }
-  
+
   .animate-float {
     animation: float 6s ease-in-out infinite;
   }
-  
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  
+
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
-  
+
   .text-warm-shadow {
     text-shadow: 0 2px 10px hsl(var(--shadow-warm) / 0.1);
   }
+
+  /* Safe area utilities (use aliases consistently) */
+  .safe-area-inset-top { padding-top: var(--safe-top); }
+  .safe-area-inset-bottom { padding-bottom: var(--safe-bottom); }
+  .safe-area-inset-left { padding-left: var(--safe-left); }
+  .safe-area-inset-right { padding-right: var(--safe-right); }
+
+  /* Backward-compatible aliases used elsewhere in your app */
+  .safe-area-top { padding-top: var(--safe-top); }
+  .safe-area-bottom { padding-bottom: var(--safe-bottom); }
+  .safe-area-top-offset { top: var(--safe-top); }
+  .safe-area-bottom-offset { bottom: var(--safe-bottom); }
 }
 
 @keyframes fadeIn {
@@ -428,11 +434,11 @@ body {
 }
 
 @keyframes slideUp {
-  from { 
+  from {
     opacity: 0;
     transform: translateY(12px);
   }
-  to { 
+  to {
     opacity: 1;
     transform: translateY(0);
   }
@@ -450,108 +456,47 @@ body {
 }
 
 @keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
 }
 
 @keyframes sparkle-float {
-  0% {
-    opacity: 1;
-    transform: translateY(0) scale(1) rotate(0deg);
-  }
-  50% {
-    opacity: 0.8;
-    transform: translateY(-40px) scale(1.2) rotate(180deg);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-80px) scale(0.5) rotate(360deg);
-  }
+  0% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+  50% { opacity: 0.8; transform: translateY(-40px) scale(1.2) rotate(180deg); }
+  100% { opacity: 0; transform: translateY(-80px) scale(0.5) rotate(360deg); }
 }
 
 @keyframes sparkle-burst {
-  0% {
-    opacity: 1;
-    transform: scale(0) rotate(0deg);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.5) rotate(180deg);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.8) rotate(360deg) translateY(-30px);
-  }
+  0% { opacity: 1; transform: scale(0) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.5) rotate(180deg); }
+  100% { opacity: 0; transform: scale(0.8) rotate(360deg) translateY(-30px); }
 }
 
 @keyframes sparkle-pop {
-  0% {
-    opacity: 1;
-    transform: scale(0);
-  }
-  40% {
-    opacity: 1;
-    transform: scale(1.4);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.5) translateY(-50px);
-  }
+  0% { opacity: 1; transform: scale(0); }
+  40% { opacity: 1; transform: scale(1.4); }
+  100% { opacity: 0; transform: scale(0.5) translateY(-50px); }
 }
 
 @keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 @layer utilities {
   .animate-sparkle-float {
     animation: sparkle-float var(--duration, 1s) ease-out forwards;
   }
-  
+
   .animate-sparkle-burst {
     animation: sparkle-burst var(--duration, 1s) ease-out forwards;
   }
-  
+
   .animate-sparkle-pop {
     animation: sparkle-pop var(--duration, 1s) ease-out forwards;
   }
-  
+
   .animate-shimmer {
     animation: shimmer 1.5s ease-in-out infinite;
-  }
-
-  /* Safe area padding for iOS devices */
-  .safe-area-inset-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-  
-  .safe-area-inset-top {
-    padding-top: env(safe-area-inset-top, 0px);
-  }
-  
-  /* Safe area utilities using CSS variables */
-  .safe-area-top {
-    padding-top: var(--safe-top);
-  }
-  
-  .safe-area-bottom {
-    padding-bottom: var(--safe-bottom);
-  }
-  
-  .safe-area-top-offset {
-    top: var(--safe-top);
-  }
-  
-  .safe-area-bottom-offset {
-    bottom: var(--safe-bottom);
   }
 }
