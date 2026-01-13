@@ -130,12 +130,15 @@ export const OnboardingScreen5: React.FC = () => {
       </motion.div>
 
       {/* Main content (standardized wrapper) */}
-      <div className="flex-1 flex flex-col px-6 min-h-0 overflow-y-auto">
+      <div className={cn(
+        "flex-1 flex flex-col px-6 min-h-0 overflow-y-auto",
+        isAndroid && "pb-4"
+      )}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
-          className="py-4 space-y-6"
+          className={cn("py-4 space-y-5", isAndroid && "space-y-4")}
         >
           {/* Headline (standardized) */}
           <div className="space-y-2">

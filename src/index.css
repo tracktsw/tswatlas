@@ -440,6 +440,18 @@ body {
   .android-min-full-height {
     min-height: calc(var(--app-vh, 1vh) * 100);
   }
+
+  /* Android page height - accounts for safe areas and nav bar */
+  .android-page-height {
+    height: calc(var(--app-vh, 1vh) * 100);
+    max-height: calc(var(--app-vh, 1vh) * 100);
+  }
+
+  /* Android flex fill - for flex children that should fill available space */
+  .android-flex-fill {
+    flex: 1;
+    min-height: 0;
+  }
 }
 
 /* C) Android inset normalization - single source of truth */

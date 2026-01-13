@@ -4,14 +4,19 @@ import { CoachChat } from '@/components/CoachChat';
 import { useAICoach } from '@/hooks/useAICoach';
 import PaywallGuard from '@/components/PaywallGuard';
 import { Capacitor } from '@capacitor/core';
+import { cn } from '@/lib/utils';
 
 const CoachPage = () => {
   const { messages, isLoading, sendMessage, clearChat } = useAICoach();
   const platform = Capacitor.getPlatform();
+  const isAndroid = platform === 'android';
 
   return (
     <PaywallGuard feature="AI Coach">
-      <div className="flex flex-col h-full relative">
+      <div className={cn(
+        "flex flex-col h-full relative bg-background",
+        isAndroid && "android-page-height"
+      )}>
         {/* Header */}
         <div
           className="px-4 border-b border-border/60 bg-card/50 backdrop-blur-sm shrink-0"
