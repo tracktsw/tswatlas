@@ -110,6 +110,9 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
 
   // Calculate the input bar height (approximately)
   const inputBarHeight = messages.length > 0 ? 120 : 80; // With or without clear button
+  const safeBottom = isAndroid ? getCssPxVar('--safe-bottom') : 0;
+  const navOffset = isAndroid ? BOTTOM_NAV_CONTENT_HEIGHT + safeBottom : 0;
+  const scrollPaddingBottom = inputBarHeight + 16 + navOffset;
 
   return (
     <div 
@@ -125,7 +128,7 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
         ref={scrollRef}
         style={{ overscrollBehavior: 'contain' }}
       >
-        <div style={{ paddingBottom: `${inputBarHeight + 16}px` }}>
+        <div style={{ paddingBottom: `${scrollPaddingBottom}px` }}>
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center py-8">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -183,11 +186,19 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
 
       {/* Input Area - positioned at bottom of this flex container */}
       <div
-        className="shrink-0 border-t border-border p-4 bg-background"
+        className={cn(
+          "shrink-0 border-t border-border p-4 bg-background",
+          isAndroid && "fixed left-0 right-0 z-40"
+        )}
         style={{
-          // Only add offset when Android keyboard is open
-          marginBottom: keyboardOffset > 0 ? `${keyboardOffset}px` : undefined,
-          transition: 'margin-bottom 0.2s ease-out',
+          ...(isAndroid
+            ? {
+                bottom: `calc(${navOffset}px + ${keyboardOffset}px)`,
+                paddingLeft: 'var(--safe-area-inset-left, 0px)',
+                paddingRight: 'var(--safe-area-inset-right, 0px)',
+              }
+            : {}),
+          transition: isAndroid ? 'bottom 0.2s ease-out' : undefined,
         }}
       >
         {messages.length > 0 && (
