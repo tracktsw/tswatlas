@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 
 interface Particle {
@@ -26,19 +26,24 @@ const colors = [
   'hsl(45, 60%, 85%)',    // cream
 ];
 
-const SparkleParticle = ({ particle }: { particle: Particle }) => {
+// Memoized particle component to prevent unnecessary re-renders
+const SparkleParticle = memo(({ particle }: { particle: Particle }) => {
+  // Pre-compute styles to avoid recalculation during animation
+  const style = useMemo(() => ({
+    left: `${particle.x}%`,
+    top: `${particle.y}%`,
+    width: particle.size,
+    height: particle.size,
+    '--duration': `${particle.duration}s`,
+    animationDelay: `${particle.delay}s`,
+    transform: 'translate3d(0, 0, 0)', // Force GPU layer
+  } as React.CSSProperties), [particle]);
+
   if (particle.type === 'heart') {
     return (
       <svg
         className="absolute animate-sparkle-float pointer-events-none"
-        style={{
-          left: `${particle.x}%`,
-          top: `${particle.y}%`,
-          width: particle.size,
-          height: particle.size,
-          animationDelay: `${particle.delay}s`,
-          animationDuration: `${particle.duration}s`,
-        }}
+        style={style}
         viewBox="0 0 24 24"
         fill={particle.color}
       >
@@ -51,14 +56,7 @@ const SparkleParticle = ({ particle }: { particle: Particle }) => {
     return (
       <svg
         className="absolute animate-sparkle-burst pointer-events-none"
-        style={{
-          left: `${particle.x}%`,
-          top: `${particle.y}%`,
-          width: particle.size,
-          height: particle.size,
-          animationDelay: `${particle.delay}s`,
-          animationDuration: `${particle.duration}s`,
-        }}
+        style={style}
         viewBox="0 0 24 24"
         fill={particle.color}
       >
@@ -71,45 +69,53 @@ const SparkleParticle = ({ particle }: { particle: Particle }) => {
     <div
       className="absolute rounded-full animate-sparkle-pop pointer-events-none"
       style={{
-        left: `${particle.x}%`,
-        top: `${particle.y}%`,
-        width: particle.size,
-        height: particle.size,
+        ...style,
         backgroundColor: particle.color,
-        animationDelay: `${particle.delay}s`,
-        animationDuration: `${particle.duration}s`,
       }}
     />
   );
+});
+
+SparkleParticle.displayName = 'SparkleParticle';
+
+// Pre-generate random values to avoid runtime Math.random during render
+const generateParticles = (): Particle[] => {
+  const types: Particle['type'][] = ['sparkle', 'heart', 'circle'];
+  const particles: Particle[] = [];
+  
+  // Reduced from 20 to 15 particles for better performance
+  for (let i = 0; i < 15; i++) {
+    particles.push({
+      id: i,
+      x: 20 + Math.random() * 60,
+      y: 20 + Math.random() * 60,
+      size: 14 + Math.random() * 16, // Slightly smaller range
+      color: colors[Math.floor(Math.random() * colors.length)],
+      delay: Math.random() * 0.3, // Reduced delay spread
+      duration: 0.7 + Math.random() * 0.4, // Faster animations
+      type: types[Math.floor(Math.random() * types.length)],
+    });
+  }
+  
+  return particles;
 };
 
-export const SparkleEffect = ({ isActive, onComplete, className }: SparkleEffectProps) => {
+export const SparkleEffect = memo(({ isActive, onComplete, className }: SparkleEffectProps) => {
   const [particles, setParticles] = useState<Particle[]>([]);
 
   useEffect(() => {
     if (isActive) {
-      const newParticles: Particle[] = [];
-      const types: Particle['type'][] = ['sparkle', 'heart', 'circle'];
-      
-      for (let i = 0; i < 20; i++) {
-        newParticles.push({
-          id: i,
-          x: 20 + Math.random() * 60,
-          y: 20 + Math.random() * 60,
-          size: 12 + Math.random() * 20,
-          color: colors[Math.floor(Math.random() * colors.length)],
-          delay: Math.random() * 0.5,
-          duration: 0.8 + Math.random() * 0.6,
-          type: types[Math.floor(Math.random() * types.length)],
-        });
-      }
-      
+      // Generate particles once when activated
+      const newParticles = generateParticles();
       setParticles(newParticles);
       
+      // Use requestAnimationFrame for smoother cleanup timing
       const timer = setTimeout(() => {
-        setParticles([]);
-        onComplete?.();
-      }, 2000);
+        requestAnimationFrame(() => {
+          setParticles([]);
+          onComplete?.();
+        });
+      }, 1500); // Reduced from 2000ms
       
       return () => clearTimeout(timer);
     }
@@ -118,10 +124,21 @@ export const SparkleEffect = ({ isActive, onComplete, className }: SparkleEffect
   if (!isActive && particles.length === 0) return null;
 
   return (
-    <div className={cn('fixed inset-0 z-50 pointer-events-none overflow-hidden', className)}>
+    <div 
+      className={cn(
+        'fixed inset-0 z-50 pointer-events-none overflow-hidden',
+        className
+      )}
+      style={{ 
+        contain: 'strict', // Enable CSS containment for performance
+        willChange: 'contents',
+      }}
+    >
       {particles.map((particle) => (
         <SparkleParticle key={particle.id} particle={particle} />
       ))}
     </div>
   );
-};
+});
+
+SparkleEffect.displayName = 'SparkleEffect';
