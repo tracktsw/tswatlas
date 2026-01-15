@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Camera, CheckCircle, BarChart3, Users, BookOpen, Settings, Calendar as CalendarIcon, Flame, Pencil, Leaf, Sun, Loader2, Crown, Sparkles, Trophy } from 'lucide-react';
 import { LeafIllustration, PlantIllustration } from '@/components/illustrations';
+import StreakFire from '@/components/StreakFire';
 import compassLogo from '@/assets/compass-logo.png';
 import { useUserData } from '@/contexts/UserDataContext';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -287,11 +288,14 @@ const HomePage = () => {
             )}
             <p className="text-xs text-muted-foreground font-medium mt-1">Journal</p>
           </div>
-          <div className="text-center p-3 rounded-2xl bg-streak/8">
+          <div className="text-center p-3 rounded-2xl bg-streak/8 relative">
             {isLoading ? (
               <Skeleton className="h-8 w-8 mx-auto mb-1" />
             ) : (
-              <p className="text-2xl font-bold text-streak">{checkInStreak}</p>
+              <div className="relative flex items-center justify-center">
+                <p className="text-2xl font-bold text-streak">{checkInStreak}</p>
+                <StreakFire streak={checkInStreak} className="absolute -top-3 -right-1" />
+              </div>
             )}
             <p className="text-xs text-muted-foreground font-medium mt-1">Streak</p>
           </div>
