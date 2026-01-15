@@ -288,12 +288,12 @@ const HomePage = () => {
             )}
             <p className="text-xs text-muted-foreground font-medium mt-1">Journal</p>
           </div>
-          <div className="text-center p-3 rounded-2xl bg-streak/8 relative">
+          <div className="text-center p-3 rounded-2xl bg-streak/8">
             {isLoading ? (
               <Skeleton className="h-8 w-8 mx-auto mb-1" />
             ) : (
-              <div className="relative inline-flex items-center justify-center h-8">
-                <StreakFire streak={checkInStreak} className="absolute inset-0 flex items-center justify-center" />
+              <div className="relative inline-flex items-center justify-center min-w-[2rem] min-h-[2rem]">
+                <StreakFire streak={checkInStreak} />
                 <p className="text-2xl font-bold text-streak relative z-10">{checkInStreak}</p>
               </div>
             )}
