@@ -292,9 +292,9 @@ const HomePage = () => {
             {isLoading ? (
               <Skeleton className="h-8 w-8 mx-auto mb-1" />
             ) : (
-              <div className="relative flex items-center justify-center">
-                <p className="text-2xl font-bold text-streak">{checkInStreak}</p>
-                <StreakFire streak={checkInStreak} className="absolute -top-3 -right-1" />
+              <div className="relative inline-flex items-center justify-center">
+                <StreakFire streak={checkInStreak} className="absolute -top-4 left-1/2 -translate-x-1/2" />
+                <p className="text-2xl font-bold text-streak relative z-10">{checkInStreak}</p>
               </div>
             )}
             <p className="text-xs text-muted-foreground font-medium mt-1">Streak</p>
