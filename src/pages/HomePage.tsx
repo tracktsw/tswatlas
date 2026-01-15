@@ -114,7 +114,7 @@ const HomePage = () => {
       path: '/check-in', 
       icon: CheckCircle, 
       label: 'Check In', 
-      description: hasMorningCheckIn && hasEveningCheckIn ? 'All done today!' : 'Log your day',
+      description: todayCheckIns.length >= 1 ? 'All done today!' : 'Log your day',
       bgClass: 'bg-action/10',
       iconColor: 'text-action',
       isAction: true
@@ -275,7 +275,7 @@ const HomePage = () => {
             {isLoading ? (
               <Skeleton className="h-8 w-10 mx-auto mb-1" />
             ) : (
-              <p className="text-2xl font-bold text-sage">{todayCheckIns.length}/2</p>
+              <p className="text-2xl font-bold text-sage">{todayCheckIns.length}/1</p>
             )}
             <p className="text-xs text-muted-foreground font-medium mt-1">Check-ins</p>
           </div>
