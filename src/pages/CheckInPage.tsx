@@ -229,9 +229,9 @@ const CheckInPage = () => {
     setSleepScore(null);
     setNotes('');
   };
-    Boolean(editingCheckIn) ||
-    (timeOfDay === 'morning' && !hasMorningCheckIn) ||
-    (timeOfDay === 'evening' && !hasEveningCheckIn);
+
+  // For single daily check-in: can submit if editing OR haven't reached daily limit
+  const canSubmit = Boolean(editingCheckIn) || getTodayCheckInCount() < 1;
 
   const handleSubmit = async () => {
     if (!canSubmit || isSaving) return;
