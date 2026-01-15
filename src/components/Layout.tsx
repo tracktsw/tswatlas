@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import BottomNav from './BottomNav';
 import { ReminderBanner } from './ReminderBanner';
@@ -16,18 +16,14 @@ const Layout = () => {
   const { isKeyboardOpen, isIOS } = useIOSKeyboardContext();
   const navigate = useNavigate();
 
-  const {
-    shouldShowReminder,
-    reminderType,
-    dismissReminder,
-    snoozeReminder,
-  } = useCheckInReminder({
+  const isAndroid = useMemo(() => Capacitor.getPlatform() === 'android', []);
+
+  const { shouldShowReminder, reminderType, dismissReminder, snoozeReminder } = useCheckInReminder({
     reminderSettings,
     checkIns,
     userId,
   });
 
-  // Initialize notification listeners on native platforms
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
@@ -38,7 +34,6 @@ const Layout = () => {
     return cleanup;
   }, [navigate]);
 
-  // Schedule notifications when reminder settings change (on native)
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || !userId || isLoading) return;
 
@@ -53,7 +48,6 @@ const Layout = () => {
 
   return (
     <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
-      {/* Reminder banner */}
       {!isLoading && shouldShowReminder && reminderType && (
         <ReminderBanner
           reminderType={reminderType}
@@ -64,9 +58,14 @@ const Layout = () => {
 
       <main
         className={cn(
-          "flex-1 min-h-0 overscroll-contain",
-          !hideBottomNav && "pb-20",
-          isIOS && isKeyboardOpen ? "overflow-hidden" : "overflow-y-auto"
+          'flex-1 min-h-0 overscroll-contain',
+          isIOS && isKeyboardOpen ? 'overflow-hidden' : 'overflow-y-auto',
+
+          // iOS unchanged: still needs room for FIXED BottomNav
+          !hideBottomNav && !isAndroid && 'pb-20',
+
+          // Android: BottomNav is NOT fixed anymore, so no padding needed
+          !hideBottomNav && isAndroid && 'pb-0'
         )}
       >
         <Outlet />

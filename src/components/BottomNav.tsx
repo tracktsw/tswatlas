@@ -1,5 +1,4 @@
-// BottomNav.tsx
-import { useMemo, useRef, useState, useEffect, useLayoutEffect, useCallback } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Camera, CheckCircle, BarChart3, Users, Leaf } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
@@ -27,13 +26,14 @@ const BottomNav = () => {
   const location = useLocation();
   const platform = Capacitor.getPlatform();
   const isAndroid = platform === 'android';
+
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const [indicatorStyle, setIndicatorStyle] = useState({ x: 0, width: 0 });
   const preloadedRoutes = useRef<Set<string>>(new Set());
 
   const activeIndex = useMemo(() => {
-    const index = navItems.findIndex(item => item.path === location.pathname);
+    const index = navItems.findIndex((item) => item.path === location.pathname);
     return index >= 0 ? index : 0;
   }, [location.pathname]);
 
@@ -50,54 +50,51 @@ const BottomNav = () => {
     });
   };
 
-  useLayoutEffect(() => {
-    updateIndicator();
-  }, [activeIndex]);
-
   useEffect(() => {
+    updateIndicator();
     window.addEventListener('resize', updateIndicator);
     return () => window.removeEventListener('resize', updateIndicator);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeIndex]);
 
-  const handlePreload = useCallback((path: string) => {
+  const handlePreload = (path: string) => {
     if (preloadedRoutes.current.has(path)) return;
     const importFn = pageImports[path];
-    if (importFn) {
-      preloadedRoutes.current.add(path);
-      importFn();
-    }
-  }, []);
+    if (!importFn) return;
 
-  // D) Fix bottom navigation grey strip
-  // iOS: reduce perceived empty space under the bar while keeping gesture safety
-  // Android with nav bar: extend background through system nav area using padding
-  // Android without nav bar (gesture nav): use minimal padding, background extends via CSS
+    preloadedRoutes.current.add(path);
+    importFn();
+  };
+
+  // Keep your existing safe-area usage.
+  // On Android we DO NOT need "extend/fixed" tricks anymore because the nav is in-flow.
   const paddingBottom =
     platform === 'ios'
       ? 'max(calc(var(--safe-bottom, 0px) - 8px), 0px)'
-      : 'var(--safe-bottom, 0px)'; // Works for both nav bar and gesture nav cases
+      : 'var(--safe-bottom, 0px)';
 
   return (
     <nav
       className={cn(
-        "fixed bottom-0 left-0 right-0 z-50 bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg",
-        // Add Android-specific class for background extension via pseudo-element
-        isAndroid && "bottom-nav-android-extend"
+        // iOS: unchanged (fixed)
+        !isAndroid && 'fixed bottom-0 left-0 right-0 z-50',
+        // Android: in-flow at bottom of flex layout
+        isAndroid && 'relative shrink-0',
+
+        'bg-card/98 backdrop-blur-md border-t border-border/50 shadow-lg'
       )}
       style={{
         paddingBottom,
         paddingLeft: 'var(--safe-area-inset-left, 0px)',
         paddingRight: 'var(--safe-area-inset-right, 0px)',
-        // Android: ensure solid background color for the inset area
-        ...(isAndroid && { backgroundColor: 'hsl(var(--card) / 0.98)' }),
+        ...(isAndroid ? { backgroundColor: 'hsl(var(--card) / 0.98)' } : {}),
       }}
     >
       <div
         ref={containerRef}
         className={cn(
-          "flex items-center justify-around px-1 max-w-lg md:max-w-none md:px-8 lg:px-12 mx-auto relative",
-          // iOS: compact content height; Android: keep current
-          platform === 'ios' ? "py-1" : "py-1 sm:py-1.5"
+          'flex items-center justify-around px-1 max-w-lg md:max-w-none md:px-8 lg:px-12 mx-auto relative',
+          platform === 'ios' ? 'py-1' : 'py-1 sm:py-1.5'
         )}
       >
         <div
@@ -111,6 +108,7 @@ const BottomNav = () => {
 
         {navItems.map(({ path, icon: Icon, label }, index) => {
           const isActive = location.pathname === path;
+
           return (
             <NavLink
               key={path}
@@ -135,7 +133,9 @@ const BottomNav = () => {
               >
                 <Icon className="w-5 h-5 md:w-6 md:h-6" strokeWidth={isActive ? 2.5 : 2} />
               </div>
-              <span className="text-[10px] md:text-xs font-semibold whitespace-nowrap">{label}</span>
+              <span className="text-[10px] md:text-xs font-semibold whitespace-nowrap">
+                {label}
+              </span>
             </NavLink>
           );
         })}
