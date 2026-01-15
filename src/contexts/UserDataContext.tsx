@@ -50,8 +50,10 @@ export interface JournalEntry {
 
 export interface ReminderSettings {
   enabled: boolean;
-  morningTime: string;
-  eveningTime: string;
+  reminderTime: string; // Single daily reminder time
+  // Legacy fields kept for migration
+  morningTime?: string;
+  eveningTime?: string;
 }
 
 interface UserDataContextType {
@@ -113,8 +115,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [customTreatments, setCustomTreatments] = useState<string[]>([]);
   const [reminderSettings, setReminderSettings] = useState<ReminderSettings>({
     enabled: true,
-    morningTime: '08:00',
-    eveningTime: '20:00',
+    reminderTime: '09:00', // Single daily reminder
   });
   const [tswStartDate, setTswStartDateState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -189,8 +190,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const localJournalEntries = storedJournalEntries ? JSON.parse(storedJournalEntries) : [];
       const localReminderSettings = storedReminderSettings ? JSON.parse(storedReminderSettings) : {
         enabled: true,
-        morningTime: '08:00',
-        eveningTime: '20:00',
+        reminderTime: '09:00',
       };
       const localCustomTreatments = storedCustomTreatments ? JSON.parse(storedCustomTreatments) : [];
 
@@ -200,8 +200,8 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         tsw_start_date: storedTswStartDate || null,
         custom_treatments: localCustomTreatments,
         reminders_enabled: localReminderSettings.enabled,
-        morning_time: localReminderSettings.morningTime,
-        evening_time: localReminderSettings.eveningTime,
+        morning_time: localReminderSettings.reminderTime || localReminderSettings.morningTime || '09:00',
+        evening_time: '20:00', // Legacy, not used
       });
 
       // Upload photos to storage and create records
@@ -322,8 +322,8 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setCustomTreatments(settingsResult.data.custom_treatments || []);
         setReminderSettings({
           enabled: settingsResult.data.reminders_enabled,
-          morningTime: settingsResult.data.morning_time,
-          eveningTime: settingsResult.data.evening_time,
+          // Use morning_time as the single reminder time (legacy migration)
+          reminderTime: settingsResult.data.morning_time || '09:00',
         });
       }
 
@@ -638,7 +638,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         console.log('[CHECK-IN] Starting save with client_request_id:', clientRequestId);
       }
 
-      // Check daily limit (max 2 per day)
+      // Check daily limit (max 1 per day - single daily check-in)
       const today = new Date().toLocaleDateString('en-CA');
       const todayCheckIns = checkIns.filter(c => {
         const checkInDate = new Date(c.timestamp).toLocaleDateString('en-CA');
@@ -649,8 +649,8 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         console.log('[CHECK-IN] Daily count before save:', todayCheckIns.length);
       }
 
-      if (todayCheckIns.length >= 2) {
-        throw new Error("You've reached today's 2 check-ins.");
+      if (todayCheckIns.length >= 1) {
+        throw new Error("You've already checked in today. Edit your existing check-in if needed.");
       }
 
       try {
