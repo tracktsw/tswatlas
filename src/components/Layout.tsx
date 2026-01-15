@@ -37,10 +37,9 @@ const Layout = () => {
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || !userId || isLoading) return;
 
-    if (reminderSettings.morningTime && reminderSettings.eveningTime) {
+    if (reminderSettings.reminderTime) {
       scheduleCheckInReminders(
-        reminderSettings.morningTime,
-        reminderSettings.eveningTime,
+        reminderSettings.reminderTime,
         reminderSettings.enabled
       );
     }

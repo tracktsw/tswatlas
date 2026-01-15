@@ -64,8 +64,7 @@ const SettingsPage = () => {
         await updateReminderSettings({ ...reminderSettings, enabled: false });
         if (isNative) {
           await scheduleCheckInReminders(
-            reminderSettings.morningTime,
-            reminderSettings.eveningTime,
+            reminderSettings.reminderTime,
             false
           );
         }
@@ -98,8 +97,7 @@ const SettingsPage = () => {
       // Schedule native notifications
       if (isNative) {
         await scheduleCheckInReminders(
-          reminderSettings.morningTime,
-          reminderSettings.eveningTime,
+          reminderSettings.reminderTime,
           true
         );
       }
@@ -117,8 +115,7 @@ const SettingsPage = () => {
       // Schedule notifications now that permission is granted
       if (reminderSettings.enabled) {
         await scheduleCheckInReminders(
-          reminderSettings.morningTime,
-          reminderSettings.eveningTime,
+          reminderSettings.reminderTime,
           true
         );
       }
@@ -128,26 +125,13 @@ const SettingsPage = () => {
     }
   };
 
-  const handleMorningTimeChange = async (time: string) => {
+  const handleReminderTimeChange = async (time: string) => {
     try {
-      await updateReminderSettings({ ...reminderSettings, morningTime: time });
+      await updateReminderSettings({ ...reminderSettings, reminderTime: time });
       
       // Reschedule native notifications
       if (isNative && reminderSettings.enabled) {
-        await scheduleCheckInReminders(time, reminderSettings.eveningTime, true);
-      }
-    } catch (error) {
-      toast.error('Failed to update settings');
-    }
-  };
-
-  const handleEveningTimeChange = async (time: string) => {
-    try {
-      await updateReminderSettings({ ...reminderSettings, eveningTime: time });
-      
-      // Reschedule native notifications
-      if (isNative && reminderSettings.enabled) {
-        await scheduleCheckInReminders(reminderSettings.morningTime, time, true);
+        await scheduleCheckInReminders(time, true);
       }
     } catch (error) {
       toast.error('Failed to update settings');
@@ -211,16 +195,13 @@ const SettingsPage = () => {
         </div>
       </div>
 
-      {/* ... rest of the content stays exactly the same ... */}
-      {/* I'll include all the remaining sections for completeness */}
-
       <div className="glass-card p-4 space-y-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-full bg-primary/10">
             <Bell className="w-5 h-5 text-primary" />
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-foreground">Reminders</h3>
+            <h3 className="font-semibold text-foreground">Daily Reminder</h3>
             <p className="text-sm text-muted-foreground">Get reminded to check in</p>
           </div>
           <Switch 
@@ -234,24 +215,12 @@ const SettingsPage = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm">Morning reminder</span>
+                <span className="text-sm">Reminder time</span>
               </div>
               <Input 
                 type="time"
-                value={reminderSettings.morningTime}
-                onChange={(e) => handleMorningTimeChange(e.target.value)}
-                className="w-28"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm">Evening reminder</span>
-              </div>
-              <Input 
-                type="time"
-                value={reminderSettings.eveningTime}
-                onChange={(e) => handleEveningTimeChange(e.target.value)}
+                value={reminderSettings.reminderTime}
+                onChange={(e) => handleReminderTimeChange(e.target.value)}
                 className="w-28"
               />
             </div>
@@ -309,8 +278,8 @@ const SettingsPage = () => {
             
             <p className="text-xs text-muted-foreground">
               {isNative 
-                ? 'You\'ll receive push notifications at your scheduled times.'
-                : 'Reminders appear when you open the app after the scheduled time.'}
+                ? 'You\'ll receive a push notification at your scheduled time.'
+                : 'Reminder appears when you open the app after the scheduled time.'}
             </p>
           </div>
         )}
@@ -450,31 +419,28 @@ const SettingsPage = () => {
         href="mailto:contact@tracktsw.app" 
         className="glass-card p-4 block hover:bg-muted/50 transition-colors"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3">
           <div className="p-2 rounded-full bg-primary/10">
             <Mail className="w-5 h-5 text-primary" />
           </div>
-          <div className="flex-1">
+          <div>
             <h3 className="font-semibold text-foreground">Contact Us</h3>
-            <p className="text-sm text-muted-foreground">Get in touch with our team (contact@tracktsw.app)</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Questions, feedback, or feature requests? We'd love to hear from you.
+            </p>
+            <p className="text-xs text-primary mt-2">contact@tracktsw.app</p>
           </div>
         </div>
       </a>
 
-      <div className="glass-card p-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-full bg-destructive/10">
-            <LogOut className="w-5 h-5 text-destructive" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-foreground">Sign Out</h3>
-            <p className="text-sm text-muted-foreground">Sign out of your account</p>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            Sign Out
-          </Button>
-        </div>
-      </div>
+      <Button
+        variant="outline"
+        className="w-full gap-2"
+        onClick={handleLogout}
+      >
+        <LogOut className="w-4 h-4" />
+        Sign Out
+      </Button>
     </div>
   );
 };

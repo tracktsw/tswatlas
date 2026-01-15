@@ -11,8 +11,7 @@ function log(...args: unknown[]) {
 
 export interface ReminderState {
   enabled: boolean;
-  morningTime: string; // "HH:MM"
-  eveningTime: string; // "HH:MM"
+  reminderTime: string; // "HH:MM" - single daily reminder
   lastRemindedAt: string | null;
   snoozedUntil: string | null;
   timezone: string | null;
@@ -21,8 +20,7 @@ export interface ReminderState {
 interface UseCheckInReminderOptions {
   reminderSettings: {
     enabled: boolean;
-    morningTime: string;
-    eveningTime: string;
+    reminderTime: string;
   };
   checkIns: Array<{ timestamp: string; timeOfDay: 'morning' | 'evening' }>;
   userId: string | null;
@@ -30,7 +28,7 @@ interface UseCheckInReminderOptions {
 
 interface UseCheckInReminderReturn {
   shouldShowReminder: boolean;
-  reminderType: 'morning' | 'evening' | null;
+  reminderType: 'daily' | null;
   nextReminderTime: Date | null;
   dismissReminder: () => Promise<void>;
   snoozeReminder: (hours?: number) => Promise<void>;
@@ -62,12 +60,11 @@ function isToday(date: Date): boolean {
 }
 
 function hasCheckedInToday(
-  checkIns: Array<{ timestamp: string; timeOfDay: 'morning' | 'evening' }>,
-  timeOfDay: 'morning' | 'evening'
+  checkIns: Array<{ timestamp: string; timeOfDay: 'morning' | 'evening' }>
 ): boolean {
   return checkIns.some(checkIn => {
     const checkInDate = new Date(checkIn.timestamp);
-    return isToday(checkInDate) && checkIn.timeOfDay === timeOfDay;
+    return isToday(checkInDate);
   });
 }
 
@@ -77,7 +74,7 @@ export function useCheckInReminder({
   userId,
 }: UseCheckInReminderOptions): UseCheckInReminderReturn {
   const [shouldShowReminder, setShouldShowReminder] = useState(false);
-  const [reminderType, setReminderType] = useState<'morning' | 'evening' | null>(null);
+  const [reminderType, setReminderType] = useState<'daily' | null>(null);
   const [nextReminderTime, setNextReminderTime] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [reminderState, setReminderState] = useState<{
@@ -156,37 +153,25 @@ export function useCheckInReminder({
       }
     }
 
-    // Get scheduled times for today
-    const morningTime = getScheduledTime(reminderSettings.morningTime);
-    const eveningTime = getScheduledTime(reminderSettings.eveningTime);
+    // Get scheduled time for today
+    const scheduledTime = getScheduledTime(reminderSettings.reminderTime);
+    log('Daily scheduled:', scheduledTime.toISOString());
 
-    log('Morning scheduled:', morningTime.toISOString());
-    log('Evening scheduled:', eveningTime.toISOString());
-
-    // Determine which reminder period we're in
-    const isAfterMorning = now >= morningTime;
-    const isAfterEvening = now >= eveningTime;
+    // Check if we're past the scheduled time
+    const isAfterScheduled = now >= scheduledTime;
 
     let shouldPrompt = false;
-    let promptType: 'morning' | 'evening' | null = null;
+    let promptType: 'daily' | null = null;
 
-    // Check evening first (higher priority if both are due)
-    if (isAfterEvening) {
-      const eveningDone = hasCheckedInToday(checkIns, 'evening');
-      log('Evening period - checked in:', eveningDone);
-      if (!eveningDone) {
+    if (isAfterScheduled) {
+      const checkedIn = hasCheckedInToday(checkIns);
+      log('After scheduled time - checked in today:', checkedIn);
+      if (!checkedIn) {
         shouldPrompt = true;
-        promptType = 'evening';
-      }
-    } else if (isAfterMorning) {
-      const morningDone = hasCheckedInToday(checkIns, 'morning');
-      log('Morning period - checked in:', morningDone);
-      if (!morningDone) {
-        shouldPrompt = true;
-        promptType = 'morning';
+        promptType = 'daily';
       }
     } else {
-      log('Before any scheduled reminder time');
+      log('Before scheduled reminder time');
     }
 
     log('Decision:', { shouldPrompt, promptType });
@@ -204,19 +189,16 @@ export function useCheckInReminder({
     }
 
     const now = new Date();
-    const morningToday = getScheduledTime(reminderSettings.morningTime);
-    const eveningToday = getScheduledTime(reminderSettings.eveningTime);
-    const morningTomorrow = new Date(morningToday);
-    morningTomorrow.setDate(morningTomorrow.getDate() + 1);
+    const todayScheduled = getScheduledTime(reminderSettings.reminderTime);
+    const tomorrowScheduled = new Date(todayScheduled);
+    tomorrowScheduled.setDate(tomorrowScheduled.getDate() + 1);
 
     let next: Date;
 
-    if (now < morningToday) {
-      next = morningToday;
-    } else if (now < eveningToday) {
-      next = eveningToday;
+    if (now < todayScheduled) {
+      next = todayScheduled;
     } else {
-      next = morningTomorrow;
+      next = tomorrowScheduled;
     }
 
     log('Next reminder calculated:', next.toISOString());

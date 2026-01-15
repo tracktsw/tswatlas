@@ -1,9 +1,8 @@
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
-// Notification IDs
-export const MORNING_NOTIFICATION_ID = 1;
-export const EVENING_NOTIFICATION_ID = 2;
+// Notification ID for daily reminder
+export const DAILY_NOTIFICATION_ID = 1;
 
 // Parse time string "HH:MM" to hours and minutes
 function parseTime(timeStr: string): { hour: number; minute: number } {
@@ -32,12 +31,11 @@ function getNextFireDate(hour: number, minute: number): Date {
 }
 
 /**
- * Schedule check-in reminder notifications.
+ * Schedule daily check-in reminder notification.
  * Call this when reminder settings change.
  */
 export async function scheduleCheckInReminders(
-  morningTime: string,
-  eveningTime: string,
+  reminderTime: string,
   enabled: boolean
 ): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) {
@@ -49,8 +47,7 @@ export async function scheduleCheckInReminders(
     // First, cancel existing reminders
     await LocalNotifications.cancel({
       notifications: [
-        { id: MORNING_NOTIFICATION_ID },
-        { id: EVENING_NOTIFICATION_ID },
+        { id: DAILY_NOTIFICATION_ID },
       ],
     });
     console.log('[NOTIFICATIONS] Cancelled existing reminders');
@@ -60,26 +57,21 @@ export async function scheduleCheckInReminders(
       return true;
     }
 
-    const morning = parseTime(morningTime);
-    const evening = parseTime(eveningTime);
+    const time = parseTime(reminderTime);
+    const fireDate = getNextFireDate(time.hour, time.minute);
 
-    // Calculate next fire dates
-    const morningFireDate = getNextFireDate(morning.hour, morning.minute);
-    const eveningFireDate = getNextFireDate(evening.hour, evening.minute);
-
-    console.log('[NOTIFICATIONS] Scheduling notifications:');
-    console.log(`  Morning: ${morningTime} -> Next fire: ${morningFireDate.toLocaleString()}`);
-    console.log(`  Evening: ${eveningTime} -> Next fire: ${eveningFireDate.toLocaleString()}`);
+    console.log('[NOTIFICATIONS] Scheduling daily notification:');
+    console.log(`  Time: ${reminderTime} -> Next fire: ${fireDate.toLocaleString()}`);
 
     // Schedule with 'at' and 'every: day' for reliable daily scheduling
     await LocalNotifications.schedule({
       notifications: [
         {
-          id: MORNING_NOTIFICATION_ID,
-          title: 'Good morning! ☀️',
-          body: 'Time for your morning check-in. How are you feeling today?',
+          id: DAILY_NOTIFICATION_ID,
+          title: 'Daily check-in ✨',
+          body: 'How is your skin today? Take a moment to log your progress.',
           schedule: {
-            at: morningFireDate,
+            at: fireDate,
             every: 'day',
             allowWhileIdle: true,
           },
@@ -87,29 +79,12 @@ export async function scheduleCheckInReminders(
           actionTypeId: 'CHECK_IN',
           extra: {
             route: '/check-in',
-            timeOfDay: 'morning',
-          },
-        },
-        {
-          id: EVENING_NOTIFICATION_ID,
-          title: 'Evening check-in 🌙',
-          body: 'How was your skin today? Take a moment to log your progress.',
-          schedule: {
-            at: eveningFireDate,
-            every: 'day',
-            allowWhileIdle: true,
-          },
-          sound: 'default',
-          actionTypeId: 'CHECK_IN',
-          extra: {
-            route: '/check-in',
-            timeOfDay: 'evening',
           },
         },
       ],
     });
 
-    console.log('[NOTIFICATIONS] Successfully scheduled daily reminders');
+    console.log('[NOTIFICATIONS] Successfully scheduled daily reminder');
     return true;
   } catch (error) {
     console.error('[NOTIFICATIONS] Error scheduling notifications:', error);
@@ -128,8 +103,7 @@ export async function cancelAllCheckInReminders(): Promise<boolean> {
   try {
     await LocalNotifications.cancel({
       notifications: [
-        { id: MORNING_NOTIFICATION_ID },
-        { id: EVENING_NOTIFICATION_ID },
+        { id: DAILY_NOTIFICATION_ID },
       ],
     });
     console.log('Cancelled all check-in reminders');

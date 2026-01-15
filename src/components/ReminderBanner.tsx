@@ -6,12 +6,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePlatform } from '@/hooks/usePlatform';
 
 interface ReminderBannerProps {
-  reminderType: 'morning' | 'evening';
+  reminderType: 'daily';
   onDismiss: () => void;
   onSnooze: (hours?: number) => void;
 }
 
-export function ReminderBanner({ reminderType, onDismiss, onSnooze }: ReminderBannerProps) {
+export function ReminderBanner({ onDismiss, onSnooze }: ReminderBannerProps) {
   const navigate = useNavigate();
   const [isVisible, setIsVisible] = useState(true);
   const { isAndroid } = usePlatform();
@@ -31,8 +31,6 @@ export function ReminderBanner({ reminderType, onDismiss, onSnooze }: ReminderBa
     setIsVisible(false);
     onDismiss();
   };
-
-  const timeLabel = reminderType === 'morning' ? 'morning' : 'evening';
 
   return (
     <AnimatePresence>
@@ -54,7 +52,7 @@ export function ReminderBanner({ reminderType, onDismiss, onSnooze }: ReminderBa
                 
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-base">
-                    Time for your {timeLabel} check-in!
+                    Time for your daily check-in!
                   </h3>
                   <p className="text-sm opacity-90 mt-0.5">
                     Track your progress and treatments
