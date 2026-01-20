@@ -1,6 +1,6 @@
 // App version - increment this with each deployment
 // IMPORTANT: Update this AND public/version.json on every deploy
-export const APP_VERSION = "1.5.7";
+export const APP_VERSION = "1.5.8";
 
 // Version storage key
 export const VERSION_STORAGE_KEY = "tracktsw-app-version";
