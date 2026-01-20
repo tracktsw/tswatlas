@@ -471,7 +471,7 @@ const AuthPage = () => {
               </a>{' '}
               and{' '}
               <a
-                href="https://docs.google.com/document/d/1IvDC3rMcV-KEeuDG9EVM3UxmGv7iCSlgbKq0bUDdA3w/edit?tab=t.0#heading=h.6ji8kwu7yicm"
+                href="https://tracktsw.com/terms"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-coral hover:text-coral-deep underline"
