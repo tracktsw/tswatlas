@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSubscription } from '@/hooks/useSubscription';
 import { usePaymentRouter } from '@/hooks/usePaymentRouter';
+import { getTermsUrl, PRIVACY_POLICY_URL, type Platform } from '@/utils/platformLinks';
 import { PlantIllustration, SparkleIllustration, SunIllustration } from '@/components/illustrations';
 import DemoEditModal from '@/components/DemoEditModal';
 import SymptomsInsights from '@/components/SymptomsInsights';
@@ -471,7 +472,7 @@ const InsightsPage = () => {
               <p className="text-xs text-muted-foreground mt-1">
                 By subscribing, you agree to our{' '}
                 <a 
-                  href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" 
+                  href={getTermsUrl(platform as Platform)} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="underline text-primary"
@@ -480,7 +481,7 @@ const InsightsPage = () => {
                 </a>{' '}
                 and{' '}
                 <a 
-                  href="https://docs.google.com/document/d/1qFfvOp8s6k5Wul4G6VYzJSw1V0asApM_2foT1bC80t0/edit" 
+                  href={PRIVACY_POLICY_URL} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="underline text-primary"
