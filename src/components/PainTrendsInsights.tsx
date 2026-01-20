@@ -5,6 +5,7 @@ import { format, startOfMonth, endOfMonth, subMonths, addMonths, isSameMonth } f
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceLine, ReferenceArea, Tooltip } from 'recharts';
 import { DailyFlareState } from '@/utils/flareStateEngine';
 import { Button } from '@/components/ui/button';
+import { useTheme } from 'next-themes';
 
 const MIN_PAIN_ENTRIES = 5;
 const MIN_TRIGGER_OCCURRENCES = 2;
@@ -33,6 +34,10 @@ interface TriggerCorrelation {
 
 const PainTrendsInsights = ({ checkIns, dailyFlareStates }: PainTrendsInsightsProps) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const { theme } = useTheme();
+  
+  // Line color: black in light mode, yellow in dark mode
+  const lineColor = theme === 'dark' ? '#facc15' : '#171717';
 
   // Get the earliest and latest dates with pain data
   const dateRange = useMemo(() => {
@@ -402,10 +407,10 @@ const PainTrendsInsights = ({ checkIns, dailyFlareStates }: PainTrendsInsightsPr
                   <Line
                     type="monotone"
                     dataKey="painScore"
-                    stroke="#facc15"
+                    stroke={lineColor}
                     strokeWidth={2}
-                    dot={{ fill: '#facc15', strokeWidth: 0, r: 3 }}
-                    activeDot={{ r: 5, fill: '#facc15' }}
+                    dot={{ fill: lineColor, strokeWidth: 0, r: 3 }}
+                    activeDot={{ r: 5, fill: lineColor }}
                     connectNulls
                   />
                 </LineChart>
