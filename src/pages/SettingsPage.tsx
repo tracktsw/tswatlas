@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock, Mail, Eye, Smartphone } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock, Mail, Eye, Smartphone, RotateCcw } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { useUserData } from '@/contexts/UserDataContext';
@@ -151,6 +151,31 @@ const SettingsPage = () => {
     await supabase.auth.signOut();
     toast.success('Signed out successfully');
     navigate('/auth');
+  };
+
+  // Hidden debug feature: long-press version to reset onboarding
+  const [versionTapCount, setVersionTapCount] = useState(0);
+  const [showResetOnboarding, setShowResetOnboarding] = useState(false);
+
+  const handleVersionTap = useCallback(() => {
+    setVersionTapCount(prev => {
+      const newCount = prev + 1;
+      if (newCount >= 5) {
+        setShowResetOnboarding(true);
+        toast.info('Debug options unlocked');
+        return 0;
+      }
+      return newCount;
+    });
+    // Reset count after 2 seconds of no taps
+    setTimeout(() => setVersionTapCount(0), 2000);
+  }, []);
+
+  const handleResetOnboarding = () => {
+    localStorage.removeItem('hasSeenOnboarding');
+    localStorage.removeItem('onboardingData');
+    toast.success('Onboarding reset! Sign out and back in to see it.');
+    setShowResetOnboarding(false);
   };
 
   return (
@@ -390,7 +415,10 @@ const SettingsPage = () => {
         </div>
       )}
 
-      <div className="glass-card p-4">
+      <div 
+        className="glass-card p-4 cursor-pointer select-none"
+        onClick={handleVersionTap}
+      >
         <div className="flex items-start gap-3">
           <div className="p-2 rounded-full bg-primary/10">
             <RefreshCw className="w-5 h-5 text-primary" />
@@ -403,6 +431,30 @@ const SettingsPage = () => {
           </div>
         </div>
       </div>
+
+      {showResetOnboarding && (
+        <div className="glass-card p-4 border-amber-500/50">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-full bg-amber-500/10">
+              <RotateCcw className="w-5 h-5 text-amber-500" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-foreground">Debug: Reset Onboarding</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Clear onboarding state to test the flow again.
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-3 border-amber-500/50 text-amber-600"
+                onClick={handleResetOnboarding}
+              >
+                Reset Onboarding
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="glass-card p-4">
         <h3 className="font-semibold text-foreground mb-2">About TrackTSW</h3>
