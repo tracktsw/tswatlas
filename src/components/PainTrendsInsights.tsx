@@ -402,10 +402,10 @@ const PainTrendsInsights = ({ checkIns, dailyFlareStates }: PainTrendsInsightsPr
                   <Line
                     type="monotone"
                     dataKey="painScore"
-                    stroke="hsl(var(--amber-500, 245 158 11))"
+                    stroke="#facc15"
                     strokeWidth={2}
-                    dot={{ fill: 'hsl(var(--amber-500, 245 158 11))', strokeWidth: 0, r: 3 }}
-                    activeDot={{ r: 5, fill: 'hsl(var(--amber-500, 245 158 11))' }}
+                    dot={{ fill: '#facc15', strokeWidth: 0, r: 3 }}
+                    activeDot={{ r: 5, fill: '#facc15' }}
                     connectNulls
                   />
                 </LineChart>
