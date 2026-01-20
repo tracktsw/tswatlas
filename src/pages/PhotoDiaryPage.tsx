@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { parseLocalDateTime } from '@/utils/localDateTime';
 import { useSubscription } from '@/hooks/useSubscription';
 import { usePaymentRouter } from '@/hooks/usePaymentRouter';
+import { getTermsUrl, PRIVACY_POLICY_URL, type Platform } from '@/utils/platformLinks';
 import { useBatchUpload } from '@/hooks/useBatchUpload';
 import { useSingleUpload } from '@/hooks/useSingleUpload';
 import { extractExifDateWithSource } from '@/utils/exifExtractor';
@@ -1114,7 +1115,7 @@ const PhotoDiaryPage = () => {
             <p className="text-xs text-muted-foreground/70 text-center">
               By subscribing, you agree to our{' '}
               <a 
-                href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" 
+                href={getTermsUrl(platform as Platform)} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="underline hover:text-foreground transition-colors"
@@ -1123,7 +1124,7 @@ const PhotoDiaryPage = () => {
               </a>{' '}
               and{' '}
               <a 
-                href="https://tracktsw.com/privacy" 
+                href={PRIVACY_POLICY_URL} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="underline hover:text-foreground transition-colors"
@@ -1181,7 +1182,7 @@ const PhotoDiaryPage = () => {
               <p className="text-xs text-muted-foreground/70 text-center">
                 By subscribing, you agree to our{' '}
                 <a 
-                  href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" 
+                  href={getTermsUrl(platform as Platform)} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="underline hover:text-foreground transition-colors"
@@ -1190,7 +1191,7 @@ const PhotoDiaryPage = () => {
                 </a>{' '}
                 and{' '}
                 <a 
-                  href="https://tracktsw.com/privacy" 
+                  href={PRIVACY_POLICY_URL} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="underline hover:text-foreground transition-colors"
@@ -1299,7 +1300,7 @@ const PhotoDiaryPage = () => {
               <p className="text-xs text-muted-foreground/70 text-center">
                 By subscribing, you agree to our{' '}
                 <a 
-                  href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" 
+                  href={getTermsUrl(platform as Platform)} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="underline hover:text-foreground transition-colors"
@@ -1308,7 +1309,7 @@ const PhotoDiaryPage = () => {
                 </a>{' '}
                 and{' '}
                 <a 
-                  href="https://tracktsw.com/privacy" 
+                  href={PRIVACY_POLICY_URL} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="underline hover:text-foreground transition-colors"
@@ -1408,7 +1409,7 @@ const PhotoDiaryPage = () => {
             <p className="text-xs text-muted-foreground/70 text-center">
               By subscribing, you agree to our{' '}
               <a 
-                href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" 
+                href={getTermsUrl(platform as Platform)} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="underline hover:text-foreground transition-colors"
@@ -1417,7 +1418,7 @@ const PhotoDiaryPage = () => {
               </a>{' '}
               and{' '}
               <a 
-                href="https://tracktsw.com/privacy" 
+                href={PRIVACY_POLICY_URL} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="underline hover:text-foreground transition-colors"
