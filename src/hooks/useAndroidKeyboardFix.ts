@@ -2,14 +2,18 @@
 import { getPlatformInfo } from './usePlatform';
 
 /**
- * Fix for SwiftKey and other third-party Android keyboards that use
- * deleteSurroundingText() IME method instead of standard keydown events.
+  * Fix for Android text re-injection bug with SwiftKey keyboard.
   * 
-  * Root cause: IME composition interference - SwiftKey sends batch delete operations
-  * that don't trigger proper DOM updates in React controlled inputs.
+  * Root Cause: React controlled inputs write value back to DOM on every render.
+  * When SwiftKey's deleteSurroundingText() fails to update DOM, our fix would
+  * call onChange(), triggering re-render, which writes stale text back to input
+  * WHILE user is typing. This breaks IME state and requires multiple backspaces.
   * 
-  * Solution: Detect failed deletions by comparing DOM value with React state,
-  * but ONLY when NOT composing. Let IME composition finish naturally.
+  * Solution: Make DOM the source of truth while focused.
+  * - During focus: Update DOM directly, NEVER call onChange
+  * - On blur: Sync final DOM value to React state
+  * - No text written back while user is editing
+  * - Preserves IME composition state
  * 
  * Only active on Android - no-op on iOS and Web.
  */
@@ -27,6 +31,24 @@ export function useAndroidKeyboardFix(
 
      let pendingDelete = false;
      let isComposing = false;
+     let isFocused = false;
+     let lastSyncedValue = value;
+ 
+     // Track focus state - critical for preventing re-injection
+     const handleFocus = () => {
+       isFocused = true;
+       lastSyncedValue = value;
+     };
+ 
+     const handleBlur = () => {
+       isFocused = false;
+       // Sync final DOM value to React state
+       const finalValue = element.value;
+       if (finalValue !== lastSyncedValue) {
+         onChange(finalValue);
+         lastSyncedValue = finalValue;
+       }
+     };
  
      // Detect composition state
      const handleCompositionStart = () => {
@@ -41,7 +63,6 @@ export function useAndroidKeyboardFix(
     const handleBeforeInput = (e: InputEvent) => {
       if (e.inputType === 'deleteContentBackward') {
          pendingDelete = true;
-         // Never preventDefault - let native behavior try first
       }
     };
      
@@ -50,50 +71,47 @@ export function useAndroidKeyboardFix(
        if (!pendingDelete) return;
        pendingDelete = false;
  
-       // Skip during composition - let IME finish naturally
-       if (isComposing) return;
+       // Skip during composition or when not focused
+       if (isComposing || !isFocused) return;
  
-       // Compare DOM value with React state
+       // Compare DOM value with last synced value
        const currentDOMValue = element.value;
-       const currentReactValue = value;
+       const expectedValue = lastSyncedValue;
  
        // If DOM didn't update (SwiftKey bug), manually delete
-       if (currentDOMValue === currentReactValue && currentReactValue.length > 0) {
-         const start = element.selectionStart ?? currentReactValue.length;
-         const end = element.selectionEnd ?? currentReactValue.length;
+       if (currentDOMValue === expectedValue && expectedValue.length > 0) {
+         const start = element.selectionStart ?? expectedValue.length;
+         const end = element.selectionEnd ?? expectedValue.length;
  
          if (start === end && start > 0) {
-           const newValue = currentReactValue.slice(0, start - 1) + currentReactValue.slice(end);
+           // Directly update DOM - don't call onChange while focused
+           const newValue = expectedValue.slice(0, start - 1) + expectedValue.slice(end);
            const newPos = start - 1;
            
-           // Update state only - don't mutate DOM during input event
-           onChange(newValue);
-           
-           // Restore cursor after React updates
-           requestAnimationFrame(() => {
-             if (element === document.activeElement) {
-               element.setSelectionRange(newPos, newPos);
-             }
-           });
+           element.value = newValue;
+           element.setSelectionRange(newPos, newPos);
+           lastSyncedValue = newValue;
          } else if (start !== end) {
-           const newValue = currentReactValue.slice(0, start) + currentReactValue.slice(end);
-           onChange(newValue);
+           // Delete selection
+           const newValue = expectedValue.slice(0, start) + expectedValue.slice(end);
            
-           requestAnimationFrame(() => {
-             if (element === document.activeElement) {
-               element.setSelectionRange(start, start);
-             }
-           });
+           element.value = newValue;
+           element.setSelectionRange(start, start);
+           lastSyncedValue = newValue;
          }
        }
      };
 
+     element.addEventListener('focus', handleFocus);
+     element.addEventListener('blur', handleBlur);
      element.addEventListener('compositionstart', handleCompositionStart);
      element.addEventListener('compositionend', handleCompositionEnd);
     element.addEventListener('beforeinput', handleBeforeInput as EventListener);
      element.addEventListener('input', handleInput);
  
     return () => {
+       element.removeEventListener('focus', handleFocus);
+       element.removeEventListener('blur', handleBlur);
        element.removeEventListener('compositionstart', handleCompositionStart);
        element.removeEventListener('compositionend', handleCompositionEnd);
       element.removeEventListener('beforeinput', handleBeforeInput as EventListener);
