@@ -3,13 +3,13 @@ import { cn } from "@/lib/utils";
 import { getPlatformInfo } from "@/hooks/usePlatform";
 
 /**
-  * Android-safe Input component that completely prevents React value updates during focus.
+  * Android-safe Input component that prevents ALL React DOM writes during focus.
  * 
-  * Root cause: SwiftKey's deleteSurroundingText() gets confused when React writes
-  * the value prop back to the DOM during deletion. ANY React update breaks IME state.
+  * Root cause: SwiftKey's deleteSurroundingText() breaks when React touches the DOM
+  * during IME composition, even via parent re-renders or passive observation.
  * 
-  * Solution: On Android, track focus state and BLOCK all React value updates while focused.
-  * React only updates the input when it's not focused. User typing is pure DOM.
+  * Solution: On Android, input is 100% uncontrolled while focused. No value prop,
+  * no onValueChange calls during typing. State syncs only on blur via DOM ref.
  */
 
 export interface AndroidSafeInputProps
@@ -23,49 +23,51 @@ const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeInputProp
     const innerRef = React.useRef<HTMLInputElement>(null);
     const resolvedRef = (ref as React.RefObject<HTMLInputElement>) || innerRef;
     const isAndroid = getPlatformInfo().isAndroid;
-     const isFocusedRef = React.useRef(false);
+    const isFocusedRef = React.useRef(false);
+    const pendingValueRef = React.useRef(value);
 
     if (isAndroid) {
-       React.useEffect(() => {
-         const element = resolvedRef.current;
-         if (!element) return;
+      React.useEffect(() => {
+        const element = resolvedRef.current;
+        if (!element) return;
 
-         const handleFocus = () => {
-           isFocusedRef.current = true;
-         };
+        const handleFocus = () => {
+          isFocusedRef.current = true;
+        };
  
-         const handleInput = (e: Event) => {
-           const target = e.target as HTMLInputElement;
-           onValueChange(target.value);
-         };
+        const handleBlur = (e: FocusEvent) => {
+          isFocusedRef.current = false;
+          const target = e.target as HTMLInputElement;
+          const currentValue = target.value;
+          
+          // Only call onValueChange if value actually changed
+          if (currentValue !== pendingValueRef.current) {
+            onValueChange(currentValue);
+            pendingValueRef.current = currentValue;
+          }
+        };
  
-         const handleBlur = () => {
-           isFocusedRef.current = false;
-           // Final sync on blur
-           onValueChange(element.value);
-         };
+        element.addEventListener('focus', handleFocus);
+        element.addEventListener('blur', handleBlur);
  
-         element.addEventListener('focus', handleFocus);
-         element.addEventListener('input', handleInput);
-         element.addEventListener('blur', handleBlur);
+        return () => {
+          element.removeEventListener('focus', handleFocus);
+          element.removeEventListener('blur', handleBlur);
+        };
+      }, [onValueChange]);
  
-         return () => {
-           element.removeEventListener('focus', handleFocus);
-           element.removeEventListener('input', handleInput);
-           element.removeEventListener('blur', handleBlur);
-         };
-       }, [onValueChange]);
- 
-       // Update input value only when NOT focused
-       React.useEffect(() => {
-         const element = resolvedRef.current;
-         if (!element || isFocusedRef.current) return;
-         
-         // Only update if value prop differs from DOM
-         if (element.value !== value) {
-           element.value = value;
-         }
-       }, [value]);
+      // Sync external value changes (only when NOT focused)
+      React.useEffect(() => {
+        const element = resolvedRef.current;
+        if (!element) return;
+        
+        pendingValueRef.current = value;
+        
+        // Only touch DOM if not focused
+        if (!isFocusedRef.current && element.value !== value) {
+          element.value = value;
+        }
+      }, [value]);
  
       return (
         <input
@@ -75,8 +77,8 @@ const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeInputProp
             className
           )}
           ref={resolvedRef}
-           defaultValue={value}
-           onBlur={onBlur}
+          defaultValue={value}
+          onBlur={onBlur}
           {...props}
         />
       );
