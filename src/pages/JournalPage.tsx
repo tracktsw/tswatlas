@@ -1,8 +1,8 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import { BookOpen, Plus, Trash2, Edit2, Save, X, Feather } from 'lucide-react';
 import { useUserData } from '@/contexts/UserDataContext';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { AndroidSafeTextarea } from '@/components/ui/android-safe-textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -10,7 +10,6 @@ import { cn } from '@/lib/utils';
 import PaywallGuard from '@/components/PaywallGuard';
 import { LeafIllustration, HeartIllustration } from '@/components/illustrations';
 import { SparkleEffect } from '@/components/SparkleEffect';
-import { useAndroidKeyboardFix } from '@/hooks/useAndroidKeyboardFix';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 
@@ -23,15 +22,9 @@ const JournalPage = () => {
   const [editContent, setEditContent] = useState('');
   const [showSparkles, setShowSparkles] = useState(false);
 
-  // Refs for Android keyboard fix
+  // Refs for textareas
   const newContentRef = useRef<HTMLTextAreaElement>(null);
   const editContentRef = useRef<HTMLTextAreaElement>(null);
-
-  // Android SwiftKey backspace fix
-  const handleNewContentChange = useCallback((val: string) => setNewContent(val), []);
-  const handleEditContentChange = useCallback((val: string) => setEditContent(val), []);
-  useAndroidKeyboardFix(newContentRef, newContent, handleNewContentChange);
-  useAndroidKeyboardFix(editContentRef, editContent, handleEditContentChange);
 
   const handleSave = async () => {
     if (!newContent.trim()) {
@@ -139,11 +132,11 @@ const JournalPage = () => {
               </div>
               <div>
                 <label className="text-sm font-semibold mb-2 block">What's on your mind?</label>
-                <Textarea 
+                <AndroidSafeTextarea 
                   ref={newContentRef}
                   placeholder="Write your thoughts, feelings, observations..."
                   value={newContent}
-                  onChange={(e) => setNewContent(e.target.value)}
+                  onValueChange={setNewContent}
                   rows={6}
                   className="resize-none rounded-xl border-2"
                 />
@@ -207,10 +200,10 @@ const JournalPage = () => {
               
               {editingId === entry.id ? (
                 <div className="space-y-3">
-                  <Textarea 
+                  <AndroidSafeTextarea 
                     ref={editContentRef}
                     value={editContent}
-                    onChange={(e) => setEditContent(e.target.value)}
+                    onValueChange={setEditContent}
                     rows={4}
                     className="resize-none rounded-xl border-2"
                   />

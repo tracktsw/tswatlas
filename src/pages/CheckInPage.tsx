@@ -1,9 +1,9 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import { CheckCircle, Check, Plus, Heart, Pencil, X, Loader2 } from 'lucide-react';
 import { useUserData, CheckIn, SymptomEntry } from '@/contexts/UserDataContext';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
+import { AndroidSafeTextarea } from '@/components/ui/android-safe-textarea';
+import { AndroidSafeInput } from '@/components/ui/android-safe-input';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -11,7 +11,6 @@ import { HeartIllustration, SunIllustration, LeafIllustration } from '@/componen
 import { SparkleEffect } from '@/components/SparkleEffect';
 import { severityColors, severityLabels } from '@/constants/severityColors';
 import { trackCheckInCompleted } from '@/utils/analytics';
-import { useAndroidKeyboardFix } from '@/hooks/useAndroidKeyboardFix';
 
 const treatments = [
   { id: 'nmt', label: 'NMT', description: 'No Moisture Treatment' },
@@ -88,21 +87,11 @@ const CheckInPage = () => {
   // Client request ID for idempotent submissions - persists across retries
   const [clientRequestId, setClientRequestId] = useState<string>(() => crypto.randomUUID());
 
-  // Refs for Android keyboard fix
+  // Refs for inputs
   const notesRef = useRef<HTMLTextAreaElement>(null);
   const customTreatmentRef = useRef<HTMLInputElement>(null);
   const foodTriggerRef = useRef<HTMLInputElement>(null);
   const newProductRef = useRef<HTMLInputElement>(null);
-
-  // Android SwiftKey backspace fix
-  const handleNotesChange = useCallback((val: string) => setNotes(val), []);
-  const handleCustomTreatmentChange = useCallback((val: string) => setCustomTreatment(val), []);
-  const handleFoodTriggerChange = useCallback((val: string) => setFoodTriggerText(val), []);
-  const handleNewProductChange = useCallback((val: string) => setNewProductText(val), []);
-  useAndroidKeyboardFix(notesRef, notes, handleNotesChange);
-  useAndroidKeyboardFix(customTreatmentRef, customTreatment, handleCustomTreatmentChange);
-  useAndroidKeyboardFix(foodTriggerRef, foodTriggerText, handleFoodTriggerChange);
-  useAndroidKeyboardFix(newProductRef, newProductText, handleNewProductChange);
 
   const today = format(new Date(), 'yyyy-MM-dd');
   const todayCheckIns = checkIns.filter((c) => format(new Date(c.timestamp), 'yyyy-MM-dd') === today);
@@ -542,11 +531,11 @@ const CheckInPage = () => {
             
             {/* Custom treatment input */}
             <div className="flex gap-2">
-              <Input
+              <AndroidSafeInput
                 ref={customTreatmentRef}
                 placeholder="Add your own treatment..."
                 value={customTreatment}
-                onChange={(e) => setCustomTreatment(e.target.value)}
+                onValueChange={setCustomTreatment} 
                 onKeyDown={(e) => e.key === 'Enter' && handleAddCustomTreatment()}
                 className="flex-1 h-11 rounded-xl border-2"
               />
@@ -595,11 +584,11 @@ const CheckInPage = () => {
             {/* Food input field - shown when Food is selected */}
             {isFoodSelected && (
               <div className="mt-2">
-                <Input
+                <AndroidSafeInput
                   ref={foodTriggerRef}
                   placeholder="What food? (e.g., dairy, gluten)"
                   value={foodTriggerText}
-                  onChange={(e) => setFoodTriggerText(e.target.value)}
+                  onValueChange={setFoodTriggerText}
                   className="h-10 rounded-xl border-2"
                 />
               </div>
@@ -607,11 +596,11 @@ const CheckInPage = () => {
             {/* New Product input field - shown when New Product is selected */}
             {isNewProductSelected && (
               <div className="mt-2">
-                <Input
+                <AndroidSafeInput
                   ref={newProductRef}
                   placeholder="Which product? (e.g., new lotion, sunscreen)"
                   value={newProductText}
-                  onChange={(e) => setNewProductText(e.target.value)}
+                  onValueChange={setNewProductText}
                   className="h-10 rounded-xl border-2"
                 />
               </div>
@@ -840,11 +829,11 @@ const CheckInPage = () => {
             <h3 className="font-display font-bold text-lg text-foreground">
               Any notes? (optional)
             </h3>
-            <Textarea 
+            <AndroidSafeTextarea 
               ref={notesRef}
               placeholder="How was your day? Any triggers or improvements?"
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onValueChange={setNotes}
               rows={3}
               className="rounded-2xl border-2 resize-none"
             />
