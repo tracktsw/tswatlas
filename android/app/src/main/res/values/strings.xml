@@ -4,4 +4,6 @@
     <string name="title_activity_main">TrackTSW</string>
     <string name="package_name">app.tracktsw.atlas</string>
     <string name="custom_url_scheme">app.tracktsw.atlas</string>
+    <string name="facebook_app_id">3139615679580163</string>
+    <string name="facebook_client_token">92d036144b4939d8330b02fdcc901255</string>
 </resources>
