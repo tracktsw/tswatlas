@@ -3,19 +3,12 @@ import { cn } from "@/lib/utils";
 import { getPlatformInfo } from "@/hooks/usePlatform";
 
 /**
- * Android-safe Input component that prevents SwiftKey backspace bug.
+  * Android-safe Input component - uses native input event for better Android compatibility.
  * 
- * Root cause: React controlled inputs participate in IME reconciliation.
- * Even read-only hooks or conditional value comparisons cause SwiftKey
- * to suppress delete operations, requiring multiple backspace presses.
+  * Root cause: React's onChange uses synthetic events that don't always fire correctly
+  * with SwiftKey's deleteSurroundingText() IME method. Native input events are more reliable.
  * 
- * Solution: Fully uncontrolled input while focused on Android.
- * - Uses defaultValue, not value prop
- * - No onChange during typing
- * - State syncs ONLY on blur by reading from DOM ref
- * - React never participates in input reconciliation during focus
- * 
- * On iOS/Web: Standard controlled input behavior.
+  * Solution: Use native input event on Android, synthetic onChange on iOS/Web.
  */
 
 export interface AndroidSafeInputProps
@@ -30,15 +23,31 @@ const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeInputProp
     const resolvedRef = (ref as React.RefObject<HTMLInputElement>) || innerRef;
     const isAndroid = getPlatformInfo().isAndroid;
 
-    // On Android: Fully uncontrolled - only sync on blur
     if (isAndroid) {
-      const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-        // Read final value from DOM and sync to React state
-        const finalValue = e.target.value;
-        onValueChange(finalValue);
-        onBlur?.(e);
-      };
+       // Use native input event instead of React's synthetic onChange
+       React.useEffect(() => {
+         const element = resolvedRef.current;
+         if (!element) return;
 
+         const handleInput = (e: Event) => {
+           const target = e.target as HTMLInputElement;
+           onValueChange(target.value);
+         };
+ 
+         // Use native addEventListener instead of React event
+         element.addEventListener('input', handleInput);
+         return () => element.removeEventListener('input', handleInput);
+       }, [onValueChange]);
+ 
+       const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+         // Ensure sync on blur as backup
+         const finalValue = e.target.value;
+         if (finalValue !== value) {
+           onValueChange(finalValue);
+         }
+         onBlur?.(e);
+       };
+ 
       return (
         <input
           type={type}
@@ -47,7 +56,7 @@ const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeInputProp
             className
           )}
           ref={resolvedRef}
-          defaultValue={value}
+           value={value}
           onBlur={handleBlur}
           {...props}
         />
