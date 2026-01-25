@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Users, ThumbsUp, ThumbsDown, Minus, Plus, Send, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useAndroidKeyboardFix } from '@/hooks/useAndroidKeyboardFix';
 
 
 interface Treatment {
@@ -45,6 +46,16 @@ const CommunityPage = () => {
   const [newTreatmentName, setNewTreatmentName] = useState('');
   const [newTreatmentDesc, setNewTreatmentDesc] = useState('');
   const [newTreatmentCategory, setNewTreatmentCategory] = useState('general');
+
+  // Refs for Android keyboard fix
+  const treatmentNameRef = useRef<HTMLInputElement>(null);
+  const treatmentDescRef = useRef<HTMLTextAreaElement>(null);
+
+  // Android SwiftKey backspace fix
+  const handleNameChange = useCallback((val: string) => setNewTreatmentName(val), []);
+  const handleDescChange = useCallback((val: string) => setNewTreatmentDesc(val), []);
+  useAndroidKeyboardFix(treatmentNameRef, newTreatmentName, handleNameChange);
+  useAndroidKeyboardFix(treatmentDescRef, newTreatmentDesc, handleDescChange);
 
   // Get user ID for voting
   useEffect(() => {
@@ -223,6 +234,7 @@ const CommunityPage = () => {
               <div>
                 <label className="text-sm font-semibold mb-2 block">Treatment Name</label>
                 <Input 
+                  ref={treatmentNameRef}
                   placeholder="e.g., Vitamin D supplements"
                   value={newTreatmentName}
                   onChange={(e) => setNewTreatmentName(e.target.value)}
@@ -247,6 +259,7 @@ const CommunityPage = () => {
               <div>
                 <label className="text-sm font-semibold mb-2 block">Description (optional)</label>
                 <Textarea 
+                  ref={treatmentDescRef}
                   placeholder="Brief description of how it helps..."
                   value={newTreatmentDesc}
                   onChange={(e) => setNewTreatmentDesc(e.target.value)}
