@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { BookOpen, Plus, Trash2, Edit2, Save, X, Feather } from 'lucide-react';
 import { useUserData } from '@/contexts/UserDataContext';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import PaywallGuard from '@/components/PaywallGuard';
 import { LeafIllustration, HeartIllustration } from '@/components/illustrations';
 import { SparkleEffect } from '@/components/SparkleEffect';
+import { useAndroidKeyboardFix } from '@/hooks/useAndroidKeyboardFix';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 
@@ -21,6 +22,16 @@ const JournalPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   const [showSparkles, setShowSparkles] = useState(false);
+
+  // Refs for Android keyboard fix
+  const newContentRef = useRef<HTMLTextAreaElement>(null);
+  const editContentRef = useRef<HTMLTextAreaElement>(null);
+
+  // Android SwiftKey backspace fix
+  const handleNewContentChange = useCallback((val: string) => setNewContent(val), []);
+  const handleEditContentChange = useCallback((val: string) => setEditContent(val), []);
+  useAndroidKeyboardFix(newContentRef, newContent, handleNewContentChange);
+  useAndroidKeyboardFix(editContentRef, editContent, handleEditContentChange);
 
   const handleSave = async () => {
     if (!newContent.trim()) {
@@ -129,6 +140,7 @@ const JournalPage = () => {
               <div>
                 <label className="text-sm font-semibold mb-2 block">What's on your mind?</label>
                 <Textarea 
+                  ref={newContentRef}
                   placeholder="Write your thoughts, feelings, observations..."
                   value={newContent}
                   onChange={(e) => setNewContent(e.target.value)}
@@ -196,6 +208,7 @@ const JournalPage = () => {
               {editingId === entry.id ? (
                 <div className="space-y-3">
                   <Textarea 
+                    ref={editContentRef}
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
                     rows={4}

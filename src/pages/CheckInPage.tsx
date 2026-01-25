@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { CheckCircle, Check, Plus, Heart, Pencil, X, Loader2 } from 'lucide-react';
 import { useUserData, CheckIn, SymptomEntry } from '@/contexts/UserDataContext';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { HeartIllustration, SunIllustration, LeafIllustration } from '@/componen
 import { SparkleEffect } from '@/components/SparkleEffect';
 import { severityColors, severityLabels } from '@/constants/severityColors';
 import { trackCheckInCompleted } from '@/utils/analytics';
+import { useAndroidKeyboardFix } from '@/hooks/useAndroidKeyboardFix';
 
 const treatments = [
   { id: 'nmt', label: 'NMT', description: 'No Moisture Treatment' },
@@ -86,6 +87,22 @@ const CheckInPage = () => {
   const [expandedSymptom, setExpandedSymptom] = useState<string | null>(null);
   // Client request ID for idempotent submissions - persists across retries
   const [clientRequestId, setClientRequestId] = useState<string>(() => crypto.randomUUID());
+
+  // Refs for Android keyboard fix
+  const notesRef = useRef<HTMLTextAreaElement>(null);
+  const customTreatmentRef = useRef<HTMLInputElement>(null);
+  const foodTriggerRef = useRef<HTMLInputElement>(null);
+  const newProductRef = useRef<HTMLInputElement>(null);
+
+  // Android SwiftKey backspace fix
+  const handleNotesChange = useCallback((val: string) => setNotes(val), []);
+  const handleCustomTreatmentChange = useCallback((val: string) => setCustomTreatment(val), []);
+  const handleFoodTriggerChange = useCallback((val: string) => setFoodTriggerText(val), []);
+  const handleNewProductChange = useCallback((val: string) => setNewProductText(val), []);
+  useAndroidKeyboardFix(notesRef, notes, handleNotesChange);
+  useAndroidKeyboardFix(customTreatmentRef, customTreatment, handleCustomTreatmentChange);
+  useAndroidKeyboardFix(foodTriggerRef, foodTriggerText, handleFoodTriggerChange);
+  useAndroidKeyboardFix(newProductRef, newProductText, handleNewProductChange);
 
   const today = format(new Date(), 'yyyy-MM-dd');
   const todayCheckIns = checkIns.filter((c) => format(new Date(c.timestamp), 'yyyy-MM-dd') === today);
@@ -526,6 +543,7 @@ const CheckInPage = () => {
             {/* Custom treatment input */}
             <div className="flex gap-2">
               <Input
+                ref={customTreatmentRef}
                 placeholder="Add your own treatment..."
                 value={customTreatment}
                 onChange={(e) => setCustomTreatment(e.target.value)}
@@ -578,6 +596,7 @@ const CheckInPage = () => {
             {isFoodSelected && (
               <div className="mt-2">
                 <Input
+                  ref={foodTriggerRef}
                   placeholder="What food? (e.g., dairy, gluten)"
                   value={foodTriggerText}
                   onChange={(e) => setFoodTriggerText(e.target.value)}
@@ -589,6 +608,7 @@ const CheckInPage = () => {
             {isNewProductSelected && (
               <div className="mt-2">
                 <Input
+                  ref={newProductRef}
                   placeholder="Which product? (e.g., new lotion, sunscreen)"
                   value={newProductText}
                   onChange={(e) => setNewProductText(e.target.value)}
@@ -821,6 +841,7 @@ const CheckInPage = () => {
               Any notes? (optional)
             </h3>
             <Textarea 
+              ref={notesRef}
               placeholder="How was your day? Any triggers or improvements?"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
