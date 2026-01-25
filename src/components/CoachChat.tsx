@@ -1,12 +1,11 @@
 // CoachChat.tsx - Simple flex layout for both iOS and Android
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Send, Sparkles, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { AndroidSafeTextarea } from '@/components/ui/android-safe-textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import type { ChatMessage } from '@/hooks/useAICoach';
-import { useAndroidKeyboardFix } from '@/hooks/useAndroidKeyboardFix';
 
 interface CoachChatProps {
   messages: ChatMessage[];
@@ -26,10 +25,6 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Android SwiftKey backspace fix
-  const handleInputChange = useCallback((newValue: string) => setInput(newValue), []);
-  useAndroidKeyboardFix(textareaRef, input, handleInputChange);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -146,10 +141,10 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
         )}
 
         <form onSubmit={handleSubmit} className="flex gap-2">
-          <Textarea
+          <AndroidSafeTextarea
             ref={textareaRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onValueChange={setInput}
             onKeyDown={handleKeyDown}
             placeholder="Ask about your TSW journey..."
             className="min-h-[44px] max-h-32 resize-none"

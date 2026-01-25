@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Mail, Lock, Heart, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { AndroidSafeInput } from '@/components/ui/android-safe-input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -10,7 +10,6 @@ import trackTswLogo from '@/assets/tracktsw-logo-transparent.png';
 import { usePlatform } from '@/hooks/usePlatform';
 import { useOnboardingSubmit } from '@/hooks/useOnboardingSubmit';
 import { hasPendingOnboardingSurvey, sendPendingOnboardingSurvey, identifyUser } from '@/utils/analytics';
-import { useAndroidKeyboardFix } from '@/hooks/useAndroidKeyboardFix';
 
 type AuthMode = 'login' | 'signup' | 'forgot';
 
@@ -32,18 +31,10 @@ const AuthPage = () => {
   const { isAndroid } = usePlatform();
   const { submitOnboardingData, hasPendingOnboardingData } = useOnboardingSubmit();
 
-  // Refs for Android keyboard fix
+  // Refs for inputs
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmPasswordRef = useRef<HTMLInputElement>(null);
-
-  // Android SwiftKey backspace fix
-  const handleEmailChange = useCallback((val: string) => setEmail(val), []);
-  const handlePasswordChange = useCallback((val: string) => setPassword(val), []);
-  const handleConfirmPasswordChange = useCallback((val: string) => setConfirmPassword(val), []);
-  useAndroidKeyboardFix(emailRef, email, handleEmailChange);
-  useAndroidKeyboardFix(passwordRef, password, handlePasswordChange);
-  useAndroidKeyboardFix(confirmPasswordRef, confirmPassword, handleConfirmPasswordChange);
 
   // Common valid email domains
   const validDomains = [
@@ -367,13 +358,13 @@ const AuthPage = () => {
             <Label htmlFor="email" className="font-semibold">Email</Label>
             <div className="relative">
               <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
+              <AndroidSafeInput
                 ref={emailRef}
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
+                onValueChange={(val) => {
+                  setEmail(val);
                   if (emailError) setEmailError('');
                 }}
                 placeholder="you@example.com"
@@ -391,13 +382,13 @@ const AuthPage = () => {
               <Label htmlFor="password" className="font-semibold">Password</Label>
               <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
+                <AndroidSafeInput
                   ref={passwordRef}
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
+                  onValueChange={(val) => {
+                    setPassword(val);
                     if (authError) setAuthError('');
                     if (passwordError) setPasswordError('');
                     if (confirmPasswordError) setConfirmPasswordError('');
@@ -430,13 +421,13 @@ const AuthPage = () => {
               <Label htmlFor="confirmPassword" className="font-semibold">Confirm Password</Label>
               <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
+                <AndroidSafeInput
                   ref={confirmPasswordRef}
                   id="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
-                  onChange={(e) => {
-                    setConfirmPassword(e.target.value);
+                  onValueChange={(val) => {
+                    setConfirmPassword(val);
                     if (confirmPasswordError) setConfirmPasswordError('');
                   }}
                   placeholder="••••••••"

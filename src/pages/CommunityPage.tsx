@@ -1,15 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Users, ThumbsUp, ThumbsDown, Minus, Plus, Send, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { AndroidSafeInput } from '@/components/ui/android-safe-input';
+import { AndroidSafeTextarea } from '@/components/ui/android-safe-textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useAndroidKeyboardFix } from '@/hooks/useAndroidKeyboardFix';
 
 
 interface Treatment {
@@ -47,15 +46,9 @@ const CommunityPage = () => {
   const [newTreatmentDesc, setNewTreatmentDesc] = useState('');
   const [newTreatmentCategory, setNewTreatmentCategory] = useState('general');
 
-  // Refs for Android keyboard fix
+  // Refs for inputs
   const treatmentNameRef = useRef<HTMLInputElement>(null);
   const treatmentDescRef = useRef<HTMLTextAreaElement>(null);
-
-  // Android SwiftKey backspace fix
-  const handleNameChange = useCallback((val: string) => setNewTreatmentName(val), []);
-  const handleDescChange = useCallback((val: string) => setNewTreatmentDesc(val), []);
-  useAndroidKeyboardFix(treatmentNameRef, newTreatmentName, handleNameChange);
-  useAndroidKeyboardFix(treatmentDescRef, newTreatmentDesc, handleDescChange);
 
   // Get user ID for voting
   useEffect(() => {
@@ -233,11 +226,11 @@ const CommunityPage = () => {
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-semibold mb-2 block">Treatment Name</label>
-                <Input 
+                <AndroidSafeInput 
                   ref={treatmentNameRef}
                   placeholder="e.g., Vitamin D supplements"
                   value={newTreatmentName}
-                  onChange={(e) => setNewTreatmentName(e.target.value)}
+                  onValueChange={setNewTreatmentName}
                   className="h-11 rounded-xl border-2"
                 />
               </div>
@@ -258,11 +251,11 @@ const CommunityPage = () => {
               </div>
               <div>
                 <label className="text-sm font-semibold mb-2 block">Description (optional)</label>
-                <Textarea 
+                <AndroidSafeTextarea 
                   ref={treatmentDescRef}
                   placeholder="Brief description of how it helps..."
                   value={newTreatmentDesc}
-                  onChange={(e) => setNewTreatmentDesc(e.target.value)}
+                  onValueChange={setNewTreatmentDesc}
                   rows={2}
                   className="rounded-xl border-2 resize-none"
                 />
