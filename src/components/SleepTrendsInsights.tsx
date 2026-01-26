@@ -292,8 +292,8 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
                       x2={period.end}
                       y1={0}
                       y2={5}
-                      fill="hsl(var(--muted))"
-                      fillOpacity={0.3}
+                      fill="#ef4444"
+                      fillOpacity={0.25}
                     />
                   ))}
                   
@@ -353,7 +353,7 @@ const SleepTrendsInsights = ({ checkIns, dailyFlareStates }: SleepTrendsInsights
 
             {flarePeriods.length > 0 && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <div className="w-3 h-3 rounded bg-muted/60" />
+                <div className="w-3 h-3 rounded bg-red-500/40" />
                 <span>Shaded areas indicate flare periods</span>
               </div>
             )}
