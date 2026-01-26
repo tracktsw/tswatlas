@@ -52,17 +52,20 @@ export function KeyboardWarning() {
       
       const currentValue = target.value;
       const previousValue = lastValueRef.current;
-      const hadSelection = lastSelectionRef.current > 0 || previousValue.length > 0;
       
-      if (hadSelection && previousValue.length > 0 && currentValue.length >= previousValue.length) {
+      // If backspace was pressed but text length didn't decrease, it failed
+      if (previousValue.length > 0 && currentValue.length >= previousValue.length) {
         failedBackspaceCount.current++;
+        console.log('Failed backspace detected:', failedBackspaceCount.current);
         
         if (failedBackspaceCount.current >= FAILED_BACKSPACE_THRESHOLD) {
+          console.log('Threshold reached, showing warning');
           failedBackspaceCount.current = 0;
           setForceShow(true);
           setShow(true);
         }
       } else {
+        // Successful backspace, reset counter
         failedBackspaceCount.current = 0;
       }
     };
