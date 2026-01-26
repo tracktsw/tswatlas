@@ -198,7 +198,7 @@ const DailyInsight = ({ checkIns, isPremium = false }: DailyInsightProps) => {
     return (
       <div className="glass-card p-5">
         <div className="flex items-center gap-2 mb-3">
-          <Lightbulb className="w-5 h-5 text-primary" />
+          <Lightbulb className="w-5 h-5 text-primary animate-[pulse_3s_ease-in-out_infinite]" />
           <h3 className="font-display font-bold text-lg text-anchor">Your Daily Insight</h3>
         </div>
         
@@ -233,7 +233,7 @@ const DailyInsight = ({ checkIns, isPremium = false }: DailyInsightProps) => {
     return (
       <div className="glass-card p-5">
         <div className="flex items-center gap-2 mb-3">
-          <Lightbulb className="w-5 h-5 text-primary" />
+          <Lightbulb className="w-5 h-5 text-primary animate-[pulse_3s_ease-in-out_infinite]" />
           <h3 className="font-display font-bold text-lg text-anchor">Your Daily Insight</h3>
         </div>
         
@@ -259,7 +259,7 @@ const DailyInsight = ({ checkIns, isPremium = false }: DailyInsightProps) => {
   return (
     <div className="glass-card p-5">
       <div className="flex items-center gap-2 mb-3">
-        <Lightbulb className="w-5 h-5 text-primary" />
+        <Lightbulb className="w-5 h-5 text-primary animate-[pulse_3s_ease-in-out_infinite]" />
         <h3 className="font-display font-bold text-lg text-anchor">Your Daily Insight</h3>
       </div>
       
