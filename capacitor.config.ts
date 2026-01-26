@@ -1,4 +1,5 @@
 import type { CapacitorConfig } from '@capacitor/cli';
+import { KeyboardResize } from '@capacitor/keyboard';
 
 const config: CapacitorConfig = {
   appId: 'com.swat.tswatlas',
@@ -9,6 +10,11 @@ const config: CapacitorConfig = {
       // Ensure compatibility with latest Android versions including Pixel 10 XL
       androidxActivityVersion: '1.8.0',
       androidxExifInterfaceVersion: '1.3.6',
+    },
+    Keyboard: {
+      // Use native resize mode for better IME handling on Android
+      resize: KeyboardResize.Native,
+      resizeOnFullScreen: true,
     },
   },
   android: {

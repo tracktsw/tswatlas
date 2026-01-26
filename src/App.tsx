@@ -16,6 +16,8 @@ import NotFound from "@/pages/NotFound";
 import { useDeepLink } from "@/hooks/useDeepLink";
 import { SafeArea } from 'capacitor-plugin-safe-area';
 import { Capacitor } from '@capacitor/core';
+import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
+import { getPlatformInfo } from '@/hooks/usePlatform';
 import {
   HomePageSkeleton,
   PhotoDiaryPageSkeleton,
@@ -111,6 +113,17 @@ const SafeAreaInitializer = ({ children }: { children: React.ReactNode }) => {
         listener.remove();
       }
     };
+  }, []);
+
+  // Android keyboard configuration - use native resize mode for better IME handling
+  useEffect(() => {
+    const { isAndroid } = getPlatformInfo();
+    
+    if (isAndroid) {
+      Keyboard.setResizeMode({ mode: KeyboardResize.Native }).catch((err) => {
+        console.warn('Failed to set keyboard resize mode:', err);
+      });
+    }
   }, []);
 
   return <>{children}</>;
