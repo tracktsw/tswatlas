@@ -198,7 +198,10 @@ const DailyInsight = ({ checkIns, isPremium = false }: DailyInsightProps) => {
     return (
       <div className="glass-card p-5">
         <div className="flex items-center gap-2 mb-3">
-          <Lightbulb className="w-5 h-5 text-primary animate-[pulse_3s_ease-in-out_infinite]" />
+          <div className="relative">
+            <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,_hsl(45_100%_60%_/_0.4)_0%,_transparent_70%)] blur-sm scale-150" />
+            <Lightbulb className="w-5 h-5 text-amber-500 relative z-10 animate-[pulse_3s_ease-in-out_infinite]" />
+          </div>
           <h3 className="font-display font-bold text-lg text-anchor">Your Daily Insight</h3>
         </div>
         
@@ -233,7 +236,10 @@ const DailyInsight = ({ checkIns, isPremium = false }: DailyInsightProps) => {
     return (
       <div className="glass-card p-5">
         <div className="flex items-center gap-2 mb-3">
-          <Lightbulb className="w-5 h-5 text-primary animate-[pulse_3s_ease-in-out_infinite]" />
+          <div className="relative">
+            <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,_hsl(45_100%_60%_/_0.4)_0%,_transparent_70%)] blur-sm scale-150" />
+            <Lightbulb className="w-5 h-5 text-amber-500 relative z-10 animate-[pulse_3s_ease-in-out_infinite]" />
+          </div>
           <h3 className="font-display font-bold text-lg text-anchor">Your Daily Insight</h3>
         </div>
         
@@ -259,7 +265,10 @@ const DailyInsight = ({ checkIns, isPremium = false }: DailyInsightProps) => {
   return (
     <div className="glass-card p-5">
       <div className="flex items-center gap-2 mb-3">
-        <Lightbulb className="w-5 h-5 text-primary animate-[pulse_3s_ease-in-out_infinite]" />
+        <div className="relative">
+          <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,_hsl(45_100%_60%_/_0.4)_0%,_transparent_70%)] blur-sm scale-150" />
+          <Lightbulb className="w-5 h-5 text-amber-500 relative z-10 animate-[pulse_3s_ease-in-out_infinite]" />
+        </div>
         <h3 className="font-display font-bold text-lg text-anchor">Your Daily Insight</h3>
       </div>
       
