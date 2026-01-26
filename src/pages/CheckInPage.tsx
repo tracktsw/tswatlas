@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo } from 'react';
-import { CheckCircle, Check, Plus, Heart, Pencil, X, Loader2, UtensilsCrossed, ChevronDown } from 'lucide-react';
+import { CheckCircle, Check, Plus, Heart, Pencil, X, Loader2, UtensilsCrossed, ChevronDown, Package } from 'lucide-react';
 import { useUserData, CheckIn, SymptomEntry } from '@/contexts/UserDataContext';
 import { Button } from '@/components/ui/button';
 import { AndroidSafeTextarea } from '@/components/ui/android-safe-textarea';
@@ -32,7 +32,6 @@ const triggersList = [
   { id: 'dust_pollen', label: 'Dust / Pollen' },
   { id: 'detergent', label: 'Detergent' },
   { id: 'fragrance', label: 'Fragrance' },
-  { id: 'new_product', label: 'New Product' },
   { id: 'pets', label: 'Pets' },
   // Internal triggers
   { id: 'stress', label: 'Stress' },
@@ -60,6 +59,11 @@ const symptomsList = [
 // Common food suggestions for quick-tap
 const commonFoodSuggestions = [
   'Dairy', 'Gluten', 'Eggs', 'Nuts', 'Soy', 'Shellfish', 'Sugar', 'Alcohol', 'Caffeine', 'Spicy food'
+];
+
+// Common product suggestions for quick-tap
+const commonProductSuggestions = [
+  'New moisturizer', 'Sunscreen', 'Cleanser', 'Serum', 'Shampoo', 'Body wash', 'Laundry detergent', 'Makeup'
 ];
 
 const sleepOptions = [
@@ -133,8 +137,42 @@ const CheckInPage = () => {
       .map(([food]) => food);
   }, [checkIns]);
 
-  // Filter suggestions based on input text
-  const filteredSuggestions = useMemo(() => {
+  // Extract recently logged products from check-in history (last 30 days)
+  const recentProducts = useMemo(() => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const productCounts: Record<string, number> = {};
+    
+    checkIns
+      .filter(c => new Date(c.timestamp) >= thirtyDaysAgo)
+      .forEach(c => {
+        (c.triggers || []).forEach(trigger => {
+          // Support both new product: prefix and legacy new_product: prefix
+          if (trigger.startsWith('product:')) {
+            const product = trigger.slice(8).trim();
+            if (product) {
+              const normalizedProduct = product.charAt(0).toUpperCase() + product.slice(1).toLowerCase();
+              productCounts[normalizedProduct] = (productCounts[normalizedProduct] || 0) + 1;
+            }
+          } else if (trigger.startsWith('new_product:')) {
+            const product = trigger.slice(12).trim();
+            if (product) {
+              const normalizedProduct = product.charAt(0).toUpperCase() + product.slice(1).toLowerCase();
+              productCounts[normalizedProduct] = (productCounts[normalizedProduct] || 0) + 1;
+            }
+          }
+        });
+      });
+    
+    return Object.entries(productCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([product]) => product);
+  }, [checkIns]);
+
+  // Filter food suggestions based on input text
+  const filteredFoodSuggestions = useMemo(() => {
     const inputLower = foodInputText.toLowerCase().trim();
     const alreadyAdded = new Set(foodItems.map(f => f.toLowerCase()));
     
@@ -152,6 +190,23 @@ const CheckInPage = () => {
       .slice(0, 6);
   }, [foodInputText, foodItems, recentFoods]);
 
+  // Filter product suggestions based on input text
+  const filteredProductSuggestions = useMemo(() => {
+    const inputLower = productInputText.toLowerCase().trim();
+    const alreadyAdded = new Set(productItems.map(p => p.toLowerCase()));
+    
+    // Combine recent products and common suggestions, prioritizing recent
+    const allSuggestions = [...new Set([...recentProducts, ...commonProductSuggestions])];
+    
+    if (!inputLower) {
+      return allSuggestions.filter(s => !alreadyAdded.has(s.toLowerCase())).slice(0, 8);
+    }
+    
+    return allSuggestions
+      .filter(s => s.toLowerCase().includes(inputLower) && !alreadyAdded.has(s.toLowerCase()))
+      .slice(0, 6);
+  }, [productInputText, productItems, recentProducts]);
+
   const toggleTreatment = (id: string) => {
     if (isSaving) return;
     setSelectedTreatments((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
@@ -159,24 +214,8 @@ const CheckInPage = () => {
 
   const toggleTrigger = (id: string) => {
     if (isSaving) return;
-    if (id === 'new_product') {
-      // For new_product, toggle the selection
-      setSelectedTriggers((prev) => {
-        if (prev.some(t => t === 'new_product' || t.startsWith('new_product:'))) {
-          // Deselecting - clear the products too
-          setProductItems([]);
-          setProductInputText('');
-          return prev.filter((t) => t !== 'new_product' && !t.startsWith('new_product:'));
-        } else {
-          return [...prev, 'new_product'];
-        }
-      });
-    } else {
-      setSelectedTriggers((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
-    }
+    setSelectedTriggers((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
   };
-
-  const isNewProductSelected = selectedTriggers.some(t => t === 'new_product' || t.startsWith('new_product:'));
 
   const handleAddFoodItem = () => {
     if (isSaving) return;
@@ -281,15 +320,18 @@ const CheckInPage = () => {
       setFoodItems([]);
     }
     setFoodInputText('');
-    // Extract new_product items from triggers if present (can have multiple new_product:xxx entries)
-    const productTriggers = triggers.filter(t => t.startsWith('new_product:'));
+    // Extract new_product or product items from triggers if present
+    const productTriggers = triggers.filter(t => t.startsWith('product:') || t.startsWith('new_product:'));
     if (productTriggers.length > 0) {
-      setProductItems(productTriggers.map(t => t.replace('new_product:', '')));
+      setProductItems(productTriggers.map(t => 
+        t.startsWith('product:') ? t.replace('product:', '') : t.replace('new_product:', '')
+      ));
     } else {
       setProductItems([]);
     }
     setProductInputText('');
-    setSelectedTriggers(triggers);
+    // Filter out food and product entries from selected triggers (they're handled separately)
+    setSelectedTriggers(triggers.filter(t => !t.startsWith('food:') && !t.startsWith('product:') && !t.startsWith('new_product:')));
     setPainScore(checkIn.painScore ?? null);
     setSleepScore(checkIn.sleepScore ?? null);
     setNotes(checkIn.notes || '');
@@ -332,13 +374,14 @@ const CheckInPage = () => {
 
     setIsSaving(true);
 
-    // Process triggers: add food items and new_product items as prefixed entries
+    // Process triggers: add food items and product items as prefixed entries
     const processedTriggers = selectedTriggers
-      .filter(t => t !== 'new_product') // Remove plain 'new_product' entry
-      .filter(t => !t.startsWith('new_product:')) // Remove any existing new_product:xxx entries
+      .filter(t => !t.startsWith('product:')) // Remove any existing product:xxx entries (will re-add from productItems)
+      .filter(t => !t.startsWith('new_product:')) // Clean up legacy new_product entries
+      .filter(t => t !== 'new_product') // Clean up legacy new_product entry
       .filter(t => !t.startsWith('food:')) // Remove any existing food:xxx entries (will re-add from foodItems)
       .concat(foodItems.length > 0 ? foodItems.map(f => `food:${f}`) : [])
-      .concat(isNewProductSelected && productItems.length > 0 ? productItems.map(p => `new_product:${p}`) : isNewProductSelected ? ['new_product'] : []);
+      .concat(productItems.length > 0 ? productItems.map(p => `product:${p}`) : []);
 
     try {
       if (editingCheckIn) {
@@ -641,7 +684,7 @@ const CheckInPage = () => {
             </div>
             <div className="grid grid-cols-2 gap-1.5">
             {triggersList.map(({ id, label }) => {
-                const isSelected = id === 'new_product' ? isNewProductSelected : selectedTriggers.includes(id);
+                const isSelected = selectedTriggers.includes(id);
                 return (
                   <button
                     key={id}
@@ -658,52 +701,6 @@ const CheckInPage = () => {
                 );
               })}
             </div>
-            {/* New Product input field - shown when New Product is selected */}
-            {isNewProductSelected && (
-              <div className="mt-2 space-y-2">
-                {/* Added product items */}
-                {productItems.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {productItems.map((product) => (
-                      <span
-                        key={product}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium"
-                      >
-                        {product}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveProductItem(product)}
-                          className="p-0.5 rounded-full hover:bg-primary/20 transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {/* Input to add more products */}
-                <div className="flex gap-2">
-                  <AndroidSafeInput
-                    ref={productInputRef}
-                    placeholder="Add a product (e.g., new lotion, sunscreen)"
-                    value={productInputText}
-                    onValueChange={setProductInputText}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddProductItem()}
-                    className="flex-1 h-10 rounded-xl border-2"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={handleAddProductItem}
-                    disabled={!productInputText.trim()}
-                    className="h-10 w-10 rounded-xl"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
             <p className="text-xs text-muted-foreground mt-2">
               Select anything that might have contributed. Patterns are assessed over time.
             </p>
@@ -763,13 +760,13 @@ const CheckInPage = () => {
             )}
             
             {/* Quick food suggestions */}
-            {filteredSuggestions.length > 0 && (
+            {filteredFoodSuggestions.length > 0 && (
               <div className="space-y-1.5">
                 <p className="text-[10px] text-muted-foreground font-medium">
                   {recentFoods.length > 0 && foodInputText === '' ? 'Recent & common foods:' : 'Suggestions:'}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
-                  {filteredSuggestions.map((suggestion) => {
+                  {filteredFoodSuggestions.map((suggestion) => {
                     const isRecent = recentFoods.includes(suggestion);
                     return (
                       <button
@@ -827,9 +824,9 @@ const CheckInPage = () => {
               </Button>
               
               {/* Autocomplete dropdown */}
-              {showFoodSuggestions && foodInputText.trim() && filteredSuggestions.length > 0 && (
+              {showFoodSuggestions && foodInputText.trim() && filteredFoodSuggestions.length > 0 && (
                 <div className="absolute top-full left-0 right-12 mt-1 bg-background border border-amber-200 dark:border-amber-800 rounded-xl shadow-xl z-[100] overflow-hidden">
-                  {filteredSuggestions.slice(0, 5).map((suggestion) => (
+                  {filteredFoodSuggestions.slice(0, 5).map((suggestion) => (
                     <button
                       key={suggestion}
                       type="button"
@@ -854,6 +851,122 @@ const CheckInPage = () => {
             
             <p className="text-[10px] text-muted-foreground/70">
               Foods you log appear in Insights → Food Breakdown to show correlations with your skin
+            </p>
+          </div>
+
+          {/* Product Diary Section (Optional) */}
+          <div className="space-y-3 animate-slide-up relative z-20" style={{ animationDelay: '0.195s' }}>
+            <button
+              type="button"
+              onClick={() => {
+                if (productItems.length === 0) {
+                  setTimeout(() => productInputRef.current?.focus(), 100);
+                }
+              }}
+              className="flex items-center gap-2 w-full"
+            >
+              <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                <Package className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div className="text-left flex-1">
+                <h3 className="font-display font-bold text-lg text-foreground">
+                  Product Diary
+                  <span className="text-xs font-normal text-muted-foreground ml-2">(optional)</span>
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Track new products to find patterns in your skin reactions
+                </p>
+              </div>
+              {productItems.length > 0 && (
+                <span className="text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-2 py-0.5 rounded-full">
+                  {productItems.length} logged
+                </span>
+              )}
+            </button>
+            
+            {/* Product items chips */}
+            {productItems.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {productItems.map((product) => (
+                  <span
+                    key={product}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm font-medium"
+                  >
+                    🧴 {product}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveProductItem(product)}
+                      className="p-0.5 rounded-full hover:bg-purple-200 dark:hover:bg-purple-800/50 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            
+            {/* Quick product suggestions */}
+            {filteredProductSuggestions.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[10px] text-muted-foreground font-medium">
+                  {recentProducts.length > 0 && productInputText === '' ? 'Recent & common products:' : 'Suggestions:'}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {filteredProductSuggestions.map((suggestion) => {
+                    const isRecent = recentProducts.includes(suggestion);
+                    return (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        onClick={() => {
+                          if (!productItems.includes(suggestion)) {
+                            setProductItems((prev) => [...prev, suggestion]);
+                          }
+                        }}
+                        className={cn(
+                          "px-2.5 py-1 text-xs font-medium rounded-full transition-all",
+                          isRecent
+                            ? "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 ring-1 ring-purple-300 dark:ring-purple-700"
+                            : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        {isRecent && <span className="mr-1">🕐</span>}
+                        {suggestion}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            
+            {/* Product input */}
+            <div className="flex gap-2 relative">
+              <AndroidSafeInput
+                ref={productInputRef}
+                placeholder="Type to search or add custom product..."
+                value={productInputText}
+                onValueChange={setProductInputText}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddProductItem();
+                  }
+                }}
+                className="flex-1 h-10 rounded-xl border-2 border-purple-200 dark:border-purple-800/50 focus:border-purple-400"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={handleAddProductItem}
+                disabled={!productInputText.trim()}
+                className="h-10 w-10 rounded-xl border-purple-200 dark:border-purple-800/50 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+              >
+                <Plus className="w-4 h-4 text-purple-600" />
+              </Button>
+            </div>
+            
+            <p className="text-[10px] text-muted-foreground/70">
+              Products you log appear in Insights → Product Breakdown to show correlations with your skin
             </p>
           </div>
 
