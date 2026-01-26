@@ -24,7 +24,7 @@ const triggersList = [
   { id: 'exercise', label: 'Exercise' },
   { id: 'alcohol', label: 'Alcohol' },
   { id: 'spicy_food', label: 'Spicy Food' },
-  { id: 'specific_food', label: 'Specific Food' },
+  
   { id: 'friction_scratching', label: 'Friction / Scratching' },
 ];
 
