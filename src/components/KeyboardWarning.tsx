@@ -1,25 +1,86 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { getPlatformInfo } from '@/hooks/usePlatform';
 import { AlertCircle, X } from 'lucide-react';
+
+const STORAGE_KEY = 'keyboard-warning-dismissed';
+const FAILED_BACKSPACE_THRESHOLD = 3;
 
 export function KeyboardWarning() {
   const [show, setShow] = useState(false);
   const { isAndroid } = getPlatformInfo();
+  const failedBackspaceCount = useRef(0);
+  const lastValueRef = useRef<string>('');
+  const lastSelectionRef = useRef<number>(0);
 
-  useEffect(() => {
-    if (isAndroid) {
-      const dismissed = localStorage.getItem('keyboard-warning-dismissed');
-      if (!dismissed) {
-        setShow(true);
-      }
+  const checkAndShow = useCallback(() => {
+    if (!isAndroid) return;
+    
+    const dismissed = localStorage.getItem(STORAGE_KEY);
+    if (!dismissed) {
+      setShow(true);
     }
+  }, [isAndroid]);
+
+  // Initial check - show if not dismissed
+  useEffect(() => {
+    checkAndShow();
+  }, [checkAndShow]);
+
+  // Backspace failure detection - re-show warning if user is still having issues
+  useEffect(() => {
+    if (!isAndroid) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Backspace') return;
+      
+      const target = e.target as HTMLInputElement | HTMLTextAreaElement;
+      if (!target || !('value' in target)) return;
+      
+      // Store current state before backspace
+      lastValueRef.current = target.value;
+      lastSelectionRef.current = target.selectionStart || 0;
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key !== 'Backspace') return;
+      
+      const target = e.target as HTMLInputElement | HTMLTextAreaElement;
+      if (!target || !('value' in target)) return;
+      
+      const currentValue = target.value;
+      const previousValue = lastValueRef.current;
+      const hadSelection = lastSelectionRef.current > 0 || previousValue.length > 0;
+      
+      // Check if backspace should have deleted something but didn't
+      if (hadSelection && previousValue.length > 0 && currentValue.length >= previousValue.length) {
+        failedBackspaceCount.current++;
+        
+        // If we hit threshold, show warning again even if dismissed
+        if (failedBackspaceCount.current >= FAILED_BACKSPACE_THRESHOLD) {
+          failedBackspaceCount.current = 0;
+          setShow(true);
+        }
+      } else {
+        // Successful backspace, reset counter
+        failedBackspaceCount.current = 0;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown, true);
+    document.addEventListener('keyup', handleKeyUp, true);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+      document.removeEventListener('keyup', handleKeyUp, true);
+    };
   }, [isAndroid]);
 
   if (!show) return null;
 
   const dismiss = () => {
-    localStorage.setItem('keyboard-warning-dismissed', 'true');
+    localStorage.setItem(STORAGE_KEY, 'true');
     setShow(false);
+    failedBackspaceCount.current = 0;
   };
 
   return (
