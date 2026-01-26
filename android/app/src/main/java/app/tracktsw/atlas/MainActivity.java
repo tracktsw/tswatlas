@@ -20,6 +20,9 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
+        // Register custom plugins
+        registerPlugin(InAppReviewPlugin.class);
+        
         // Initialize Meta SDK for Facebook Ads Attribution
         FacebookSdk.sdkInitialize(getApplicationContext());
         AppEventsLogger.activateApp(getApplication());
