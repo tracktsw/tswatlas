@@ -11,7 +11,7 @@ import { HeartIllustration, SunIllustration, LeafIllustration } from '@/componen
 import { SparkleEffect } from '@/components/SparkleEffect';
 import { severityColors, severityLabels } from '@/constants/severityColors';
 import { trackCheckInCompleted } from '@/utils/analytics';
-
+import { useInAppReview } from '@/hooks/useInAppReview';
 const treatments = [
   { id: 'nmt', label: 'NMT', description: 'No Moisture Treatment' },
   { id: 'moisturizer', label: 'Moisturizer', description: 'Applied moisturizer' },
@@ -78,6 +78,7 @@ const sleepOptions = [
 
 const CheckInPage = () => {
   const { checkIns, addCheckIn, updateCheckIn, customTreatments, addCustomTreatment, removeCustomTreatment, getTodayCheckInCount } = useUserData();
+  const { maybeRequestReview } = useInAppReview();
   const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
   const [customTreatment, setCustomTreatment] = useState('');
   const [mood, setMood] = useState(3);
@@ -424,6 +425,10 @@ const CheckInPage = () => {
         
         // Track successful check-in (after DB insert succeeds)
         trackCheckInCompleted('daily');
+        
+        // Request in-app review after 7th check-in (once per user)
+        const newCheckInCount = checkIns.length + 1;
+        maybeRequestReview(newCheckInCount);
         
         // Generate new clientRequestId for next check-in (only on success)
         setClientRequestId(crypto.randomUUID());
