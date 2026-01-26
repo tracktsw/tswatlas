@@ -29,8 +29,10 @@ const DemoModeContext = createContext<DemoModeContextType | undefined>(undefined
 
 // Sample data generation helpers
 const symptomsList = ['Burning', 'Itching', 'Thermodysregulation', 'Flaking', 'Oozing', 'Swelling', 'Redness'];
-const triggersList = ['heat_sweat', 'stress', 'poor_sleep', 'shower_hard_water', 'weather_change', 'food', 'dust_pollen'];
+const triggersList = ['heat_sweat', 'stress', 'poor_sleep', 'shower_hard_water', 'weather_change', 'dust_pollen', 'friction_scratching'];
 const treatmentsList = ['nmt', 'moisturizer', 'rlt', 'salt_bath', 'cold_compress', 'antihistamine', 'exercise', 'meditation'];
+const foodsList = ['Dairy', 'Gluten', 'Eggs', 'Nuts', 'Sugar', 'Alcohol', 'Caffeine', 'Soy'];
+const productsList = ['New moisturizer', 'Sunscreen', 'Cleanser', 'Serum', 'Shampoo', 'Body wash'];
 
 const pickRandom = <T,>(arr: T[], count: number): T[] => {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
@@ -208,7 +210,24 @@ export const DemoModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Triggers on bad days
       const triggerCount = skinFeeling <= 2 ? Math.floor(Math.random() * 2) + 1 : 
                            skinFeeling <= 3 ? (Math.random() > 0.5 ? 1 : 0) : 0;
-      const triggers = pickRandom(triggersList, triggerCount);
+      const baseTriggers = pickRandom(triggersList, triggerCount);
+      
+      // Add food diary entries (randomly, ~40% of days)
+      const foodTriggers: string[] = [];
+      if (Math.random() > 0.6) {
+        const foodCount = Math.floor(Math.random() * 2) + 1;
+        const foods = pickRandom(foodsList, foodCount);
+        foods.forEach(f => foodTriggers.push(`food:${f}`));
+      }
+      
+      // Add product diary entries (randomly, ~20% of days)
+      const productTriggers: string[] = [];
+      if (Math.random() > 0.8) {
+        const product = pickRandom(productsList, 1)[0];
+        productTriggers.push(`product:${product}`);
+      }
+      
+      const triggers = [...baseTriggers, ...foodTriggers, ...productTriggers];
       
       // Treatments - more on bad days, some on good days
       const treatmentCount = skinFeeling <= 2 ? Math.floor(Math.random() * 3) + 2 :
