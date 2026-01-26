@@ -223,10 +223,15 @@ const CheckInPage = () => {
   const handleAddFoodItem = () => {
     if (isSaving) return;
     const trimmed = foodInputText.trim();
-    if (trimmed && !foodItems.includes(trimmed)) {
-      setFoodItems((prev) => [...prev, trimmed]);
-      setFoodInputText('');
+    if (!trimmed) return;
+    // Normalize: capitalize first letter, lowercase rest
+    const normalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+    // Case-insensitive duplicate check
+    const alreadyExists = foodItems.some(f => f.toLowerCase() === normalized.toLowerCase());
+    if (!alreadyExists) {
+      setFoodItems((prev) => [...prev, normalized]);
     }
+    setFoodInputText('');
   };
 
   const handleRemoveFoodItem = (food: string) => {
@@ -237,10 +242,15 @@ const CheckInPage = () => {
   const handleAddProductItem = () => {
     if (isSaving) return;
     const trimmed = productInputText.trim();
-    if (trimmed && !productItems.includes(trimmed)) {
-      setProductItems((prev) => [...prev, trimmed]);
-      setProductInputText('');
+    if (!trimmed) return;
+    // Normalize: capitalize first letter, lowercase rest
+    const normalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+    // Case-insensitive duplicate check
+    const alreadyExists = productItems.some(p => p.toLowerCase() === normalized.toLowerCase());
+    if (!alreadyExists) {
+      setProductItems((prev) => [...prev, normalized]);
     }
+    setProductInputText('');
   };
 
   const handleRemoveProductItem = (product: string) => {
