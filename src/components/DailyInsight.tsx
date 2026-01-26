@@ -270,22 +270,34 @@ const insightGenerators = [
     };
   },
 
-  // Consistency insight
+  // Pain trend insight
   (checkIns: CheckIn[]) => {
-    const last30Days = subDays(new Date(), 30);
-    const recent = checkIns.filter(c => new Date(c.timestamp) >= last30Days);
+    const now = new Date();
+    const oneWeekAgo = subDays(now, 7);
+    const twoWeeksAgo = subDays(now, 14);
+
+    const thisWeek = checkIns.filter(c => new Date(c.timestamp) >= oneWeekAgo && c.painScore !== undefined && c.painScore !== null);
+    const lastWeek = checkIns.filter(c => {
+      const date = new Date(c.timestamp);
+      return date >= twoWeeksAgo && date < oneWeekAgo && c.painScore !== undefined && c.painScore !== null;
+    });
+
+    if (thisWeek.length < 3 || lastWeek.length < 3) return null;
+
+    const thisWeekAvg = thisWeek.reduce((sum, c) => sum + (c.painScore ?? 0), 0) / thisWeek.length;
+    const lastWeekAvg = lastWeek.reduce((sum, c) => sum + (c.painScore ?? 0), 0) / lastWeek.length;
     
-    const uniqueDays = new Set(recent.map(c => format(new Date(c.timestamp), 'yyyy-MM-dd'))).size;
+    const change = lastWeekAvg - thisWeekAvg; // Lower pain is better
     
-    if (uniqueDays < 10) return null;
+    if (change <= 0) return null;
 
     return {
-      icon: Lightbulb,
-      iconColor: 'text-primary',
-      bgColor: 'bg-primary/10',
-      title: 'Great Consistency!',
-      message: `You've checked in ${uniqueDays} days this month. Keep building those insights!`,
-      cta: 'Unlock deeper analysis',
+      icon: TrendingUp,
+      iconColor: 'text-emerald-500',
+      bgColor: 'bg-emerald-500/10',
+      title: 'Pain Improving',
+      message: `Your pain levels are ${change.toFixed(1)} points lower than last week.`,
+      cta: 'View pain trends',
       ctaLink: '/insights'
     };
   },
@@ -416,14 +428,18 @@ const DailyInsight = ({ checkIns, isPremium = false }: DailyInsightProps) => {
         </div>
       </div>
       
-      {/* Premium hint - only for free users */}
-      {!isPremium && (
-        <div className="mt-4 pt-3 border-t border-muted/50">
+      {/* Premium hint - only for free users, premium-specific CTA for premium users */}
+      <div className="mt-4 pt-3 border-t border-muted/50">
+        {isPremium ? (
+          <p className="text-[10px] text-muted-foreground text-center">
+            ✨ <Link to="/insights" className="text-primary font-medium hover:underline">Head to Insights</Link> for full in-depth analysis.
+          </p>
+        ) : (
           <p className="text-[10px] text-muted-foreground text-center">
             ✨ This is just a glimpse. <Link to="/insights" className="text-primary font-medium hover:underline">Unlock full insights</Link> with Premium.
           </p>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
