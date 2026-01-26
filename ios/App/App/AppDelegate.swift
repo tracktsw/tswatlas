@@ -1,8 +1,6 @@
 import UIKit
 import Capacitor
 import FBSDKCoreKit
-import AppTrackingTransparency
-import AdSupport
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -13,55 +11,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Initialize Meta SDK for Facebook Ads Attribution
         ApplicationDelegate.shared.application(application, didFinishLaunchingWithOptions: launchOptions)
         
+        // Enable automatic event logging for install attribution
+        Settings.shared.isAutoLogAppEventsEnabled = true
+        Settings.shared.isAdvertiserIDCollectionEnabled = true
+        
         // Debug logging
         print("=== META SDK DEBUG (iOS) ===")
         print("Facebook SDK initialized")
         print("App ID: \(Settings.shared.appID ?? "not set")")
+        print("Auto log events: \(Settings.shared.isAutoLogAppEventsEnabled)")
+        print("Advertiser ID collection: \(Settings.shared.isAdvertiserIDCollectionEnabled)")
         
         return true
-    }
-    
-    func applicationDidBecomeActive(_ application: UIApplication) {
-        // Request App Tracking Transparency authorization when app becomes active
-        requestTrackingAuthorization()
-    }
-    
-    private func requestTrackingAuthorization() {
-        if #available(iOS 14.5, *) {
-            ATTrackingManager.requestTrackingAuthorization { status in
-                DispatchQueue.main.async {
-                    switch status {
-                    case .authorized:
-                        // User granted permission - enable tracking
-                        Settings.shared.isAutoLogAppEventsEnabled = true
-                        Settings.shared.isAdvertiserIDCollectionEnabled = true
-                        print("=== ATT DEBUG ===")
-                        print("Tracking authorized")
-                        print("IDFA: \(ASIdentifierManager.shared().advertisingIdentifier.uuidString)")
-                    case .denied:
-                        print("=== ATT DEBUG ===")
-                        print("Tracking denied by user")
-                        Settings.shared.isAdvertiserIDCollectionEnabled = false
-                    case .notDetermined:
-                        print("=== ATT DEBUG ===")
-                        print("Tracking not determined")
-                    case .restricted:
-                        print("=== ATT DEBUG ===")
-                        print("Tracking restricted")
-                        Settings.shared.isAdvertiserIDCollectionEnabled = false
-                    @unknown default:
-                        print("=== ATT DEBUG ===")
-                        print("Unknown tracking status")
-                    }
-                }
-            }
-        } else {
-            // iOS < 14.5: No ATT required, enable tracking directly
-            Settings.shared.isAutoLogAppEventsEnabled = true
-            Settings.shared.isAdvertiserIDCollectionEnabled = true
-            print("=== ATT DEBUG ===")
-            print("iOS < 14.5 - ATT not required, tracking enabled")
-        }
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
@@ -76,7 +37,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Called as part of the transition from the background to the active state.
     }
 
-    // applicationDidBecomeActive is now handled above with ATT request
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        // Restart any tasks that were paused while the application was inactive.
+    }
 
     func applicationWillTerminate(_ application: UIApplication) {
         // Called when the application is about to terminate.
