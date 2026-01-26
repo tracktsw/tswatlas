@@ -710,7 +710,7 @@ const CheckInPage = () => {
           </div>
 
           {/* Food Diary Section (Optional) */}
-          <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.19s' }}>
+          <div className="space-y-3 animate-slide-up relative z-30" style={{ animationDelay: '0.19s' }}>
             <button
               type="button"
               onClick={() => {
