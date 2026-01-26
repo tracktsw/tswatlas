@@ -715,6 +715,36 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
         </div>
       )}
 
+      {/* No Longer a Concern Section - Moved up, before Food/Product Diary */}
+      {resolvedTriggers.length > 0 && (
+        <div className="glass-card p-5 space-y-3 bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-800/30">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+              No Longer a Concern
+            </p>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            These triggers were previously flagged but recent data shows improvement
+          </p>
+          <div className="space-y-2">
+            {resolvedTriggers.map(({ id, label, totalDays, wasPercentWorse, nowPercentBetter }) => (
+              <div 
+                key={id} 
+                className="flex items-center justify-between py-2 border-b border-emerald-200/30 dark:border-emerald-800/20 last:border-0"
+              >
+                <span className="font-medium text-sm text-foreground">
+                  {label}
+                </span>
+                <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                  Was {wasPercentWorse}% worse → Now {nowPercentBetter > 0 ? `${nowPercentBetter}% better` : 'normal'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Food Diary Analysis Section - New Delayed Reaction Logic */}
       {foodAnalysis.length > 0 && (
         <div className="glass-card p-5 space-y-3">
@@ -864,36 +894,6 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {/* No Longer a Concern Section */}
-      {resolvedTriggers.length > 0 && (
-        <div className="glass-card p-5 space-y-3 bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-800/30">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-              No Longer a Concern
-            </p>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            These triggers were previously flagged but recent data shows improvement
-          </p>
-          <div className="space-y-2">
-            {resolvedTriggers.map(({ id, label, totalDays, wasPercentWorse, nowPercentBetter }) => (
-              <div 
-                key={id} 
-                className="flex items-center justify-between py-2 border-b border-emerald-200/30 dark:border-emerald-800/20 last:border-0"
-              >
-                <span className="font-medium text-sm text-foreground">
-                  {label}
-                </span>
-                <span className="text-xs text-emerald-600 dark:text-emerald-400">
-                  Was {wasPercentWorse}% worse → Now {nowPercentBetter > 0 ? `${nowPercentBetter}% better` : 'normal'}
-                </span>
-              </div>
-            ))}
-          </div>
         </div>
       )}
     </div>
