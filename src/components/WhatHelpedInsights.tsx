@@ -331,7 +331,7 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
         {/* Primary View: Simple Treatment Effectiveness */}
         {treatmentStats.length > 0 ? (
           <div className="space-y-4">
-            {treatmentStats.slice(0, 4).map(({ id, label, count, effectiveness, hasHighCorrelation, correlationRatio }) => (
+            {treatmentStats.map(({ id, label, count, effectiveness, hasHighCorrelation, correlationRatio }) => (
               <div key={id} className="space-y-2">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
