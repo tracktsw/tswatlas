@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Eye, TrendingDown, TrendingUp, CheckCircle2 } from 'lucide-react';
+import { Eye, TrendingDown, TrendingUp, CheckCircle2, ChevronDown } from 'lucide-react';
 import { CheckIn } from '@/contexts/UserDataContext';
 import { cn } from '@/lib/utils';
 import { BaselineConfidence } from '@/utils/flareStateEngine';
@@ -65,8 +65,11 @@ const PERIOD_DAYS: Record<TimePeriod, number> = {
   all: 9999,
 };
 
+const TRIGGERS_INITIAL_DISPLAY = 5;
+
 const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatternsInsightsProps) => {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('all');
+  const [showAllTriggers, setShowAllTriggers] = useState(false);
   const { activePatterns, resolvedTriggers } = useMemo(() => {
     // Filter check-ins by selected time period
     const now = new Date();
@@ -250,11 +253,11 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
       }
     });
 
-    // Sort active patterns by impact score
+    // Sort active patterns by impact score (no artificial limit - we'll handle display in UI)
     activePatterns.sort((a, b) => b.impactScore - a.impactScore);
     
     return { 
-      activePatterns: activePatterns.slice(0, 6), 
+      activePatterns, 
       resolvedTriggers: resolvedTriggers.slice(0, 3) 
     };
   }, [checkIns, timePeriod]);
@@ -371,7 +374,7 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
           <p className="text-xs text-muted-foreground">
             Triggers correlated with worse-than-average skin days
           </p>
-          {activePatterns.map(({ id, label, uniqueDays, percentWorse, impactScore, isHighConfidence, trend }, index) => {
+          {(showAllTriggers ? activePatterns : activePatterns.slice(0, TRIGGERS_INITIAL_DISPLAY)).map(({ id, label, uniqueDays, percentWorse, impactScore, isHighConfidence, trend }, index) => {
             const barWidth = (impactScore / maxImpact) * 100;
             
             return (
@@ -412,6 +415,25 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
               </div>
             );
           })}
+          
+          {activePatterns.length > TRIGGERS_INITIAL_DISPLAY && (
+            <button
+              onClick={() => setShowAllTriggers(!showAllTriggers)}
+              className="flex items-center justify-center gap-1.5 w-full py-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              {showAllTriggers ? (
+                <>
+                  Show less
+                  <ChevronDown className="w-3.5 h-3.5 rotate-180 transition-transform" />
+                </>
+              ) : (
+                <>
+                  Show {activePatterns.length - TRIGGERS_INITIAL_DISPLAY} more
+                  <ChevronDown className="w-3.5 h-3.5 transition-transform" />
+                </>
+              )}
+            </button>
+          )}
           <p className="text-[10px] text-muted-foreground/70 mt-3 pt-3 border-t border-muted/50">
             Based on repeated check-ins over time. Early data may be inconclusive.
           </p>
