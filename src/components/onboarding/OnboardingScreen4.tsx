@@ -21,11 +21,11 @@ export const OnboardingScreen4: React.FC = () => {
   const screenshots = [
     {
       image: foodImage,
-      headline: "Track what you eat. See what makes you flare.",
+      headline: "Log what you eat and see how your skin tends to respond over time.",
     },
     {
       image: productImage,
-      headline: "Find out which products help — or hurt.",
+      headline: "Identify products that often appear before flares.",
     },
   ];
 
@@ -108,8 +108,8 @@ export const OnboardingScreen4: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.4 }}
             >
-              <span className="text-foreground">Your skin reacts to </span>
-              <span className="text-primary">what you consume.</span>
+              <span className="text-foreground">Flares are not </span>
+              <span className="text-primary">random.</span>
             </motion.h1>
           </div>
 
@@ -155,7 +155,7 @@ export const OnboardingScreen4: React.FC = () => {
             onClick={handleContinue}
             className="w-full h-14 text-base font-semibold bg-primary hover:bg-primary/90"
           >
-            Continue
+            Keep Going
           </Button>
         </motion.div>
       </div>
