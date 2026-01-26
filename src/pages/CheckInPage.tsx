@@ -1335,13 +1335,33 @@ const CheckInPage = () => {
                   </div>
                 </div>
               )}
-              {/* Triggers - excluding food items */}
-              {checkIn.triggers && checkIn.triggers.filter(t => !t.startsWith('food:')).length > 0 && (
+              {/* Product Diary - separate section */}
+              {checkIn.triggers && checkIn.triggers.filter(t => t.startsWith('product:') || t.startsWith('new_product:')).length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs text-muted-foreground mb-1.5 font-medium">🧴 Product Diary</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {checkIn.triggers
+                      .filter(t => t.startsWith('product:') || t.startsWith('new_product:'))
+                      .map(triggerId => {
+                        const productText = triggerId.startsWith('product:') 
+                          ? triggerId.replace('product:', '') 
+                          : triggerId.replace('new_product:', '');
+                        return (
+                          <span key={triggerId} className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium px-2.5 py-1 rounded-full">
+                            {productText}
+                          </span>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+              {/* Triggers - excluding food and product items */}
+              {checkIn.triggers && checkIn.triggers.filter(t => !t.startsWith('food:') && !t.startsWith('product:') && !t.startsWith('new_product:')).length > 0 && (
                 <div className="mt-3">
                   <p className="text-xs text-muted-foreground mb-1.5 font-medium">Triggers logged today</p>
                   <div className="flex flex-wrap gap-1.5">
                     {checkIn.triggers
-                      .filter(t => !t.startsWith('food:'))
+                      .filter(t => !t.startsWith('food:') && !t.startsWith('product:') && !t.startsWith('new_product:'))
                       .map(triggerId => (
                         <span key={triggerId} className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-400 font-medium px-2.5 py-1 rounded-full">
                           {triggersList.find(t => t.id === triggerId)?.label || triggerId}
