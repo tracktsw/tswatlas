@@ -16,6 +16,8 @@ import { useCheckInReminder } from '@/hooks/useCheckInReminder';
 import { useLocalNotifications } from '@/hooks/useLocalNotifications';
 import { scheduleCheckInReminders } from '@/utils/notificationScheduler';
 import { format } from 'date-fns';
+import RevenueCatDebugPanel from '@/components/RevenueCatDebugPanel';
+import { getIsNativeMobile } from '@/hooks/useRevenueCat';
 
 const SettingsPage = () => {
   const { reminderSettings, updateReminderSettings, photos, checkIns, journalEntries, isLoading, isSyncing, userId } = useUserData();
@@ -454,6 +456,11 @@ const SettingsPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* RevenueCat Debug Panel - shown when debug options are unlocked AND on native */}
+      {showResetOnboarding && getIsNativeMobile() && (
+        <RevenueCatDebugPanel />
       )}
 
       <div className="glass-card p-4">
