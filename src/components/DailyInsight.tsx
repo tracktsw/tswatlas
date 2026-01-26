@@ -9,6 +9,7 @@ import { analyzeProductReactions } from '@/utils/productAnalysis';
 interface DailyInsightProps {
   checkIns: CheckIn[];
   isPremium?: boolean;
+  isSubscriptionLoading?: boolean;
 }
 
 const MIN_CHECKINS_FOR_INSIGHT = 5;
@@ -303,7 +304,7 @@ const insightGenerators = [
   },
 ];
 
-const DailyInsight = ({ checkIns, isPremium = false }: DailyInsightProps) => {
+const DailyInsight = ({ checkIns, isPremium = false, isSubscriptionLoading = false }: DailyInsightProps) => {
   const insight = useMemo(() => {
     if (checkIns.length < MIN_CHECKINS_FOR_INSIGHT) {
       return null;
@@ -429,17 +430,19 @@ const DailyInsight = ({ checkIns, isPremium = false }: DailyInsightProps) => {
       </div>
       
       {/* Premium hint - only for free users, premium-specific CTA for premium users */}
-      <div className="mt-4 pt-3 border-t border-muted/50">
-        {isPremium ? (
-          <p className="text-[10px] text-muted-foreground text-center">
-            ✨ <Link to="/insights" className="text-primary font-medium hover:underline">Head to Insights</Link> for full in-depth analysis.
-          </p>
-        ) : (
-          <p className="text-[10px] text-muted-foreground text-center">
-            ✨ This is just a glimpse. <Link to="/insights" className="text-primary font-medium hover:underline">Unlock full insights</Link> with Premium.
-          </p>
-        )}
-      </div>
+      {!isSubscriptionLoading && (
+        <div className="mt-4 pt-3 border-t border-muted/50">
+          {isPremium ? (
+            <p className="text-[10px] text-muted-foreground text-center">
+              ✨ <Link to="/insights" className="text-primary font-medium hover:underline">Head to Insights</Link> for full in-depth analysis.
+            </p>
+          ) : (
+            <p className="text-[10px] text-muted-foreground text-center">
+              ✨ This is just a glimpse. <Link to="/insights" className="text-primary font-medium hover:underline">Unlock full insights</Link> with Premium.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 };
