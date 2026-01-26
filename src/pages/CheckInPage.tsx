@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { CheckCircle, Check, Plus, Heart, Pencil, X, Loader2 } from 'lucide-react';
+import { CheckCircle, Check, Plus, Heart, Pencil, X, Loader2, UtensilsCrossed, ChevronDown } from 'lucide-react';
 import { useUserData, CheckIn, SymptomEntry } from '@/contexts/UserDataContext';
 import { Button } from '@/components/ui/button';
 import { AndroidSafeTextarea } from '@/components/ui/android-safe-textarea';
@@ -43,7 +43,7 @@ const triggersList = [
   { id: 'exercise', label: 'Exercise' },
   { id: 'alcohol', label: 'Alcohol' },
   { id: 'spicy_food', label: 'Spicy Food' },
-  { id: 'specific_food', label: 'Specific Food' },
+  
   { id: 'friction_scratching', label: 'Friction / Scratching' },
 ];
 
@@ -106,19 +106,7 @@ const CheckInPage = () => {
 
   const toggleTrigger = (id: string) => {
     if (isSaving) return;
-    if (id === 'specific_food') {
-      // For specific_food, toggle the selection
-      setSelectedTriggers((prev) => {
-        if (prev.some(t => t === 'specific_food' || t.startsWith('food:'))) {
-          // Deselecting - clear the foods too
-          setFoodItems([]);
-          setFoodInputText('');
-          return prev.filter((t) => t !== 'specific_food' && !t.startsWith('food:'));
-        } else {
-          return [...prev, 'specific_food'];
-        }
-      });
-    } else if (id === 'new_product') {
+    if (id === 'new_product') {
       // For new_product, toggle the selection
       setSelectedTriggers((prev) => {
         if (prev.some(t => t === 'new_product' || t.startsWith('new_product:'))) {
@@ -135,7 +123,6 @@ const CheckInPage = () => {
     }
   };
 
-  const isFoodSelected = selectedTriggers.some(t => t === 'specific_food' || t.startsWith('food:'));
   const isNewProductSelected = selectedTriggers.some(t => t === 'new_product' || t.startsWith('new_product:'));
 
   const handleAddFoodItem = () => {
@@ -292,13 +279,12 @@ const CheckInPage = () => {
 
     setIsSaving(true);
 
-    // Process triggers: replace 'specific_food' with 'food:item' entries and 'new_product' with 'new_product:text' if text is provided
+    // Process triggers: add food items and new_product items as prefixed entries
     const processedTriggers = selectedTriggers
-      .filter(t => t !== 'specific_food') // Remove plain 'specific_food' entry
-      .filter(t => !t.startsWith('food:')) // Remove any existing food:xxx entries
       .filter(t => t !== 'new_product') // Remove plain 'new_product' entry
       .filter(t => !t.startsWith('new_product:')) // Remove any existing new_product:xxx entries
-      .concat(isFoodSelected && foodItems.length > 0 ? foodItems.map(f => `food:${f}`) : isFoodSelected ? ['specific_food'] : [])
+      .filter(t => !t.startsWith('food:')) // Remove any existing food:xxx entries (will re-add from foodItems)
+      .concat(foodItems.length > 0 ? foodItems.map(f => `food:${f}`) : [])
       .concat(isNewProductSelected && productItems.length > 0 ? productItems.map(p => `new_product:${p}`) : isNewProductSelected ? ['new_product'] : []);
 
     try {
@@ -602,7 +588,7 @@ const CheckInPage = () => {
             </div>
             <div className="grid grid-cols-2 gap-1.5">
             {triggersList.map(({ id, label }) => {
-                const isSelected = id === 'food' ? isFoodSelected : id === 'new_product' ? isNewProductSelected : selectedTriggers.includes(id);
+                const isSelected = id === 'new_product' ? isNewProductSelected : selectedTriggers.includes(id);
                 return (
                   <button
                     key={id}
@@ -619,52 +605,6 @@ const CheckInPage = () => {
                 );
               })}
             </div>
-            {/* Food input field - shown when Specific Food is selected */}
-            {isFoodSelected && (
-              <div className="mt-2 space-y-2">
-                {/* Added food items */}
-                {foodItems.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {foodItems.map((food) => (
-                      <span
-                        key={food}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium"
-                      >
-                        {food}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFoodItem(food)}
-                          className="p-0.5 rounded-full hover:bg-primary/20 transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {/* Input to add more foods */}
-                <div className="flex gap-2">
-                  <AndroidSafeInput
-                    ref={foodInputRef}
-                    placeholder="Add a food (e.g., dairy, gluten, eggs)"
-                    value={foodInputText}
-                    onValueChange={setFoodInputText}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddFoodItem()}
-                    className="flex-1 h-10 rounded-xl border-2"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={handleAddFoodItem}
-                    disabled={!foodInputText.trim()}
-                    className="h-10 w-10 rounded-xl"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
             {/* New Product input field - shown when New Product is selected */}
             {isNewProductSelected && (
               <div className="mt-2 space-y-2">
@@ -713,6 +653,86 @@ const CheckInPage = () => {
             )}
             <p className="text-xs text-muted-foreground mt-2">
               Select anything that might have contributed. Patterns are assessed over time.
+            </p>
+          </div>
+
+          {/* Food Diary Section (Optional) */}
+          <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.19s' }}>
+            <button
+              type="button"
+              onClick={() => {
+                // Toggle visibility - if already has items, keep visible
+                if (foodItems.length === 0) {
+                  // Focus input when opening
+                  setTimeout(() => foodInputRef.current?.focus(), 100);
+                }
+              }}
+              className="flex items-center gap-2 w-full"
+            >
+              <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                <UtensilsCrossed className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="text-left flex-1">
+                <h3 className="font-display font-bold text-lg text-foreground">
+                  Food Diary
+                  <span className="text-xs font-normal text-muted-foreground ml-2">(optional)</span>
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Track foods to find patterns in your skin reactions
+                </p>
+              </div>
+              {foodItems.length > 0 && (
+                <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+                  {foodItems.length} logged
+                </span>
+              )}
+            </button>
+            
+            {/* Food items chips */}
+            {foodItems.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {foodItems.map((food) => (
+                  <span
+                    key={food}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-sm font-medium"
+                  >
+                    🍽️ {food}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFoodItem(food)}
+                      className="p-0.5 rounded-full hover:bg-amber-200 dark:hover:bg-amber-800/50 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            
+            {/* Food input */}
+            <div className="flex gap-2">
+              <AndroidSafeInput
+                ref={foodInputRef}
+                placeholder="Add a food (e.g., dairy, nuts, eggs)"
+                value={foodInputText}
+                onValueChange={setFoodInputText}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddFoodItem()}
+                className="flex-1 h-10 rounded-xl border-2 border-amber-200 dark:border-amber-800/50 focus:border-amber-400"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={handleAddFoodItem}
+                disabled={!foodInputText.trim()}
+                className="h-10 w-10 rounded-xl border-amber-200 dark:border-amber-800/50 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+              >
+                <Plus className="w-4 h-4 text-amber-600" />
+              </Button>
+            </div>
+            
+            <p className="text-[10px] text-muted-foreground/70">
+              Foods you log appear in Insights → Food Breakdown to show correlations with your skin
             </p>
           </div>
 
