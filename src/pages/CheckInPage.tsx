@@ -836,7 +836,7 @@ const CheckInPage = () => {
             </div>
             <AndroidSafeTextarea 
               ref={notesRef}
-              placeholder="How was your day? Any triggers, improvements, or things worth remembering?"
+              placeholder="Anything specific happen today? Dive deeper into anything you think is important..."
               value={notes}
               onValueChange={setNotes}
               rows={3}
