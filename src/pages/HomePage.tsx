@@ -272,7 +272,7 @@ const HomePage = () => {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5 text-coral" />
-            <h3 className="font-display font-bold text-lg text-anchor">Community Favorites</h3>
+            <h3 className="font-display font-bold text-lg text-anchor">Community Favourites</h3>
           </div>
           <Link to="/community" className="text-xs text-sage font-medium hover:underline">
             View all →
