@@ -1204,26 +1204,36 @@ const CheckInPage = () => {
                   ))}
                 </div>
               )}
-              {checkIn.triggers && checkIn.triggers.length > 0 && (
+              {/* Food Diary - separate section */}
+              {checkIn.triggers && checkIn.triggers.filter(t => t.startsWith('food:')).length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs text-muted-foreground mb-1.5 font-medium">🍽️ Food Diary</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {checkIn.triggers
+                      .filter(t => t.startsWith('food:'))
+                      .map(triggerId => {
+                        const foodText = triggerId.replace('food:', '');
+                        return (
+                          <span key={triggerId} className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-medium px-2.5 py-1 rounded-full">
+                            {foodText}
+                          </span>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+              {/* Triggers - excluding food items */}
+              {checkIn.triggers && checkIn.triggers.filter(t => !t.startsWith('food:')).length > 0 && (
                 <div className="mt-3">
                   <p className="text-xs text-muted-foreground mb-1.5 font-medium">Triggers logged today</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {checkIn.triggers.map(triggerId => {
-                      // Handle food:xxx format
-                      if (triggerId.startsWith('food:')) {
-                        const foodText = triggerId.replace('food:', '');
-                        return (
-                          <span key={triggerId} className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-400 font-medium px-2.5 py-1 rounded-full">
-                            Food: {foodText}
-                          </span>
-                        );
-                      }
-                      return (
+                    {checkIn.triggers
+                      .filter(t => !t.startsWith('food:'))
+                      .map(triggerId => (
                         <span key={triggerId} className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-400 font-medium px-2.5 py-1 rounded-full">
                           {triggersList.find(t => t.id === triggerId)?.label || triggerId}
                         </span>
-                      );
-                    })}
+                      ))}
                   </div>
                 </div>
               )}

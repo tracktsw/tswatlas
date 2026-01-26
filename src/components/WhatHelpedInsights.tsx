@@ -22,7 +22,7 @@ interface ImprovementPeriod {
 interface CorrelationResult {
   id: string;
   label: string;
-  type: 'treatment' | 'trigger_absent' | 'sleep';
+  type: 'treatment' | 'trigger_absent' | 'sleep' | 'food';
   correlationRatio: number;
   improvementUsage: number;
   baselineUsage: number;
@@ -207,9 +207,11 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
       if (baselinePresence > 0.3 && improvementPresence < baselinePresence * 0.5) {
         // Format trigger label: check triggersList first, then format underscores
         let triggerLabel = triggersList.find(t => t.id === triggerId)?.label;
+        const isFood = triggerId.startsWith('food:');
         if (!triggerLabel) {
-          if (triggerId.startsWith('food:')) {
-            triggerLabel = `Food: ${triggerId.slice(5).split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}`;
+          if (isFood) {
+            // Food diary items - format nicely
+            triggerLabel = triggerId.slice(5).split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
           } else {
             // Convert snake_case to Title Case
             triggerLabel = triggerId.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
@@ -219,7 +221,7 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
         results.push({
           id: triggerId,
           label: triggerLabel,
-          type: 'trigger_absent',
+          type: isFood ? 'food' : 'trigger_absent',
           correlationRatio: baselinePresence / (improvementPresence + 0.01),
           improvementUsage: improvementPresence,
           baselineUsage: baselinePresence,
@@ -254,6 +256,7 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
 
   const helpfulFactors = correlationAnalysis.filter(c => c.type === 'treatment' || c.type === 'sleep');
   const triggersToAvoid = correlationAnalysis.filter(c => c.type === 'trigger_absent');
+  const foodsToAvoid = correlationAnalysis.filter(c => c.type === 'food');
 
   // Minimum uses required for full confidence in effectiveness score
   const MIN_USES_FOR_FULL_CONFIDENCE = 5;
@@ -506,24 +509,49 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
                     </div>
                   )}
 
+                  {/* Foods to avoid - separate from triggers */}
+                  {foodsToAvoid.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-border/30">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">🍽️</span>
+                        <span className="text-xs font-medium text-foreground">Food Diary: absent during improvement</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {foodsToAvoid.map(food => (
+                          <span 
+                            key={food.id}
+                            className="text-xs px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-medium"
+                          >
+                            {food.label}
+                            <TrendingDown className="w-3 h-3 inline ml-1" />
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Summary */}
-                  {(helpfulFactors.length > 0 || triggersToAvoid.length > 0) && (
+                  {(helpfulFactors.length > 0 || triggersToAvoid.length > 0 || foodsToAvoid.length > 0) && (
                     <div className="pt-2 border-t border-border/30">
                       <p className="text-xs text-muted-foreground italic">
                         💡 Based on your data, 
                         {helpfulFactors.length > 0 && (
                           <> <span className="font-medium text-foreground">{helpfulFactors[0].label}</span></>
                         )}
-                        {helpfulFactors.length > 0 && triggersToAvoid.length > 0 && ' combined with avoiding '}
+                        {helpfulFactors.length > 0 && (triggersToAvoid.length > 0 || foodsToAvoid.length > 0) && ' combined with avoiding '}
                         {triggersToAvoid.length > 0 && (
                           <><span className="font-medium text-foreground">{triggersToAvoid[0].label}</span></>
+                        )}
+                        {triggersToAvoid.length > 0 && foodsToAvoid.length > 0 && ' and '}
+                        {foodsToAvoid.length > 0 && (
+                          <><span className="font-medium text-foreground">{foodsToAvoid[0].label}</span></>
                         )}
                         {' may have contributed to your improvement.'}
                       </p>
                     </div>
                   )}
 
-                  {helpfulFactors.length === 0 && triggersToAvoid.length === 0 && (
+                  {helpfulFactors.length === 0 && triggersToAvoid.length === 0 && foodsToAvoid.length === 0 && (
                     <p className="text-xs text-muted-foreground text-center">
                       Improvement periods found but no strong correlations detected yet.
                     </p>
