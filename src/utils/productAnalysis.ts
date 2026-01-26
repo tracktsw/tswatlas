@@ -60,14 +60,20 @@ function buildDateProductMap(checkIns: CheckIn[]): Map<string, Set<string>> {
     const triggers = checkIn.triggers || [];
     
     triggers.forEach(trigger => {
+      let productName: string | null = null;
+      
+      // Support both new product: prefix and legacy new_product: prefix
       if (trigger.startsWith('product:')) {
-        const productName = trigger.slice(8).trim().toLowerCase();
-        if (productName) {
-          if (!dateMap.has(date)) {
-            dateMap.set(date, new Set());
-          }
-          dateMap.get(date)!.add(productName);
+        productName = trigger.slice(8).trim().toLowerCase();
+      } else if (trigger.startsWith('new_product:')) {
+        productName = trigger.slice(12).trim().toLowerCase();
+      }
+      
+      if (productName) {
+        if (!dateMap.has(date)) {
+          dateMap.set(date, new Set());
         }
+        dateMap.get(date)!.add(productName);
       }
     });
   });
