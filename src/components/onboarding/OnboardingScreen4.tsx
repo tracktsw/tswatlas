@@ -8,8 +8,8 @@ import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { Capacitor } from '@capacitor/core';
 import { OnboardingProgress } from './OnboardingProgress';
 import { FloatingLeaf } from './FloatingLeaf';
-import symptomsImage from '@/assets/onboarding-symptoms.png';
-import sleepImage from '@/assets/onboarding-sleep.png';
+import foodImage from '@/assets/onboarding-food.png';
+import productImage from '@/assets/onboarding-product.png';
 import { cn } from '@/lib/utils';
 
 export const OnboardingScreen4: React.FC = () => {
@@ -20,12 +20,12 @@ export const OnboardingScreen4: React.FC = () => {
 
   const screenshots = [
     {
-      image: symptomsImage,
-      headline: "Your symptoms are real. Your data makes them undeniable.",
+      image: foodImage,
+      headline: "Track what you eat. See what makes you flare.",
     },
     {
-      image: sleepImage,
-      headline: "Your flares are stealing your sleep.",
+      image: productImage,
+      headline: "Find out which products help — or hurt.",
     },
   ];
 
@@ -45,7 +45,6 @@ export const OnboardingScreen4: React.FC = () => {
     nextScreen();
   };
 
-  // E) Fix onboarding squish: Use measured viewport height on Android, 100svh on iOS
   const isAndroid = platform === 'android';
 
   return (
@@ -56,10 +55,9 @@ export const OnboardingScreen4: React.FC = () => {
       )}
       style={!isAndroid ? { height: '100svh' } : undefined}
     >
-      {/* Floating leaf animation */}
       <FloatingLeaf />
       
-      {/* Header with back and skip - with safe area padding */}
+      {/* Header with back and skip */}
       <motion.div 
         className={cn(
           "flex items-center justify-between px-4 shrink-0",
@@ -91,7 +89,7 @@ export const OnboardingScreen4: React.FC = () => {
         </button>
       </motion.div>
 
-      {/* Main content - centered like other screens */}
+      {/* Main content */}
       <div className={cn(
         "flex-1 flex flex-col justify-center px-6 min-h-0 overflow-y-auto",
         isAndroid && "android-onboarding-content"
@@ -110,12 +108,12 @@ export const OnboardingScreen4: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.4 }}
             >
-              <span className="text-foreground">TSW affects </span>
-              <span className="text-primary">everything.</span>
+              <span className="text-foreground">Your skin reacts to </span>
+              <span className="text-primary">what you consume.</span>
             </motion.h1>
           </div>
 
-          {/* Screenshots stacked - height responsive */}
+          {/* Screenshots stacked */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -140,14 +138,14 @@ export const OnboardingScreen4: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* Footer with progress and CTA - with safe area padding */}
+      {/* Footer with progress and CTA */}
       <div
         className={cn("px-6 shrink-0 space-y-4", isAndroid && "android-onboarding-fixed")}
         style={{
           paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 24px)',
         }}
       >
-        <OnboardingProgress current={3} total={4} />
+        <OnboardingProgress current={3} total={5} />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -157,7 +155,7 @@ export const OnboardingScreen4: React.FC = () => {
             onClick={handleContinue}
             className="w-full h-14 text-base font-semibold bg-primary hover:bg-primary/90"
           >
-            Let's Get Started
+            Continue
           </Button>
         </motion.div>
       </div>
