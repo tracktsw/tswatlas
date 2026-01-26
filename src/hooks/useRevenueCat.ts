@@ -474,15 +474,12 @@ export const useRevenueCat = () => {
 
   // Purchase monthly package
   // CRITICAL: Requires user to be logged in first
-  // CRITICAL: iOS-only fix - must use raw package object, not reactive proxy
   const purchaseMonthly = useCallback(async (): Promise<{ 
     success: boolean; 
     error?: string; 
     errorCode?: number;
     isPremiumNow?: boolean;
   }> => {
-    console.log('[RevenueCat] === purchaseMonthly ENTRY ===');
-    
     if (!getIsNativeMobile()) {
       console.log('[RevenueCat] Purchase skipped - not native mobile');
       return { success: false, error: 'Not native mobile', isPremiumNow: false };
@@ -497,9 +494,7 @@ export const useRevenueCat = () => {
     setIsLoading(true);
     
     try {
-      console.log('[RevenueCat] Importing Purchases module...');
       const { Purchases, PACKAGE_TYPE } = await import('@revenuecat/purchases-capacitor');
-      console.log('[RevenueCat] Purchases module imported successfully');
       
       // Fetch offerings fresh - don't rely on potentially stale state
       console.log('[RevenueCat] Fetching offerings for purchase...');
@@ -532,32 +527,11 @@ export const useRevenueCat = () => {
         return { success: false, error: 'Monthly subscription not available.', isPremiumNow: false };
       }
       
-      console.log('[RevenueCat] Monthly package found:', {
-        identifier: monthly.identifier,
-        price: monthly.product?.priceString,
-        productId: monthly.product?.identifier,
-      });
-
-      // CRITICAL FIX: Create a plain object copy to avoid reactive proxy issues
-      // This is the ROOT CAUSE of the iOS purchase sheet not appearing
-      // Reactive proxies (from Vue/React state) break the Capacitor native bridge
-      const plainPackage = JSON.parse(JSON.stringify(monthly));
+      // Attempt purchase
+      console.log('[RevenueCat] Starting purchase with package:', monthly.identifier);
+      const purchaseResult = await Purchases.purchasePackage({ aPackage: monthly as any });
       
-      console.log('[RevenueCat] === CALLING Purchases.purchasePackage NOW ===');
-      console.log('[RevenueCat] Package being sent:', JSON.stringify(plainPackage, null, 2));
-      
-      // Attempt purchase with plain object
-      // CRITICAL: Use packageToPurchase (newer API) with fallback to aPackage (older API)
-      let purchaseResult;
-      try {
-        purchaseResult = await Purchases.purchasePackage({ aPackage: plainPackage });
-      } catch (purchaseError: any) {
-        // If aPackage fails, try packageToPurchase
-        console.log('[RevenueCat] aPackage failed, trying packageToPurchase...', purchaseError?.message);
-        purchaseResult = await (Purchases as any).purchasePackage({ packageToPurchase: plainPackage });
-      }
-      
-      console.log('[RevenueCat] === purchasePackage RETURNED ===');
+      // Detailed logging of purchase result
       console.log('[RevenueCat] Purchase result:', JSON.stringify(purchaseResult, null, 2));
       
       const resultCustomerInfo = purchaseResult?.customerInfo as CustomerInfo;
@@ -590,35 +564,30 @@ export const useRevenueCat = () => {
       return { success: true, isPremiumNow };
       
     } catch (error: any) {
-      console.error('[RevenueCat] === PURCHASE ERROR ===');
-      console.error('[RevenueCat] Error object:', error);
-      console.error('[RevenueCat] Error code:', error?.code);
-      console.error('[RevenueCat] Error message:', error?.message);
-      console.error('[RevenueCat] Error stack:', error?.stack);
+      console.error('[RevenueCat] Purchase error:', error);
+      console.error('[RevenueCat] Error code:', error.code);
+      console.error('[RevenueCat] Error message:', error.message);
       setIsLoading(false);
       
-      // User cancelled (code 1 or code 2 for StoreKit)
-      if (error?.code === 1 || error?.code === 2 || error?.message?.includes('cancel') || error?.message?.includes('Cancel')) {
-        console.log('[RevenueCat] User cancelled purchase');
+      // User cancelled (code 1)
+      if (error.code === 1 || error.message?.includes('cancel')) {
         return { success: false, isPremiumNow: false }; // No error message for cancellation
       }
       
       // Configuration error (code 23 - products not fetched)
-      if (error?.code === 23) {
+      if (error.code === 23) {
         return { 
           success: false, 
-          error: 'Unable to connect to App Store. Please try again.',
+          error: 'Unable to connect to Play Store. Please try again.',
           errorCode: 23,
           isPremiumNow: false,
         };
       }
       
-      // Rethrow to ensure errors are visible
-      const errorMessage = error?.message || 'Purchase failed. Please try again.';
       return { 
         success: false, 
-        error: errorMessage,
-        errorCode: error?.code,
+        error: error.message || 'Purchase failed. Please try again.',
+        errorCode: error.code,
         isPremiumNow: false,
       };
     }

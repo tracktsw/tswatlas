@@ -48,30 +48,13 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   
   const [upgradeAttempted, setUpgradeAttempted] = useState(false);
   const hasTrackedPaywallRef = useRef(false);
-  const [initTimeout, setInitTimeout] = useState(false);
 
   const effectiveIsPremium = isAdmin || isPremium;
   const paywallLocation = getPaywallLocation(location.pathname);
 
   // Prevent a brief paywall flash on native while RevenueCat initializes/validates.
-  // Add timeout fallback to prevent indefinite loading if RevenueCat never initializes
-  const isNativePending = isNative && isUserLoggedIn && !revenueCat.isInitialized && !initTimeout;
+  const isNativePending = isNative && isUserLoggedIn && !revenueCat.isInitialized;
   const isLoading = isBackendLoading || isNativePending;
-
-  // Timeout fallback: if RevenueCat hasn't initialized after 10 seconds, proceed anyway
-  useEffect(() => {
-    if (!isNative || !isUserLoggedIn || revenueCat.isInitialized) {
-      setInitTimeout(false);
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      console.warn('[PaywallGuard] RevenueCat initialization timeout - proceeding without waiting');
-      setInitTimeout(true);
-    }, 10000);
-
-    return () => clearTimeout(timeout);
-  }, [isNative, isUserLoggedIn, revenueCat.isInitialized]);
 
   // Track paywall_shown once when paywall is actually displayed
   useEffect(() => {
