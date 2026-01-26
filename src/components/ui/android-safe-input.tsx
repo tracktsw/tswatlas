@@ -3,13 +3,13 @@ import { cn } from "@/lib/utils";
 import { getPlatformInfo } from "@/hooks/usePlatform";
 
 /**
- * Android-safe Input that works around Android WebView IME bugs.
+ * Android-safe Input that prevents React reconciliation during focus.
  * 
- * Root cause: Android WebView's deleteSurroundingText() doesn't work correctly,
- * especially with SwiftKey. Any React reconciliation during composition breaks it.
+ * Root cause: React's reconciliation interferes with IME composition state.
+ * Plain HTML inputs work fine with SwiftKey - this makes React behave the same.
  * 
- * Solution: Make input completely uncontrolled on Android. Never pass value prop,
- * never update DOM while focused. Sync only on blur.
+ * Solution: Use native DOM events and prevent all React updates during focus.
+ * Sync to React state only on blur.
  */
 
 export interface AndroidSafeInputProps
@@ -24,49 +24,9 @@ const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeInputProp
     const resolvedRef = (ref as React.RefObject<HTMLInputElement>) || innerRef;
     const isAndroid = getPlatformInfo().isAndroid;
     const isFocusedRef = React.useRef(false);
-    const lastValueRef = React.useRef(value);
 
-    if (isAndroid) {
-      React.useEffect(() => {
-        const element = resolvedRef.current;
-        if (!element) return;
-
-        const handleFocus = () => {
-          isFocusedRef.current = true;
-          lastValueRef.current = element.value;
-        };
- 
-        const handleBlur = (e: FocusEvent) => {
-          isFocusedRef.current = false;
-          const target = e.target as HTMLInputElement;
-          
-          // Sync to React state on blur
-          if (target.value !== lastValueRef.current) {
-            onValueChange(target.value);
-            lastValueRef.current = target.value;
-          }
-        };
- 
-        element.addEventListener('focus', handleFocus);
-        element.addEventListener('blur', handleBlur);
- 
-        return () => {
-          element.removeEventListener('focus', handleFocus);
-          element.removeEventListener('blur', handleBlur);
-        };
-      }, [onValueChange]);
- 
-      // Sync external value changes only when not focused
-      React.useEffect(() => {
-        const element = resolvedRef.current;
-        if (!element || isFocusedRef.current) return;
-        
-        if (element.value !== value) {
-          element.value = value;
-          lastValueRef.current = value;
-        }
-      }, [value]);
- 
+    // iOS/Web: Standard controlled input
+    if (!isAndroid) {
       return (
         <input
           type={type}
@@ -75,18 +35,58 @@ const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeInputProp
             className
           )}
           ref={resolvedRef}
-          defaultValue={value}
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          spellCheck="false"
+          value={value}
+          onChange={(e) => onValueChange(e.target.value)}
           onBlur={onBlur}
           {...props}
         />
       );
     }
 
-    // On iOS/Web: Standard controlled input
+    // Android: Native event listeners to prevent React reconciliation
+    React.useEffect(() => {
+      const element = resolvedRef.current;
+      if (!element) return;
+
+      const handleFocus = () => {
+        isFocusedRef.current = true;
+      };
+ 
+      const handleBlur = (e: FocusEvent) => {
+        isFocusedRef.current = false;
+        const finalValue = (e.target as HTMLInputElement).value;
+        
+        // Sync to React state only on blur
+        if (finalValue !== value) {
+          onValueChange(finalValue);
+        }
+        
+        // Call original onBlur if provided
+        if (onBlur) {
+          onBlur(e as any);
+        }
+      };
+ 
+      element.addEventListener('focus', handleFocus);
+      element.addEventListener('blur', handleBlur);
+ 
+      return () => {
+        element.removeEventListener('focus', handleFocus);
+        element.removeEventListener('blur', handleBlur);
+      };
+    }, [onValueChange, onBlur, value]);
+ 
+    // Sync external value changes only when not focused
+    React.useEffect(() => {
+      const element = resolvedRef.current;
+      if (!element || isFocusedRef.current) return;
+        
+      if (element.value !== value) {
+        element.value = value;
+      }
+    }, [value]);
+ 
+    // Android: Uncontrolled input (like plain HTML)
     return (
       <input
         type={type}
@@ -95,9 +95,7 @@ const AndroidSafeInput = React.forwardRef<HTMLInputElement, AndroidSafeInputProp
           className
         )}
         ref={resolvedRef}
-        value={value}
-        onChange={(e) => onValueChange(e.target.value)}
-        onBlur={onBlur}
+        defaultValue={value}
         {...props}
       />
     );
