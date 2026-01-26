@@ -18,6 +18,7 @@ import { SafeArea } from 'capacitor-plugin-safe-area';
 import { Capacitor } from '@capacitor/core';
 import { Keyboard, KeyboardResize } from '@capacitor/keyboard';
 import { getPlatformInfo } from '@/hooks/usePlatform';
+import { KeyboardWarning } from '@/components/KeyboardWarning';
 import {
   HomePageSkeleton,
   PhotoDiaryPageSkeleton,
@@ -141,6 +142,7 @@ const App = () => (
                 <AndroidDebugPanel />
               </Suspense>
               <BrowserRouter>
+                <KeyboardWarning />
                 <DeepLinkHandler>
                   <Routes>
                     {/* Public routes */}
