@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Eye, TrendingDown, TrendingUp, CheckCircle2, ChevronDown } from 'lucide-react';
+import { Eye, TrendingDown, TrendingUp, CheckCircle2, ChevronDown, UtensilsCrossed, Package } from 'lucide-react';
 import { CheckIn } from '@/contexts/UserDataContext';
 import { cn } from '@/lib/utils';
 import { BaselineConfidence } from '@/utils/flareStateEngine';
@@ -24,7 +24,7 @@ const triggersList = [
   { id: 'exercise', label: 'Exercise' },
   { id: 'alcohol', label: 'Alcohol' },
   { id: 'spicy_food', label: 'Spicy Food' },
-  { id: 'food', label: 'Food' },
+  { id: 'specific_food', label: 'Specific Food' },
   { id: 'friction_scratching', label: 'Friction / Scratching' },
 ];
 
@@ -56,6 +56,13 @@ interface ResolvedTrigger {
   nowPercentBetter: number;
 }
 
+interface ItemBreakdown {
+  name: string;
+  count: number;
+  avgIntensity: number;
+  percentWorse: number;
+}
+
 const TREND_THRESHOLD = 0.3;
 const IMPACT_THRESHOLD = 0.3;
 
@@ -70,7 +77,9 @@ const TRIGGERS_INITIAL_DISPLAY = 5;
 const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatternsInsightsProps) => {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('all');
   const [showAllTriggers, setShowAllTriggers] = useState(false);
-  const { activePatterns, resolvedTriggers } = useMemo(() => {
+  const [showFoodBreakdown, setShowFoodBreakdown] = useState(false);
+  const [showProductBreakdown, setShowProductBreakdown] = useState(false);
+  const { activePatterns, resolvedTriggers, foodBreakdown, productBreakdown } = useMemo(() => {
     // Filter check-ins by selected time period
     const now = new Date();
     const periodDays = PERIOD_DAYS[timePeriod];
@@ -168,25 +177,25 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     const getLabel = (triggerId: string): string => {
       if (triggerId.startsWith('food:')) {
         const foodName = triggerId.slice(5).trim();
-        if (!foodName) return 'Food (general)';
+        if (!foodName) return 'Food (unspecified)';
         // Capitalize first letter of each word
-        return `Food: ${foodName.split(' ').map(word => 
+        return `🍽️ ${foodName.split(' ').map(word => 
           word.charAt(0).toUpperCase() + word.slice(1)
         ).join(' ')}`;
       }
-      if (triggerId === 'food') {
-        return 'Food (general)';
+      if (triggerId === 'food' || triggerId === 'specific_food') {
+        return 'Food (unspecified)';
       }
       if (triggerId.startsWith('new_product:')) {
         const productName = triggerId.slice(12).trim();
-        if (!productName) return 'New Product (general)';
+        if (!productName) return 'New Product (unspecified)';
         // Capitalize first letter of each word
-        return `New Product: ${productName.split(' ').map(word => 
+        return `🧴 ${productName.split(' ').map(word => 
           word.charAt(0).toUpperCase() + word.slice(1)
         ).join(' ')}`;
       }
       if (triggerId === 'new_product') {
-        return 'New Product (general)';
+        return 'New Product (unspecified)';
       }
       return triggersList.find(t => t.id === triggerId)?.label || triggerId;
     };
@@ -256,9 +265,73 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     // Sort active patterns by impact score (no artificial limit - we'll handle display in UI)
     activePatterns.sort((a, b) => b.impactScore - a.impactScore);
     
+    // Extract food and product breakdown for dedicated sections
+    const allIntensitiesForBaseline = checkIns.map(c => c.skinIntensity ?? (5 - c.skinFeeling));
+    const baselineIntensity = allIntensitiesForBaseline.length > 0 
+      ? allIntensitiesForBaseline.reduce((a, b) => a + b, 0) / allIntensitiesForBaseline.length 
+      : 2;
+    
+    const foodItems: Record<string, { count: number; totalIntensity: number }> = {};
+    const productItems: Record<string, { count: number; totalIntensity: number }> = {};
+    
+    checkInsWithTriggers.forEach(checkIn => {
+      const triggers = checkIn.triggers || [];
+      const intensity = checkIn.skinIntensity ?? (5 - checkIn.skinFeeling);
+      
+      triggers.forEach(trigger => {
+        if (trigger.startsWith('food:')) {
+          const foodName = trigger.slice(5).trim().toLowerCase();
+          if (foodName) {
+            if (!foodItems[foodName]) {
+              foodItems[foodName] = { count: 0, totalIntensity: 0 };
+            }
+            foodItems[foodName].count++;
+            foodItems[foodName].totalIntensity += intensity;
+          }
+        } else if (trigger.startsWith('new_product:')) {
+          const productName = trigger.slice(12).trim().toLowerCase();
+          if (productName) {
+            if (!productItems[productName]) {
+              productItems[productName] = { count: 0, totalIntensity: 0 };
+            }
+            productItems[productName].count++;
+            productItems[productName].totalIntensity += intensity;
+          }
+        }
+      });
+    });
+    
+    const foodBreakdown: ItemBreakdown[] = Object.entries(foodItems)
+      .map(([name, data]) => {
+        const avgIntensity = data.totalIntensity / data.count;
+        const percentWorse = Math.round(((avgIntensity - baselineIntensity) / Math.max(baselineIntensity, 0.5)) * 100);
+        return {
+          name: name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+          count: data.count,
+          avgIntensity,
+          percentWorse,
+        };
+      })
+      .sort((a, b) => b.percentWorse - a.percentWorse);
+    
+    const productBreakdown: ItemBreakdown[] = Object.entries(productItems)
+      .map(([name, data]) => {
+        const avgIntensity = data.totalIntensity / data.count;
+        const percentWorse = Math.round(((avgIntensity - baselineIntensity) / Math.max(baselineIntensity, 0.5)) * 100);
+        return {
+          name: name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+          count: data.count,
+          avgIntensity,
+          percentWorse,
+        };
+      })
+      .sort((a, b) => b.percentWorse - a.percentWorse);
+    
     return { 
       activePatterns, 
-      resolvedTriggers: resolvedTriggers.slice(0, 3) 
+      resolvedTriggers: resolvedTriggers.slice(0, 3),
+      foodBreakdown,
+      productBreakdown,
     };
   }, [checkIns, timePeriod]);
 
@@ -437,6 +510,130 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
           <p className="text-[10px] text-muted-foreground/70 mt-3 pt-3 border-t border-muted/50">
             Based on repeated check-ins over time. Early data may be inconclusive.
           </p>
+        </div>
+      )}
+
+      {/* Food Breakdown Section */}
+      {foodBreakdown.length > 0 && (
+        <div className="glass-card p-5 space-y-3">
+          <button
+            onClick={() => setShowFoodBreakdown(!showFoodBreakdown)}
+            className="flex items-center justify-between w-full"
+          >
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                <UtensilsCrossed className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-foreground">
+                  Food Breakdown
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {foodBreakdown.length} food{foodBreakdown.length !== 1 ? 's' : ''} tracked
+                </p>
+              </div>
+            </div>
+            <ChevronDown className={cn(
+              "w-4 h-4 text-muted-foreground transition-transform",
+              showFoodBreakdown && "rotate-180"
+            )} />
+          </button>
+          
+          {showFoodBreakdown && (
+            <div className="space-y-2 pt-2 border-t border-muted/50">
+              {foodBreakdown.map((item, index) => (
+                <div 
+                  key={item.name}
+                  className="flex items-center justify-between py-1.5"
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                >
+                  <span className="text-sm font-medium text-foreground flex items-center gap-2">
+                    🍽️ {item.name}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {item.count}×
+                    </span>
+                    <span className={cn(
+                      "text-xs font-medium px-1.5 py-0.5 rounded-full",
+                      item.percentWorse > 20 
+                        ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                        : item.percentWorse > 0
+                          ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                          : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                    )}>
+                      {item.percentWorse > 0 ? `+${item.percentWorse}%` : item.percentWorse === 0 ? 'neutral' : `${item.percentWorse}%`}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              <p className="text-[10px] text-muted-foreground/70 pt-2">
+                Shows how skin intensity compared to your average on days with each food
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Product Breakdown Section */}
+      {productBreakdown.length > 0 && (
+        <div className="glass-card p-5 space-y-3">
+          <button
+            onClick={() => setShowProductBreakdown(!showProductBreakdown)}
+            className="flex items-center justify-between w-full"
+          >
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                <Package className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-foreground">
+                  Product Breakdown
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {productBreakdown.length} product{productBreakdown.length !== 1 ? 's' : ''} tracked
+                </p>
+              </div>
+            </div>
+            <ChevronDown className={cn(
+              "w-4 h-4 text-muted-foreground transition-transform",
+              showProductBreakdown && "rotate-180"
+            )} />
+          </button>
+          
+          {showProductBreakdown && (
+            <div className="space-y-2 pt-2 border-t border-muted/50">
+              {productBreakdown.map((item, index) => (
+                <div 
+                  key={item.name}
+                  className="flex items-center justify-between py-1.5"
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                >
+                  <span className="text-sm font-medium text-foreground flex items-center gap-2">
+                    🧴 {item.name}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {item.count}×
+                    </span>
+                    <span className={cn(
+                      "text-xs font-medium px-1.5 py-0.5 rounded-full",
+                      item.percentWorse > 20 
+                        ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                        : item.percentWorse > 0
+                          ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                          : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                    )}>
+                      {item.percentWorse > 0 ? `+${item.percentWorse}%` : item.percentWorse === 0 ? 'neutral' : `${item.percentWorse}%`}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              <p className="text-[10px] text-muted-foreground/70 pt-2">
+                Shows how skin intensity compared to your average on days with each product
+              </p>
+            </div>
+          )}
         </div>
       )}
 
