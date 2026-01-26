@@ -77,7 +77,8 @@ const CheckInPage = () => {
   const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
   const [foodItems, setFoodItems] = useState<string[]>([]);
   const [foodInputText, setFoodInputText] = useState('');
-  const [newProductText, setNewProductText] = useState('');
+  const [productItems, setProductItems] = useState<string[]>([]);
+  const [productInputText, setProductInputText] = useState('');
   const [painScore, setPainScore] = useState<number | null>(null);
   const [sleepScore, setSleepScore] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
@@ -92,7 +93,7 @@ const CheckInPage = () => {
   const notesRef = useRef<HTMLTextAreaElement>(null);
   const customTreatmentRef = useRef<HTMLInputElement>(null);
   const foodInputRef = useRef<HTMLInputElement>(null);
-  const newProductRef = useRef<HTMLInputElement>(null);
+  const productInputRef = useRef<HTMLInputElement>(null);
 
   const today = format(new Date(), 'yyyy-MM-dd');
   const todayCheckIns = checkIns.filter((c) => format(new Date(c.timestamp), 'yyyy-MM-dd') === today);
@@ -118,11 +119,12 @@ const CheckInPage = () => {
         }
       });
     } else if (id === 'new_product') {
-      // For new_product, toggle the selection but don't clear the text immediately
+      // For new_product, toggle the selection
       setSelectedTriggers((prev) => {
         if (prev.some(t => t === 'new_product' || t.startsWith('new_product:'))) {
-          // Deselecting new_product - clear the text too
-          setNewProductText('');
+          // Deselecting - clear the products too
+          setProductItems([]);
+          setProductInputText('');
           return prev.filter((t) => t !== 'new_product' && !t.startsWith('new_product:'));
         } else {
           return [...prev, 'new_product'];
@@ -148,6 +150,20 @@ const CheckInPage = () => {
   const handleRemoveFoodItem = (food: string) => {
     if (isSaving) return;
     setFoodItems((prev) => prev.filter((f) => f !== food));
+  };
+
+  const handleAddProductItem = () => {
+    if (isSaving) return;
+    const trimmed = productInputText.trim();
+    if (trimmed && !productItems.includes(trimmed)) {
+      setProductItems((prev) => [...prev, trimmed]);
+      setProductInputText('');
+    }
+  };
+
+  const handleRemoveProductItem = (product: string) => {
+    if (isSaving) return;
+    setProductItems((prev) => prev.filter((p) => p !== product));
   };
 
   const toggleSymptom = (symptom: string) => {
@@ -225,13 +241,14 @@ const CheckInPage = () => {
       setFoodItems([]);
     }
     setFoodInputText('');
-    // Extract new_product text from triggers if present
-    const newProductTrigger = triggers.find(t => t.startsWith('new_product:'));
-    if (newProductTrigger) {
-      setNewProductText(newProductTrigger.replace('new_product:', ''));
+    // Extract new_product items from triggers if present (can have multiple new_product:xxx entries)
+    const productTriggers = triggers.filter(t => t.startsWith('new_product:'));
+    if (productTriggers.length > 0) {
+      setProductItems(productTriggers.map(t => t.replace('new_product:', '')));
     } else {
-      setNewProductText('');
+      setProductItems([]);
     }
+    setProductInputText('');
     setSelectedTriggers(triggers);
     setPainScore(checkIn.painScore ?? null);
     setSleepScore(checkIn.sleepScore ?? null);
@@ -248,7 +265,8 @@ const CheckInPage = () => {
     setSelectedTriggers([]);
     setFoodItems([]);
     setFoodInputText('');
-    setNewProductText('');
+    setProductItems([]);
+    setProductInputText('');
     setPainScore(null);
     setSleepScore(null);
     setNotes('');
@@ -281,7 +299,7 @@ const CheckInPage = () => {
       .filter(t => t !== 'new_product') // Remove plain 'new_product' entry
       .filter(t => !t.startsWith('new_product:')) // Remove any existing new_product:xxx entries
       .concat(isFoodSelected && foodItems.length > 0 ? foodItems.map(f => `food:${f}`) : isFoodSelected ? ['specific_food'] : [])
-      .concat(isNewProductSelected && newProductText.trim() ? [`new_product:${newProductText.trim()}`] : isNewProductSelected ? ['new_product'] : []);
+      .concat(isNewProductSelected && productItems.length > 0 ? productItems.map(p => `new_product:${p}`) : isNewProductSelected ? ['new_product'] : []);
 
     try {
       if (editingCheckIn) {
@@ -332,7 +350,8 @@ const CheckInPage = () => {
       setSelectedTriggers([]);
       setFoodItems([]);
       setFoodInputText('');
-      setNewProductText('');
+      setProductItems([]);
+      setProductInputText('');
       setPainScore(null);
       setSleepScore(null);
       setNotes('');
@@ -648,14 +667,48 @@ const CheckInPage = () => {
             )}
             {/* New Product input field - shown when New Product is selected */}
             {isNewProductSelected && (
-              <div className="mt-2">
-                <AndroidSafeInput
-                  ref={newProductRef}
-                  placeholder="Which product? (e.g., new lotion, sunscreen)"
-                  value={newProductText}
-                  onValueChange={setNewProductText}
-                  className="h-10 rounded-xl border-2"
-                />
+              <div className="mt-2 space-y-2">
+                {/* Added product items */}
+                {productItems.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {productItems.map((product) => (
+                      <span
+                        key={product}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium"
+                      >
+                        {product}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveProductItem(product)}
+                          className="p-0.5 rounded-full hover:bg-primary/20 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {/* Input to add more products */}
+                <div className="flex gap-2">
+                  <AndroidSafeInput
+                    ref={productInputRef}
+                    placeholder="Add a product (e.g., new lotion, sunscreen)"
+                    value={productInputText}
+                    onValueChange={setProductInputText}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddProductItem()}
+                    className="flex-1 h-10 rounded-xl border-2"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleAddProductItem}
+                    disabled={!productInputText.trim()}
+                    className="h-10 w-10 rounded-xl"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             )}
             <p className="text-xs text-muted-foreground mt-2">
