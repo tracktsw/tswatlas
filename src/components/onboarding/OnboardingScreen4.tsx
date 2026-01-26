@@ -129,8 +129,8 @@ export const OnboardingScreen4: React.FC = () => {
                 <img
                   src={screenshot.image}
                   alt={screenshot.headline}
-                  className="w-[90%] mx-auto h-auto rounded-xl shadow-lg border border-border"
-                  style={{ maxHeight: '25vh', objectFit: 'contain' }}
+                  className="w-full mx-auto h-auto rounded-xl shadow-lg border border-border"
+                  style={{ maxHeight: '32vh', objectFit: 'contain' }}
                 />
               </div>
             ))}
