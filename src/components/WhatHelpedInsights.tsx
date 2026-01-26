@@ -53,6 +53,8 @@ const triggersList = [
 
 const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [showAllTreatments, setShowAllTreatments] = useState(false);
+  const TREATMENTS_INITIAL_DISPLAY = 5;
 
   // Get total unique days logged for gating
   const totalUniqueDaysLogged = useMemo(() => {
@@ -331,7 +333,7 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
         {/* Primary View: Simple Treatment Effectiveness */}
         {treatmentStats.length > 0 ? (
           <div className="space-y-4">
-            {treatmentStats.map(({ id, label, count, effectiveness, hasHighCorrelation, correlationRatio }) => (
+            {(showAllTreatments ? treatmentStats : treatmentStats.slice(0, TREATMENTS_INITIAL_DISPLAY)).map(({ id, label, count, effectiveness, hasHighCorrelation, correlationRatio }) => (
               <div key={id} className="space-y-2">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
@@ -355,6 +357,25 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
                 </div>
               </div>
             ))}
+            
+            {treatmentStats.length > TREATMENTS_INITIAL_DISPLAY && (
+              <button
+                onClick={() => setShowAllTreatments(!showAllTreatments)}
+                className="flex items-center justify-center gap-1.5 w-full py-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+              >
+                {showAllTreatments ? (
+                  <>
+                    Show less
+                    <ChevronDown className="w-3.5 h-3.5 rotate-180 transition-transform" />
+                  </>
+                ) : (
+                  <>
+                    Show {treatmentStats.length - TREATMENTS_INITIAL_DISPLAY} more
+                    <ChevronDown className="w-3.5 h-3.5 transition-transform" />
+                  </>
+                )}
+              </button>
+            )}
           </div>
         ) : (
           <div className="text-center py-4">
