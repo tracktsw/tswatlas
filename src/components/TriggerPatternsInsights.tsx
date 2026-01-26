@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { BaselineConfidence } from '@/utils/flareStateEngine';
 import { analyzeFoodReactions, FoodAnalysisResult, FoodPattern, FoodConfidence } from '@/utils/foodAnalysis';
 import { analyzeProductReactions, ProductAnalysisResult, ProductPattern, ProductConfidence } from '@/utils/productAnalysis';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const triggersList = [
   // Environmental triggers
@@ -452,26 +453,51 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     };
 
     const getConfidenceBadge = (confidence: FoodConfidence) => {
-      switch (confidence) {
-        case 'high':
-          return (
-            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 px-1.5 py-0.5 rounded-full">
-              High confidence
+      const getStyles = () => {
+        switch (confidence) {
+          case 'high':
+            return {
+              bg: 'bg-emerald-100 dark:bg-emerald-900/40',
+              text: 'text-emerald-600 dark:text-emerald-400',
+              label: 'High',
+              tooltip: '8+ logs with consistent results',
+            };
+          case 'medium':
+            return {
+              bg: 'bg-blue-100 dark:bg-blue-900/40',
+              text: 'text-blue-600 dark:text-blue-400',
+              label: 'Moderate',
+              tooltip: '5-7 logs with fairly consistent results',
+            };
+          case 'low':
+          default:
+            return {
+              bg: 'bg-muted',
+              text: 'text-muted-foreground',
+              label: 'Preliminary',
+              tooltip: 'Less than 5 logs — keep tracking for more accurate insights',
+            };
+        }
+      };
+      const styles = getStyles();
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className={cn(
+              "inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full cursor-help",
+              styles.bg,
+              styles.text,
+              confidence === 'low' && "opacity-70"
+            )}>
+              <Info className="w-2.5 h-2.5" />
+              {styles.label} confidence
             </span>
-          );
-        case 'medium':
-          return (
-            <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 rounded-full">
-              Moderate
-            </span>
-          );
-        case 'low':
-          return (
-            <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full opacity-70">
-              Preliminary
-            </span>
-          );
-      }
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-[200px] text-xs">
+            <p>{styles.tooltip}</p>
+          </TooltipContent>
+        </Tooltip>
+      );
     };
 
     const styles = getPatternStyles(food.pattern);
@@ -531,11 +557,51 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     };
 
     const getConfidenceBadge = (confidence: ProductConfidence) => {
-      switch (confidence) {
-        case 'high': return <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 px-1.5 py-0.5 rounded-full">High confidence</span>;
-        case 'medium': return <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 rounded-full">Moderate</span>;
-        default: return <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full opacity-70">Preliminary</span>;
-      }
+      const getStyles = () => {
+        switch (confidence) {
+          case 'high':
+            return {
+              bg: 'bg-emerald-100 dark:bg-emerald-900/40',
+              text: 'text-emerald-600 dark:text-emerald-400',
+              label: 'High',
+              tooltip: '8+ logs with consistent results',
+            };
+          case 'medium':
+            return {
+              bg: 'bg-blue-100 dark:bg-blue-900/40',
+              text: 'text-blue-600 dark:text-blue-400',
+              label: 'Moderate',
+              tooltip: '5-7 logs with fairly consistent results',
+            };
+          case 'low':
+          default:
+            return {
+              bg: 'bg-muted',
+              text: 'text-muted-foreground',
+              label: 'Preliminary',
+              tooltip: 'Less than 5 logs — keep tracking for more accurate insights',
+            };
+        }
+      };
+      const styles = getStyles();
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className={cn(
+              "inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full cursor-help",
+              styles.bg,
+              styles.text,
+              confidence === 'low' && "opacity-70"
+            )}>
+              <Info className="w-2.5 h-2.5" />
+              {styles.label} confidence
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-[200px] text-xs">
+            <p>{styles.tooltip}</p>
+          </TooltipContent>
+        </Tooltip>
+      );
     };
 
     const styles = getPatternStyles(product.pattern);
