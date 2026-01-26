@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Lightbulb, TrendingUp, Moon, Zap, Heart, ArrowRight, BarChart3 } from 'lucide-react';
+import { Lightbulb, TrendingUp, Moon, Zap, Heart, ArrowRight, BarChart3, UtensilsCrossed, Package } from 'lucide-react';
 import { CheckIn } from '@/contexts/UserDataContext';
 import { format, subDays } from 'date-fns';
+import { analyzeFoodReactions } from '@/utils/foodAnalysis';
+import { analyzeProductReactions } from '@/utils/productAnalysis';
 
 interface DailyInsightProps {
   checkIns: CheckIn[];
@@ -116,6 +118,10 @@ const insightGenerators = [
     checkIns.forEach(checkIn => {
       const isBadDay = checkIn.skinFeeling <= 2;
       checkIn.triggers.forEach(trigger => {
+        // Skip food and product entries - they have their own dedicated insights
+        if (trigger.startsWith('food:') || trigger.startsWith('product:') || trigger.startsWith('new_product:')) {
+          return;
+        }
         if (!triggerImpact[trigger]) {
           triggerImpact[trigger] = { badDays: 0, totalDays: 0 };
         }
@@ -144,6 +150,122 @@ const insightGenerators = [
       title: 'Watch Out For',
       message: `${triggerLabel} appears on ${worst.impact}% of your tough skin days.`,
       cta: 'See all trigger patterns',
+      ctaLink: '/insights'
+    };
+  },
+
+  // Food diary insight - problematic foods
+  (checkIns: CheckIn[]) => {
+    const foodResults = analyzeFoodReactions(checkIns, 9999);
+    
+    // Find foods with "often_worse" pattern and at least medium confidence
+    const problematicFoods = foodResults.filter(
+      f => f.pattern === 'often_worse' && (f.confidence === 'high' || f.confidence === 'medium')
+    );
+    
+    if (problematicFoods.length === 0) return null;
+    
+    const worst = problematicFoods[0];
+    const worsePercent = worst.analyzableExposures > 0 
+      ? Math.round((worst.daysWorseAfter / worst.analyzableExposures) * 100)
+      : 0;
+    
+    if (worsePercent < 50) return null;
+    
+    return {
+      icon: UtensilsCrossed,
+      iconColor: 'text-amber-600',
+      bgColor: 'bg-amber-100 dark:bg-amber-900/30',
+      title: 'Food Pattern Detected',
+      message: `${worst.name} was followed by worse symptoms ${worsePercent}% of the time.`,
+      cta: 'View food diary analysis',
+      ctaLink: '/insights'
+    };
+  },
+
+  // Food diary insight - beneficial foods
+  (checkIns: CheckIn[]) => {
+    const foodResults = analyzeFoodReactions(checkIns, 9999);
+    
+    // Find foods with "often_better" pattern
+    const beneficialFoods = foodResults.filter(
+      f => f.pattern === 'often_better' && (f.confidence === 'high' || f.confidence === 'medium')
+    );
+    
+    if (beneficialFoods.length === 0) return null;
+    
+    const best = beneficialFoods[0];
+    const betterPercent = best.analyzableExposures > 0 
+      ? Math.round((best.daysBetterAfter / best.analyzableExposures) * 100)
+      : 0;
+    
+    if (betterPercent < 50) return null;
+    
+    return {
+      icon: UtensilsCrossed,
+      iconColor: 'text-emerald-600',
+      bgColor: 'bg-emerald-100 dark:bg-emerald-900/30',
+      title: 'Helpful Food Found',
+      message: `${best.name} was followed by improvement ${betterPercent}% of the time.`,
+      cta: 'View food diary analysis',
+      ctaLink: '/insights'
+    };
+  },
+
+  // Product diary insight - problematic products
+  (checkIns: CheckIn[]) => {
+    const productResults = analyzeProductReactions(checkIns, 9999);
+    
+    // Find products with "often_worse" pattern
+    const problematicProducts = productResults.filter(
+      p => p.pattern === 'often_worse' && (p.confidence === 'high' || p.confidence === 'medium')
+    );
+    
+    if (problematicProducts.length === 0) return null;
+    
+    const worst = problematicProducts[0];
+    const worsePercent = worst.analyzableExposures > 0 
+      ? Math.round((worst.daysWorseAfter / worst.analyzableExposures) * 100)
+      : 0;
+    
+    if (worsePercent < 50) return null;
+    
+    return {
+      icon: Package,
+      iconColor: 'text-purple-600',
+      bgColor: 'bg-purple-100 dark:bg-purple-900/30',
+      title: 'Product Alert',
+      message: `${worst.name} was followed by worse symptoms ${worsePercent}% of the time.`,
+      cta: 'View product diary analysis',
+      ctaLink: '/insights'
+    };
+  },
+
+  // Product diary insight - beneficial products
+  (checkIns: CheckIn[]) => {
+    const productResults = analyzeProductReactions(checkIns, 9999);
+    
+    // Find products with "often_better" pattern
+    const beneficialProducts = productResults.filter(
+      p => p.pattern === 'often_better' && (p.confidence === 'high' || p.confidence === 'medium')
+    );
+    
+    if (beneficialProducts.length === 0) return null;
+    
+    const best = beneficialProducts[0];
+    const betterPercent = best.analyzableExposures > 0 
+      ? Math.round((best.daysBetterAfter / best.analyzableExposures) * 100)
+      : 0;
+    
+    if (betterPercent < 50) return null;
+    
+    return {
+      icon: Package,
+      iconColor: 'text-emerald-600',
+      bgColor: 'bg-emerald-100 dark:bg-emerald-900/30',
+      title: 'Helpful Product Found',
+      message: `${best.name} was followed by improvement ${betterPercent}% of the time.`,
+      cta: 'View product diary analysis',
       ctaLink: '/insights'
     };
   },
@@ -249,11 +371,17 @@ const DailyInsight = ({ checkIns, isPremium = false }: DailyInsightProps) => {
           </div>
           <div className="flex-1">
             <p className="text-sm text-foreground font-medium">
-              Keep checking in to build your insights
+              Not enough patterns detected yet
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              We're still learning your patterns. More data means better personalized insights.
+              Keep logging check-ins, foods, and products consistently. Meaningful insights emerge once we can identify reliable patterns in your data.
             </p>
+            <Link 
+              to="/check-in"
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary mt-3 hover:underline"
+            >
+              Log today's check-in <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
         </div>
       </div>
