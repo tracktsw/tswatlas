@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Eye, TrendingDown, TrendingUp, CheckCircle2, ChevronDown, UtensilsCrossed, Package } from 'lucide-react';
+import { Eye, TrendingDown, TrendingUp, CheckCircle2, ChevronDown, UtensilsCrossed, Package, AlertCircle, Info } from 'lucide-react';
 import { CheckIn } from '@/contexts/UserDataContext';
 import { cn } from '@/lib/utils';
 import { BaselineConfidence } from '@/utils/flareStateEngine';
+import { analyzeFoodReactions, FoodAnalysisResult, FoodPattern, FoodConfidence } from '@/utils/foodAnalysis';
 
 const triggersList = [
   // Environmental triggers
@@ -79,7 +80,7 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
   const [showAllTriggers, setShowAllTriggers] = useState(false);
   const [showFoodBreakdown, setShowFoodBreakdown] = useState(false);
   const [showProductBreakdown, setShowProductBreakdown] = useState(false);
-  const { activePatterns, resolvedTriggers, foodBreakdown, productBreakdown } = useMemo(() => {
+  const { activePatterns, resolvedTriggers, productBreakdown } = useMemo(() => {
     // Filter check-ins by selected time period
     const now = new Date();
     const periodDays = PERIOD_DAYS[timePeriod];
@@ -265,13 +266,12 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     // Sort active patterns by impact score (no artificial limit - we'll handle display in UI)
     activePatterns.sort((a, b) => b.impactScore - a.impactScore);
     
-    // Extract food and product breakdown for dedicated sections
+    // Extract product breakdown (keep old logic for products)
     const allIntensitiesForBaseline = checkIns.map(c => c.skinIntensity ?? (5 - c.skinFeeling));
     const baselineIntensity = allIntensitiesForBaseline.length > 0 
       ? allIntensitiesForBaseline.reduce((a, b) => a + b, 0) / allIntensitiesForBaseline.length 
       : 2;
     
-    const foodItems: Record<string, { count: number; totalIntensity: number }> = {};
     const productItems: Record<string, { count: number; totalIntensity: number }> = {};
     
     checkInsWithTriggers.forEach(checkIn => {
@@ -279,16 +279,7 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
       const intensity = checkIn.skinIntensity ?? (5 - checkIn.skinFeeling);
       
       triggers.forEach(trigger => {
-        if (trigger.startsWith('food:')) {
-          const foodName = trigger.slice(5).trim().toLowerCase();
-          if (foodName) {
-            if (!foodItems[foodName]) {
-              foodItems[foodName] = { count: 0, totalIntensity: 0 };
-            }
-            foodItems[foodName].count++;
-            foodItems[foodName].totalIntensity += intensity;
-          }
-        } else if (trigger.startsWith('new_product:')) {
+        if (trigger.startsWith('new_product:')) {
           const productName = trigger.slice(12).trim().toLowerCase();
           if (productName) {
             if (!productItems[productName]) {
@@ -300,19 +291,6 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
         }
       });
     });
-    
-    const foodBreakdown: ItemBreakdown[] = Object.entries(foodItems)
-      .map(([name, data]) => {
-        const avgIntensity = data.totalIntensity / data.count;
-        const percentWorse = Math.round(((avgIntensity - baselineIntensity) / Math.max(baselineIntensity, 0.5)) * 100);
-        return {
-          name: name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
-          count: data.count,
-          avgIntensity,
-          percentWorse,
-        };
-      })
-      .sort((a, b) => b.percentWorse - a.percentWorse);
     
     const productBreakdown: ItemBreakdown[] = Object.entries(productItems)
       .map(([name, data]) => {
@@ -330,10 +308,22 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     return { 
       activePatterns, 
       resolvedTriggers: resolvedTriggers.slice(0, 3),
-      foodBreakdown,
       productBreakdown,
     };
   }, [checkIns, timePeriod]);
+
+  // New food analysis using delayed reaction logic
+  const foodAnalysis = useMemo(() => {
+    const periodDays = PERIOD_DAYS[timePeriod];
+    return analyzeFoodReactions(checkIns, periodDays);
+  }, [checkIns, timePeriod]);
+  
+  // Separate foods with sufficient data from those without
+  const { analyzedFoods, insufficientDataFoods } = useMemo(() => {
+    const analyzed = foodAnalysis.filter(f => f.pattern !== 'insufficient_data');
+    const insufficient = foodAnalysis.filter(f => f.pattern === 'insufficient_data');
+    return { analyzedFoods: analyzed, insufficientDataFoods: insufficient };
+  }, [foodAnalysis]);
 
   // Check if user has logged any triggers at all
   const hasAnyTriggers = checkIns.some(c => c.triggers && c.triggers.length > 0);
@@ -429,6 +419,106 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     return null;
   };
 
+  // Food Analysis Card Component
+  const FoodAnalysisCard = ({ food, index }: { food: FoodAnalysisResult; index: number }) => {
+    const getPatternStyles = (pattern: FoodPattern) => {
+      switch (pattern) {
+        case 'often_worse':
+          return {
+            bg: 'bg-amber-50 dark:bg-amber-950/30',
+            border: 'border-amber-200/50 dark:border-amber-800/30',
+            text: 'text-amber-700 dark:text-amber-300',
+            label: 'Often followed by worse symptoms',
+          };
+        case 'often_better':
+          return {
+            bg: 'bg-emerald-50 dark:bg-emerald-950/30',
+            border: 'border-emerald-200/50 dark:border-emerald-800/30',
+            text: 'text-emerald-700 dark:text-emerald-300',
+            label: 'Often followed by improvement',
+          };
+        case 'mixed':
+          return {
+            bg: 'bg-muted/50',
+            border: 'border-muted',
+            text: 'text-muted-foreground',
+            label: 'Mixed reactions observed',
+          };
+        case 'no_pattern':
+        default:
+          return {
+            bg: 'bg-muted/30',
+            border: 'border-muted/50',
+            text: 'text-muted-foreground/80',
+            label: 'No clear pattern detected',
+          };
+      }
+    };
+
+    const getConfidenceBadge = (confidence: FoodConfidence) => {
+      switch (confidence) {
+        case 'high':
+          return (
+            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 px-1.5 py-0.5 rounded-full">
+              High confidence
+            </span>
+          );
+        case 'medium':
+          return (
+            <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 rounded-full">
+              Moderate
+            </span>
+          );
+        case 'low':
+          return (
+            <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full opacity-70">
+              Preliminary
+            </span>
+          );
+      }
+    };
+
+    const styles = getPatternStyles(food.pattern);
+    const total = food.daysWorseAfter + food.daysBetterAfter + food.daysNeutralAfter;
+
+    return (
+      <div
+        className={cn(
+          "p-3 rounded-lg border animate-slide-up",
+          styles.bg,
+          styles.border,
+          food.confidence === 'low' && "opacity-75"
+        )}
+        style={{ animationDelay: `${index * 0.05}s` }}
+      >
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-foreground">🍽️ {food.name}</span>
+            <span className="text-xs text-muted-foreground">
+              {food.count} log{food.count !== 1 ? 's' : ''}
+            </span>
+          </div>
+          {getConfidenceBadge(food.confidence)}
+        </div>
+        
+        <p className={cn("text-xs font-medium mb-1", styles.text)}>
+          {styles.label}
+        </p>
+        
+        {food.analyzableExposures > 0 && (
+          <p className="text-[10px] text-muted-foreground/70">
+            {food.daysWorseAfter > 0 && `${food.daysWorseAfter} worse`}
+            {food.daysWorseAfter > 0 && (food.daysBetterAfter > 0 || food.daysNeutralAfter > 0) && ' · '}
+            {food.daysBetterAfter > 0 && `${food.daysBetterAfter} better`}
+            {food.daysBetterAfter > 0 && food.daysNeutralAfter > 0 && ' · '}
+            {food.daysNeutralAfter > 0 && `${food.daysNeutralAfter} neutral`}
+            {' '}of {total} analyzed
+          </p>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
       <div className="flex items-center justify-between gap-2">
@@ -513,8 +603,8 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
         </div>
       )}
 
-      {/* Food Breakdown Section */}
-      {foodBreakdown.length > 0 && (
+      {/* Food Diary Analysis Section - New Delayed Reaction Logic */}
+      {foodAnalysis.length > 0 && (
         <div className="glass-card p-5 space-y-3">
           <button
             onClick={() => setShowFoodBreakdown(!showFoodBreakdown)}
@@ -526,10 +616,10 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
               </div>
               <div className="text-left">
                 <p className="text-sm font-semibold text-foreground">
-                  Food Breakdown
+                  Food Diary Analysis
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {foodBreakdown.length} food{foodBreakdown.length !== 1 ? 's' : ''} tracked
+                  {foodAnalysis.length} food{foodAnalysis.length !== 1 ? 's' : ''} tracked
                 </p>
               </div>
             </div>
@@ -540,36 +630,50 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
           </button>
           
           {showFoodBreakdown && (
-            <div className="space-y-2 pt-2 border-t border-muted/50">
-              {foodBreakdown.map((item, index) => (
-                <div 
-                  key={item.name}
-                  className="flex items-center justify-between py-1.5"
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                >
-                  <span className="text-sm font-medium text-foreground flex items-center gap-2">
-                    🍽️ {item.name}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {item.count}×
-                    </span>
-                    <span className={cn(
-                      "text-xs font-medium px-1.5 py-0.5 rounded-full",
-                      item.percentWorse > 20 
-                        ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                        : item.percentWorse > 0
-                          ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                          : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                    )}>
-                      {item.percentWorse > 0 ? `+${item.percentWorse}%` : item.percentWorse === 0 ? 'neutral' : `${item.percentWorse}%`}
-                    </span>
+            <div className="space-y-3 pt-2 border-t border-muted/50">
+              {/* Disclaimer */}
+              <div className="flex items-start gap-2 p-2 bg-amber-50/50 dark:bg-amber-950/20 rounded-lg border border-amber-200/50 dark:border-amber-800/30">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                  Observations only — not medical advice. Correlation does not mean causation.
+                </p>
+              </div>
+              
+              {/* Analyzed foods with patterns */}
+              {analyzedFoods.length > 0 && (
+                <div className="space-y-2">
+                  {analyzedFoods.map((food, index) => (
+                    <FoodAnalysisCard key={food.name} food={food} index={index} />
+                  ))}
+                </div>
+              )}
+              
+              {/* Insufficient data foods */}
+              {insufficientDataFoods.length > 0 && (
+                <div className="pt-2 border-t border-muted/30">
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">
+                    Not enough data yet
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {insufficientDataFoods.map((food) => (
+                      <span
+                        key={food.name}
+                        className="text-xs text-muted-foreground/70 bg-muted/30 px-2 py-1 rounded-full"
+                      >
+                        {food.name} ({food.count} log{food.count !== 1 ? 's' : ''})
+                      </span>
+                    ))}
                   </div>
                 </div>
-              ))}
-              <p className="text-[10px] text-muted-foreground/70 pt-2">
-                Shows how skin intensity compared to your average on days with each food
-              </p>
+              )}
+              
+              {/* Footer explanation */}
+              <div className="flex items-start gap-2 pt-2 border-t border-muted/30">
+                <Info className="w-3 h-3 text-muted-foreground/60 mt-0.5 flex-shrink-0" />
+                <p className="text-[10px] text-muted-foreground/60">
+                  Patterns based on symptoms 1-3 days after eating. Consult a healthcare provider before making dietary changes.
+                </p>
+              </div>
             </div>
           )}
         </div>
