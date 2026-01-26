@@ -43,7 +43,7 @@ const triggersList = [
   { id: 'exercise', label: 'Exercise' },
   { id: 'alcohol', label: 'Alcohol' },
   { id: 'spicy_food', label: 'Spicy Food' },
-  { id: 'food', label: 'Food' },
+  { id: 'specific_food', label: 'Specific Food' },
   { id: 'friction_scratching', label: 'Friction / Scratching' },
 ];
 
@@ -75,7 +75,8 @@ const CheckInPage = () => {
   const [skinFeeling, setSkinFeeling] = useState(3);
   const [selectedSymptoms, setSelectedSymptoms] = useState<SymptomEntry[]>([]);
   const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
-  const [foodTriggerText, setFoodTriggerText] = useState('');
+  const [foodItems, setFoodItems] = useState<string[]>([]);
+  const [foodInputText, setFoodInputText] = useState('');
   const [newProductText, setNewProductText] = useState('');
   const [painScore, setPainScore] = useState<number | null>(null);
   const [sleepScore, setSleepScore] = useState<number | null>(null);
@@ -90,7 +91,7 @@ const CheckInPage = () => {
   // Refs for inputs
   const notesRef = useRef<HTMLTextAreaElement>(null);
   const customTreatmentRef = useRef<HTMLInputElement>(null);
-  const foodTriggerRef = useRef<HTMLInputElement>(null);
+  const foodInputRef = useRef<HTMLInputElement>(null);
   const newProductRef = useRef<HTMLInputElement>(null);
 
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -104,15 +105,16 @@ const CheckInPage = () => {
 
   const toggleTrigger = (id: string) => {
     if (isSaving) return;
-    if (id === 'food') {
-      // For food, toggle the selection but don't clear the text immediately
+    if (id === 'specific_food') {
+      // For specific_food, toggle the selection
       setSelectedTriggers((prev) => {
-        if (prev.some(t => t === 'food' || t.startsWith('food:'))) {
-          // Deselecting food - clear the text too
-          setFoodTriggerText('');
-          return prev.filter((t) => t !== 'food' && !t.startsWith('food:'));
+        if (prev.some(t => t === 'specific_food' || t.startsWith('food:'))) {
+          // Deselecting - clear the foods too
+          setFoodItems([]);
+          setFoodInputText('');
+          return prev.filter((t) => t !== 'specific_food' && !t.startsWith('food:'));
         } else {
-          return [...prev, 'food'];
+          return [...prev, 'specific_food'];
         }
       });
     } else if (id === 'new_product') {
@@ -131,8 +133,22 @@ const CheckInPage = () => {
     }
   };
 
-  const isFoodSelected = selectedTriggers.some(t => t === 'food' || t.startsWith('food:'));
+  const isFoodSelected = selectedTriggers.some(t => t === 'specific_food' || t.startsWith('food:'));
   const isNewProductSelected = selectedTriggers.some(t => t === 'new_product' || t.startsWith('new_product:'));
+
+  const handleAddFoodItem = () => {
+    if (isSaving) return;
+    const trimmed = foodInputText.trim();
+    if (trimmed && !foodItems.includes(trimmed)) {
+      setFoodItems((prev) => [...prev, trimmed]);
+      setFoodInputText('');
+    }
+  };
+
+  const handleRemoveFoodItem = (food: string) => {
+    if (isSaving) return;
+    setFoodItems((prev) => prev.filter((f) => f !== food));
+  };
 
   const toggleSymptom = (symptom: string) => {
     if (isSaving) return;
@@ -200,14 +216,15 @@ const CheckInPage = () => {
     setMood(checkIn.mood);
     setSkinFeeling(checkIn.skinFeeling);
     setSelectedSymptoms(checkIn.symptomsExperienced || []);
-    // Extract food text from triggers if present
+    // Extract food items from triggers if present (can have multiple food:xxx entries)
     const triggers = checkIn.triggers || [];
-    const foodTrigger = triggers.find(t => t.startsWith('food:'));
-    if (foodTrigger) {
-      setFoodTriggerText(foodTrigger.replace('food:', ''));
+    const foodTriggers = triggers.filter(t => t.startsWith('food:'));
+    if (foodTriggers.length > 0) {
+      setFoodItems(foodTriggers.map(t => t.replace('food:', '')));
     } else {
-      setFoodTriggerText('');
+      setFoodItems([]);
     }
+    setFoodInputText('');
     // Extract new_product text from triggers if present
     const newProductTrigger = triggers.find(t => t.startsWith('new_product:'));
     if (newProductTrigger) {
@@ -229,7 +246,8 @@ const CheckInPage = () => {
     setSkinFeeling(3);
     setSelectedSymptoms([]);
     setSelectedTriggers([]);
-    setFoodTriggerText('');
+    setFoodItems([]);
+    setFoodInputText('');
     setNewProductText('');
     setPainScore(null);
     setSleepScore(null);
@@ -256,13 +274,13 @@ const CheckInPage = () => {
 
     setIsSaving(true);
 
-    // Process triggers: replace 'food' with 'food:text' and 'new_product' with 'new_product:text' if text is provided
+    // Process triggers: replace 'specific_food' with 'food:item' entries and 'new_product' with 'new_product:text' if text is provided
     const processedTriggers = selectedTriggers
-      .filter(t => t !== 'food') // Remove plain 'food' entry
+      .filter(t => t !== 'specific_food') // Remove plain 'specific_food' entry
       .filter(t => !t.startsWith('food:')) // Remove any existing food:xxx entries
       .filter(t => t !== 'new_product') // Remove plain 'new_product' entry
       .filter(t => !t.startsWith('new_product:')) // Remove any existing new_product:xxx entries
-      .concat(isFoodSelected && foodTriggerText.trim() ? [`food:${foodTriggerText.trim()}`] : isFoodSelected ? ['food'] : [])
+      .concat(isFoodSelected && foodItems.length > 0 ? foodItems.map(f => `food:${f}`) : isFoodSelected ? ['specific_food'] : [])
       .concat(isNewProductSelected && newProductText.trim() ? [`new_product:${newProductText.trim()}`] : isNewProductSelected ? ['new_product'] : []);
 
     try {
@@ -312,7 +330,8 @@ const CheckInPage = () => {
       setSkinFeeling(3);
       setSelectedSymptoms([]);
       setSelectedTriggers([]);
-      setFoodTriggerText('');
+      setFoodItems([]);
+      setFoodInputText('');
       setNewProductText('');
       setPainScore(null);
       setSleepScore(null);
@@ -581,16 +600,50 @@ const CheckInPage = () => {
                 );
               })}
             </div>
-            {/* Food input field - shown when Food is selected */}
+            {/* Food input field - shown when Specific Food is selected */}
             {isFoodSelected && (
-              <div className="mt-2">
-                <AndroidSafeInput
-                  ref={foodTriggerRef}
-                  placeholder="What food? (e.g., dairy, gluten)"
-                  value={foodTriggerText}
-                  onValueChange={setFoodTriggerText}
-                  className="h-10 rounded-xl border-2"
-                />
+              <div className="mt-2 space-y-2">
+                {/* Added food items */}
+                {foodItems.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {foodItems.map((food) => (
+                      <span
+                        key={food}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium"
+                      >
+                        {food}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFoodItem(food)}
+                          className="p-0.5 rounded-full hover:bg-primary/20 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {/* Input to add more foods */}
+                <div className="flex gap-2">
+                  <AndroidSafeInput
+                    ref={foodInputRef}
+                    placeholder="Add a food (e.g., dairy, gluten, eggs)"
+                    value={foodInputText}
+                    onValueChange={setFoodInputText}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddFoodItem()}
+                    className="flex-1 h-10 rounded-xl border-2"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleAddFoodItem}
+                    disabled={!foodInputText.trim()}
+                    className="h-10 w-10 rounded-xl"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             )}
             {/* New Product input field - shown when New Product is selected */}
