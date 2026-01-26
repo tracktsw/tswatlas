@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { CheckCircle, Check, Plus, Heart, Pencil, X, Loader2, UtensilsCrossed, ChevronDown } from 'lucide-react';
 import { useUserData, CheckIn, SymptomEntry } from '@/contexts/UserDataContext';
 import { Button } from '@/components/ui/button';
@@ -57,6 +57,11 @@ const symptomsList = [
   'Oozing', 'Swelling', 'Redness'
 ];
 
+// Common food suggestions for quick-tap
+const commonFoodSuggestions = [
+  'Dairy', 'Gluten', 'Eggs', 'Nuts', 'Soy', 'Shellfish', 'Sugar', 'Alcohol', 'Caffeine', 'Spicy food'
+];
+
 const sleepOptions = [
   { value: 1, label: 'Very poor', emoji: '😫' },
   { value: 2, label: 'Poor', emoji: '😩' },
@@ -88,6 +93,7 @@ const CheckInPage = () => {
   const [expandedSymptom, setExpandedSymptom] = useState<string | null>(null);
   // Client request ID for idempotent submissions - persists across retries
   const [clientRequestId, setClientRequestId] = useState<string>(() => crypto.randomUUID());
+  const [showFoodSuggestions, setShowFoodSuggestions] = useState(false);
 
   // Refs for inputs
   const notesRef = useRef<HTMLTextAreaElement>(null);
@@ -98,6 +104,53 @@ const CheckInPage = () => {
   const today = format(new Date(), 'yyyy-MM-dd');
   const todayCheckIns = checkIns.filter((c) => format(new Date(c.timestamp), 'yyyy-MM-dd') === today);
   const hasTodayCheckIn = todayCheckIns.length > 0;
+
+  // Extract recently logged foods from check-in history (last 30 days)
+  const recentFoods = useMemo(() => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const foodCounts: Record<string, number> = {};
+    
+    checkIns
+      .filter(c => new Date(c.timestamp) >= thirtyDaysAgo)
+      .forEach(c => {
+        (c.triggers || []).forEach(trigger => {
+          if (trigger.startsWith('food:')) {
+            const food = trigger.slice(5).trim();
+            if (food) {
+              const normalizedFood = food.charAt(0).toUpperCase() + food.slice(1).toLowerCase();
+              foodCounts[normalizedFood] = (foodCounts[normalizedFood] || 0) + 1;
+            }
+          }
+        });
+      });
+    
+    // Sort by frequency and return top 10
+    return Object.entries(foodCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([food]) => food);
+  }, [checkIns]);
+
+  // Filter suggestions based on input text
+  const filteredSuggestions = useMemo(() => {
+    const inputLower = foodInputText.toLowerCase().trim();
+    const alreadyAdded = new Set(foodItems.map(f => f.toLowerCase()));
+    
+    // Combine recent foods and common suggestions, prioritizing recent
+    const allSuggestions = [...new Set([...recentFoods, ...commonFoodSuggestions])];
+    
+    if (!inputLower) {
+      // Show all suggestions not already added
+      return allSuggestions.filter(s => !alreadyAdded.has(s.toLowerCase())).slice(0, 8);
+    }
+    
+    // Filter by input
+    return allSuggestions
+      .filter(s => s.toLowerCase().includes(inputLower) && !alreadyAdded.has(s.toLowerCase()))
+      .slice(0, 6);
+  }, [foodInputText, foodItems, recentFoods]);
 
   const toggleTreatment = (id: string) => {
     if (isSaving) return;
@@ -709,14 +762,57 @@ const CheckInPage = () => {
               </div>
             )}
             
+            {/* Quick food suggestions */}
+            {filteredSuggestions.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[10px] text-muted-foreground font-medium">
+                  {recentFoods.length > 0 && foodInputText === '' ? 'Recent & common foods:' : 'Suggestions:'}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {filteredSuggestions.map((suggestion) => {
+                    const isRecent = recentFoods.includes(suggestion);
+                    return (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        onClick={() => {
+                          if (!foodItems.includes(suggestion)) {
+                            setFoodItems((prev) => [...prev, suggestion]);
+                          }
+                        }}
+                        className={cn(
+                          "px-2.5 py-1 text-xs font-medium rounded-full transition-all",
+                          isRecent
+                            ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 ring-1 ring-amber-300 dark:ring-amber-700"
+                            : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        {isRecent && <span className="mr-1">🕐</span>}
+                        {suggestion}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            
             {/* Food input */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 relative">
               <AndroidSafeInput
                 ref={foodInputRef}
-                placeholder="Add a food (e.g., dairy, nuts, eggs)"
+                placeholder="Type to search or add custom food..."
                 value={foodInputText}
-                onValueChange={setFoodInputText}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddFoodItem()}
+                onValueChange={(val) => {
+                  setFoodInputText(val);
+                  setShowFoodSuggestions(true);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddFoodItem();
+                  }
+                }}
+                onFocus={() => setShowFoodSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowFoodSuggestions(false), 150)}
                 className="flex-1 h-10 rounded-xl border-2 border-amber-200 dark:border-amber-800/50 focus:border-amber-400"
               />
               <Button
@@ -729,6 +825,31 @@ const CheckInPage = () => {
               >
                 <Plus className="w-4 h-4 text-amber-600" />
               </Button>
+              
+              {/* Autocomplete dropdown */}
+              {showFoodSuggestions && foodInputText.trim() && filteredSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-12 mt-1 bg-background border border-amber-200 dark:border-amber-800 rounded-xl shadow-lg z-50 overflow-hidden">
+                  {filteredSuggestions.slice(0, 5).map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setFoodItems((prev) => [...prev, suggestion]);
+                        setFoodInputText('');
+                        setShowFoodSuggestions(false);
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors flex items-center gap-2"
+                    >
+                      {recentFoods.includes(suggestion) && <span className="text-xs">🕐</span>}
+                      <span>{suggestion}</span>
+                      {recentFoods.includes(suggestion) && (
+                        <span className="text-[10px] text-muted-foreground ml-auto">recent</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             
             <p className="text-[10px] text-muted-foreground/70">
