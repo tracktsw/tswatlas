@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, TrendingUp, Moon, Zap, Heart, ArrowRight, BarChart3 } from 'lucide-react';
+import { Lightbulb, TrendingUp, Moon, Zap, Heart, ArrowRight, BarChart3 } from 'lucide-react';
 import { CheckIn } from '@/contexts/UserDataContext';
-import { format, subDays, parseISO } from 'date-fns';
+import { format, subDays } from 'date-fns';
 
 interface DailyInsightProps {
   checkIns: CheckIn[];
+  isPremium?: boolean;
 }
 
 const MIN_CHECKINS_FOR_INSIGHT = 5;
@@ -157,7 +158,7 @@ const insightGenerators = [
     if (uniqueDays < 10) return null;
 
     return {
-      icon: Sparkles,
+      icon: Lightbulb,
       iconColor: 'text-primary',
       bgColor: 'bg-primary/10',
       title: 'Great Consistency!',
@@ -168,7 +169,7 @@ const insightGenerators = [
   },
 ];
 
-const DailyInsight = ({ checkIns }: DailyInsightProps) => {
+const DailyInsight = ({ checkIns, isPremium = false }: DailyInsightProps) => {
   const insight = useMemo(() => {
     if (checkIns.length < MIN_CHECKINS_FOR_INSIGHT) {
       return null;
@@ -197,7 +198,7 @@ const DailyInsight = ({ checkIns }: DailyInsightProps) => {
     return (
       <div className="glass-card p-5">
         <div className="flex items-center gap-2 mb-3">
-          <Sparkles className="w-5 h-5 text-primary" />
+          <Lightbulb className="w-5 h-5 text-primary" />
           <h3 className="font-display font-bold text-lg text-anchor">Your Daily Insight</h3>
         </div>
         
@@ -232,7 +233,7 @@ const DailyInsight = ({ checkIns }: DailyInsightProps) => {
     return (
       <div className="glass-card p-5">
         <div className="flex items-center gap-2 mb-3">
-          <Sparkles className="w-5 h-5 text-primary" />
+          <Lightbulb className="w-5 h-5 text-primary" />
           <h3 className="font-display font-bold text-lg text-anchor">Your Daily Insight</h3>
         </div>
         
@@ -258,7 +259,7 @@ const DailyInsight = ({ checkIns }: DailyInsightProps) => {
   return (
     <div className="glass-card p-5">
       <div className="flex items-center gap-2 mb-3">
-        <Sparkles className="w-5 h-5 text-primary" />
+        <Lightbulb className="w-5 h-5 text-primary" />
         <h3 className="font-display font-bold text-lg text-anchor">Your Daily Insight</h3>
       </div>
       
@@ -278,12 +279,14 @@ const DailyInsight = ({ checkIns }: DailyInsightProps) => {
         </div>
       </div>
       
-      {/* Premium hint */}
-      <div className="mt-4 pt-3 border-t border-muted/50">
-        <p className="text-[10px] text-muted-foreground text-center">
-          ✨ This is just a glimpse. <Link to="/insights" className="text-primary font-medium hover:underline">Unlock full insights</Link> with Premium.
-        </p>
-      </div>
+      {/* Premium hint - only for free users */}
+      {!isPremium && (
+        <div className="mt-4 pt-3 border-t border-muted/50">
+          <p className="text-[10px] text-muted-foreground text-center">
+            ✨ This is just a glimpse. <Link to="/insights" className="text-primary font-medium hover:underline">Unlock full insights</Link> with Premium.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

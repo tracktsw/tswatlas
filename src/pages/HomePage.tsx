@@ -335,7 +335,7 @@ const HomePage = () => {
 
       {/* Daily Insight */}
       <div className="animate-slide-up" style={{ animationDelay: '0.25s' }}>
-        <DailyInsight checkIns={checkIns} />
+        <DailyInsight checkIns={checkIns} isPremium={isPremium} />
       </div>
 
       {/* Journal Quick Access */}
