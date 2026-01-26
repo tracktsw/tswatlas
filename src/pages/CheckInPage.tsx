@@ -826,12 +826,17 @@ const CheckInPage = () => {
 
           {/* Notes */}
           <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.28s' }}>
-            <h3 className="font-display font-bold text-lg text-foreground">
-              Any notes? (optional)
-            </h3>
+            <div>
+              <h3 className="font-display font-bold text-lg text-foreground">
+                Today's notes (optional)
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Your AI Coach uses these notes to give you personalised advice
+              </p>
+            </div>
             <AndroidSafeTextarea 
               ref={notesRef}
-              placeholder="How was your day? Any triggers or improvements?"
+              placeholder="How was your day? Any triggers, improvements, or things worth remembering?"
               value={notes}
               onValueChange={setNotes}
               rows={3}
