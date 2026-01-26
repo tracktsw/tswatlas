@@ -10,6 +10,7 @@ import trackTswLogo from '@/assets/tracktsw-logo-transparent.png';
 import { usePlatform } from '@/hooks/usePlatform';
 import { useOnboardingSubmit } from '@/hooks/useOnboardingSubmit';
 import { hasPendingOnboardingSurvey, sendPendingOnboardingSurvey, identifyUser } from '@/utils/analytics';
+import { KeyboardWarning } from '@/components/KeyboardWarning';
 
 type AuthMode = 'login' | 'signup' | 'forgot';
 
@@ -306,10 +307,12 @@ const AuthPage = () => {
   };
 
   return (
-    <div 
-      className="h-[100dvh] flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden" 
-      style={isAndroid ? undefined : { paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
-    >
+    <>
+      <KeyboardWarning />
+      <div 
+        className="h-[100dvh] flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden" 
+        style={isAndroid ? undefined : { paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
+      >
       {/* Decorative background - simplified for mobile performance */}
       <div className="hidden sm:block">
         <div className="decorative-blob w-64 h-64 bg-coral/40 -top-20 -right-20 fixed" />
@@ -522,7 +525,8 @@ const AuthPage = () => {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 
