@@ -172,7 +172,7 @@ export const OnboardingScreen3: React.FC = () => {
 
       {/* Footer */}
       <div className={cn("px-6 space-y-4 shrink-0", isAndroid && "android-onboarding-fixed")} style={{ paddingBottom: 'calc(var(--safe-bottom, 0px) + 16px)' }}>
-        <OnboardingProgress current={2} total={4} />
+        <OnboardingProgress current={2} total={5} />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

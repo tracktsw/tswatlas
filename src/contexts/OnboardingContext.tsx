@@ -71,7 +71,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
   });
 
-  const totalScreens = 5;
+  const totalScreens = 6;
 
   // Persist data changes
   useEffect(() => {
