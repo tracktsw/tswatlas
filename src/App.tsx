@@ -47,6 +47,7 @@ const AdminPage = lazy(() => import("@/pages/AdminPage"));
 // Lazy load non-critical components
 const PWAInstallPrompt = lazy(() => import("@/components/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
 const AppUpdateBanner = lazy(() => import("@/components/AppUpdateBanner").then(m => ({ default: m.AppUpdateBanner })));
+const KeyboardWarning = lazy(() => import("@/components/KeyboardWarning").then(m => ({ default: m.KeyboardWarning })));
 
 // F) Android debug panel - lazy loaded, shown only with ?insetsDebug=1 on Android
 const AndroidDebugPanel = lazy(() => import("@/components/AndroidDebugPanel"));
@@ -139,6 +140,10 @@ const App = () => (
               {/* F) Android Debug Panel - visible only with ?insetsDebug=1 on Android */}
               <Suspense fallback={null}>
                 <AndroidDebugPanel />
+              </Suspense>
+              {/* Android keyboard recommendation banner */}
+              <Suspense fallback={null}>
+                <KeyboardWarning />
               </Suspense>
               <BrowserRouter>
                 <DeepLinkHandler>
