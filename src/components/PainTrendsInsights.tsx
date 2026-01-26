@@ -364,8 +364,8 @@ const PainTrendsInsights = ({ checkIns, dailyFlareStates }: PainTrendsInsightsPr
                       x2={period.end}
                       y1={0}
                       y2={10}
-                      fill="hsl(var(--muted))"
-                      fillOpacity={0.4}
+                      fill="#ef4444"
+                      fillOpacity={0.25}
                     />
                   ))}
                   
@@ -419,7 +419,7 @@ const PainTrendsInsights = ({ checkIns, dailyFlareStates }: PainTrendsInsightsPr
 
             {flarePeriods.length > 0 && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <div className="w-3 h-3 rounded bg-muted/60" />
+                <div className="w-3 h-3 rounded bg-red-500/40" />
                 <span>Shaded areas indicate active flare periods</span>
               </div>
             )}
