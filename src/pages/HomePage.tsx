@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, CheckCircle, BarChart3, Users, BookOpen, Settings, Calendar as CalendarIcon, Flame, Pencil, Leaf, Sun, Loader2, Crown, Sparkles, Trophy } from 'lucide-react';
+import { BookOpen, Settings, Calendar as CalendarIcon, Flame, Pencil, Leaf, Sun, Loader2, Crown, Trophy } from 'lucide-react';
+import DailyInsight from '@/components/DailyInsight';
 import { LeafIllustration, PlantIllustration } from '@/components/illustrations';
 import StreakFire from '@/components/StreakFire';
 import compassLogo from '@/assets/compass-logo.png';
@@ -101,42 +102,6 @@ const HomePage = () => {
   const greeting = getGreeting();
   const GreetingIcon = greeting.icon;
 
-  const quickActions = [
-    { 
-      path: '/photos', 
-      icon: Camera, 
-      label: 'Take Photo', 
-      description: 'Capture your progress',
-      bgClass: 'bg-action/10',
-      iconColor: 'text-action',
-      isAction: true
-    },
-    { 
-      path: '/check-in', 
-      icon: CheckCircle, 
-      label: 'Check In', 
-      description: todayCheckIns.length >= 1 ? 'All done today!' : 'Log your day',
-      bgClass: 'bg-action/10',
-      iconColor: 'text-action',
-      isAction: true
-    },
-    { 
-      path: '/insights', 
-      icon: BarChart3, 
-      label: 'View Insights', 
-      description: 'See your progress',
-      bgClass: 'bg-sage/10',
-      iconColor: 'text-sage'
-    },
-    { 
-      path: '/community', 
-      icon: Users, 
-      label: 'Community', 
-      description: 'What helps others',
-      bgClass: 'bg-healing/10',
-      iconColor: 'text-healing'
-    },
-  ];
 
   // OPTIMIZED: Removed full-page loading spinner
   // Page now renders progressively - skeleton sections handle individual loading states
@@ -368,28 +333,9 @@ const HomePage = () => {
         )}
       </div>
 
-      {/* Quick Actions */}
-      <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
-        <h3 className="font-display font-bold text-lg md:text-xl text-anchor">Quick Actions</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          {quickActions.map(({ path, icon: Icon, label, description, bgClass, iconColor, isAction }, index) => (
-            <Link
-              key={path}
-              to={path}
-              className={cn(
-                "glass-card p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200",
-                isAction && "border-action/20"
-              )}
-              style={{ animationDelay: `${0.3 + index * 0.05}s` }}
-            >
-              <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center mb-3", bgClass)}>
-                <Icon className={cn("w-5 h-5", iconColor)} />
-              </div>
-              <h4 className="font-display font-bold text-foreground text-sm">{label}</h4>
-              <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-            </Link>
-          ))}
-        </div>
+      {/* Daily Insight */}
+      <div className="animate-slide-up" style={{ animationDelay: '0.25s' }}>
+        <DailyInsight checkIns={checkIns} />
       </div>
 
       {/* Journal Quick Access */}
