@@ -253,7 +253,10 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
   const helpfulFactors = correlationAnalysis.filter(c => c.type === 'treatment' || c.type === 'sleep');
   const triggersToAvoid = correlationAnalysis.filter(c => c.type === 'trigger_absent');
 
-  // Unified treatment effectiveness with correlation scoring
+  // Minimum uses required for full confidence in effectiveness score
+  const MIN_USES_FOR_FULL_CONFIDENCE = 5;
+
+  // Unified treatment effectiveness with confidence-weighted scoring
   const treatmentStats = useMemo(() => {
     // Step 1: Calculate basic effectiveness (% good days)
     const basicStats: Record<string, { count: number; goodDays: number }> = {};
@@ -279,7 +282,7 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
     // Find max correlation for normalization
     const maxCorrelation = Math.max(...Array.from(correlationMap.values()), 1);
     
-    // Step 3: Build unified stats with combined score
+    // Step 3: Build unified stats with confidence-weighted combined score
     return Object.entries(basicStats)
       .filter(([_, data]) => data.count > 0)
       .map(([id, data]) => {
@@ -287,8 +290,15 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
         const correlationRatio = correlationMap.get(id) || 0;
         // Normalize correlation to 0-100 scale for combining
         const normalizedCorrelation = correlationRatio > 0 ? (correlationRatio / maxCorrelation) * 100 : 0;
-        // Combined score: 60% effectiveness + 40% correlation
-        const combinedScore = (effectiveness * 0.6) + (normalizedCorrelation * 0.4);
+        
+        // Confidence multiplier: treatments with more uses get higher confidence
+        // Scales from 0.2 (1 use) to 1.0 (5+ uses)
+        const confidenceMultiplier = Math.min(1, Math.max(0.2, data.count / MIN_USES_FOR_FULL_CONFIDENCE));
+        
+        // Combined score: Apply confidence to effectiveness, then combine with correlation
+        // This ensures treatments with many uses rank higher than 1-2 use treatments with 100%
+        const confidenceWeightedEffectiveness = effectiveness * confidenceMultiplier;
+        const combinedScore = (confidenceWeightedEffectiveness * 0.6) + (normalizedCorrelation * 0.4);
         
         return {
           id,
@@ -298,6 +308,7 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
           correlationRatio,
           hasHighCorrelation: correlationRatio >= 1.5,
           combinedScore,
+          confidenceMultiplier,
         };
       })
       .sort((a, b) => b.combinedScore - a.combinedScore);
