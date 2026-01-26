@@ -98,6 +98,8 @@ const CheckInPage = () => {
   // Client request ID for idempotent submissions - persists across retries
   const [clientRequestId, setClientRequestId] = useState<string>(() => crypto.randomUUID());
   const [showFoodSuggestions, setShowFoodSuggestions] = useState(false);
+  const [isFoodDiaryOpen, setIsFoodDiaryOpen] = useState(false);
+  const [isProductDiaryOpen, setIsProductDiaryOpen] = useState(false);
 
   // Refs for inputs
   const notesRef = useRef<HTMLTextAreaElement>(null);
@@ -316,8 +318,10 @@ const CheckInPage = () => {
     const foodTriggers = triggers.filter(t => t.startsWith('food:'));
     if (foodTriggers.length > 0) {
       setFoodItems(foodTriggers.map(t => t.replace('food:', '')));
+      setIsFoodDiaryOpen(true); // Auto-expand if has items
     } else {
       setFoodItems([]);
+      setIsFoodDiaryOpen(false);
     }
     setFoodInputText('');
     // Extract new_product or product items from triggers if present
@@ -326,8 +330,10 @@ const CheckInPage = () => {
       setProductItems(productTriggers.map(t => 
         t.startsWith('product:') ? t.replace('product:', '') : t.replace('new_product:', '')
       ));
+      setIsProductDiaryOpen(true); // Auto-expand if has items
     } else {
       setProductItems([]);
+      setIsProductDiaryOpen(false);
     }
     setProductInputText('');
     // Filter out food and product entries from selected triggers (they're handled separately)
@@ -706,18 +712,17 @@ const CheckInPage = () => {
             </p>
           </div>
 
-          {/* Food Diary Section (Optional) */}
+          {/* Food Diary Section (Optional) - Collapsible */}
           <div className="space-y-3 animate-slide-up relative z-30" style={{ animationDelay: '0.19s' }}>
             <button
               type="button"
               onClick={() => {
-                // Toggle visibility - if already has items, keep visible
-                if (foodItems.length === 0) {
-                  // Focus input when opening
-                  setTimeout(() => foodInputRef.current?.focus(), 100);
+                setIsFoodDiaryOpen(!isFoodDiaryOpen);
+                if (!isFoodDiaryOpen && foodItems.length === 0) {
+                  setTimeout(() => foodInputRef.current?.focus(), 150);
                 }
               }}
-              className="flex items-center gap-2 w-full"
+              className="flex items-center gap-2 w-full group"
             >
               <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30">
                 <UtensilsCrossed className="w-4 h-4 text-amber-600 dark:text-amber-400" />
@@ -731,139 +736,154 @@ const CheckInPage = () => {
                   Track foods to find patterns in your skin reactions
                 </p>
               </div>
-              {foodItems.length > 0 && (
-                <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
-                  {foodItems.length} logged
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {foodItems.length > 0 && (
+                  <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+                    {foodItems.length} logged
+                  </span>
+                )}
+                <ChevronDown className={cn(
+                  "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                  isFoodDiaryOpen && "rotate-180"
+                )} />
+              </div>
             </button>
             
-            {/* Food items chips */}
-            {foodItems.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {foodItems.map((food) => (
-                  <span
-                    key={food}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-sm font-medium"
-                  >
-                    🍽️ {food}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveFoodItem(food)}
-                      className="p-0.5 rounded-full hover:bg-amber-200 dark:hover:bg-amber-800/50 transition-colors"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-            
-            {/* Quick food suggestions */}
-            {filteredFoodSuggestions.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-[10px] text-muted-foreground font-medium">
-                  {recentFoods.length > 0 && foodInputText === '' ? 'Recent & common foods:' : 'Suggestions:'}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {filteredFoodSuggestions.map((suggestion) => {
-                    const isRecent = recentFoods.includes(suggestion);
-                    return (
-                      <button
-                        key={suggestion}
-                        type="button"
-                        onClick={() => {
-                          if (!foodItems.includes(suggestion)) {
-                            setFoodItems((prev) => [...prev, suggestion]);
-                          }
-                        }}
-                        className={cn(
-                          "px-2.5 py-1 text-xs font-medium rounded-full transition-all",
-                          isRecent
-                            ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 ring-1 ring-amber-300 dark:ring-amber-700"
-                            : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
-                        )}
+            {/* Collapsible content */}
+            <div className={cn(
+              "overflow-hidden transition-all duration-200 ease-out",
+              isFoodDiaryOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+            )}>
+              <div className="space-y-3 pt-1">
+                {/* Food items chips */}
+                {foodItems.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {foodItems.map((food) => (
+                      <span
+                        key={food}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-sm font-medium"
                       >
-                        {isRecent && <span className="mr-1">🕐</span>}
-                        {suggestion}
-                      </button>
-                    );
-                  })}
+                        🍽️ {food}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFoodItem(food)}
+                          className="p-0.5 rounded-full hover:bg-amber-200 dark:hover:bg-amber-800/50 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Quick food suggestions */}
+                {filteredFoodSuggestions.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] text-muted-foreground font-medium">
+                      {recentFoods.length > 0 && foodInputText === '' ? 'Recent & common foods:' : 'Suggestions:'}
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {filteredFoodSuggestions.map((suggestion) => {
+                        const isRecent = recentFoods.includes(suggestion);
+                        return (
+                          <button
+                            key={suggestion}
+                            type="button"
+                            onClick={() => {
+                              if (!foodItems.includes(suggestion)) {
+                                setFoodItems((prev) => [...prev, suggestion]);
+                              }
+                            }}
+                            className={cn(
+                              "px-2.5 py-1 text-xs font-medium rounded-full transition-all",
+                              isRecent
+                                ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 ring-1 ring-amber-300 dark:ring-amber-700"
+                                : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            )}
+                          >
+                            {isRecent && <span className="mr-1">🕐</span>}
+                            {suggestion}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Food input */}
+                <div className="flex gap-2 relative z-20">
+                  <AndroidSafeInput
+                    ref={foodInputRef}
+                    placeholder="Type to search or add custom food..."
+                    value={foodInputText}
+                    onValueChange={(val) => {
+                      setFoodInputText(val);
+                      setShowFoodSuggestions(true);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleAddFoodItem();
+                      }
+                    }}
+                    onFocus={() => setShowFoodSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowFoodSuggestions(false), 150)}
+                    className="flex-1 h-10 rounded-xl border-2 border-amber-200 dark:border-amber-800/50 focus:border-amber-400"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleAddFoodItem}
+                    disabled={!foodInputText.trim()}
+                    className="h-10 w-10 rounded-xl border-amber-200 dark:border-amber-800/50 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                  >
+                    <Plus className="w-4 h-4 text-amber-600" />
+                  </Button>
+                  
+                  {/* Autocomplete dropdown */}
+                  {showFoodSuggestions && foodInputText.trim() && filteredFoodSuggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-12 mt-1 bg-background border border-amber-200 dark:border-amber-800 rounded-xl shadow-xl z-[100] overflow-hidden">
+                      {filteredFoodSuggestions.slice(0, 5).map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setFoodItems((prev) => [...prev, suggestion]);
+                            setFoodInputText('');
+                            setShowFoodSuggestions(false);
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors flex items-center gap-2"
+                        >
+                          {recentFoods.includes(suggestion) && <span className="text-xs">🕐</span>}
+                          <span>{suggestion}</span>
+                          {recentFoods.includes(suggestion) && (
+                            <span className="text-[10px] text-muted-foreground ml-auto">recent</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
+                
+                <p className="text-[10px] text-muted-foreground/70">
+                  Foods you log appear in Insights → Food Breakdown to show correlations with your skin
+                </p>
               </div>
-            )}
-            
-            {/* Food input */}
-            <div className="flex gap-2 relative z-20">
-              <AndroidSafeInput
-                ref={foodInputRef}
-                placeholder="Type to search or add custom food..."
-                value={foodInputText}
-                onValueChange={(val) => {
-                  setFoodInputText(val);
-                  setShowFoodSuggestions(true);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleAddFoodItem();
-                  }
-                }}
-                onFocus={() => setShowFoodSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowFoodSuggestions(false), 150)}
-                className="flex-1 h-10 rounded-xl border-2 border-amber-200 dark:border-amber-800/50 focus:border-amber-400"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={handleAddFoodItem}
-                disabled={!foodInputText.trim()}
-                className="h-10 w-10 rounded-xl border-amber-200 dark:border-amber-800/50 hover:bg-amber-50 dark:hover:bg-amber-900/20"
-              >
-                <Plus className="w-4 h-4 text-amber-600" />
-              </Button>
-              
-              {/* Autocomplete dropdown */}
-              {showFoodSuggestions && foodInputText.trim() && filteredFoodSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-12 mt-1 bg-background border border-amber-200 dark:border-amber-800 rounded-xl shadow-xl z-[100] overflow-hidden">
-                  {filteredFoodSuggestions.slice(0, 5).map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        setFoodItems((prev) => [...prev, suggestion]);
-                        setFoodInputText('');
-                        setShowFoodSuggestions(false);
-                      }}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors flex items-center gap-2"
-                    >
-                      {recentFoods.includes(suggestion) && <span className="text-xs">🕐</span>}
-                      <span>{suggestion}</span>
-                      {recentFoods.includes(suggestion) && (
-                        <span className="text-[10px] text-muted-foreground ml-auto">recent</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
-            
-            <p className="text-[10px] text-muted-foreground/70">
-              Foods you log appear in Insights → Food Breakdown to show correlations with your skin
-            </p>
           </div>
 
-          {/* Product Diary Section (Optional) */}
+          {/* Product Diary Section (Optional) - Collapsible */}
           <div className="space-y-3 animate-slide-up relative z-20" style={{ animationDelay: '0.195s' }}>
             <button
               type="button"
               onClick={() => {
-                if (productItems.length === 0) {
-                  setTimeout(() => productInputRef.current?.focus(), 100);
+                setIsProductDiaryOpen(!isProductDiaryOpen);
+                if (!isProductDiaryOpen && productItems.length === 0) {
+                  setTimeout(() => productInputRef.current?.focus(), 150);
                 }
               }}
-              className="flex items-center gap-2 w-full"
+              className="flex items-center gap-2 w-full group"
             >
               <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/30">
                 <Package className="w-4 h-4 text-purple-600 dark:text-purple-400" />
@@ -877,97 +897,111 @@ const CheckInPage = () => {
                   Track new products to find patterns in your skin reactions
                 </p>
               </div>
-              {productItems.length > 0 && (
-                <span className="text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-2 py-0.5 rounded-full">
-                  {productItems.length} logged
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {productItems.length > 0 && (
+                  <span className="text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-2 py-0.5 rounded-full">
+                    {productItems.length} logged
+                  </span>
+                )}
+                <ChevronDown className={cn(
+                  "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                  isProductDiaryOpen && "rotate-180"
+                )} />
+              </div>
             </button>
             
-            {/* Product items chips */}
-            {productItems.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {productItems.map((product) => (
-                  <span
-                    key={product}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm font-medium"
-                  >
-                    🧴 {product}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveProductItem(product)}
-                      className="p-0.5 rounded-full hover:bg-purple-200 dark:hover:bg-purple-800/50 transition-colors"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-            
-            {/* Quick product suggestions */}
-            {filteredProductSuggestions.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-[10px] text-muted-foreground font-medium">
-                  {recentProducts.length > 0 && productInputText === '' ? 'Recent & common products:' : 'Suggestions:'}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {filteredProductSuggestions.map((suggestion) => {
-                    const isRecent = recentProducts.includes(suggestion);
-                    return (
-                      <button
-                        key={suggestion}
-                        type="button"
-                        onClick={() => {
-                          if (!productItems.includes(suggestion)) {
-                            setProductItems((prev) => [...prev, suggestion]);
-                          }
-                        }}
-                        className={cn(
-                          "px-2.5 py-1 text-xs font-medium rounded-full transition-all",
-                          isRecent
-                            ? "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 ring-1 ring-purple-300 dark:ring-purple-700"
-                            : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
-                        )}
+            {/* Collapsible content */}
+            <div className={cn(
+              "overflow-hidden transition-all duration-200 ease-out",
+              isProductDiaryOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+            )}>
+              <div className="space-y-3 pt-1">
+                {/* Product items chips */}
+                {productItems.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {productItems.map((product) => (
+                      <span
+                        key={product}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm font-medium"
                       >
-                        {isRecent && <span className="mr-1">🕐</span>}
-                        {suggestion}
-                      </button>
-                    );
-                  })}
+                        🧴 {product}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveProductItem(product)}
+                          className="p-0.5 rounded-full hover:bg-purple-200 dark:hover:bg-purple-800/50 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Quick product suggestions */}
+                {filteredProductSuggestions.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] text-muted-foreground font-medium">
+                      {recentProducts.length > 0 && productInputText === '' ? 'Recent & common products:' : 'Suggestions:'}
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {filteredProductSuggestions.map((suggestion) => {
+                        const isRecent = recentProducts.includes(suggestion);
+                        return (
+                          <button
+                            key={suggestion}
+                            type="button"
+                            onClick={() => {
+                              if (!productItems.includes(suggestion)) {
+                                setProductItems((prev) => [...prev, suggestion]);
+                              }
+                            }}
+                            className={cn(
+                              "px-2.5 py-1 text-xs font-medium rounded-full transition-all",
+                              isRecent
+                                ? "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 ring-1 ring-purple-300 dark:ring-purple-700"
+                                : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            )}
+                          >
+                            {isRecent && <span className="mr-1">🕐</span>}
+                            {suggestion}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Product input */}
+                <div className="flex gap-2 relative">
+                  <AndroidSafeInput
+                    ref={productInputRef}
+                    placeholder="Type to search or add custom product..."
+                    value={productInputText}
+                    onValueChange={setProductInputText}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleAddProductItem();
+                      }
+                    }}
+                    className="flex-1 h-10 rounded-xl border-2 border-purple-200 dark:border-purple-800/50 focus:border-purple-400"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleAddProductItem}
+                    disabled={!productInputText.trim()}
+                    className="h-10 w-10 rounded-xl border-purple-200 dark:border-purple-800/50 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                  >
+                    <Plus className="w-4 h-4 text-purple-600" />
+                  </Button>
                 </div>
+                
+                <p className="text-[10px] text-muted-foreground/70">
+                  Products you log appear in Insights → Product Breakdown to show correlations with your skin
+                </p>
               </div>
-            )}
-            
-            {/* Product input */}
-            <div className="flex gap-2 relative">
-              <AndroidSafeInput
-                ref={productInputRef}
-                placeholder="Type to search or add custom product..."
-                value={productInputText}
-                onValueChange={setProductInputText}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleAddProductItem();
-                  }
-                }}
-                className="flex-1 h-10 rounded-xl border-2 border-purple-200 dark:border-purple-800/50 focus:border-purple-400"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={handleAddProductItem}
-                disabled={!productInputText.trim()}
-                className="h-10 w-10 rounded-xl border-purple-200 dark:border-purple-800/50 hover:bg-purple-50 dark:hover:bg-purple-900/20"
-              >
-                <Plus className="w-4 h-4 text-purple-600" />
-              </Button>
             </div>
-            
-            <p className="text-[10px] text-muted-foreground/70">
-              Products you log appear in Insights → Product Breakdown to show correlations with your skin
-            </p>
           </div>
 
           {/* Symptoms experienced today */}
