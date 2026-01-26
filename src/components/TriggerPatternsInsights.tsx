@@ -136,13 +136,18 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
       const isRecent = new Date(checkIn.timestamp) >= recentCutoff;
 
       triggers.forEach(triggerId => {
-        // Normalize food triggers for consistent matching (e.g., "food:Nuts" -> "food:nuts")
-        const normalizedId = triggerId.startsWith('food:') 
-          ? `food:${triggerId.slice(5).toLowerCase().trim()}`
-          : triggerId;
+        // Skip food and product entries - they have their own dedicated sections
+        if (triggerId.startsWith('food:') || 
+            triggerId.startsWith('product:') || 
+            triggerId.startsWith('new_product:') ||
+            triggerId === 'new_product' ||
+            triggerId === 'food' ||
+            triggerId === 'specific_food') {
+          return;
+        }
         
-        if (!stats[normalizedId]) {
-          stats[normalizedId] = {
+        if (!stats[triggerId]) {
+          stats[triggerId] = {
             uniqueDays: new Set(),
             totalIntensity: 0,
             totalCount: 0,
@@ -155,18 +160,18 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
           };
         }
         
-        stats[normalizedId].uniqueDays.add(date);
-        stats[normalizedId].totalCount++;
-        stats[normalizedId].totalIntensity += intensity;
+        stats[triggerId].uniqueDays.add(date);
+        stats[triggerId].totalCount++;
+        stats[triggerId].totalIntensity += intensity;
         
         if (isRecent) {
-          stats[normalizedId].recentDays.add(date);
-          stats[normalizedId].recentCount++;
-          stats[normalizedId].recentIntensity += intensity;
+          stats[triggerId].recentDays.add(date);
+          stats[triggerId].recentCount++;
+          stats[triggerId].recentIntensity += intensity;
         } else {
-          stats[normalizedId].historicalDays.add(date);
-          stats[normalizedId].historicalCount++;
-          stats[normalizedId].historicalIntensity += intensity;
+          stats[triggerId].historicalDays.add(date);
+          stats[triggerId].historicalCount++;
+          stats[triggerId].historicalIntensity += intensity;
         }
       });
     });
@@ -174,30 +179,8 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     const activePatterns: TriggerStat[] = [];
     const resolvedTriggers: ResolvedTrigger[] = [];
 
-    // Helper to generate label for triggers, including specific food items and new products
+    // Helper to generate label for triggers (food and products are handled separately)
     const getLabel = (triggerId: string): string => {
-      if (triggerId.startsWith('food:')) {
-        const foodName = triggerId.slice(5).trim();
-        if (!foodName) return 'Food (unspecified)';
-        // Capitalize first letter of each word
-        return `🍽️ ${foodName.split(' ').map(word => 
-          word.charAt(0).toUpperCase() + word.slice(1)
-        ).join(' ')}`;
-      }
-      if (triggerId === 'food' || triggerId === 'specific_food') {
-        return 'Food (unspecified)';
-      }
-      if (triggerId.startsWith('new_product:')) {
-        const productName = triggerId.slice(12).trim();
-        if (!productName) return 'New Product (unspecified)';
-        // Capitalize first letter of each word
-        return `🧴 ${productName.split(' ').map(word => 
-          word.charAt(0).toUpperCase() + word.slice(1)
-        ).join(' ')}`;
-      }
-      if (triggerId === 'new_product') {
-        return 'New Product (unspecified)';
-      }
       return triggersList.find(t => t.id === triggerId)?.label || triggerId;
     };
 
