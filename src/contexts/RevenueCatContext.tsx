@@ -68,6 +68,22 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [authTimeout, setAuthTimeout] = useState(false);
+
+  // Timeout fallback: if auth check hasn't completed after 8 seconds, proceed anyway
+  // This prevents indefinite loading if auth check or RevenueCat initialization hangs
+  useEffect(() => {
+    if (authChecked || !getIsNativeMobile()) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      console.warn('[RevenueCatProvider] Auth check timeout - proceeding without waiting');
+      setAuthTimeout(true);
+    }, 8000);
+
+    return () => clearTimeout(timeout);
+  }, [authChecked]);
 
   // Retry initialization - useful if initial load failed
   const retryInitialization = useCallback(async () => {
@@ -185,9 +201,10 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
     retryInitialization,
   };
 
-  // On native, block rendering until we've resolved auth at least once.
+  // On native, block rendering until we've resolved auth at least once OR timeout occurs.
   // This prevents a brief "free" UI flash before RevenueCat initializes and/or cache is applied.
-  if (getIsNativeMobile() && !authChecked) {
+  // The timeout fallback ensures we don't hang indefinitely if auth/RevenueCat initialization fails.
+  if (getIsNativeMobile() && !authChecked && !authTimeout) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
