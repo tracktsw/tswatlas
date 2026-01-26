@@ -797,7 +797,7 @@ const CheckInPage = () => {
             )}
             
             {/* Food input */}
-            <div className="flex gap-2 relative">
+            <div className="flex gap-2 relative z-20">
               <AndroidSafeInput
                 ref={foodInputRef}
                 placeholder="Type to search or add custom food..."
@@ -828,7 +828,7 @@ const CheckInPage = () => {
               
               {/* Autocomplete dropdown */}
               {showFoodSuggestions && foodInputText.trim() && filteredSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-12 mt-1 bg-background border border-amber-200 dark:border-amber-800 rounded-xl shadow-lg z-50 overflow-hidden">
+                <div className="absolute top-full left-0 right-12 mt-1 bg-background border border-amber-200 dark:border-amber-800 rounded-xl shadow-xl z-[100] overflow-hidden">
                   {filteredSuggestions.slice(0, 5).map((suggestion) => (
                     <button
                       key={suggestion}
