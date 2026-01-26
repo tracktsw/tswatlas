@@ -4,6 +4,7 @@ import { CheckIn } from '@/contexts/UserDataContext';
 import { cn } from '@/lib/utils';
 import { BaselineConfidence } from '@/utils/flareStateEngine';
 import { analyzeFoodReactions, FoodAnalysisResult, FoodPattern, FoodConfidence } from '@/utils/foodAnalysis';
+import { analyzeProductReactions, ProductAnalysisResult, ProductPattern, ProductConfidence } from '@/utils/productAnalysis';
 
 const triggersList = [
   // Environmental triggers
@@ -14,7 +15,6 @@ const triggersList = [
   { id: 'dust_pollen', label: 'Dust / Pollen' },
   { id: 'detergent', label: 'Detergent' },
   { id: 'fragrance', label: 'Fragrance' },
-  { id: 'new_product', label: 'New Product' },
   { id: 'pets', label: 'Pets' },
   // Internal triggers
   { id: 'stress', label: 'Stress' },
@@ -318,12 +318,25 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     return analyzeFoodReactions(checkIns, periodDays);
   }, [checkIns, timePeriod]);
   
+  // New product analysis using delayed reaction logic
+  const productAnalysis = useMemo(() => {
+    const periodDays = PERIOD_DAYS[timePeriod];
+    return analyzeProductReactions(checkIns, periodDays);
+  }, [checkIns, timePeriod]);
+  
   // Separate foods with sufficient data from those without
   const { analyzedFoods, insufficientDataFoods } = useMemo(() => {
     const analyzed = foodAnalysis.filter(f => f.pattern !== 'insufficient_data');
     const insufficient = foodAnalysis.filter(f => f.pattern === 'insufficient_data');
     return { analyzedFoods: analyzed, insufficientDataFoods: insufficient };
   }, [foodAnalysis]);
+  
+  // Separate products with sufficient data from those without
+  const { analyzedProducts, insufficientDataProducts } = useMemo(() => {
+    const analyzed = productAnalysis.filter(p => p.pattern !== 'insufficient_data');
+    const insufficient = productAnalysis.filter(p => p.pattern === 'insufficient_data');
+    return { analyzedProducts: analyzed, insufficientDataProducts: insufficient };
+  }, [productAnalysis]);
 
   // Check if user has logged any triggers at all
   const hasAnyTriggers = checkIns.some(c => c.triggers && c.triggers.length > 0);
@@ -519,6 +532,56 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     );
   };
 
+  // Product Analysis Card Component
+  const ProductAnalysisCard = ({ product, index }: { product: ProductAnalysisResult; index: number }) => {
+    const getPatternStyles = (pattern: ProductPattern) => {
+      switch (pattern) {
+        case 'often_worse':
+          return { bg: 'bg-purple-50 dark:bg-purple-950/30', border: 'border-purple-200/50 dark:border-purple-800/30', text: 'text-purple-700 dark:text-purple-300', label: 'Often followed by worse symptoms' };
+        case 'often_better':
+          return { bg: 'bg-emerald-50 dark:bg-emerald-950/30', border: 'border-emerald-200/50 dark:border-emerald-800/30', text: 'text-emerald-700 dark:text-emerald-300', label: 'Often followed by improvement' };
+        case 'mixed':
+          return { bg: 'bg-muted/50', border: 'border-muted', text: 'text-muted-foreground', label: 'Mixed reactions observed' };
+        default:
+          return { bg: 'bg-muted/30', border: 'border-muted/50', text: 'text-muted-foreground/80', label: 'No clear pattern detected' };
+      }
+    };
+
+    const getConfidenceBadge = (confidence: ProductConfidence) => {
+      switch (confidence) {
+        case 'high': return <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 px-1.5 py-0.5 rounded-full">High confidence</span>;
+        case 'medium': return <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 rounded-full">Moderate</span>;
+        default: return <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full opacity-70">Preliminary</span>;
+      }
+    };
+
+    const styles = getPatternStyles(product.pattern);
+    const total = product.daysWorseAfter + product.daysBetterAfter + product.daysNeutralAfter;
+
+    return (
+      <div className={cn("p-3 rounded-lg border animate-slide-up", styles.bg, styles.border, product.confidence === 'low' && "opacity-75")} style={{ animationDelay: `${index * 0.05}s` }}>
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-foreground">🧴 {product.name}</span>
+            <span className="text-xs text-muted-foreground">{product.count} log{product.count !== 1 ? 's' : ''}</span>
+          </div>
+          {getConfidenceBadge(product.confidence)}
+        </div>
+        <p className={cn("text-xs font-medium mb-1", styles.text)}>{styles.label}</p>
+        {product.analyzableExposures > 0 && (
+          <p className="text-[10px] text-muted-foreground/70">
+            {product.daysWorseAfter > 0 && `${product.daysWorseAfter} worse`}
+            {product.daysWorseAfter > 0 && (product.daysBetterAfter > 0 || product.daysNeutralAfter > 0) && ' · '}
+            {product.daysBetterAfter > 0 && `${product.daysBetterAfter} better`}
+            {product.daysBetterAfter > 0 && product.daysNeutralAfter > 0 && ' · '}
+            {product.daysNeutralAfter > 0 && `${product.daysNeutralAfter} neutral`}
+            {' '}of {total} analyzed
+          </p>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
       <div className="flex items-center justify-between gap-2">
@@ -679,8 +742,8 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
         </div>
       )}
 
-      {/* Product Breakdown Section */}
-      {productBreakdown.length > 0 && (
+      {/* Product Diary Analysis Section - New Delayed Reaction Logic */}
+      {productAnalysis.length > 0 && (
         <div className="glass-card p-5 space-y-3">
           <button
             onClick={() => setShowProductBreakdown(!showProductBreakdown)}
@@ -692,10 +755,10 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
               </div>
               <div className="text-left">
                 <p className="text-sm font-semibold text-foreground">
-                  Product Breakdown
+                  Product Diary Analysis
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {productBreakdown.length} product{productBreakdown.length !== 1 ? 's' : ''} tracked
+                  {productAnalysis.length} product{productAnalysis.length !== 1 ? 's' : ''} tracked
                 </p>
               </div>
             </div>
@@ -706,36 +769,50 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
           </button>
           
           {showProductBreakdown && (
-            <div className="space-y-2 pt-2 border-t border-muted/50">
-              {productBreakdown.map((item, index) => (
-                <div 
-                  key={item.name}
-                  className="flex items-center justify-between py-1.5"
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                >
-                  <span className="text-sm font-medium text-foreground flex items-center gap-2">
-                    🧴 {item.name}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {item.count}×
-                    </span>
-                    <span className={cn(
-                      "text-xs font-medium px-1.5 py-0.5 rounded-full",
-                      item.percentWorse > 20 
-                        ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                        : item.percentWorse > 0
-                          ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                          : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                    )}>
-                      {item.percentWorse > 0 ? `+${item.percentWorse}%` : item.percentWorse === 0 ? 'neutral' : `${item.percentWorse}%`}
-                    </span>
+            <div className="space-y-3 pt-2 border-t border-muted/50">
+              {/* Disclaimer */}
+              <div className="flex items-start gap-2 p-2 bg-purple-50/50 dark:bg-purple-950/20 rounded-lg border border-purple-200/50 dark:border-purple-800/30">
+                <AlertCircle className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+                <p className="text-[10px] text-purple-700 dark:text-purple-300">
+                  Observations only — not medical advice. Correlation does not mean causation.
+                </p>
+              </div>
+              
+              {/* Analyzed products with patterns */}
+              {analyzedProducts.length > 0 && (
+                <div className="space-y-2">
+                  {analyzedProducts.map((product, index) => (
+                    <ProductAnalysisCard key={product.name} product={product} index={index} />
+                  ))}
+                </div>
+              )}
+              
+              {/* Insufficient data products */}
+              {insufficientDataProducts.length > 0 && (
+                <div className="pt-2 border-t border-muted/30">
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">
+                    Not enough data yet
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {insufficientDataProducts.map((product) => (
+                      <span
+                        key={product.name}
+                        className="text-xs text-muted-foreground/70 bg-muted/30 px-2 py-1 rounded-full"
+                      >
+                        {product.name} ({product.count} log{product.count !== 1 ? 's' : ''})
+                      </span>
+                    ))}
                   </div>
                 </div>
-              ))}
-              <p className="text-[10px] text-muted-foreground/70 pt-2">
-                Shows how skin intensity compared to your average on days with each product
-              </p>
+              )}
+              
+              {/* Footer explanation */}
+              <div className="flex items-start gap-2 pt-2 border-t border-muted/30">
+                <Info className="w-3 h-3 text-muted-foreground/60 mt-0.5 flex-shrink-0" />
+                <p className="text-[10px] text-muted-foreground/60">
+                  Patterns based on symptoms 1-3 days after use. Consult a dermatologist before making product changes.
+                </p>
+              </div>
             </div>
           )}
         </div>
