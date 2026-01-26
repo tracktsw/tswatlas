@@ -41,16 +41,16 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<key>FacebookAppID</key>
-	<string>3139615679580163</string>
-	<key>FacebookClientToken</key>
-	<string>YOUR_CLIENT_TOKEN_HERE</string>
-	<key>FacebookDisplayName</key>
-	<string>TrackTSW</string>
-	<key>FacebookAutoLogAppEventsEnabled</key>
-	<true/>
 	<key>FacebookAdvertiserIDCollectionEnabled</key>
 	<true/>
+	<key>FacebookAppID</key>
+	<string>3139615679580163</string>
+	<key>FacebookAutoLogAppEventsEnabled</key>
+	<true/>
+	<key>FacebookClientToken</key>
+	<string>92d036144b4939d8330b02fdcc901255</string>
+	<key>FacebookDisplayName</key>
+	<string>TrackTSW</string>
 	<key>LSApplicationCategoryType</key>
 	<string></string>
 	<key>LSApplicationQueriesSchemes</key>

@@ -1,0 +1,88 @@
+PODS:
+  - Capacitor (8.0.1):
+    - CapacitorCordova
+  - CapacitorApp (8.0.0):
+    - Capacitor
+  - CapacitorCamera (8.0.0):
+    - Capacitor
+  - CapacitorCordova (8.0.1)
+  - CapacitorHaptics (8.0.0):
+    - Capacitor
+  - CapacitorKeyboard (8.0.0):
+    - Capacitor
+  - CapacitorLocalNotifications (8.0.0):
+    - Capacitor
+  - CapacitorPluginSafeArea (5.0.0):
+    - Capacitor
+  - CapacitorSplashScreen (8.0.0):
+    - Capacitor
+  - FBAEMKit (17.4.0):
+    - FBSDKCoreKit_Basics (= 17.4.0)
+  - FBSDKCoreKit (17.4.0):
+    - FBAEMKit (= 17.4.0)
+    - FBSDKCoreKit_Basics (= 17.4.0)
+  - FBSDKCoreKit_Basics (17.4.0)
+  - PurchasesHybridCommon (13.38.1):
+    - RevenueCat (= 5.29.0)
+  - RevenueCat (5.29.0)
+
+DEPENDENCIES:
+  - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
+  - "CapacitorCamera (from `../../node_modules/@capacitor/camera`)"
+  - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorHaptics (from `../../node_modules/@capacitor/haptics`)"
+  - "CapacitorKeyboard (from `../../node_modules/@capacitor/keyboard`)"
+  - "CapacitorLocalNotifications (from `../../node_modules/@capacitor/local-notifications`)"
+  - CapacitorPluginSafeArea (from `../../node_modules/capacitor-plugin-safe-area`)
+  - "CapacitorSplashScreen (from `../../node_modules/@capacitor/splash-screen`)"
+  - FBSDKCoreKit (~> 17.0)
+  - PurchasesHybridCommon (~> 13.5)
+
+SPEC REPOS:
+  trunk:
+    - FBAEMKit
+    - FBSDKCoreKit
+    - FBSDKCoreKit_Basics
+    - PurchasesHybridCommon
+    - RevenueCat
+
+EXTERNAL SOURCES:
+  Capacitor:
+    :path: "../../node_modules/@capacitor/ios"
+  CapacitorApp:
+    :path: "../../node_modules/@capacitor/app"
+  CapacitorCamera:
+    :path: "../../node_modules/@capacitor/camera"
+  CapacitorCordova:
+    :path: "../../node_modules/@capacitor/ios"
+  CapacitorHaptics:
+    :path: "../../node_modules/@capacitor/haptics"
+  CapacitorKeyboard:
+    :path: "../../node_modules/@capacitor/keyboard"
+  CapacitorLocalNotifications:
+    :path: "../../node_modules/@capacitor/local-notifications"
+  CapacitorPluginSafeArea:
+    :path: "../../node_modules/capacitor-plugin-safe-area"
+  CapacitorSplashScreen:
+    :path: "../../node_modules/@capacitor/splash-screen"
+
+SPEC CHECKSUMS:
+  Capacitor: ff35b0f66370b84aa238251b35b91886a3207c16
+  CapacitorApp: 3963a84197280757b84f126afd1520a85ae3b092
+  CapacitorCamera: 592acb7ab9fb748e2d8571eb03af30ec4e1ace12
+  CapacitorCordova: 0d65b9bb74e995dcecb9463f34f1af2aba6f955c
+  CapacitorHaptics: 2079d9fa04c5a71e18663b4722323c304c58245c
+  CapacitorKeyboard: d7868c079a4d5277a3deca27a10a488fcbbb8b69
+  CapacitorLocalNotifications: 177cfbf8228d9bd82a147e094cb7984d7afb9e29
+  CapacitorPluginSafeArea: 9d0682951c011bf0b36e513a89103c5fbff7ac49
+  CapacitorSplashScreen: 422880d7117605c30699eb4b21644b62db42e86c
+  FBAEMKit: 58cb5f302cdd715a56d4c1d0dfdd2e423ac1421a
+  FBSDKCoreKit: 94d7461d0cecf441b1ba7c41acfff41daa8ccd41
+  FBSDKCoreKit_Basics: 151b43db8b834d3f0e02f95d36a44ffd36265e45
+  PurchasesHybridCommon: 5a46c67f78680dee9289783edbcebd983ff7bd9c
+  RevenueCat: 5fa12c42c14b390dd2423897e925f407f474b8fa
+
+PODFILE CHECKSUM: 9169cffc3cf913fd898129f6cf2b07328efc91ae
+
+COCOAPODS: 1.16.2
