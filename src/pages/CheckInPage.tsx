@@ -612,9 +612,14 @@ const CheckInPage = () => {
 
           {/* Symptoms experienced today */}
           <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            <h3 className="font-display font-bold text-lg text-foreground">
-              Symptoms
-            </h3>
+            <div>
+              <h3 className="font-display font-bold text-lg text-foreground">
+                Symptoms
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Select and rate severity: <span className="text-yellow-600">mild</span>, <span className="text-orange-500">moderate</span>, or <span className="text-red-500">severe</span>
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {symptomsList.map((symptom) => {
                 const selected = isSymptomSelected(symptom);
