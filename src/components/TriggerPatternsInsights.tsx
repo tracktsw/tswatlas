@@ -745,157 +745,187 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
         </div>
       )}
 
-      {/* Food Diary Analysis Section - New Delayed Reaction Logic */}
-      {foodAnalysis.length > 0 && (
-        <div className="glass-card p-5 space-y-3">
-          <button
-            onClick={() => setShowFoodBreakdown(!showFoodBreakdown)}
-            className="flex items-center justify-between w-full"
-          >
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-                <UtensilsCrossed className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              </div>
-              <div className="text-left">
-                <p className="text-sm font-semibold text-foreground">
-                  Food Diary Analysis
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {foodAnalysis.length} food{foodAnalysis.length !== 1 ? 's' : ''} tracked
-                </p>
-              </div>
+      {/* Food Diary Analysis Section - Always show, with empty state if needed */}
+      <div className="glass-card p-5 space-y-3">
+        <button
+          onClick={() => setShowFoodBreakdown(!showFoodBreakdown)}
+          className="flex items-center justify-between w-full"
+        >
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+              <UtensilsCrossed className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             </div>
-            <ChevronDown className={cn(
-              "w-4 h-4 text-muted-foreground transition-transform",
-              showFoodBreakdown && "rotate-180"
-            )} />
-          </button>
-          
-          {showFoodBreakdown && (
-            <div className="space-y-3 pt-2 border-t border-muted/50">
-              {/* Disclaimer */}
-              <div className="flex items-start gap-2 p-2 bg-amber-50/50 dark:bg-amber-950/20 rounded-lg border border-amber-200/50 dark:border-amber-800/30">
-                <AlertCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                <p className="text-[10px] text-amber-700 dark:text-amber-300">
-                  Observations only — not medical advice. Correlation does not mean causation.
+            <div className="text-left">
+              <p className="text-sm font-semibold text-foreground">
+                Food Diary Analysis
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {foodAnalysis.length > 0 
+                  ? `${foodAnalysis.length} food${foodAnalysis.length !== 1 ? 's' : ''} tracked`
+                  : 'No foods logged yet'
+                }
+              </p>
+            </div>
+          </div>
+          <ChevronDown className={cn(
+            "w-4 h-4 text-muted-foreground transition-transform",
+            showFoodBreakdown && "rotate-180"
+          )} />
+        </button>
+        
+        {showFoodBreakdown && (
+          <div className="space-y-3 pt-2 border-t border-muted/50">
+            {foodAnalysis.length === 0 ? (
+              <div className="text-center py-4">
+                <UtensilsCrossed className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground font-medium">
+                  No food diary entries yet
+                </p>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  Log foods in your daily check-ins to discover patterns over time.
                 </p>
               </div>
-              
-              {/* Analyzed foods with patterns */}
-              {analyzedFoods.length > 0 && (
-                <div className="space-y-2">
-                  {analyzedFoods.map((food, index) => (
-                    <FoodAnalysisCard key={food.name} food={food} index={index} />
-                  ))}
-                </div>
-              )}
-              
-              {/* Insufficient data foods */}
-              {insufficientDataFoods.length > 0 && (
-                <div className="pt-2 border-t border-muted/30">
-                  <p className="text-xs text-muted-foreground mb-2 font-medium">
-                    Not enough data yet
+            ) : (
+              <>
+                {/* Disclaimer */}
+                <div className="flex items-start gap-2 p-2 bg-amber-50/50 dark:bg-amber-950/20 rounded-lg border border-amber-200/50 dark:border-amber-800/30">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                    Observations only — not medical advice. Correlation does not mean causation.
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {insufficientDataFoods.map((food) => (
-                      <span
-                        key={food.name}
-                        className="text-xs text-muted-foreground/70 bg-muted/30 px-2 py-1 rounded-full"
-                      >
-                        {food.name} ({food.count} log{food.count !== 1 ? 's' : ''})
-                      </span>
+                </div>
+                
+                {/* Analyzed foods with patterns */}
+                {analyzedFoods.length > 0 && (
+                  <div className="space-y-2">
+                    {analyzedFoods.map((food, index) => (
+                      <FoodAnalysisCard key={food.name} food={food} index={index} />
                     ))}
                   </div>
+                )}
+                
+                {/* Insufficient data foods */}
+                {insufficientDataFoods.length > 0 && (
+                  <div className="pt-2 border-t border-muted/30">
+                    <p className="text-xs text-muted-foreground mb-2 font-medium">
+                      Not enough data yet
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {insufficientDataFoods.map((food) => (
+                        <span
+                          key={food.name}
+                          className="text-xs text-muted-foreground/70 bg-muted/30 px-2 py-1 rounded-full"
+                        >
+                          {food.name} ({food.count} log{food.count !== 1 ? 's' : ''})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Footer explanation */}
+                <div className="flex items-start gap-2 pt-2 border-t border-muted/30">
+                  <Info className="w-3 h-3 text-muted-foreground/60 mt-0.5 flex-shrink-0" />
+                  <p className="text-[10px] text-muted-foreground/60">
+                    Patterns based on symptoms 1-3 days after eating. Consult a healthcare provider before making dietary changes.
+                  </p>
                 </div>
-              )}
-              
-              {/* Footer explanation */}
-              <div className="flex items-start gap-2 pt-2 border-t border-muted/30">
-                <Info className="w-3 h-3 text-muted-foreground/60 mt-0.5 flex-shrink-0" />
-                <p className="text-[10px] text-muted-foreground/60">
-                  Patterns based on symptoms 1-3 days after eating. Consult a healthcare provider before making dietary changes.
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
-      {/* Product Diary Analysis Section - New Delayed Reaction Logic */}
-      {productAnalysis.length > 0 && (
-        <div className="glass-card p-5 space-y-3">
-          <button
-            onClick={() => setShowProductBreakdown(!showProductBreakdown)}
-            className="flex items-center justify-between w-full"
-          >
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                <Package className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div className="text-left">
-                <p className="text-sm font-semibold text-foreground">
-                  Product Diary Analysis
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {productAnalysis.length} product{productAnalysis.length !== 1 ? 's' : ''} tracked
-                </p>
-              </div>
+      {/* Product Diary Analysis Section - Always show, with empty state if needed */}
+      <div className="glass-card p-5 space-y-3">
+        <button
+          onClick={() => setShowProductBreakdown(!showProductBreakdown)}
+          className="flex items-center justify-between w-full"
+        >
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+              <Package className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             </div>
-            <ChevronDown className={cn(
-              "w-4 h-4 text-muted-foreground transition-transform",
-              showProductBreakdown && "rotate-180"
-            )} />
-          </button>
-          
-          {showProductBreakdown && (
-            <div className="space-y-3 pt-2 border-t border-muted/50">
-              {/* Disclaimer */}
-              <div className="flex items-start gap-2 p-2 bg-purple-50/50 dark:bg-purple-950/20 rounded-lg border border-purple-200/50 dark:border-purple-800/30">
-                <AlertCircle className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
-                <p className="text-[10px] text-purple-700 dark:text-purple-300">
-                  Observations only — not medical advice. Correlation does not mean causation.
+            <div className="text-left">
+              <p className="text-sm font-semibold text-foreground">
+                Product Diary Analysis
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {productAnalysis.length > 0 
+                  ? `${productAnalysis.length} product${productAnalysis.length !== 1 ? 's' : ''} tracked`
+                  : 'No products logged yet'
+                }
+              </p>
+            </div>
+          </div>
+          <ChevronDown className={cn(
+            "w-4 h-4 text-muted-foreground transition-transform",
+            showProductBreakdown && "rotate-180"
+          )} />
+        </button>
+        
+        {showProductBreakdown && (
+          <div className="space-y-3 pt-2 border-t border-muted/50">
+            {productAnalysis.length === 0 ? (
+              <div className="text-center py-4">
+                <Package className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground font-medium">
+                  No product diary entries yet
+                </p>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  Log products in your daily check-ins to discover patterns over time.
                 </p>
               </div>
-              
-              {/* Analyzed products with patterns */}
-              {analyzedProducts.length > 0 && (
-                <div className="space-y-2">
-                  {analyzedProducts.map((product, index) => (
-                    <ProductAnalysisCard key={product.name} product={product} index={index} />
-                  ))}
-                </div>
-              )}
-              
-              {/* Insufficient data products */}
-              {insufficientDataProducts.length > 0 && (
-                <div className="pt-2 border-t border-muted/30">
-                  <p className="text-xs text-muted-foreground mb-2 font-medium">
-                    Not enough data yet
+            ) : (
+              <>
+                {/* Disclaimer */}
+                <div className="flex items-start gap-2 p-2 bg-purple-50/50 dark:bg-purple-950/20 rounded-lg border border-purple-200/50 dark:border-purple-800/30">
+                  <AlertCircle className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-[10px] text-purple-700 dark:text-purple-300">
+                    Observations only — not medical advice. Correlation does not mean causation.
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {insufficientDataProducts.map((product) => (
-                      <span
-                        key={product.name}
-                        className="text-xs text-muted-foreground/70 bg-muted/30 px-2 py-1 rounded-full"
-                      >
-                        {product.name} ({product.count} log{product.count !== 1 ? 's' : ''})
-                      </span>
+                </div>
+                
+                {/* Analyzed products with patterns */}
+                {analyzedProducts.length > 0 && (
+                  <div className="space-y-2">
+                    {analyzedProducts.map((product, index) => (
+                      <ProductAnalysisCard key={product.name} product={product} index={index} />
                     ))}
                   </div>
+                )}
+                
+                {/* Insufficient data products */}
+                {insufficientDataProducts.length > 0 && (
+                  <div className="pt-2 border-t border-muted/30">
+                    <p className="text-xs text-muted-foreground mb-2 font-medium">
+                      Not enough data yet
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {insufficientDataProducts.map((product) => (
+                        <span
+                          key={product.name}
+                          className="text-xs text-muted-foreground/70 bg-muted/30 px-2 py-1 rounded-full"
+                        >
+                          {product.name} ({product.count} log{product.count !== 1 ? 's' : ''})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Footer explanation */}
+                <div className="flex items-start gap-2 pt-2 border-t border-muted/30">
+                  <Info className="w-3 h-3 text-muted-foreground/60 mt-0.5 flex-shrink-0" />
+                  <p className="text-[10px] text-muted-foreground/60">
+                    Patterns based on symptoms 1-3 days after use. Consult a dermatologist before making product changes.
+                  </p>
                 </div>
-              )}
-              
-              {/* Footer explanation */}
-              <div className="flex items-start gap-2 pt-2 border-t border-muted/30">
-                <Info className="w-3 h-3 text-muted-foreground/60 mt-0.5 flex-shrink-0" />
-                <p className="text-[10px] text-muted-foreground/60">
-                  Patterns based on symptoms 1-3 days after use. Consult a dermatologist before making product changes.
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
