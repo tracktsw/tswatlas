@@ -1,14 +1,11 @@
 import UIKit
 import Capacitor
 import FBSDKCoreKit
-import AppTrackingTransparency
-import AdSupport
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
-    private var hasRequestedATT = false
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Initialize Meta SDK for Facebook Ads Attribution
@@ -35,43 +32,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
-        // Request ATT permission on iOS 14.5+
-        if #available(iOS 14.5, *) {
-            if !hasRequestedATT {
-                hasRequestedATT = true
-                // Delay slightly to ensure the app is fully active
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    ATTrackingManager.requestTrackingAuthorization { status in
-                        DispatchQueue.main.async {
-                            switch status {
-                            case .authorized:
-                                print("=== ATT: Authorized ===")
-                                Settings.shared.isAutoLogAppEventsEnabled = true
-                                Settings.shared.isAdvertiserIDCollectionEnabled = true
-                            case .denied:
-                                print("=== ATT: Denied ===")
-                                Settings.shared.isAutoLogAppEventsEnabled = false
-                                Settings.shared.isAdvertiserIDCollectionEnabled = false
-                            case .restricted:
-                                print("=== ATT: Restricted ===")
-                                Settings.shared.isAutoLogAppEventsEnabled = false
-                                Settings.shared.isAdvertiserIDCollectionEnabled = false
-                            case .notDetermined:
-                                print("=== ATT: Not Determined ===")
-                            @unknown default:
-                                print("=== ATT: Unknown ===")
-                            }
-                            print("Auto log events: \(Settings.shared.isAutoLogAppEventsEnabled)")
-                            print("Advertiser ID collection: \(Settings.shared.isAdvertiserIDCollectionEnabled)")
-                        }
-                    }
-                }
-            }
-        } else {
-            // iOS < 14.5: Enable tracking by default
-            Settings.shared.isAutoLogAppEventsEnabled = true
-            Settings.shared.isAdvertiserIDCollectionEnabled = true
-        }
+        // ATT prompt is now triggered from JavaScript after onboarding completes
+        // See: src/hooks/useATTPrompt.ts and ATTPlugin.swift
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
