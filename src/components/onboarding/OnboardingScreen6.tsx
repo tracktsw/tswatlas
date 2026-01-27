@@ -6,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
-import { useATTPrompt } from '@/hooks/useATTPrompt';
 import { Capacitor } from '@capacitor/core';
 import { OnboardingProgress } from './OnboardingProgress';
 import { FloatingLeaf } from './FloatingLeaf';
@@ -43,7 +42,6 @@ export const OnboardingScreen6: React.FC = () => {
   const { prevScreen, skipOnboarding, completeOnboarding } = useOnboarding();
   const navigate = useNavigate();
   const { impact, selectionChanged, notification } = useHapticFeedback();
-  const { requestTracking } = useATTPrompt();
   const platform = Capacitor.getPlatform();
 
   const [impactLevel, setImpactLevel] = useState<string | null>(null);
@@ -84,10 +82,6 @@ export const OnboardingScreen6: React.FC = () => {
     storePendingOnboardingSurvey(impactLevel, hardest, hoping);
 
     await notification('success');
-    
-    // Request ATT permission after onboarding completes (iOS only)
-    // This gives users context about the app before asking for tracking
-    await requestTracking();
     
     completeOnboarding();
     navigate('/auth?mode=signup');
