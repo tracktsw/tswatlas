@@ -1,80 +1,82 @@
 import UIKit
 import Capacitor
+import FacebookCore
+import FacebookAEM  // Change from FBAEMKit to FacebookAEM
 import AppTrackingTransparency
-import FBSDKCoreKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
-    private var hasRequestedATT = false
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        print("=== App Starting ===")
+        
+        // Initialize Facebook SDK
+        ApplicationDelegate.shared.application(
+            application,
+            didFinishLaunchingWithOptions: launchOptions
+        )
+        print("=== Facebook SDK initialized ===")
+        
+        // Enable AEM
+        print("=== About to enable AEM ===")
+        AEMReporter.enable()
+        print("=== Facebook AEM enabled ===")
+        
+        print("App ID: \(Settings.shared.appID ?? "Not set")")
+        
         return true
     }
 
-    func applicationWillResignActive(_ application: UIApplication) {
-        // Sent when the application is about to move from active to inactive state.
-    }
-
-    func applicationDidEnterBackground(_ application: UIApplication) {
-        // Use this method to release shared resources, save user data, invalidate timers.
-    }
-
-    func applicationWillEnterForeground(_ application: UIApplication) {
-        // Called as part of the transition from the background to the active state.
-    }
-
     func applicationDidBecomeActive(_ application: UIApplication) {
-        // Request ATT permission when app becomes active (only once)
+        print("=== App became active ===")
+        
         if #available(iOS 14.5, *) {
-            if !hasRequestedATT {
-                hasRequestedATT = true
-                // Small delay to ensure app is fully active
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    ATTrackingManager.requestTrackingAuthorization { status in
-                        DispatchQueue.main.async {
-                            switch status {
-                            case .authorized:
-                                print("=== ATT: Authorized ===")
-                                Settings.shared.isAutoLogAppEventsEnabled = true
-                                Settings.shared.isAdvertiserIDCollectionEnabled = true
-                            case .denied:
-                                print("=== ATT: Denied ===")
-                                Settings.shared.isAutoLogAppEventsEnabled = false
-                                Settings.shared.isAdvertiserIDCollectionEnabled = false
-                            case .restricted:
-                                print("=== ATT: Restricted ===")
-                                Settings.shared.isAutoLogAppEventsEnabled = false
-                                Settings.shared.isAdvertiserIDCollectionEnabled = false
-                            case .notDetermined:
-                                print("=== ATT: Not Determined ===")
-                            @unknown default:
-                                print("=== ATT: Unknown ===")
-                            }
-                        }
+            ATTrackingManager.requestTrackingAuthorization { status in
+                DispatchQueue.main.async {
+                    print("=== ATT Status: \(status.rawValue) ===")
+                    
+                    switch status {
+                    case .authorized:
+                        print("✅ Tracking Authorized")
+                        Settings.shared.isAdvertiserTrackingEnabled = true
+                    case .denied:
+                        print("❌ Tracking Denied")
+                        Settings.shared.isAdvertiserTrackingEnabled = false
+                    case .restricted:
+                        print("⚠️ Tracking Restricted")
+                        Settings.shared.isAdvertiserTrackingEnabled = false
+                    case .notDetermined:
+                        print("❓ Tracking Not Determined")
+                    @unknown default:
+                        print("❓ Unknown Tracking Status")
                     }
                 }
             }
         } else {
-            // iOS < 14.5: Tracking is allowed by default
-            Settings.shared.isAutoLogAppEventsEnabled = true
-            Settings.shared.isAdvertiserIDCollectionEnabled = true
+            Settings.shared.isAdvertiserTrackingEnabled = true
+            print("=== iOS < 14.5: Tracking enabled by default ===")
         }
     }
 
-    func applicationWillTerminate(_ application: UIApplication) {
-        // Called when the application is about to terminate.
-    }
-
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-        // Called when the app was launched with a url.
+        print("=== URL Opened: \(url) ===")
+        
+        // Handle AEM URL for conversion tracking
+        AEMReporter.handle(url)
+        
+        // Handle Facebook SDK URL callback
+        if ApplicationDelegate.shared.application(app, open: url, options: options) {
+            print("✅ Facebook SDK handled URL")
+            return true
+        }
+        
+        // Handle Capacitor URLs
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
     }
 
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-        // Called when the app was launched with an activity, including Universal Links.
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
-
 }

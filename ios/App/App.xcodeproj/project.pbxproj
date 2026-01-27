@@ -15,6 +15,11 @@
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		A5DB347E2F289D4400F24B0A /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = A5DB347D2F289D4400F24B0A /* CapApp-SPM */; };
+		A5DB34812F28A1A000F24B0A /* FacebookAEM in Frameworks */ = {isa = PBXBuildFile; productRef = A5DB34802F28A1A000F24B0A /* FacebookAEM */; };
+		A5DB34832F28A1A000F24B0A /* FacebookCore in Frameworks */ = {isa = PBXBuildFile; productRef = A5DB34822F28A1A000F24B0A /* FacebookCore */; };
+		A5DB34862F28A3C400F24B0A /* FacebookCore in Frameworks */ = {isa = PBXBuildFile; productRef = A5DB34852F28A3C400F24B0A /* FacebookCore */; };
+		A5DB34892F28A4C800F24B0A /* FacebookAEM in Frameworks */ = {isa = PBXBuildFile; productRef = A5DB34882F28A4C800F24B0A /* FacebookAEM */; };
+		A5DB348B2F28A4C800F24B0A /* FacebookCore in Frameworks */ = {isa = PBXBuildFile; productRef = A5DB348A2F28A4C800F24B0A /* FacebookCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -36,7 +41,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A5DB34812F28A1A000F24B0A /* FacebookAEM in Frameworks */,
+				A5DB348B2F28A4C800F24B0A /* FacebookCore in Frameworks */,
+				A5DB34892F28A4C800F24B0A /* FacebookAEM in Frameworks */,
+				A5DB34832F28A1A000F24B0A /* FacebookCore in Frameworks */,
 				A5DB347E2F289D4400F24B0A /* CapApp-SPM in Frameworks */,
+				A5DB34862F28A3C400F24B0A /* FacebookCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -123,6 +133,7 @@
 			mainGroup = 504EC2FB1FED79650016851F;
 			packageReferences = (
 				A5DB347C2F289D4400F24B0A /* XCLocalSwiftPackageReference "CapApp-SPM" */,
+				A5DB34872F28A4C800F24B0A /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */,
 			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
@@ -381,10 +392,62 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		A5DB347F2F28A19F00F24B0A /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/facebook/facebook-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 14.1.0;
+			};
+		};
+		A5DB34842F28A3C400F24B0A /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/facebook/facebook-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 14.1.0;
+			};
+		};
+		A5DB34872F28A4C800F24B0A /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/facebook/facebook-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 14.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		A5DB347D2F289D4400F24B0A /* CapApp-SPM */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = "CapApp-SPM";
+		};
+		A5DB34802F28A1A000F24B0A /* FacebookAEM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A5DB347F2F28A19F00F24B0A /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */;
+			productName = FacebookAEM;
+		};
+		A5DB34822F28A1A000F24B0A /* FacebookCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A5DB347F2F28A19F00F24B0A /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */;
+			productName = FacebookCore;
+		};
+		A5DB34852F28A3C400F24B0A /* FacebookCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A5DB34842F28A3C400F24B0A /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */;
+			productName = FacebookCore;
+		};
+		A5DB34882F28A4C800F24B0A /* FacebookAEM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A5DB34872F28A4C800F24B0A /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */;
+			productName = FacebookAEM;
+		};
+		A5DB348A2F28A4C800F24B0A /* FacebookCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A5DB34872F28A4C800F24B0A /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */;
+			productName = FacebookCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
