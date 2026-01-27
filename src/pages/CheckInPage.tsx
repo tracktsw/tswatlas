@@ -731,12 +731,7 @@ const CheckInPage = () => {
           <div className="space-y-3 animate-slide-up relative z-30" style={{ animationDelay: '0.19s' }}>
             <button
               type="button"
-              onClick={() => {
-                setIsFoodDiaryOpen(!isFoodDiaryOpen);
-                if (!isFoodDiaryOpen && foodItems.length === 0) {
-                  setTimeout(() => foodInputRef.current?.focus(), 150);
-                }
-              }}
+              onClick={() => setIsFoodDiaryOpen(!isFoodDiaryOpen)}
               className="flex items-center gap-2 w-full group"
             >
               <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30">
@@ -892,12 +887,7 @@ const CheckInPage = () => {
           <div className="space-y-3 animate-slide-up relative z-20" style={{ animationDelay: '0.195s' }}>
             <button
               type="button"
-              onClick={() => {
-                setIsProductDiaryOpen(!isProductDiaryOpen);
-                if (!isProductDiaryOpen && productItems.length === 0) {
-                  setTimeout(() => productInputRef.current?.focus(), 150);
-                }
-              }}
+              onClick={() => setIsProductDiaryOpen(!isProductDiaryOpen)}
               className="flex items-center gap-2 w-full group"
             >
               <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/30">
