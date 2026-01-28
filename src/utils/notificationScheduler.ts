@@ -1,8 +1,11 @@
 import { Capacitor } from '@capacitor/core';
-import { LocalNotifications, ScheduleOn } from '@capacitor/local-notifications';
+import { LocalNotifications, ScheduleOn, Channel } from '@capacitor/local-notifications';
 
 // Notification ID for daily reminder
 export const DAILY_NOTIFICATION_ID = 1;
+
+// Android notification channel ID - must match what we create
+const ANDROID_CHANNEL_ID = 'tsw_reminders';
 
 // Parse time string "HH:MM" to hours and minutes
 function parseTime(timeStr: string): { hour: number; minute: number } {
@@ -11,6 +14,35 @@ function parseTime(timeStr: string): { hour: number; minute: number } {
     hour: parseInt(hourStr, 10),
     minute: parseInt(minuteStr, 10),
   };
+}
+
+/**
+ * Create Android notification channel with HIGH importance for heads-up display.
+ * This MUST be called before scheduling notifications on Android.
+ * Importance 5 = HIGH = heads-up notifications that appear on screen.
+ */
+async function ensureAndroidChannel(): Promise<void> {
+  if (Capacitor.getPlatform() !== 'android') {
+    return;
+  }
+
+  try {
+    const channel: Channel = {
+      id: ANDROID_CHANNEL_ID,
+      name: 'Daily Reminders',
+      description: 'Daily check-in reminder notifications',
+      importance: 5, // HIGH - enables heads-up notifications
+      visibility: 1, // PUBLIC - show on lock screen
+      vibration: true,
+      lights: true,
+      lightColor: '#6B8E7A',
+    };
+
+    await LocalNotifications.createChannel(channel);
+    console.log('[NOTIFICATIONS] Android channel created/updated with HIGH importance');
+  } catch (error) {
+    console.error('[NOTIFICATIONS] Error creating Android channel:', error);
+  }
 }
 
 /**
@@ -49,6 +81,9 @@ export async function scheduleCheckInReminders(
       return false;
     }
 
+    // Ensure Android channel exists with HIGH importance for heads-up display
+    await ensureAndroidChannel();
+
     const time = parseTime(reminderTime);
     
     console.log('[NOTIFICATIONS] Scheduling daily notification:');
@@ -73,9 +108,16 @@ export async function scheduleCheckInReminders(
             allowWhileIdle: true,
           },
           sound: 'default',
+          // Android: status bar icon (must be in res/drawable)
           smallIcon: 'ic_stat_icon_config_sample',
+          // Android: large icon shown in notification (app logo)
+          largeIcon: 'ic_launcher',
           iconColor: '#6B8E7A',
           actionTypeId: 'CHECK_IN',
+          // Android: use our HIGH importance channel for heads-up display
+          channelId: ANDROID_CHANNEL_ID,
+          // Android: dismiss notification when tapped
+          autoCancel: true,
           extra: {
             route: '/check-in',
           },

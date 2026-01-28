@@ -1,6 +1,6 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { LocalNotifications, ScheduleOn } from '@capacitor/local-notifications';
+import { LocalNotifications, ScheduleOn, Channel } from '@capacitor/local-notifications';
 import { App } from '@capacitor/app';
 
 const PERMISSION_REQUESTED_KEY = 'notif_permission_requested_v2';
@@ -225,15 +225,35 @@ export function useLocalNotifications() {
     }
 
     try {
+      // Ensure Android channel exists for test notifications too
+      if (Capacitor.getPlatform() === 'android') {
+        const channel: Channel = {
+          id: 'tsw_reminders',
+          name: 'Daily Reminders',
+          description: 'Daily check-in reminder notifications',
+          importance: 5, // HIGH - enables heads-up notifications
+          visibility: 1,
+          vibration: true,
+          lights: true,
+          lightColor: '#6B8E7A',
+        };
+        await LocalNotifications.createChannel(channel);
+      }
+
       await LocalNotifications.schedule({
         notifications: [{
           id: 99999,
-          title: 'Test Notification',
-          body: 'Local notifications are working!',
+          title: 'Test Notification 🎉',
+          body: 'Local notifications are working! Your app logo should appear.',
           schedule: {
             at: new Date(Date.now() + 5000),
           },
           sound: 'default',
+          smallIcon: 'ic_stat_icon_config_sample',
+          largeIcon: 'ic_launcher',
+          iconColor: '#6B8E7A',
+          channelId: 'tsw_reminders',
+          autoCancel: true,
         }],
       });
       return true;
