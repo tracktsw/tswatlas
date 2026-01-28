@@ -53,6 +53,14 @@
     <!-- Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     
+    <!-- Local Notifications - Required for Android 13+ (API 33+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    
     <!-- Meta SDK - Advertiser ID for attribution -->
     <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
     
