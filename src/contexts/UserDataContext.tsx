@@ -859,18 +859,20 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!userId) return;
 
     try {
+      // Use morning_time column to store the single daily reminder time
+      // This maintains backwards compatibility with the database schema
       const { error } = await supabase
         .from('user_settings')
         .update({
           reminders_enabled: settings.enabled,
-          morning_time: settings.morningTime,
-          evening_time: settings.eveningTime,
+          morning_time: settings.reminderTime, // Store reminderTime in morning_time column
         })
         .eq('user_id', userId);
 
       if (error) throw error;
 
       setReminderSettings(settings);
+      console.log('[SETTINGS] Reminder settings saved:', settings);
     } catch (error) {
       console.error('Error updating reminder settings:', error);
       throw error;
