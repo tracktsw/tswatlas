@@ -1,5 +1,5 @@
 import { Capacitor } from '@capacitor/core';
-import { LocalNotifications } from '@capacitor/local-notifications';
+import { LocalNotifications, ScheduleOn } from '@capacitor/local-notifications';
 
 // Notification ID for daily reminder
 export const DAILY_NOTIFICATION_ID = 1;
@@ -14,25 +14,10 @@ function parseTime(timeStr: string): { hour: number; minute: number } {
 }
 
 /**
- * Calculate the next fire date for a given hour and minute.
- * If the time has already passed today, schedule for tomorrow.
- */
-function getNextFireDate(hour: number, minute: number): Date {
-  const now = new Date();
-  const fireDate = new Date();
-  fireDate.setHours(hour, minute, 0, 0);
-
-  // If the time has already passed today, schedule for tomorrow
-  if (fireDate <= now) {
-    fireDate.setDate(fireDate.getDate() + 1);
-  }
-
-  return fireDate;
-}
-
-/**
  * Schedule daily check-in reminder notification.
  * Call this when reminder settings change.
+ * 
+ * Uses ScheduleOn with repeats:true for reliable daily scheduling on both iOS and Android.
  */
 export async function scheduleCheckInReminders(
   reminderTime: string,
@@ -57,13 +42,25 @@ export async function scheduleCheckInReminders(
       return true;
     }
 
+    // Check permission first
+    const permResult = await LocalNotifications.checkPermissions();
+    if (permResult.display !== 'granted') {
+      console.log('[NOTIFICATIONS] Permission not granted, cannot schedule');
+      return false;
+    }
+
     const time = parseTime(reminderTime);
-    const fireDate = getNextFireDate(time.hour, time.minute);
-
+    
     console.log('[NOTIFICATIONS] Scheduling daily notification:');
-    console.log(`  Time: ${reminderTime} -> Next fire: ${fireDate.toLocaleString()}`);
+    console.log(`  Time: ${time.hour}:${time.minute}`);
 
-    // Schedule with 'at' and 'every: day' for reliable daily scheduling
+    // Use ScheduleOn for reliable daily repeating notifications
+    // This is the recommended approach for both iOS and Android
+    const scheduleOn: ScheduleOn = {
+      hour: time.hour,
+      minute: time.minute,
+    };
+
     await LocalNotifications.schedule({
       notifications: [
         {
@@ -71,17 +68,26 @@ export async function scheduleCheckInReminders(
           title: 'Daily check-in ✨',
           body: 'How is your skin today? Take a moment to log your progress.',
           schedule: {
-            at: fireDate,
-            every: 'day',
+            on: scheduleOn,
+            repeats: true,
             allowWhileIdle: true,
           },
           sound: 'default',
+          smallIcon: 'ic_stat_icon_config_sample',
+          iconColor: '#6B8E7A',
           actionTypeId: 'CHECK_IN',
           extra: {
             route: '/check-in',
           },
         },
       ],
+    });
+
+    // Verify it was scheduled
+    const pending = await LocalNotifications.getPending();
+    console.log('[NOTIFICATIONS] Pending notifications:', pending.notifications.length);
+    pending.notifications.forEach(n => {
+      console.log(`  ID: ${n.id}, Title: ${n.title}`);
     });
 
     console.log('[NOTIFICATIONS] Successfully scheduled daily reminder');
