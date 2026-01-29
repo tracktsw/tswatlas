@@ -68,8 +68,12 @@ interface UserDataContextType {
   userId: string | null;
   addPhoto: (photo: { dataUrl: string; bodyPart: BodyPart; notes?: string }) => Promise<void>;
   deletePhoto: (id: string) => Promise<void>;
-  addCheckIn: (checkIn: Omit<CheckIn, 'id' | 'timestamp'>, clientRequestId: string) => Promise<void>;
+  /** Add a check-in. Optional customDate param for backfilling past days. */
+  addCheckIn: (checkIn: Omit<CheckIn, 'id' | 'timestamp'>, clientRequestId: string, customDate?: Date) => Promise<void>;
   updateCheckIn: (id: string, checkIn: Omit<CheckIn, 'id' | 'timestamp'>) => Promise<void>;
+  deleteCheckIn: (id: string) => Promise<void>;
+  /** Get check-in for a specific date (YYYY-MM-DD format or Date object) */
+  getCheckInForDate: (date: string | Date) => CheckIn | undefined;
   getTodayCheckInCount: () => number;
   addJournalEntry: (entry: Omit<JournalEntry, 'id' | 'timestamp'>) => Promise<void>;
   updateJournalEntry: (id: string, content: string) => Promise<void>;
@@ -628,51 +632,69 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return todayCount;
   }, [checkIns]);
 
+  // Get check-in for a specific date
+  const getCheckInForDate = useCallback((date: string | Date): CheckIn | undefined => {
+    const targetDate = typeof date === 'string' ? date : date.toLocaleDateString('en-CA');
+    return checkIns.find(c => {
+      const checkInDate = new Date(c.timestamp).toLocaleDateString('en-CA');
+      return checkInDate === targetDate;
+    });
+  }, [checkIns]);
+
   const addCheckIn = useCallback(
-    async (checkIn: Omit<CheckIn, 'id' | 'timestamp'>, clientRequestId: string) => {
+    async (checkIn: Omit<CheckIn, 'id' | 'timestamp'>, clientRequestId: string, customDate?: Date) => {
       if (!userId) {
         throw new Error('Please sign in to save check-ins.');
       }
 
-      if (DEBUG_CHECKINS) {
-        console.log('[CHECK-IN] Starting save with client_request_id:', clientRequestId);
-      }
-
-      // Check daily limit (max 1 per day - single daily check-in)
-      const today = new Date().toLocaleDateString('en-CA');
-      const todayCheckIns = checkIns.filter(c => {
-        const checkInDate = new Date(c.timestamp).toLocaleDateString('en-CA');
-        return checkInDate === today;
-      });
+      // Determine target date (custom date for backfill or today)
+      const targetDate = customDate 
+        ? customDate.toLocaleDateString('en-CA')
+        : new Date().toLocaleDateString('en-CA');
 
       if (DEBUG_CHECKINS) {
-        console.log('[CHECK-IN] Daily count before save:', todayCheckIns.length);
+        console.log('[CHECK-IN] Starting save with client_request_id:', clientRequestId, 'for date:', targetDate);
       }
 
-      if (todayCheckIns.length >= 1) {
-        throw new Error("You've already checked in today. Edit your existing check-in if needed.");
+      // Check if there's already a check-in for this date
+      const existingCheckIn = getCheckInForDate(targetDate);
+
+      if (existingCheckIn) {
+        throw new Error(`You already have a check-in for ${targetDate}. Edit the existing entry instead.`);
       }
 
       try {
         // Calculate skin_intensity from skinFeeling (1-5 → 4-0)
         const skinIntensity = 5 - checkIn.skinFeeling;
 
+        // For backfill: use custom date with noon time to avoid timezone issues
+        const createdAt = customDate 
+          ? new Date(customDate.getFullYear(), customDate.getMonth(), customDate.getDate(), 12, 0, 0).toISOString()
+          : undefined; // Let DB use now() for today
+
+        const insertData: any = {
+          user_id: userId,
+          time_of_day: checkIn.timeOfDay,
+          treatments: checkIn.treatments,
+          mood: checkIn.mood,
+          skin_feeling: checkIn.skinFeeling,
+          skin_intensity: skinIntensity,
+          pain_score: checkIn.painScore ?? null,
+          sleep_score: checkIn.sleepScore ?? null,
+          notes: checkIn.notes || null,
+          symptoms_experienced: JSON.parse(JSON.stringify(checkIn.symptomsExperienced || [])),
+          triggers: checkIn.triggers || [],
+          client_request_id: clientRequestId,
+        };
+
+        // Only set created_at for backfill (past dates)
+        if (createdAt) {
+          insertData.created_at = createdAt;
+        }
+
         const { data, error } = await supabase
           .from('user_check_ins')
-          .insert({
-            user_id: userId,
-            time_of_day: checkIn.timeOfDay,
-            treatments: checkIn.treatments,
-            mood: checkIn.mood,
-            skin_feeling: checkIn.skinFeeling,
-            skin_intensity: skinIntensity,
-            pain_score: checkIn.painScore ?? null,
-            sleep_score: checkIn.sleepScore ?? null,
-            notes: checkIn.notes || null,
-            symptoms_experienced: JSON.parse(JSON.stringify(checkIn.symptomsExperienced || [])),
-            triggers: checkIn.triggers || [],
-            client_request_id: clientRequestId,
-          })
+          .insert(insertData)
           .select()
           .single();
 
@@ -721,7 +743,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         throw error;
       }
     },
-    [userId, reloadCheckIns, checkIns]
+    [userId, reloadCheckIns, getCheckInForDate]
   );
 
   const updateCheckIn = useCallback(
@@ -784,6 +806,30 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     },
     [userId, reloadCheckIns]
   );
+
+  const deleteCheckIn = useCallback(async (id: string) => {
+    if (!userId) {
+      throw new Error('Please sign in to delete check-ins.');
+    }
+
+    try {
+      const { error } = await supabase
+        .from('user_check_ins')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setCheckIns(prev => prev.filter(c => c.id !== id));
+      
+      if (DEBUG_CHECKINS) {
+        console.log('[CHECK-IN] Deleted check-in:', id);
+      }
+    } catch (error) {
+      console.error('Error deleting check-in:', error);
+      throw error;
+    }
+  }, [userId]);
 
   const addJournalEntry = useCallback(async (entry: Omit<JournalEntry, 'id' | 'timestamp'>) => {
     if (!userId) return;
@@ -957,6 +1003,8 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         deletePhoto,
         addCheckIn,
         updateCheckIn,
+        deleteCheckIn,
+        getCheckInForDate,
         addJournalEntry,
         updateJournalEntry,
         deleteJournalEntry,
