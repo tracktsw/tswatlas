@@ -4,9 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
-import androidx.work.Constraints;
 import androidx.work.ExistingPeriodicWorkPolicy;
-import androidx.work.NetworkType;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 
@@ -41,26 +39,26 @@ public class ReminderScheduler {
             .putBoolean("reminders_enabled", true)
             .putInt("reminder_hour", hour)
             .putInt("reminder_minute", minute)
+            .putLong("scheduled_at", System.currentTimeMillis())
             .apply();
 
         // Calculate the initial delay to the target time
         long initialDelay = calculateInitialDelay(hour, minute);
 
-        // Create constraints - none required for reminders, but we want them to run
-        Constraints constraints = new Constraints.Builder()
-            .setRequiresBatteryNotLow(false)
-            .setRequiresCharging(false)
-            .build();
+        Log.d(TAG, "Calculated initial delay: " + initialDelay + "ms (" + (initialDelay / 1000 / 60) + " minutes, " + (initialDelay / 1000 / 60 / 60) + " hours)");
+
+        // Cancel any existing work first
+        WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME);
 
         // Create the periodic work request
         // Uses a 24-hour interval with a 15-minute flex window
+        // The flex window allows Android to batch work for battery optimization
         PeriodicWorkRequest reminderWork = new PeriodicWorkRequest.Builder(
             ReminderWorker.class,
             24, TimeUnit.HOURS,
-            15, TimeUnit.MINUTES // Flex interval
+            15, TimeUnit.MINUTES // Flex interval - work can run within 15 min of target
         )
             .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
-            .setConstraints(constraints)
             .addTag("daily_reminder")
             .build();
 
@@ -68,11 +66,11 @@ public class ReminderScheduler {
         WorkManager.getInstance(context)
             .enqueueUniquePeriodicWork(
                 WORK_NAME,
-                ExistingPeriodicWorkPolicy.UPDATE, // Replace existing with new schedule
+                ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE, // Fully replace existing
                 reminderWork
             );
 
-        Log.d(TAG, "Daily reminder scheduled. Initial delay: " + (initialDelay / 1000 / 60) + " minutes");
+        Log.d(TAG, "Daily reminder scheduled successfully. Initial delay: " + (initialDelay / 1000 / 60) + " minutes");
     }
 
     /**

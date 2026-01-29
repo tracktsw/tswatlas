@@ -6,6 +6,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.util.Log;
 
@@ -33,7 +34,7 @@ public class ReminderWorker extends Worker {
     @NonNull
     @Override
     public Result doWork() {
-        Log.d(TAG, "ReminderWorker executing");
+        Log.d(TAG, "ReminderWorker executing at " + System.currentTimeMillis());
 
         // Check if reminders are still enabled
         SharedPreferences prefs = getApplicationContext().getSharedPreferences("tsw_reminder_prefs", Context.MODE_PRIVATE);
@@ -66,10 +67,14 @@ public class ReminderWorker extends Worker {
             channel.enableLights(true);
             channel.setLightColor(0xFF6B8E7A);
             channel.setShowBadge(true);
+            // Force heads-up behavior
+            channel.setBypassDnd(false);
+            channel.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
 
             NotificationManager manager = getApplicationContext().getSystemService(NotificationManager.class);
             if (manager != null) {
                 manager.createNotificationChannel(channel);
+                Log.d(TAG, "Notification channel created with IMPORTANCE_HIGH");
             }
         }
     }
@@ -91,23 +96,33 @@ public class ReminderWorker extends Worker {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        // Build the notification
+        // Get the app icon resource
+        int smallIconRes = context.getResources().getIdentifier("ic_launcher_foreground", "drawable", context.getPackageName());
+        if (smallIconRes == 0) {
+            smallIconRes = context.getResources().getIdentifier("ic_launcher", "mipmap", context.getPackageName());
+        }
+        if (smallIconRes == 0) {
+            smallIconRes = android.R.drawable.ic_popup_reminder;
+        }
+
+        // Build the notification with HIGH priority for heads-up display
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setSmallIcon(smallIconRes)
             .setContentTitle("Daily check-in ✨")
             .setContentText("How is your skin today? Take a moment to log your progress.")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(NotificationCompat.PRIORITY_HIGH) // Critical for heads-up on older Android
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setColor(0xFF6B8E7A); // App brand color
 
         // Try to set the app icon as large icon
         try {
             int largeIconRes = context.getResources().getIdentifier("ic_launcher", "mipmap", context.getPackageName());
             if (largeIconRes != 0) {
-                builder.setLargeIcon(android.graphics.BitmapFactory.decodeResource(context.getResources(), largeIconRes));
+                builder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), largeIconRes));
             }
         } catch (Exception e) {
             Log.w(TAG, "Could not set large icon: " + e.getMessage());
@@ -117,7 +132,7 @@ public class ReminderWorker extends Worker {
         try {
             NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
             notificationManager.notify(NOTIFICATION_ID, builder.build());
-            Log.d(TAG, "Notification shown successfully");
+            Log.d(TAG, "Notification shown successfully with heads-up priority");
         } catch (SecurityException e) {
             Log.e(TAG, "No permission to post notifications: " + e.getMessage());
         }
