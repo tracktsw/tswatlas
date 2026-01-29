@@ -45,6 +45,9 @@ dependencies {
     // Google Play In-App Review
     implementation 'com.google.android.play:review:2.0.1'
     implementation 'com.google.android.play:review-ktx:2.0.1'
+
+    // WorkManager for scheduling reminders (replaces exact alarms)
+    implementation 'androidx.work:work-runtime:2.9.0'
 }
 
 apply from: 'capacitor.build.gradle'
