@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Users, ThumbsUp, ThumbsDown, Minus, Plus, Send, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -7,6 +7,7 @@ import { AndroidSafeInput } from '@/components/ui/android-safe-input';
 import { AndroidSafeTextarea } from '@/components/ui/android-safe-textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +39,9 @@ const categories = [
   { value: 'general', label: 'General' },
 ];
 
+// Session storage key for persisting selected category
+const CATEGORY_FILTER_KEY = 'community_category_filter';
+
 const CommunityPage = () => {
   const [voterId, setVoterId] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -45,10 +49,23 @@ const CommunityPage = () => {
   const [newTreatmentName, setNewTreatmentName] = useState('');
   const [newTreatmentDesc, setNewTreatmentDesc] = useState('');
   const [newTreatmentCategory, setNewTreatmentCategory] = useState('general');
+  
+  // Category filter state - persist in session storage
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem(CATEGORY_FILTER_KEY) || 'all';
+    }
+    return 'all';
+  });
 
   // Refs for inputs
   const treatmentNameRef = useRef<HTMLInputElement>(null);
   const treatmentDescRef = useRef<HTMLTextAreaElement>(null);
+
+  // Persist category selection to session storage
+  useEffect(() => {
+    sessionStorage.setItem(CATEGORY_FILTER_KEY, selectedCategory);
+  }, [selectedCategory]);
 
   // Get user ID for voting
   useEffect(() => {
@@ -105,6 +122,7 @@ const CommunityPage = () => {
         };
       });
 
+      // Sort all treatments by score (this is the base ranking)
       return treatmentsWithVotes.sort((a, b) => {
         if (a.totalVotes === 0 && b.totalVotes === 0) return 0;
         if (a.totalVotes === 0) return 1;
@@ -115,6 +133,25 @@ const CommunityPage = () => {
       });
     },
   });
+
+  // Filter treatments by category (view-layer only - doesn't affect votes/rankings)
+  const filteredTreatments = useMemo(() => {
+    if (selectedCategory === 'all') return treatments;
+    return treatments.filter(t => t.category === selectedCategory);
+  }, [treatments, selectedCategory]);
+
+  // Handle category selection and pre-fill suggestion category
+  const handleCategorySelect = (category: string) => {
+    setSelectedCategory(category);
+  };
+
+  // Open suggestion dialog with pre-selected category
+  const handleOpenSuggestion = () => {
+    if (selectedCategory !== 'all') {
+      setNewTreatmentCategory(selectedCategory);
+    }
+    setSuggestionOpen(true);
+  };
 
   // Vote mutation
   const voteMutation = useMutation({
@@ -214,7 +251,7 @@ const CommunityPage = () => {
         </div>
         <Dialog open={suggestionOpen} onOpenChange={setSuggestionOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-1.5 rounded-xl">
+            <Button variant="outline" size="sm" className="gap-1.5 rounded-xl" onClick={handleOpenSuggestion}>
               <Plus className="w-4 h-4" />
               Suggest
             </Button>
@@ -293,14 +330,65 @@ const CommunityPage = () => {
         </div>
       </div>
 
+      {/* Category Filter Chips */}
+      <div className="px-4 animate-slide-up" style={{ animationDelay: '0.08s' }}>
+        <ScrollArea className="w-full whitespace-nowrap">
+          <div className="flex gap-2 pb-2">
+            <Button
+              variant={selectedCategory === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleCategorySelect('all')}
+              className={cn(
+                'rounded-full px-4 shrink-0 transition-all',
+                selectedCategory === 'all' && 'shadow-warm'
+              )}
+            >
+              All
+            </Button>
+            {categories.map(cat => (
+              <Button
+                key={cat.value}
+                variant={selectedCategory === cat.value ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleCategorySelect(cat.value)}
+                className={cn(
+                  'rounded-full px-4 shrink-0 transition-all',
+                  selectedCategory === cat.value && 'shadow-warm'
+                )}
+              >
+                {cat.label}
+              </Button>
+            ))}
+          </div>
+          <ScrollBar orientation="horizontal" className="invisible" />
+        </ScrollArea>
+      </div>
+
       {/* Treatments List */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
+      ) : filteredTreatments.length === 0 ? (
+        /* Empty State */
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center animate-fade-in">
+          <div className="p-4 rounded-2xl bg-muted/50 mb-4">
+            <Users className="w-10 h-10 text-muted-foreground" />
+          </div>
+          <h3 className="font-display font-bold text-lg text-foreground mb-2">
+            No treatments yet in this category
+          </h3>
+          <p className="text-muted-foreground mb-6 max-w-xs">
+            Be the first to suggest a {selectedCategory !== 'all' ? categories.find(c => c.value === selectedCategory)?.label.toLowerCase() : ''} treatment for the community.
+          </p>
+          <Button variant="warm" onClick={handleOpenSuggestion} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Suggest a Treatment
+          </Button>
+        </div>
       ) : (
         <div className="space-y-4 px-4">
-          {treatments.map((treatment, index) => {
+          {filteredTreatments.map((treatment, index) => {
             const percentages = getVotePercentages(treatment);
             
             return (
