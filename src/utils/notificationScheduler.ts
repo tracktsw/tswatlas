@@ -1,4 +1,4 @@
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { LocalNotifications, ScheduleOn, Channel } from '@capacitor/local-notifications';
 
 // Notification ID for daily reminder
@@ -6,6 +6,16 @@ export const DAILY_NOTIFICATION_ID = 1;
 
 // Android notification channel ID - must match what we create
 const ANDROID_CHANNEL_ID = 'tsw_reminders';
+
+// Register Android-only ReminderPlugin for WorkManager-based scheduling
+interface ReminderPluginInterface {
+  scheduleReminder(options: { hour: number; minute: number }): Promise<{ success: boolean }>;
+  cancelReminder(): Promise<{ success: boolean }>;
+  isReminderEnabled(): Promise<{ enabled: boolean }>;
+  getReminderTime(): Promise<{ hasTime: boolean; hour?: number; minute?: number }>;
+}
+
+const ReminderPlugin = registerPlugin<ReminderPluginInterface>('ReminderPlugin');
 
 // Parse time string "HH:MM" to hours and minutes
 function parseTime(timeStr: string): { hour: number; minute: number } {
@@ -49,7 +59,8 @@ async function ensureAndroidChannel(): Promise<void> {
  * Schedule daily check-in reminder notification.
  * Call this when reminder settings change.
  * 
- * Uses ScheduleOn with repeats:true for reliable daily scheduling on both iOS and Android.
+ * On Android: Uses WorkManager for reliable scheduling without exact alarm permissions.
+ * On iOS: Uses LocalNotifications with ScheduleOn for exact timing (unchanged).
  */
 export async function scheduleCheckInReminders(
   reminderTime: string,
@@ -60,14 +71,36 @@ export async function scheduleCheckInReminders(
     return false;
   }
 
+  const platform = Capacitor.getPlatform();
+  const time = parseTime(reminderTime);
+
   try {
+    // ANDROID: Use WorkManager-based ReminderPlugin
+    if (platform === 'android') {
+      if (!enabled) {
+        console.log('[NOTIFICATIONS] Canceling Android reminders via WorkManager');
+        await ReminderPlugin.cancelReminder();
+        return true;
+      }
+
+      // Ensure Android channel exists for when notifications fire
+      await ensureAndroidChannel();
+
+      console.log('[NOTIFICATIONS] Scheduling Android reminder via WorkManager:', time);
+      await ReminderPlugin.scheduleReminder({ hour: time.hour, minute: time.minute });
+      
+      console.log('[NOTIFICATIONS] Successfully scheduled Android daily reminder');
+      return true;
+    }
+
+    // iOS: Use standard LocalNotifications (unchanged behavior)
     // First, cancel existing reminders
     await LocalNotifications.cancel({
       notifications: [
         { id: DAILY_NOTIFICATION_ID },
       ],
     });
-    console.log('[NOTIFICATIONS] Cancelled existing reminders');
+    console.log('[NOTIFICATIONS] Cancelled existing iOS reminders');
 
     if (!enabled) {
       console.log('[NOTIFICATIONS] Reminders disabled, not scheduling new ones');
@@ -81,16 +114,10 @@ export async function scheduleCheckInReminders(
       return false;
     }
 
-    // Ensure Android channel exists with HIGH importance for heads-up display
-    await ensureAndroidChannel();
-
-    const time = parseTime(reminderTime);
-    
-    console.log('[NOTIFICATIONS] Scheduling daily notification:');
+    console.log('[NOTIFICATIONS] Scheduling iOS daily notification:');
     console.log(`  Time: ${time.hour}:${time.minute}`);
 
-    // Use ScheduleOn for reliable daily repeating notifications
-    // This is the recommended approach for both iOS and Android
+    // Use ScheduleOn for reliable daily repeating notifications on iOS
     const scheduleOn: ScheduleOn = {
       hour: time.hour,
       minute: time.minute,
@@ -108,16 +135,7 @@ export async function scheduleCheckInReminders(
             allowWhileIdle: true,
           },
           sound: 'default',
-          // Android: status bar icon (must be in res/drawable)
-          smallIcon: 'ic_stat_icon_config_sample',
-          // Android: large icon shown in notification (app logo)
-          largeIcon: 'ic_launcher',
-          iconColor: '#6B8E7A',
           actionTypeId: 'CHECK_IN',
-          // Android: use our HIGH importance channel for heads-up display
-          channelId: ANDROID_CHANNEL_ID,
-          // Android: dismiss notification when tapped
-          autoCancel: true,
           extra: {
             route: '/check-in',
           },
@@ -127,12 +145,12 @@ export async function scheduleCheckInReminders(
 
     // Verify it was scheduled
     const pending = await LocalNotifications.getPending();
-    console.log('[NOTIFICATIONS] Pending notifications:', pending.notifications.length);
+    console.log('[NOTIFICATIONS] Pending iOS notifications:', pending.notifications.length);
     pending.notifications.forEach(n => {
       console.log(`  ID: ${n.id}, Title: ${n.title}`);
     });
 
-    console.log('[NOTIFICATIONS] Successfully scheduled daily reminder');
+    console.log('[NOTIFICATIONS] Successfully scheduled iOS daily reminder');
     return true;
   } catch (error) {
     console.error('[NOTIFICATIONS] Error scheduling notifications:', error);
@@ -149,12 +167,22 @@ export async function cancelAllCheckInReminders(): Promise<boolean> {
   }
 
   try {
+    const platform = Capacitor.getPlatform();
+    
+    // Android: Use WorkManager plugin
+    if (platform === 'android') {
+      await ReminderPlugin.cancelReminder();
+      console.log('Cancelled all Android check-in reminders via WorkManager');
+      return true;
+    }
+
+    // iOS: Use LocalNotifications
     await LocalNotifications.cancel({
       notifications: [
         { id: DAILY_NOTIFICATION_ID },
       ],
     });
-    console.log('Cancelled all check-in reminders');
+    console.log('Cancelled all iOS check-in reminders');
     return true;
   } catch (error) {
     console.error('Error cancelling notifications:', error);

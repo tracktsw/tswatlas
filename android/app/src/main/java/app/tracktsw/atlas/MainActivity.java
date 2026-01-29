@@ -22,6 +22,7 @@ public class MainActivity extends BridgeActivity {
         
         // Register custom plugins
         registerPlugin(InAppReviewPlugin.class);
+        registerPlugin(ReminderPlugin.class);
         
         // Initialize Meta SDK for Facebook Ads Attribution
         FacebookSdk.sdkInitialize(getApplicationContext());

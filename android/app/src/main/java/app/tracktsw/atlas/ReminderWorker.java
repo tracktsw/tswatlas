@@ -1,0 +1,125 @@
+package app.tracktsw.atlas;
+
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Build;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
+import androidx.work.Worker;
+import androidx.work.WorkerParameters;
+
+/**
+ * WorkManager-based daily reminder worker.
+ * This replaces exact alarms with a more battery-friendly and policy-compliant approach.
+ * The worker is scheduled daily with flexible timing (within a 15-minute window).
+ */
+public class ReminderWorker extends Worker {
+    private static final String TAG = "ReminderWorker";
+    public static final String CHANNEL_ID = "tsw_reminders";
+    public static final String CHANNEL_NAME = "Daily Reminders";
+    public static final int NOTIFICATION_ID = 1;
+
+    public ReminderWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
+        super(context, workerParams);
+    }
+
+    @NonNull
+    @Override
+    public Result doWork() {
+        Log.d(TAG, "ReminderWorker executing");
+
+        // Check if reminders are still enabled
+        SharedPreferences prefs = getApplicationContext().getSharedPreferences("tsw_reminder_prefs", Context.MODE_PRIVATE);
+        boolean enabled = prefs.getBoolean("reminders_enabled", false);
+
+        if (!enabled) {
+            Log.d(TAG, "Reminders disabled, skipping notification");
+            return Result.success();
+        }
+
+        // Create notification channel (required for Android 8+)
+        createNotificationChannel();
+
+        // Show the notification
+        showNotification();
+
+        Log.d(TAG, "ReminderWorker completed successfully");
+        return Result.success();
+    }
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID,
+                CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_HIGH // Enables heads-up display
+            );
+            channel.setDescription("Daily check-in reminder notifications");
+            channel.enableVibration(true);
+            channel.enableLights(true);
+            channel.setLightColor(0xFF6B8E7A);
+            channel.setShowBadge(true);
+
+            NotificationManager manager = getApplicationContext().getSystemService(NotificationManager.class);
+            if (manager != null) {
+                manager.createNotificationChannel(channel);
+            }
+        }
+    }
+
+    private void showNotification() {
+        Context context = getApplicationContext();
+
+        // Create intent to open the app when notification is tapped
+        Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+        if (intent != null) {
+            intent.putExtra("route", "/check-in");
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        }
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        // Build the notification
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setContentTitle("Daily check-in ✨")
+            .setContentText("How is your skin today? Take a moment to log your progress.")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+
+        // Try to set the app icon as large icon
+        try {
+            int largeIconRes = context.getResources().getIdentifier("ic_launcher", "mipmap", context.getPackageName());
+            if (largeIconRes != 0) {
+                builder.setLargeIcon(android.graphics.BitmapFactory.decodeResource(context.getResources(), largeIconRes));
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Could not set large icon: " + e.getMessage());
+        }
+
+        // Show the notification
+        try {
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+            notificationManager.notify(NOTIFICATION_ID, builder.build());
+            Log.d(TAG, "Notification shown successfully");
+        } catch (SecurityException e) {
+            Log.e(TAG, "No permission to post notifications: " + e.getMessage());
+        }
+    }
+}
