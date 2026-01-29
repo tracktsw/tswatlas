@@ -1,17 +1,28 @@
-import { useState, useRef, useMemo } from 'react';
-import { CheckCircle, Check, Plus, Heart, Pencil, X, Loader2, UtensilsCrossed, ChevronDown, Package } from 'lucide-react';
+import { useState, useRef, useMemo, useEffect } from 'react';
+import { CheckCircle, Check, Plus, Heart, Pencil, X, Loader2, UtensilsCrossed, ChevronDown, Package, Trash2 } from 'lucide-react';
 import { useUserData, CheckIn, SymptomEntry } from '@/contexts/UserDataContext';
 import { Button } from '@/components/ui/button';
 import { AndroidSafeTextarea } from '@/components/ui/android-safe-textarea';
 import { AndroidSafeInput } from '@/components/ui/android-safe-input';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, isToday, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { HeartIllustration, SunIllustration, LeafIllustration } from '@/components/illustrations';
 import { SparkleEffect } from '@/components/SparkleEffect';
 import { severityColors, severityLabels } from '@/constants/severityColors';
 import { trackCheckInCompleted } from '@/utils/analytics';
 import { useInAppReview } from '@/hooks/useInAppReview';
+import { CheckInDatePicker } from '@/components/CheckInDatePicker';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 const treatments = [
   { id: 'nmt', label: 'NMT', description: 'No Moisture Treatment' },
   { id: 'moisturizer', label: 'Moisturizer', description: 'Applied moisturizer' },
@@ -77,8 +88,13 @@ const sleepOptions = [
 // severityLabels imported from @/constants/severityColors
 
 const CheckInPage = () => {
-  const { checkIns, addCheckIn, updateCheckIn, customTreatments, addCustomTreatment, removeCustomTreatment, getTodayCheckInCount } = useUserData();
+  const { checkIns, addCheckIn, updateCheckIn, deleteCheckIn, getCheckInForDate, customTreatments, addCustomTreatment, removeCustomTreatment, getTodayCheckInCount } = useUserData();
   const { maybeRequestReview } = useInAppReview();
+  
+  // Selected date for check-in (supports backfill)
+  const [selectedDate, setSelectedDate] = useState<Date>(() => startOfDay(new Date()));
+  const isBackfillMode = !isToday(selectedDate);
+  
   const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
   const [customTreatment, setCustomTreatment] = useState('');
   const [mood, setMood] = useState(3);
@@ -101,6 +117,10 @@ const CheckInPage = () => {
   const [showFoodSuggestions, setShowFoodSuggestions] = useState(false);
   const [isFoodDiaryOpen, setIsFoodDiaryOpen] = useState(false);
   const [isProductDiaryOpen, setIsProductDiaryOpen] = useState(false);
+  
+  // Delete confirmation dialog
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Refs for inputs
   const notesRef = useRef<HTMLTextAreaElement>(null);
@@ -108,6 +128,85 @@ const CheckInPage = () => {
   const foodInputRef = useRef<HTMLInputElement>(null);
   const productInputRef = useRef<HTMLInputElement>(null);
 
+  // Get check-in for the selected date
+  const selectedDateCheckIn = useMemo(() => {
+    return getCheckInForDate(selectedDate);
+  }, [selectedDate, getCheckInForDate]);
+
+  const hasExistingData = !!selectedDateCheckIn;
+
+  // When date changes, load existing data or reset form
+  useEffect(() => {
+    if (selectedDateCheckIn && !editingCheckIn) {
+      // Auto-load existing data for the selected date
+      loadCheckInData(selectedDateCheckIn);
+    } else if (!selectedDateCheckIn && !editingCheckIn) {
+      // Reset form for a new date
+      resetForm();
+    }
+  }, [selectedDate, selectedDateCheckIn?.id]);
+
+  const loadCheckInData = (checkIn: CheckIn) => {
+    setEditingCheckIn(checkIn);
+    setSelectedTreatments(checkIn.treatments);
+    setMood(checkIn.mood);
+    setSkinFeeling(checkIn.skinFeeling);
+    setSelectedSymptoms(checkIn.symptomsExperienced || []);
+    
+    const triggers = checkIn.triggers || [];
+    const foodTriggers = triggers.filter(t => t.startsWith('food:'));
+    if (foodTriggers.length > 0) {
+      setFoodItems(foodTriggers.map(t => t.replace('food:', '')));
+      setIsFoodDiaryOpen(true);
+    } else {
+      setFoodItems([]);
+      setIsFoodDiaryOpen(false);
+    }
+    setFoodInputText('');
+    
+    const productTriggers = triggers.filter(t => t.startsWith('product:') || t.startsWith('new_product:'));
+    if (productTriggers.length > 0) {
+      setProductItems(productTriggers.map(t => 
+        t.startsWith('product:') ? t.replace('product:', '') : t.replace('new_product:', '')
+      ));
+      setIsProductDiaryOpen(true);
+    } else {
+      setProductItems([]);
+      setIsProductDiaryOpen(false);
+    }
+    setProductInputText('');
+    
+    setSelectedTriggers(triggers.filter(t => !t.startsWith('food:') && !t.startsWith('product:') && !t.startsWith('new_product:')));
+    setPainScore(checkIn.painScore ?? null);
+    setSleepScore(checkIn.sleepScore ?? null);
+    setNotes(checkIn.notes || '');
+  };
+
+  const resetForm = () => {
+    setEditingCheckIn(null);
+    setSelectedTreatments([]);
+    setCustomTreatment('');
+    setMood(3);
+    setSkinFeeling(3);
+    setSelectedSymptoms([]);
+    setSelectedTriggers([]);
+    setFoodItems([]);
+    setFoodInputText('');
+    setProductItems([]);
+    setProductInputText('');
+    setPainScore(null);
+    setSleepScore(null);
+    setNotes('');
+    setClientRequestId(crypto.randomUUID());
+  };
+
+  const handleDateChange = (newDate: Date) => {
+    // If form has unsaved changes, we could warn - but for simplicity, just switch
+    setSelectedDate(newDate);
+    setEditingCheckIn(null); // Clear editing state, will be re-set by useEffect if data exists
+  };
+
+  // Legacy: for display in "today's check-in" section when on today
   const today = format(new Date(), 'yyyy-MM-dd');
   const todayCheckIns = checkIns.filter((c) => format(new Date(c.timestamp), 'yyyy-MM-dd') === today);
   const hasTodayCheckIn = todayCheckIns.length > 0;
@@ -319,69 +418,40 @@ const CheckInPage = () => {
 
   const handleStartEdit = (checkIn: CheckIn) => {
     if (isSaving) return;
-    setEditingCheckIn(checkIn);
-    setSelectedTreatments(checkIn.treatments);
-    setMood(checkIn.mood);
-    setSkinFeeling(checkIn.skinFeeling);
-    setSelectedSymptoms(checkIn.symptomsExperienced || []);
-    // Extract food items from triggers if present (can have multiple food:xxx entries)
-    const triggers = checkIn.triggers || [];
-    const foodTriggers = triggers.filter(t => t.startsWith('food:'));
-    if (foodTriggers.length > 0) {
-      setFoodItems(foodTriggers.map(t => t.replace('food:', '')));
-      setIsFoodDiaryOpen(true); // Auto-expand if has items
-    } else {
-      setFoodItems([]);
-      setIsFoodDiaryOpen(false);
-    }
-    setFoodInputText('');
-    // Extract new_product or product items from triggers if present
-    const productTriggers = triggers.filter(t => t.startsWith('product:') || t.startsWith('new_product:'));
-    if (productTriggers.length > 0) {
-      setProductItems(productTriggers.map(t => 
-        t.startsWith('product:') ? t.replace('product:', '') : t.replace('new_product:', '')
-      ));
-      setIsProductDiaryOpen(true); // Auto-expand if has items
-    } else {
-      setProductItems([]);
-      setIsProductDiaryOpen(false);
-    }
-    setProductInputText('');
-    // Filter out food and product entries from selected triggers (they're handled separately)
-    setSelectedTriggers(triggers.filter(t => !t.startsWith('food:') && !t.startsWith('product:') && !t.startsWith('new_product:')));
-    setPainScore(checkIn.painScore ?? null);
-    setSleepScore(checkIn.sleepScore ?? null);
-    setNotes(checkIn.notes || '');
+    loadCheckInData(checkIn);
   };
 
   const handleCancelEdit = () => {
     if (isSaving) return;
-    setEditingCheckIn(null);
-    setSelectedTreatments([]);
-    setMood(3);
-    setSkinFeeling(3);
-    setSelectedSymptoms([]);
-    setSelectedTriggers([]);
-    setFoodItems([]);
-    setFoodInputText('');
-    setProductItems([]);
-    setProductInputText('');
-    setPainScore(null);
-    setSleepScore(null);
-    setNotes('');
+    // If there's existing data for this date, reload it; otherwise reset
+    if (selectedDateCheckIn) {
+      loadCheckInData(selectedDateCheckIn);
+    } else {
+      resetForm();
+    }
   };
 
-  // For single daily check-in: can submit if editing OR haven't reached daily limit
-  const canSubmit = Boolean(editingCheckIn) || getTodayCheckInCount() < 1;
+  const handleDeleteCheckIn = async () => {
+    if (!editingCheckIn || isDeleting) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteCheckIn(editingCheckIn.id);
+      toast.success('Check-in deleted');
+      resetForm();
+      setShowDeleteDialog(false);
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to delete check-in');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Can submit if: editing existing entry OR no entry exists for selected date
+  const canSubmit = Boolean(editingCheckIn) || !hasExistingData;
 
   const handleSubmit = async () => {
     if (!canSubmit || isSaving) return;
-
-    // Check daily limit before attempting
-    if (!editingCheckIn && getTodayCheckInCount() >= 2) {
-      toast.error("You've reached today's 2 check-ins.");
-      return;
-    }
 
     // Defensive validation
     if (mood < 1 || mood > 5 || skinFeeling < 1 || skinFeeling > 5) {
@@ -414,10 +484,14 @@ const CheckInPage = () => {
           notes: notes || undefined,
         });
 
-        setEditingCheckIn(null);
-        toast.success('Check-in updated successfully');
+        toast.success(isBackfillMode ? 'Past entry updated' : 'Check-in updated');
+        // Reload the data to show it's now in "edit" mode
+        const updatedCheckIn = getCheckInForDate(selectedDate);
+        if (updatedCheckIn) {
+          setEditingCheckIn(updatedCheckIn);
+        }
       } else {
-        // Use the same clientRequestId for retries (idempotent submission)
+        // New entry - pass custom date for backfill
         await addCheckIn({
           timeOfDay: 'morning', // Default, kept for DB compatibility
           treatments: selectedTreatments,
@@ -428,13 +502,13 @@ const CheckInPage = () => {
           painScore: painScore ?? undefined,
           sleepScore: sleepScore ?? undefined,
           notes: notes || undefined,
-        }, clientRequestId);
+        }, clientRequestId, isBackfillMode ? selectedDate : undefined);
 
         setShowSparkles(true);
-        toast.success('Check-in saved successfully');
+        toast.success(isBackfillMode ? 'Past entry saved' : 'Check-in saved');
         
         // Track successful check-in (after DB insert succeeds)
-        trackCheckInCompleted('daily');
+        trackCheckInCompleted(isBackfillMode ? 'backfill' : 'daily');
         
         // Request in-app review after 7th check-in (once per user)
         const newCheckInCount = checkIns.length + 1;
@@ -442,22 +516,17 @@ const CheckInPage = () => {
         
         // Generate new clientRequestId for next check-in (only on success)
         setClientRequestId(crypto.randomUUID());
+        
+        // After saving, the new entry should appear - set it as editing
+        // Small delay to allow state to update
+        setTimeout(() => {
+          const newCheckIn = getCheckInForDate(selectedDate);
+          if (newCheckIn) {
+            setEditingCheckIn(newCheckIn);
+          }
+        }, 100);
       }
-
-      // Reset form
-      setSelectedTreatments([]);
-      setCustomTreatment('');
-      setMood(3);
-      setSkinFeeling(3);
-      setSelectedSymptoms([]);
-      setSelectedTriggers([]);
-      setFoodItems([]);
-      setFoodInputText('');
-      setProductItems([]);
-      setProductInputText('');
-      setPainScore(null);
-      setSleepScore(null);
-      setNotes('');
+      // Don't reset form - stay on the same date with the saved data loaded
     } catch (error: any) {
       const message =
         typeof error?.message === 'string' && error.message.trim().length > 0
@@ -487,12 +556,23 @@ const CheckInPage = () => {
       {/* Header */}
       <div className="animate-fade-in">
         <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">
-          {editingCheckIn ? 'Edit Check-in' : 'Daily Check-in'}
+          {isBackfillMode ? 'Log Past Day' : editingCheckIn ? 'Edit Check-in' : 'Daily Check-in'}
         </h1>
         <p className="text-muted-foreground">
-          {editingCheckIn ? 'Update your check-in details' : 'How are you feeling today?'}
+          {isBackfillMode 
+            ? 'Fill in data for a previous day'
+            : editingCheckIn 
+              ? 'Update your check-in details' 
+              : 'How are you feeling today?'}
         </p>
       </div>
+
+      {/* Date Picker */}
+      <CheckInDatePicker 
+        selectedDate={selectedDate}
+        onDateChange={handleDateChange}
+        hasExistingData={hasExistingData}
+      />
 
       {/* Editing indicator */}
       {editingCheckIn && (
@@ -501,28 +581,47 @@ const CheckInPage = () => {
             <div className="p-2 rounded-xl bg-primary/20">
               <Pencil className="w-4 h-4 text-primary" />
             </div>
-            <span className="font-semibold">Editing today's check-in</span>
+            <span className="font-semibold">
+              {isBackfillMode 
+                ? `Editing ${format(selectedDate, 'MMM d')} entry`
+                : "Editing today's check-in"}
+            </span>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
-            <X className="w-4 h-4 mr-1" />
-            Cancel
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowDeleteDialog(true)}
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       )}
 
-      {/* All done message - only show when not editing */}
-      {!editingCheckIn && hasTodayCheckIn && (
-        <div className="glass-card-warm p-6 text-center animate-scale-in relative overflow-hidden">
-          <LeafIllustration variant="cluster" className="w-20 h-20 absolute -right-4 -top-4 opacity-20" />
-          <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-primary/20 to-sage-light flex items-center justify-center relative">
-            <CheckCircle className="w-8 h-8 text-primary" />
-          </div>
-          <p className="font-display font-bold text-lg text-foreground">All done for today!</p>
-          <p className="text-muted-foreground mt-1">
-            You've completed your daily check-in. Tap it below to edit.
-          </p>
-        </div>
-      )}
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this check-in?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove the check-in for {format(selectedDate, 'EEEE, MMMM d')}. 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteCheckIn}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {canSubmit && (
         <>
@@ -1232,7 +1331,7 @@ const CheckInPage = () => {
           <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.28s' }}>
             <div>
               <h3 className="font-display font-bold text-lg text-foreground">
-                Today's notes (optional)
+                {isBackfillMode ? 'Notes for this day (optional)' : "Today's notes (optional)"}
               </h3>
               <p className="text-xs text-muted-foreground mt-1">
                 Your AI Coach uses these notes to give you personalised advice
@@ -1240,7 +1339,9 @@ const CheckInPage = () => {
             </div>
             <AndroidSafeTextarea 
               ref={notesRef}
-              placeholder="Anything specific happen today? Dive deeper into anything you think is important..."
+              placeholder={isBackfillMode 
+                ? "What do you remember about this day?" 
+                : "Anything specific happen today? Dive deeper into anything you think is important..."}
               value={notes}
               onValueChange={setNotes}
               rows={3}
@@ -1250,23 +1351,12 @@ const CheckInPage = () => {
 
           {/* Submit */}
           <div className="flex gap-3">
-            {editingCheckIn && (
-              <Button
-                onClick={handleCancelEdit}
-                variant="outline"
-                className="flex-1 h-12 text-base rounded-2xl"
-                size="lg"
-                disabled={isSaving}
-              >
-                Cancel
-              </Button>
-            )}
             <Button
               onClick={handleSubmit}
               variant="default"
-              className={cn("h-12 text-base", editingCheckIn ? "flex-1" : "w-full")}
+              className="w-full h-12 text-base"
               size="lg"
-              disabled={!canSubmit || isSaving}
+              disabled={isSaving}
             >
               {isSaving ? (
                 <>
@@ -1276,142 +1366,14 @@ const CheckInPage = () => {
               ) : (
                 <>
                   <CheckCircle className="w-5 h-5 mr-2" />
-                  {editingCheckIn ? 'Update Check-in' : 'Save Check-in'}
+                  {editingCheckIn 
+                    ? (isBackfillMode ? 'Update Entry' : 'Update Check-in')
+                    : (isBackfillMode ? 'Save Entry' : 'Save Check-in')}
                 </>
               )}
             </Button>
           </div>
         </>
-      )}
-
-      {/* Recent Check-ins */}
-      {todayCheckIns.length > 0 && (
-        <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.3s' }}>
-          <h3 className="font-display font-bold text-lg text-foreground">Today's Check-in</h3>
-          {todayCheckIns.map(checkIn => (
-            <div 
-              key={checkIn.id} 
-              className={cn(
-                "glass-card-warm p-5 cursor-pointer transition-all hover:shadow-warm",
-                editingCheckIn?.id === checkIn.id && "ring-2 ring-primary"
-              )}
-              onClick={() => handleStartEdit(checkIn)}
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <div className="p-2 rounded-xl bg-primary/20">
-                  <CheckCircle className="w-4 h-4 text-primary" />
-                </div>
-                <span className="font-semibold">Daily Check-in</span>
-                <span className="text-xs text-muted-foreground ml-auto mr-2">
-                  {format(new Date(checkIn.timestamp), 'h:mm a')}
-                </span>
-                <Pencil className="w-4 h-4 text-muted-foreground" />
-              </div>
-              <div className="flex items-center gap-4 text-sm flex-wrap">
-                <span className="flex items-center gap-1">
-                  <span className="text-muted-foreground">Mood:</span> 
-                  <span className="text-lg">{moodEmojis[checkIn.mood - 1]}</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="text-muted-foreground">Skin:</span> 
-                  <span className="text-lg">{skinEmojis[checkIn.skinFeeling - 1]}</span>
-                </span>
-                {checkIn.sleepScore !== null && checkIn.sleepScore !== undefined && (
-                  <span className="flex items-center gap-1">
-                    <span className="text-muted-foreground">Sleep:</span> 
-                    <span className="text-lg">{sleepOptions.find(s => s.value === checkIn.sleepScore)?.emoji}</span>
-                  </span>
-                )}
-                {checkIn.painScore !== null && checkIn.painScore !== undefined && (
-                  <span className="flex items-center gap-1">
-                    <span className="text-muted-foreground">Pain:</span> 
-                    <span className={cn(
-                      'text-xs font-medium px-2 py-0.5 rounded-full',
-                      checkIn.painScore <= 2 ? 'bg-yellow-200 text-yellow-900' :
-                      checkIn.painScore <= 4 ? 'bg-amber-300 text-amber-900' :
-                      checkIn.painScore <= 6 ? 'bg-orange-400 text-white' :
-                      checkIn.painScore <= 8 ? 'bg-red-500 text-white' :
-                      'bg-red-700 text-white'
-                    )}>
-                      {checkIn.painScore}/10
-                    </span>
-                  </span>
-                )}
-              </div>
-              {checkIn.treatments.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-3">
-                  {checkIn.treatments.map(t => (
-                    <span key={t} className="text-xs bg-primary/10 text-primary font-medium px-2.5 py-1 rounded-full">
-                      {treatments.find(tr => tr.id === t)?.label || t}
-                    </span>
-                  ))}
-                </div>
-              )}
-              {checkIn.symptomsExperienced && checkIn.symptomsExperienced.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {checkIn.symptomsExperienced.map(entry => (
-                    <span key={entry.symptom} className="text-xs bg-muted text-muted-foreground font-medium px-2.5 py-1 rounded-full">
-                      {entry.symptom} ({severityLabels[entry.severity]})
-                    </span>
-                  ))}
-                </div>
-              )}
-              {/* Food Diary - separate section */}
-              {checkIn.triggers && checkIn.triggers.filter(t => t.startsWith('food:')).length > 0 && (
-                <div className="mt-3">
-                  <p className="text-xs text-muted-foreground mb-1.5 font-medium">🍽️ Food Diary</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {checkIn.triggers
-                      .filter(t => t.startsWith('food:'))
-                      .map(triggerId => {
-                        const foodText = triggerId.replace('food:', '');
-                        return (
-                          <span key={triggerId} className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-medium px-2.5 py-1 rounded-full">
-                            {foodText}
-                          </span>
-                        );
-                      })}
-                  </div>
-                </div>
-              )}
-              {/* Product Diary - separate section */}
-              {checkIn.triggers && checkIn.triggers.filter(t => t.startsWith('product:') || t.startsWith('new_product:')).length > 0 && (
-                <div className="mt-3">
-                  <p className="text-xs text-muted-foreground mb-1.5 font-medium">🧴 Product Diary</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {checkIn.triggers
-                      .filter(t => t.startsWith('product:') || t.startsWith('new_product:'))
-                      .map(triggerId => {
-                        const productText = triggerId.startsWith('product:') 
-                          ? triggerId.replace('product:', '') 
-                          : triggerId.replace('new_product:', '');
-                        return (
-                          <span key={triggerId} className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium px-2.5 py-1 rounded-full">
-                            {productText}
-                          </span>
-                        );
-                      })}
-                  </div>
-                </div>
-              )}
-              {/* Triggers - excluding food and product items */}
-              {checkIn.triggers && checkIn.triggers.filter(t => !t.startsWith('food:') && !t.startsWith('product:') && !t.startsWith('new_product:')).length > 0 && (
-                <div className="mt-3">
-                  <p className="text-xs text-muted-foreground mb-1.5 font-medium">Triggers logged today</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {checkIn.triggers
-                      .filter(t => !t.startsWith('food:') && !t.startsWith('product:') && !t.startsWith('new_product:'))
-                      .map(triggerId => (
-                        <span key={triggerId} className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-400 font-medium px-2.5 py-1 rounded-full">
-                          {triggersList.find(t => t.id === triggerId)?.label || triggerId}
-                        </span>
-                      ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
       )}
     </div>
   );
