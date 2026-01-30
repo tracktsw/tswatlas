@@ -17,7 +17,7 @@ interface DemoModeContextType {
   isAdmin: boolean;
   demoCheckIns: Map<string, DemoCheckIn>; // dateStr -> demo check-in
   toggleDemoMode: () => void;
-  setDemoCheckIn: (dateStr: string, checkIn: Partial<Omit<CheckIn, 'id' | 'timestamp'>>) => void;
+  setDemoCheckIn: (dateStr: string, checkIn: Partial<Omit<CheckIn, 'id' | 'timestamp' | 'loggedAt'>>) => void;
   getDemoCheckInsForDate: (dateStr: string) => DemoCheckIn | undefined;
   clearDemoData: () => void;
   deleteDemoCheckIn: (dateStr: string) => void;
@@ -89,7 +89,7 @@ export const DemoModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   }, [isAdmin]);
 
-  const setDemoCheckIn = useCallback((dateStr: string, checkInData: Partial<Omit<CheckIn, 'id' | 'timestamp'>>) => {
+  const setDemoCheckIn = useCallback((dateStr: string, checkInData: Partial<Omit<CheckIn, 'id' | 'timestamp' | 'loggedAt'>>) => {
     if (!isDemoMode || !isAdmin) return;
 
     setDemoCheckIns(prev => {
@@ -238,6 +238,7 @@ export const DemoModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const demoCheckIn: DemoCheckIn = {
         id: `demo-${dateStr}`,
         timestamp: `${dateStr}T12:00:00.000Z`,
+        loggedAt: `${dateStr}T12:00:00.000Z`, // Demo data: loggedAt matches timestamp (real-time)
         timeOfDay: 'morning',
         mood,
         skinFeeling,
@@ -277,6 +278,7 @@ export const DemoModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       result.push({
         id: demoCheckIn.id,
         timestamp: demoCheckIn.timestamp,
+        loggedAt: demoCheckIn.loggedAt,
         timeOfDay: demoCheckIn.timeOfDay,
         treatments: demoCheckIn.treatments,
         mood: demoCheckIn.mood,

@@ -144,6 +144,7 @@ export type Database = {
           client_request_id: string | null
           created_at: string
           id: string
+          logged_at: string
           mood: number
           notes: string | null
           pain_score: number | null
@@ -160,6 +161,7 @@ export type Database = {
           client_request_id?: string | null
           created_at?: string
           id?: string
+          logged_at?: string
           mood: number
           notes?: string | null
           pain_score?: number | null
@@ -176,6 +178,7 @@ export type Database = {
           client_request_id?: string | null
           created_at?: string
           id?: string
+          logged_at?: string
           mood?: number
           notes?: string | null
           pain_score?: number | null

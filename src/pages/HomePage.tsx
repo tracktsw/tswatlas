@@ -33,23 +33,31 @@ const HomePage = () => {
     ? differenceInDays(new Date(), parseISO(tswStartDate)) 
     : null;
 
-  // Calculate check-in streak
+  // Calculate check-in streak (only counts real-time entries, not backfilled)
   const calculateStreak = () => {
     if (checkIns.length === 0) return 0;
     
-    const checkInDays = new Set(
-      checkIns.map(c => format(new Date(c.timestamp), 'yyyy-MM-dd'))
+    // Only count check-ins that were logged on the same day (not backfilled)
+    // A check-in is "real-time" if loggedAt date matches timestamp date
+    const realTimeCheckInDays = new Set(
+      checkIns
+        .filter(c => {
+          const timestampDate = format(new Date(c.timestamp), 'yyyy-MM-dd');
+          const loggedAtDate = format(new Date(c.loggedAt), 'yyyy-MM-dd');
+          return timestampDate === loggedAtDate;
+        })
+        .map(c => format(new Date(c.timestamp), 'yyyy-MM-dd'))
     );
     
     let streak = 0;
     let currentDate = startOfDay(new Date());
     
     const todayStr = format(currentDate, 'yyyy-MM-dd');
-    if (!checkInDays.has(todayStr)) {
+    if (!realTimeCheckInDays.has(todayStr)) {
       currentDate = subDays(currentDate, 1);
     }
     
-    while (checkInDays.has(format(currentDate, 'yyyy-MM-dd'))) {
+    while (realTimeCheckInDays.has(format(currentDate, 'yyyy-MM-dd'))) {
       streak++;
       currentDate = subDays(currentDate, 1);
     }
