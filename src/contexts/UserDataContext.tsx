@@ -62,6 +62,7 @@ interface UserDataContextType {
   journalEntries: JournalEntry[];
   reminderSettings: ReminderSettings;
   customTreatments: string[];
+  customTriggers: string[];
   tswStartDate: string | null;
   isLoading: boolean;
   isSyncing: boolean;
@@ -81,6 +82,8 @@ interface UserDataContextType {
   updateReminderSettings: (settings: ReminderSettings) => Promise<void>;
   addCustomTreatment: (treatment: string) => Promise<void>;
   removeCustomTreatment: (treatment: string) => Promise<void>;
+  addCustomTrigger: (trigger: string) => Promise<void>;
+  removeCustomTrigger: (trigger: string) => Promise<void>;
   getPhotosByBodyPart: (bodyPart: BodyPart) => Photo[];
   setTswStartDate: (date: string | null) => Promise<void>;
   /** Refresh photos from backend - call after external uploads */
@@ -117,6 +120,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [customTreatments, setCustomTreatments] = useState<string[]>([]);
+  const [customTriggers, setCustomTriggers] = useState<string[]>([]);
   const [reminderSettings, setReminderSettings] = useState<ReminderSettings>({
     enabled: true,
     reminderTime: '09:00', // Single daily reminder
@@ -324,6 +328,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (settingsResult.data) {
         setTswStartDateState(settingsResult.data.tsw_start_date);
         setCustomTreatments(settingsResult.data.custom_treatments || []);
+        setCustomTriggers((settingsResult.data as any).custom_triggers || []);
         setReminderSettings({
           enabled: settingsResult.data.reminders_enabled,
           // Use morning_time as the single reminder time (legacy migration)
@@ -965,6 +970,46 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [userId, customTreatments]);
 
+  const addCustomTrigger = useCallback(async (trigger: string) => {
+    if (!userId) return;
+
+    try {
+      const newTriggers = [...customTriggers, trigger];
+      
+      const { error } = await supabase
+        .from('user_settings')
+        .update({ custom_triggers: newTriggers })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      setCustomTriggers(newTriggers);
+    } catch (error) {
+      console.error('Error adding custom trigger:', error);
+      throw error;
+    }
+  }, [userId, customTriggers]);
+
+  const removeCustomTrigger = useCallback(async (trigger: string) => {
+    if (!userId) return;
+
+    try {
+      const newTriggers = customTriggers.filter(t => t !== trigger);
+      
+      const { error } = await supabase
+        .from('user_settings')
+        .update({ custom_triggers: newTriggers })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      setCustomTriggers(newTriggers);
+    } catch (error) {
+      console.error('Error removing custom trigger:', error);
+      throw error;
+    }
+  }, [userId, customTriggers]);
+
   const getPhotosByBodyPart = useCallback((bodyPart: BodyPart) => {
     return photos.filter(p => p.bodyPart === bodyPart);
   }, [photos]);
@@ -995,6 +1040,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         journalEntries,
         reminderSettings,
         customTreatments,
+        customTriggers,
         tswStartDate,
         isLoading,
         isSyncing,
@@ -1011,6 +1057,8 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         updateReminderSettings,
         addCustomTreatment,
         removeCustomTreatment,
+        addCustomTrigger,
+        removeCustomTrigger,
         getPhotosByBodyPart,
         setTswStartDate,
         refreshPhotos,
