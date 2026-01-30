@@ -96,8 +96,8 @@ public class ReminderWorker extends Worker {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        // Get the app icon resource
-        int smallIconRes = context.getResources().getIdentifier("ic_launcher_foreground", "drawable", context.getPackageName());
+        // Get the app icon resource - use mipmap foreground for the TrackTSW logo
+        int smallIconRes = context.getResources().getIdentifier("ic_launcher_foreground", "mipmap", context.getPackageName());
         if (smallIconRes == 0) {
             smallIconRes = context.getResources().getIdentifier("ic_launcher", "mipmap", context.getPackageName());
         }
