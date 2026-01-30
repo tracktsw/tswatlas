@@ -18,6 +18,7 @@ import SymptomsInsights from '@/components/SymptomsInsights';
 import TriggerPatternsInsights from '@/components/TriggerPatternsInsights';
 import SleepTrendsInsights from '@/components/SleepTrendsInsights';
 import PainTrendsInsights from '@/components/PainTrendsInsights';
+import MoodTrendsInsights from '@/components/MoodTrendsInsights';
 import WhatHelpedInsights from '@/components/WhatHelpedInsights';
 import { FlareStatusBadge } from '@/components/FlareStatusBadge';
 import { severityColors, severityLabels } from '@/constants/severityColors';
@@ -401,6 +402,9 @@ const InsightsPage = () => {
 
           {/* Sleep Trends */}
           <SleepTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
+
+          {/* Mood Trends */}
+          <MoodTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
 
           {/* Pain Trends */}
           <PainTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
