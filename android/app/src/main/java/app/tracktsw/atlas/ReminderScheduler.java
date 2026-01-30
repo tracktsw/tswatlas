@@ -4,8 +4,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
-import androidx.work.ExistingPeriodicWorkPolicy;
-import androidx.work.PeriodicWorkRequest;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 
 import java.util.Calendar;
@@ -23,8 +23,9 @@ public class ReminderScheduler {
 
     /**
      * Schedule the daily reminder using WorkManager.
-     * Uses PeriodicWorkRequest with a 24-hour interval and flexible timing.
-     * The reminder will fire approximately at the target time, with a 15-minute flex window.
+     * Uses a OneTimeWorkRequest that the worker reschedules after it runs.
+     * This tends to behave more predictably than PeriodicWorkRequest across OEM task killers,
+     * while still avoiding exact-alarm permissions.
      *
      * @param context Application context
      * @param hour Target hour (0-23)
@@ -47,30 +48,21 @@ public class ReminderScheduler {
 
         Log.d(TAG, "Calculated initial delay: " + initialDelay + "ms (" + (initialDelay / 1000 / 60) + " minutes, " + (initialDelay / 1000 / 60 / 60) + " hours)");
 
-        // Cancel any existing work first
-        WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME);
-
-        // Create the periodic work request
-        // Uses a 24-hour interval with a 15-minute flex window
-        // The flex window allows Android to batch work for battery optimization
-        PeriodicWorkRequest reminderWork = new PeriodicWorkRequest.Builder(
-            ReminderWorker.class,
-            24, TimeUnit.HOURS,
-            15, TimeUnit.MINUTES // Flex interval - work can run within 15 min of target
-        )
+        // Create a one-time work request and REPLACE any existing work.
+        // ReminderWorker will schedule the next one after it runs.
+        OneTimeWorkRequest reminderWork = new OneTimeWorkRequest.Builder(ReminderWorker.class)
             .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
             .addTag("daily_reminder")
             .build();
 
-        // Enqueue the work with REPLACE policy to update if already scheduled
         WorkManager.getInstance(context)
-            .enqueueUniquePeriodicWork(
+            .enqueueUniqueWork(
                 WORK_NAME,
-                ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE, // Fully replace existing
+                ExistingWorkPolicy.REPLACE,
                 reminderWork
             );
 
-        Log.d(TAG, "Daily reminder scheduled successfully. Initial delay: " + (initialDelay / 1000 / 60) + " minutes");
+        Log.d(TAG, "Daily reminder scheduled successfully (one-time). Initial delay: " + (initialDelay / 1000 / 60) + " minutes");
     }
 
     /**
