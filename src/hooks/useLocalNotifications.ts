@@ -1,19 +1,9 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
-import { Capacitor, registerPlugin } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
 import { LocalNotifications, ScheduleOn, Channel } from '@capacitor/local-notifications';
 import { App } from '@capacitor/app';
 
 const PERMISSION_REQUESTED_KEY = 'notif_permission_requested_v2';
-
-// Register Android-only ReminderPlugin for WorkManager-based scheduling
-interface ReminderPluginInterface {
-  scheduleReminder(options: { hour: number; minute: number }): Promise<{ success: boolean }>;
-  cancelReminder(): Promise<{ success: boolean }>;
-  isReminderEnabled(): Promise<{ enabled: boolean }>;
-  getReminderTime(): Promise<{ hasTime: boolean; hour?: number; minute?: number }>;
-}
-
-const ReminderPlugin = registerPlugin<ReminderPluginInterface>('ReminderPlugin');
 
 export interface NotificationPermissionStatus {
   granted: boolean;
