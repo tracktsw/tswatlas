@@ -51,6 +51,19 @@ public class ReminderWorker extends Worker {
         // Show the notification
         showNotification();
 
+        // Reschedule the next run (one-time work pattern)
+        try {
+            int[] time = ReminderScheduler.getReminderTime(getApplicationContext());
+            if (time != null) {
+                ReminderScheduler.scheduleReminder(getApplicationContext(), time[0], time[1]);
+                Log.d(TAG, "Next reminder scheduled for " + time[0] + ":" + time[1]);
+            } else {
+                Log.d(TAG, "No reminder time set; skipping reschedule");
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to reschedule next reminder: " + e.getMessage());
+        }
+
         Log.d(TAG, "ReminderWorker completed successfully");
         return Result.success();
     }
