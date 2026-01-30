@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock, Mail, Eye, Smartphone, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock, Mail, Eye, Smartphone, RotateCcw, AlertCircle } from 'lucide-react';
+import { usePlatform } from '@/hooks/usePlatform';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { useUserData } from '@/contexts/UserDataContext';
@@ -26,6 +27,7 @@ const SettingsPage = () => {
   const [searchParams] = useSearchParams();
   const { currentVersion, isChecking, checkForUpdate, performUpdate, updateAvailable } = useAppUpdate();
   const { isNative, permissionStatus, isRequestingPermission, checkPermission, requestPermission, scheduleTestNotification } = useLocalNotifications();
+  const { isAndroid } = usePlatform();
   
   // Get next reminder time for display
   const { nextReminderTime } = useCheckInReminder({
@@ -306,6 +308,15 @@ const SettingsPage = () => {
                 ? 'You\'ll receive a push notification at your scheduled time.'
                 : 'Reminder appears when you open the app after the scheduled time.'}
             </p>
+            
+            {isAndroid && (
+              <div className="flex items-start gap-2 p-2 bg-amber-500/10 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  Due to Android battery optimization, notifications may occasionally be delayed by a few minutes.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
