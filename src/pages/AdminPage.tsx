@@ -30,7 +30,7 @@ interface Treatment {
   is_approved: boolean;
 }
 
-const CATEGORIES = ['moisturizers', 'diet', 'supplements', 'lifestyle', 'topical', 'general'];
+const CATEGORIES = ['moisture', 'therapy', 'bathing', 'relief', 'medication', 'lifestyle', 'supplements', 'protection', 'general'];
 
 const AdminPage = () => {
   const [user, setUser] = useState<User | null>(null);
