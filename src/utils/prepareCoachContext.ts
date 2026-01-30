@@ -272,11 +272,22 @@ export function prepareCoachContext(
     .filter(d => !allDaysWithCheckIns.has(format(d, 'yyyy-MM-dd')))
     .map(d => format(d, 'MMM d'));
 
-  // Calculate check-in streak
+  // Calculate check-in streak (only counts real-time entries, not backfilled)
+  // A check-in is "real-time" if loggedAt date matches timestamp date
+  const realTimeCheckInDays = new Set(
+    checkIns
+      .filter(c => {
+        const timestampDate = format(new Date(c.timestamp), 'yyyy-MM-dd');
+        const loggedAtDate = format(new Date(c.loggedAt), 'yyyy-MM-dd');
+        return timestampDate === loggedAtDate;
+      })
+      .map(c => format(new Date(c.timestamp), 'yyyy-MM-dd'))
+  );
+  
   let streak = 0;
   for (let i = 0; i <= 30; i++) {
     const dayStr = format(subDays(now, i), 'yyyy-MM-dd');
-    if (allDaysWithCheckIns.has(dayStr)) {
+    if (realTimeCheckInDays.has(dayStr)) {
       streak++;
     } else if (i > 0) {
       break;

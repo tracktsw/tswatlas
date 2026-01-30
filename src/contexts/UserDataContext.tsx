@@ -28,6 +28,8 @@ export interface SymptomEntry {
 export interface CheckIn {
   id: string;
   timestamp: string;
+  /** When the check-in was actually submitted (used for streak calculation) */
+  loggedAt: string;
   timeOfDay: 'morning' | 'evening';
   treatments: string[];
   mood: number;
@@ -70,8 +72,8 @@ interface UserDataContextType {
   addPhoto: (photo: { dataUrl: string; bodyPart: BodyPart; notes?: string }) => Promise<void>;
   deletePhoto: (id: string) => Promise<void>;
   /** Add a check-in. Optional customDate param for backfilling past days. */
-  addCheckIn: (checkIn: Omit<CheckIn, 'id' | 'timestamp'>, clientRequestId: string, customDate?: Date) => Promise<void>;
-  updateCheckIn: (id: string, checkIn: Omit<CheckIn, 'id' | 'timestamp'>) => Promise<void>;
+  addCheckIn: (checkIn: Omit<CheckIn, 'id' | 'timestamp' | 'loggedAt'>, clientRequestId: string, customDate?: Date) => Promise<void>;
+  updateCheckIn: (id: string, checkIn: Omit<CheckIn, 'id' | 'timestamp' | 'loggedAt'>) => Promise<void>;
   deleteCheckIn: (id: string) => Promise<void>;
   /** Get check-in for a specific date (YYYY-MM-DD format or Date object) */
   getCheckInForDate: (date: string | Date) => CheckIn | undefined;
@@ -359,6 +361,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setCheckIns(checkInsResult.data.map(c => ({
           id: c.id,
           timestamp: c.created_at,
+          loggedAt: (c as any).logged_at || c.created_at,
           timeOfDay: c.time_of_day as 'morning' | 'evening',
           treatments: c.treatments,
           mood: c.mood,
@@ -453,6 +456,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       (checkInsData ?? []).map((c) => ({
         id: c.id,
         timestamp: c.created_at,
+        loggedAt: (c as any).logged_at || c.created_at,
         timeOfDay: c.time_of_day as 'morning' | 'evening',
         treatments: c.treatments,
         mood: c.mood,
@@ -647,7 +651,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [checkIns]);
 
   const addCheckIn = useCallback(
-    async (checkIn: Omit<CheckIn, 'id' | 'timestamp'>, clientRequestId: string, customDate?: Date) => {
+    async (checkIn: Omit<CheckIn, 'id' | 'timestamp' | 'loggedAt'>, clientRequestId: string, customDate?: Date) => {
       if (!userId) {
         throw new Error('Please sign in to save check-ins.');
       }
@@ -727,6 +731,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const newCheckIn: CheckIn = {
           id: data.id,
           timestamp: data.created_at,
+          loggedAt: (data as any).logged_at || data.created_at,
           timeOfDay: data.time_of_day as 'morning' | 'evening',
           treatments: data.treatments,
           mood: data.mood,
@@ -752,7 +757,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   );
 
   const updateCheckIn = useCallback(
-    async (id: string, checkIn: Omit<CheckIn, 'id' | 'timestamp'>) => {
+    async (id: string, checkIn: Omit<CheckIn, 'id' | 'timestamp' | 'loggedAt'>) => {
       if (!userId) {
         throw new Error('Please sign in to update check-ins.');
       }
