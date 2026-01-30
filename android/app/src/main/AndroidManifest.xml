@@ -58,6 +58,16 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+        
+        <!-- Alarm receiver for daily reminders -->
+        <receiver
+            android:name=".ReminderAlarmReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="app.tracktsw.atlas.ACTION_SHOW_REMINDER" />
+            </intent-filter>
+        </receiver>
     </application>
 
     <!-- Permissions -->
@@ -65,7 +75,12 @@
     
     <!-- Local Notifications - Required for Android 13+ (API 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Removed SCHEDULE_EXACT_ALARM and USE_EXACT_ALARM - using WorkManager instead -->
+    
+    <!-- Exact Alarm - Required for Android 12+ (API 31+) for reliable scheduling -->
+    <!-- SCHEDULE_EXACT_ALARM is user-grantable and doesn't require Play Store approval -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    
+    <!-- Boot completed to reschedule alarms -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
