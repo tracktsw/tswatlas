@@ -506,11 +506,8 @@ const CheckInPage = () => {
 
         toast.success(isBackfillMode ? 'Past entry updated' : 'Check-in updated');
         
-        // Reload the data and switch to viewing mode
-        const updatedCheckIn = getCheckInForDate(selectedDate);
-        if (updatedCheckIn) {
-          loadCheckInData(updatedCheckIn);
-        }
+        // The current state already has the correct data (we just submitted it)
+        // Just switch to viewing mode - no need to reload
         setIsViewingMode(true);
       } else {
         // New entry - pass custom date for backfill
@@ -539,11 +536,13 @@ const CheckInPage = () => {
         // Generate new clientRequestId for next check-in (only on success)
         setClientRequestId(crypto.randomUUID());
         
-        // After saving, load the new entry and switch to viewing mode
+        // The current state already has the correct data (we just submitted it)
+        // Set editingCheckIn to indicate there's now saved data, then switch to viewing mode
+        // Small delay to allow React Query to refetch
         setTimeout(() => {
           const newCheckIn = getCheckInForDate(selectedDate);
           if (newCheckIn) {
-            loadCheckInData(newCheckIn);
+            setEditingCheckIn(newCheckIn);
           }
           setIsViewingMode(true);
         }, 100);
