@@ -123,6 +123,14 @@ export default {
           "0%, 100%": { transform: "rotate(-2deg)" },
           "50%": { transform: "rotate(2deg)" },
         },
+        "glow-pulse": {
+          "0%, 100%": { 
+            filter: "drop-shadow(0 0 4px rgba(239, 68, 68, 0.6))",
+          },
+          "50%": { 
+            filter: "drop-shadow(0 0 12px rgba(239, 68, 68, 1))",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -130,6 +138,7 @@ export default {
         "pulse-soft": "pulse-soft 2s ease-in-out infinite",
         "float": "float 6s ease-in-out infinite",
         "wiggle": "wiggle 1s ease-in-out infinite",
+        "glow-pulse": "glow-pulse 2s ease-in-out infinite",
       },
     },
   },
