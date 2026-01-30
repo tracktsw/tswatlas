@@ -109,7 +109,7 @@ const CheckInPage = () => {
   const [sleepScore, setSleepScore] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
   const [showSparkles, setShowSparkles] = useState(false);
-  const [showSavedConfirmation, setShowSavedConfirmation] = useState(false);
+  const [isViewingMode, setIsViewingMode] = useState(false);
   const [editingCheckIn, setEditingCheckIn] = useState<CheckIn | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [expandedSymptom, setExpandedSymptom] = useState<string | null>(null);
@@ -143,11 +143,13 @@ const CheckInPage = () => {
   // When date changes, load existing data or reset form
   useEffect(() => {
     if (selectedDateCheckIn && !editingCheckIn) {
-      // Auto-load existing data for the selected date
+      // Auto-load existing data for the selected date and show viewing mode
       loadCheckInData(selectedDateCheckIn);
+      setIsViewingMode(true);
     } else if (!selectedDateCheckIn && !editingCheckIn) {
       // Reset form for a new date
       resetForm();
+      setIsViewingMode(false);
     }
   }, [selectedDate, selectedDateCheckIn?.id]);
 
@@ -503,14 +505,13 @@ const CheckInPage = () => {
         });
 
         toast.success(isBackfillMode ? 'Past entry updated' : 'Check-in updated');
-        setShowSavedConfirmation(true);
-        setTimeout(() => setShowSavedConfirmation(false), 3000);
         
-        // Reload the data to show it's now in "edit" mode
+        // Reload the data and switch to viewing mode
         const updatedCheckIn = getCheckInForDate(selectedDate);
         if (updatedCheckIn) {
-          setEditingCheckIn(updatedCheckIn);
+          loadCheckInData(updatedCheckIn);
         }
+        setIsViewingMode(true);
       } else {
         // New entry - pass custom date for backfill
         await addCheckIn({
@@ -526,8 +527,6 @@ const CheckInPage = () => {
         }, clientRequestId, isBackfillMode ? selectedDate : undefined);
 
         setShowSparkles(true);
-        setShowSavedConfirmation(true);
-        setTimeout(() => setShowSavedConfirmation(false), 3000);
         toast.success(isBackfillMode ? 'Past entry saved' : 'Check-in saved');
         
         // Track successful check-in (after DB insert succeeds)
@@ -540,13 +539,13 @@ const CheckInPage = () => {
         // Generate new clientRequestId for next check-in (only on success)
         setClientRequestId(crypto.randomUUID());
         
-        // After saving, the new entry should appear - set it as editing
-        // Small delay to allow state to update
+        // After saving, load the new entry and switch to viewing mode
         setTimeout(() => {
           const newCheckIn = getCheckInForDate(selectedDate);
           if (newCheckIn) {
-            setEditingCheckIn(newCheckIn);
+            loadCheckInData(newCheckIn);
           }
+          setIsViewingMode(true);
         }, 100);
       }
       // Don't reset form - stay on the same date with the saved data loaded
@@ -597,48 +596,160 @@ const CheckInPage = () => {
         hasExistingData={hasExistingData}
       />
 
-      {/* Saved confirmation card */}
-      {showSavedConfirmation && (
-        <div className="glass-card-warm p-4 animate-fade-in border-2 border-emerald-500/30 bg-emerald-500/10">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-emerald-500/20">
-              <CheckCircle className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="font-semibold text-emerald-700 dark:text-emerald-400">
-                {isBackfillMode ? 'Entry saved!' : 'Check-in saved!'}
-              </p>
-              <p className="text-sm text-emerald-600/80 dark:text-emerald-400/80">
-                Your data has been recorded successfully
-              </p>
+      {/* Summary Card - shown when viewing a saved check-in */}
+      {isViewingMode && editingCheckIn && (
+        <div className="space-y-4 animate-fade-in">
+          {/* Success header */}
+          <div className="glass-card-warm p-4 border-2 border-emerald-500/30 bg-emerald-500/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-emerald-500/20">
+                  <CheckCircle className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+                    {isBackfillMode ? `${format(selectedDate, 'MMM d')} logged` : "Today's check-in"}
+                  </p>
+                  <p className="text-sm text-emerald-600/80 dark:text-emerald-400/80">
+                    Tap edit to make changes
+                  </p>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setIsViewingMode(false)}
+                className="gap-1.5"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                Edit
+              </Button>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Editing indicator */}
-      {editingCheckIn && !showSavedConfirmation && (
-        <div className="flex items-center justify-between glass-card-warm p-4 animate-slide-up">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-primary/20">
-              <Pencil className="w-4 h-4 text-primary" />
+          {/* Summary card with logged data */}
+          <div className="glass-card p-5 space-y-4">
+            {/* Mood & Skin */}
+            <div className="flex gap-4">
+              <div className="flex-1 text-center p-3 bg-muted/50 rounded-xl">
+                <span className="text-3xl">{moodEmojis[mood - 1]}</span>
+                <p className="text-xs text-muted-foreground mt-1">Mood</p>
+              </div>
+              <div className="flex-1 text-center p-3 bg-muted/50 rounded-xl">
+                <span className="text-3xl">{skinEmojis[skinFeeling - 1]}</span>
+                <p className="text-xs text-muted-foreground mt-1">{skinIntensityLabels[skinFeeling - 1]}</p>
+              </div>
+              {sleepScore && (
+                <div className="flex-1 text-center p-3 bg-muted/50 rounded-xl">
+                  <span className="text-3xl">{sleepOptions.find(s => s.value === sleepScore)?.emoji}</span>
+                  <p className="text-xs text-muted-foreground mt-1">Sleep</p>
+                </div>
+              )}
+              {painScore !== null && (
+                <div className="flex-1 text-center p-3 bg-muted/50 rounded-xl">
+                  <span className="text-2xl font-bold text-foreground">{painScore}</span>
+                  <p className="text-xs text-muted-foreground mt-1">Pain</p>
+                </div>
+              )}
             </div>
-            <span className="font-semibold">
-              {isBackfillMode 
-                ? `Editing ${format(selectedDate, 'MMM d')} entry`
-                : "Editing today's check-in"}
-            </span>
+
+            {/* Treatments */}
+            {selectedTreatments.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Treatments</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedTreatments.map(t => (
+                    <span key={t} className="px-2.5 py-1 bg-primary/10 text-primary text-xs rounded-full font-medium">
+                      {treatments.find(tr => tr.id === t)?.label || t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Symptoms */}
+            {selectedSymptoms.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Symptoms</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedSymptoms.map(s => (
+                    <span 
+                      key={s.symptom} 
+                      className={cn(
+                        "px-2.5 py-1 text-xs rounded-full font-medium",
+                        s.severity === 3 ? "bg-red-500/20 text-red-700 dark:text-red-400" :
+                        s.severity === 2 ? "bg-amber-500/20 text-amber-700 dark:text-amber-400" :
+                        "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400"
+                      )}
+                    >
+                      {s.symptom}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Triggers */}
+            {selectedTriggers.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Triggers</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedTriggers.map(t => (
+                    <span key={t} className="px-2.5 py-1 bg-orange-500/15 text-orange-700 dark:text-orange-400 text-xs rounded-full font-medium">
+                      {triggersList.find(tr => tr.id === t)?.label || t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Food items */}
+            {foodItems.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Food diary</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {foodItems.map(f => (
+                    <span key={f} className="px-2.5 py-1 bg-blue-500/15 text-blue-700 dark:text-blue-400 text-xs rounded-full font-medium">
+                      {f}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Product items */}
+            {productItems.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Products used</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {productItems.map(p => (
+                    <span key={p} className="px-2.5 py-1 bg-purple-500/15 text-purple-700 dark:text-purple-400 text-xs rounded-full font-medium">
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Notes */}
+            {notes && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Notes</p>
+                <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg">{notes}</p>
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-1">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setShowDeleteDialog(true)}
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
+
+          {/* Delete button */}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setShowDeleteDialog(true)}
+            className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Delete this check-in
+          </Button>
         </div>
       )}
 
@@ -665,7 +776,33 @@ const CheckInPage = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {canSubmit && (
+      {/* Editing indicator when not in viewing mode */}
+      {!isViewingMode && editingCheckIn && (
+        <div className="flex items-center justify-between glass-card-warm p-4 animate-slide-up">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-primary/20">
+              <Pencil className="w-4 h-4 text-primary" />
+            </div>
+            <span className="font-semibold">
+              {isBackfillMode 
+                ? `Editing ${format(selectedDate, 'MMM d')} entry`
+                : "Editing today's check-in"}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowDeleteDialog(true)}
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {canSubmit && !isViewingMode && (
         <>
           {/* Mood Rating */}
           <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
