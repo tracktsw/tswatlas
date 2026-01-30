@@ -17,6 +17,14 @@ interface ReminderPluginInterface {
 
 const ReminderPlugin = registerPlugin<ReminderPluginInterface>('ReminderPlugin');
 
+function isReminderPluginAvailable(): boolean {
+  try {
+    return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android' && Capacitor.isPluginAvailable('ReminderPlugin');
+  } catch {
+    return false;
+  }
+}
+
 // Parse time string "HH:MM" to hours and minutes
 function parseTime(timeStr: string): { hour: number; minute: number } {
   const [hourStr, minuteStr] = timeStr.split(':');
@@ -77,19 +85,64 @@ export async function scheduleCheckInReminders(
   try {
     // ANDROID: Use WorkManager-based ReminderPlugin
     if (platform === 'android') {
+      const pluginAvailable = isReminderPluginAvailable();
+
       if (!enabled) {
         console.log('[NOTIFICATIONS] Canceling Android reminders via WorkManager');
-        await ReminderPlugin.cancelReminder();
+        if (pluginAvailable) {
+          await ReminderPlugin.cancelReminder();
+        } else {
+          // Fallback: cancel any scheduled LocalNotifications
+          await LocalNotifications.cancel({ notifications: [{ id: DAILY_NOTIFICATION_ID }] });
+          console.warn(
+            '[NOTIFICATIONS] ReminderPlugin not available on this Android build; cancelled via LocalNotifications fallback.'
+          );
+        }
         return true;
       }
 
       // Ensure Android channel exists for when notifications fire
       await ensureAndroidChannel();
 
-      console.log('[NOTIFICATIONS] Scheduling Android reminder via WorkManager:', time);
-      await ReminderPlugin.scheduleReminder({ hour: time.hour, minute: time.minute });
-      
-      console.log('[NOTIFICATIONS] Successfully scheduled Android daily reminder');
+      if (pluginAvailable) {
+        console.log('[NOTIFICATIONS] Scheduling Android reminder via WorkManager:', time);
+        await ReminderPlugin.scheduleReminder({ hour: time.hour, minute: time.minute });
+        console.log('[NOTIFICATIONS] Successfully scheduled Android daily reminder');
+        return true;
+      }
+
+      // If the custom plugin is missing (common when the native project wasn't synced/rebuilt),
+      // don't crash—fallback to standard LocalNotifications so the feature remains usable.
+      console.warn(
+        '[NOTIFICATIONS] ReminderPlugin not installed/available on Android. Falling back to LocalNotifications. ' +
+          'If this is a native build, run `npx cap sync android` and rebuild to include ReminderPlugin.'
+      );
+
+      // Cancel existing first
+      await LocalNotifications.cancel({ notifications: [{ id: DAILY_NOTIFICATION_ID }] });
+
+      const scheduleOn: ScheduleOn = { hour: time.hour, minute: time.minute };
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            id: DAILY_NOTIFICATION_ID,
+            title: 'Daily check-in ✨',
+            body: 'How is your skin today? Take a moment to log your progress.',
+            schedule: {
+              on: scheduleOn,
+              repeats: true,
+              allowWhileIdle: true,
+            },
+            sound: 'default',
+            actionTypeId: 'CHECK_IN',
+            extra: {
+              route: '/check-in',
+            },
+            channelId: ANDROID_CHANNEL_ID,
+          },
+        ],
+      });
+
       return true;
     }
 
@@ -171,8 +224,15 @@ export async function cancelAllCheckInReminders(): Promise<boolean> {
     
     // Android: Use WorkManager plugin
     if (platform === 'android') {
-      await ReminderPlugin.cancelReminder();
-      console.log('Cancelled all Android check-in reminders via WorkManager');
+      if (isReminderPluginAvailable()) {
+        await ReminderPlugin.cancelReminder();
+        console.log('Cancelled all Android check-in reminders via WorkManager');
+        return true;
+      }
+
+      // Fallback: cancel LocalNotifications
+      await LocalNotifications.cancel({ notifications: [{ id: DAILY_NOTIFICATION_ID }] });
+      console.warn('ReminderPlugin not available; cancelled Android reminder via LocalNotifications fallback');
       return true;
     }
 
