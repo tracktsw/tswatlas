@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format, isToday, isFuture, startOfDay } from 'date-fns';
-import { CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarIcon, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -65,19 +65,20 @@ export function CheckInDatePicker({
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
-              variant="ghost"
+              variant="outline"
               className={cn(
-                "flex-1 h-10 justify-center gap-2 font-medium rounded-xl",
-                !isTodaySelected && "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                "flex-1 h-10 justify-center gap-2 font-medium rounded-xl border-2 border-dashed border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all",
+                !isTodaySelected && "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/40 hover:border-amber-500/60"
               )}
             >
               <CalendarIcon className="h-4 w-4" />
-              <span>
+              <span className="underline underline-offset-2 decoration-dotted decoration-primary/40">
                 {isTodaySelected 
                   ? `Today · ${format(selectedDate, 'EEE d MMM')}`
                   : format(selectedDate, 'EEE d MMM yyyy')
                 }
               </span>
+              <ChevronDown className="h-3.5 w-3.5 opacity-60" />
               {hasExistingData && (
                 <span className="ml-1 text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">
                   has data
