@@ -5,7 +5,6 @@ import { format, startOfMonth, endOfMonth, subMonths, addMonths, isSameMonth } f
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceLine, ReferenceArea, Tooltip } from 'recharts';
 import { DailyFlareState } from '@/utils/flareStateEngine';
 import { Button } from '@/components/ui/button';
-import { useTheme } from 'next-themes';
 
 const MIN_MOOD_ENTRIES = 5;
 
@@ -18,10 +17,9 @@ interface MoodTrendsInsightsProps {
 
 const MoodTrendsInsights = ({ checkIns, dailyFlareStates }: MoodTrendsInsightsProps) => {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
-  const { theme } = useTheme();
   
-  // Line color: black in light mode, yellow in dark mode
-  const lineColor = theme === 'dark' ? '#facc15' : '#171717';
+  // Line color: green for both modes
+  const lineColor = '#22c55e';
 
   // Get the earliest and latest dates with mood data
   const dateRange = useMemo(() => {
