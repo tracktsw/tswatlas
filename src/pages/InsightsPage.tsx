@@ -400,11 +400,11 @@ const InsightsPage = () => {
           {/* Symptoms Insights */}
           <SymptomsInsights checkIns={checkIns} />
 
-          {/* Sleep Trends */}
-          <SleepTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
-
           {/* Mood Trends */}
           <MoodTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
+
+          {/* Sleep Trends */}
+          <SleepTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
 
           {/* Pain Trends */}
           <PainTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />

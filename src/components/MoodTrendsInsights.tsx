@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Smile, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
+import { Smile, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CheckIn } from '@/contexts/UserDataContext';
 import { format, startOfMonth, endOfMonth, subMonths, addMonths, isSameMonth } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceLine, ReferenceArea, Tooltip } from 'recharts';
@@ -8,30 +8,12 @@ import { Button } from '@/components/ui/button';
 import { useTheme } from 'next-themes';
 
 const MIN_MOOD_ENTRIES = 5;
-const MIN_TRIGGER_OCCURRENCES = 2;
-const MIN_DAYS_FOR_TRIGGER_ANALYSIS = 3;
-
-// Format trigger names: snake_case -> Title Case
-const formatTrigger = (trigger: string): string => {
-  return trigger
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-};
 
 const moodLabels = ['Very Low', 'Low', 'Okay', 'Good', 'Great'];
 
 interface MoodTrendsInsightsProps {
   checkIns: CheckIn[];
   dailyFlareStates: DailyFlareState[];
-}
-
-interface TriggerCorrelation {
-  trigger: string;
-  avgWithTrigger: number;
-  avgWithoutTrigger: number;
-  difference: number;
-  occurrences: number;
 }
 
 const MoodTrendsInsights = ({ checkIns, dailyFlareStates }: MoodTrendsInsightsProps) => {
@@ -107,64 +89,6 @@ const MoodTrendsInsights = ({ checkIns, dailyFlareStates }: MoodTrendsInsightsPr
       moodScore: d.moodScore,
       timestamp: d.date,
     }));
-  }, [moodDataWithTriggers]);
-
-  // Calculate trigger correlations
-  const triggerCorrelations = useMemo((): TriggerCorrelation[] => {
-    if (moodDataWithTriggers.length < MIN_DAYS_FOR_TRIGGER_ANALYSIS) return [];
-
-    // Count trigger occurrences and mood scores
-    const triggerStats = new Map<string, { withTrigger: number[]; }>();
-    const allMoodScores: number[] = [];
-
-    moodDataWithTriggers.forEach(day => {
-      allMoodScores.push(day.moodScore);
-      day.triggers.forEach(trigger => {
-        if (!triggerStats.has(trigger)) {
-          triggerStats.set(trigger, { withTrigger: [] });
-        }
-        triggerStats.get(trigger)!.withTrigger.push(day.moodScore);
-      });
-    });
-
-    const overallAvg = allMoodScores.reduce((a, b) => a + b, 0) / allMoodScores.length;
-
-    // Build correlations
-    const correlations: TriggerCorrelation[] = [];
-    
-    triggerStats.forEach((stats, trigger) => {
-      if (stats.withTrigger.length >= MIN_TRIGGER_OCCURRENCES) {
-        const avgWithTrigger = stats.withTrigger.reduce((a, b) => a + b, 0) / stats.withTrigger.length;
-        
-        // Calculate avg without this trigger
-        const withoutScores = moodDataWithTriggers
-          .filter(d => !d.triggers.includes(trigger))
-          .map(d => d.moodScore);
-        const avgWithoutTrigger = withoutScores.length > 0 
-          ? withoutScores.reduce((a, b) => a + b, 0) / withoutScores.length
-          : overallAvg;
-
-        correlations.push({
-          trigger,
-          avgWithTrigger,
-          avgWithoutTrigger,
-          difference: avgWithTrigger - avgWithoutTrigger,
-          occurrences: stats.withTrigger.length,
-        });
-      }
-    });
-
-    // Sort by absolute difference (impact)
-    return correlations.sort((a, b) => Math.abs(b.difference) - Math.abs(a.difference)).slice(0, 4);
-  }, [moodDataWithTriggers]);
-
-  // Create trigger lookup by date for tooltips
-  const triggersByDate = useMemo(() => {
-    const lookup = new Map<string, string[]>();
-    moodDataWithTriggers.forEach(d => {
-      lookup.set(d.date, d.triggers);
-    });
-    return lookup;
   }, [moodDataWithTriggers]);
 
   // Total mood entries across all time
@@ -265,9 +189,8 @@ const MoodTrendsInsights = ({ checkIns, dailyFlareStates }: MoodTrendsInsightsPr
       date: entry.date,
       displayDate: format(new Date(entry.date), 'd'),
       moodScore: entry.moodScore,
-      triggers: triggersByDate.get(entry.date) || [],
     }));
-  }, [moodData, triggersByDate]);
+  }, [moodData]);
 
   // Calculate tick interval to avoid crowding (show ~6-8 ticks max)
   const tickInterval = useMemo(() => {
@@ -393,7 +316,6 @@ const MoodTrendsInsights = ({ checkIns, dailyFlareStates }: MoodTrendsInsightsPr
                     content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
                       const data = payload[0].payload;
-                      const triggers = data.triggers as string[];
                       const moodIndex = Math.round(data.moodScore) - 1;
                       return (
                         <div className="bg-background/95 backdrop-blur-sm border border-border rounded-lg px-3 py-2 shadow-lg">
@@ -401,11 +323,6 @@ const MoodTrendsInsights = ({ checkIns, dailyFlareStates }: MoodTrendsInsightsPr
                           <p className="text-sm font-medium text-foreground">
                             Mood: {moodLabels[moodIndex]} ({data.moodScore.toFixed(1)}/5)
                           </p>
-                          {triggers.length > 0 && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Triggers: {triggers.slice(0, 3).map(formatTrigger).join(', ')}{triggers.length > 3 ? ` +${triggers.length - 3}` : ''}
-                            </p>
-                          )}
                         </div>
                       );
                     }}
@@ -428,39 +345,6 @@ const MoodTrendsInsights = ({ checkIns, dailyFlareStates }: MoodTrendsInsightsPr
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <div className="w-3 h-3 rounded bg-red-500/40" />
                 <span>Shaded areas indicate active flare periods</span>
-              </div>
-            )}
-
-            {/* Trigger Correlations */}
-            {triggerCorrelations.length > 0 && (
-              <div className="pt-2 border-t border-border/50 space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
-                  <Zap className="w-3.5 h-3.5 text-blue-500" />
-                  Trigger Correlations
-                </div>
-                <div className="space-y-1.5">
-                  {triggerCorrelations.map((corr) => (
-                    <div key={corr.trigger} className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground truncate max-w-[140px]">{formatTrigger(corr.trigger)}</span>
-                      <div className="flex items-center gap-2">
-                        <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full ${corr.difference < 0 ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                            style={{ width: `${Math.min(Math.abs(corr.difference) * 20, 100)}%` }}
-                          />
-                        </div>
-                        <span className={`font-medium min-w-[40px] text-right ${corr.difference < 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                          {corr.difference > 0 ? '+' : ''}{corr.difference.toFixed(1)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {triggerCorrelations[0] && triggerCorrelations[0].difference < -0.3 && (
-                  <p className="text-xs text-muted-foreground italic">
-                    On days with {formatTrigger(triggerCorrelations[0].trigger)}, mood averaged {Math.abs(triggerCorrelations[0].difference).toFixed(1)} points lower
-                  </p>
-                )}
               </div>
             )}
 
