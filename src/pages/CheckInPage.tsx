@@ -88,7 +88,7 @@ const sleepOptions = [
 // severityLabels imported from @/constants/severityColors
 
 const CheckInPage = () => {
-  const { checkIns, addCheckIn, updateCheckIn, deleteCheckIn, getCheckInForDate, customTreatments, addCustomTreatment, removeCustomTreatment, getTodayCheckInCount } = useUserData();
+  const { checkIns, addCheckIn, updateCheckIn, deleteCheckIn, getCheckInForDate, customTreatments, addCustomTreatment, removeCustomTreatment, customTriggers, addCustomTrigger, removeCustomTrigger, getTodayCheckInCount } = useUserData();
   const { maybeRequestReview } = useInAppReview();
   
   // Selected date for check-in (supports backfill)
@@ -125,8 +125,12 @@ const CheckInPage = () => {
   // Refs for inputs
   const notesRef = useRef<HTMLTextAreaElement>(null);
   const customTreatmentRef = useRef<HTMLInputElement>(null);
+  const customTriggerRef = useRef<HTMLInputElement>(null);
   const foodInputRef = useRef<HTMLInputElement>(null);
   const productInputRef = useRef<HTMLInputElement>(null);
+  
+  // Custom trigger input state
+  const [customTriggerInput, setCustomTriggerInput] = useState('');
 
   // Get check-in for the selected date
   const selectedDateCheckIn = useMemo(() => {
@@ -186,6 +190,7 @@ const CheckInPage = () => {
     setEditingCheckIn(null);
     setSelectedTreatments([]);
     setCustomTreatment('');
+    setCustomTriggerInput('');
     setMood(3);
     setSkinFeeling(3);
     setSelectedSymptoms([]);
@@ -413,6 +418,18 @@ const CheckInPage = () => {
         setSelectedTreatments((prev) => [...prev, trimmed]);
       }
       setCustomTreatment('');
+    }
+  };
+
+  const handleAddCustomTrigger = () => {
+    if (isSaving) return;
+    const trimmed = customTriggerInput.trim();
+    if (trimmed) {
+      addCustomTrigger(trimmed);
+      if (!selectedTriggers.includes(trimmed)) {
+        setSelectedTriggers((prev) => [...prev, trimmed]);
+      }
+      setCustomTriggerInput('');
     }
   };
 
@@ -821,7 +838,68 @@ const CheckInPage = () => {
                 );
               })}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
+            
+            {/* Custom triggers as buttons */}
+            {customTriggers.length > 0 && (
+              <div className="grid grid-cols-2 gap-1.5">
+                {customTriggers.map((trigger) => {
+                  const isSelected = selectedTriggers.includes(trigger);
+                  return (
+                    <div
+                      key={trigger}
+                      className={cn(
+                        'relative py-2 px-3 text-sm font-medium rounded-full transition-all duration-200 flex items-center justify-between gap-1',
+                        isSelected
+                          ? 'bg-primary/5 ring-[1.5px] ring-primary text-foreground'
+                          : 'bg-muted/50 text-muted-foreground/80 hover:bg-muted hover:text-foreground'
+                      )}
+                    >
+                      <button
+                        onClick={() => toggleTrigger(trigger)}
+                        className="flex-1 text-left truncate"
+                      >
+                        {trigger}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeCustomTrigger(trigger);
+                          setSelectedTriggers(prev => prev.filter(t => t !== trigger));
+                        }}
+                        className="p-0.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+                        title="Remove trigger"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            
+            {/* Custom trigger input */}
+            <div className="flex gap-2">
+              <AndroidSafeInput
+                ref={customTriggerRef}
+                placeholder="Add your own trigger..."
+                value={customTriggerInput}
+                onValueChange={setCustomTriggerInput} 
+                onKeyDown={(e) => e.key === 'Enter' && handleAddCustomTrigger()}
+                className="flex-1 h-11 rounded-xl border-2"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={handleAddCustomTrigger}
+                disabled={!customTriggerInput.trim()}
+                className="h-11 w-11 rounded-xl"
+              >
+                <Plus className="w-5 h-5" />
+              </Button>
+            </div>
+            
+            <p className="text-xs text-muted-foreground">
               Select anything that might have contributed. Patterns are assessed over time.
             </p>
           </div>
