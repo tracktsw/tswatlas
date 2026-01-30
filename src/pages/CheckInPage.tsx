@@ -109,6 +109,7 @@ const CheckInPage = () => {
   const [sleepScore, setSleepScore] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
   const [showSparkles, setShowSparkles] = useState(false);
+  const [showSavedConfirmation, setShowSavedConfirmation] = useState(false);
   const [editingCheckIn, setEditingCheckIn] = useState<CheckIn | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [expandedSymptom, setExpandedSymptom] = useState<string | null>(null);
@@ -502,6 +503,9 @@ const CheckInPage = () => {
         });
 
         toast.success(isBackfillMode ? 'Past entry updated' : 'Check-in updated');
+        setShowSavedConfirmation(true);
+        setTimeout(() => setShowSavedConfirmation(false), 3000);
+        
         // Reload the data to show it's now in "edit" mode
         const updatedCheckIn = getCheckInForDate(selectedDate);
         if (updatedCheckIn) {
@@ -522,6 +526,8 @@ const CheckInPage = () => {
         }, clientRequestId, isBackfillMode ? selectedDate : undefined);
 
         setShowSparkles(true);
+        setShowSavedConfirmation(true);
+        setTimeout(() => setShowSavedConfirmation(false), 3000);
         toast.success(isBackfillMode ? 'Past entry saved' : 'Check-in saved');
         
         // Track successful check-in (after DB insert succeeds)
@@ -591,8 +597,27 @@ const CheckInPage = () => {
         hasExistingData={hasExistingData}
       />
 
+      {/* Saved confirmation card */}
+      {showSavedConfirmation && (
+        <div className="glass-card-warm p-4 animate-fade-in border-2 border-emerald-500/30 bg-emerald-500/10">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-full bg-emerald-500/20">
+              <CheckCircle className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+                {isBackfillMode ? 'Entry saved!' : 'Check-in saved!'}
+              </p>
+              <p className="text-sm text-emerald-600/80 dark:text-emerald-400/80">
+                Your data has been recorded successfully
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Editing indicator */}
-      {editingCheckIn && (
+      {editingCheckIn && !showSavedConfirmation && (
         <div className="flex items-center justify-between glass-card-warm p-4 animate-slide-up">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-xl bg-primary/20">
