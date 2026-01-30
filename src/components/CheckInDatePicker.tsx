@@ -71,7 +71,7 @@ export function CheckInDatePicker({
                 !isTodaySelected && "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/40 hover:border-amber-500/60"
               )}
             >
-              <CalendarIcon className="h-4 w-4" />
+              <CalendarIcon className="h-4 w-4 animate-[pulse_1s_ease-in-out_3]" />
               <span className="underline underline-offset-2 decoration-dotted decoration-primary/40">
                 {isTodaySelected 
                   ? `Today · ${format(selectedDate, 'EEE d MMM')}`
