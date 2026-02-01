@@ -1,0 +1,23 @@
+{
+  "title": "TrackTSW",
+  "daysHealing": "Tage Heilung",
+  "started": "Gestartet: {{date}}",
+  "trackJourney": "Verfolge deine TSW-Reise",
+  "trackJourneyDesc": "Setze das Datum, an dem du Steroide abgesetzt hast, um deinen Heilungsfortschritt zu verfolgen.",
+  "setStartDate": "Startdatum festlegen",
+  "whenStopped": "Wann hast du Steroide abgesetzt?",
+  "saveDate": "Datum speichern",
+  "todaysStatus": "Heutiger Status",
+  "photos": "Fotos",
+  "checkIns": "Check-ins",
+  "journal": "Tagebuch",
+  "streak": "Serie",
+  "communityFavourites": "Community-Favoriten",
+  "noVotesYet": "Noch keine Community-Abstimmungen.",
+  "beFirstToVote": "Sei der Erste, der abstimmt →",
+  "helpful": "hilfreich",
+  "votes": "Stimmen",
+  "journalQuickAccess": "Tagebuch",
+  "writeAboutJourney": "Schreibe über deine Reise",
+  "premium": "Premium"
+}
