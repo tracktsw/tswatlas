@@ -44,9 +44,9 @@ const SettingsPage = () => {
   const handleCheckForUpdates = async () => {
     const hasUpdate = await checkForUpdate(true);
     if (hasUpdate) {
-      toast.success('New version available! Tap to update.');
+      toast.success(t('updateAvailable'));
     } else {
-      toast.success('You are on the latest version.');
+      toast.success(t('upToDate'));
     }
   };
 
@@ -75,7 +75,7 @@ const SettingsPage = () => {
             false
           );
         }
-        toast.success('Reminders disabled');
+        toast.success(t('remindersDisabled'));
         return;
       }
 
@@ -84,7 +84,7 @@ const SettingsPage = () => {
         const status = await checkPermission();
         
         if (status.denied) {
-          toast.error('Notifications are disabled. Please enable them in your device Settings.');
+            toast.error(t('notificationsDenied'));
           return;
         }
         
@@ -92,7 +92,7 @@ const SettingsPage = () => {
         // but don't schedule native notifications yet
         if (status.prompt) {
           await updateReminderSettings({ ...reminderSettings, enabled: true });
-          toast.info('Tap "Enable Notifications" below to receive push notifications.');
+            toast.info(t('tapEnableNotifications'));
           return;
         }
         
@@ -111,7 +111,7 @@ const SettingsPage = () => {
       
       toast.success('Reminders enabled');
     } catch (error) {
-      toast.error('Failed to update settings');
+      toast.error(t('failedToUpdateSettings'));
     }
   };
 
@@ -126,9 +126,9 @@ const SettingsPage = () => {
           true
         );
       }
-      toast.success('Notifications enabled!');
+      toast.success(t('notificationsEnabled'));
     } else if (permissionStatus.denied) {
-      toast.error('Notifications denied. Please enable them in your device Settings.');
+      toast.error(t('notificationsDenied'));
     }
   };
 
@@ -141,22 +141,22 @@ const SettingsPage = () => {
         await scheduleCheckInReminders(time, true);
       }
     } catch (error) {
-      toast.error('Failed to update settings');
+      toast.error(t('failedToUpdateSettings'));
     }
   };
 
   const handleTestNotification = async () => {
     const success = await scheduleTestNotification();
     if (success) {
-      toast.success('Test notification scheduled! It will appear in 5 seconds.');
+      toast.success(t('testNotificationScheduled'));
     } else {
-      toast.error('Failed to schedule test notification');
+      toast.error(t('testNotificationFailed'));
     }
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    toast.success('Signed out successfully');
+    toast.success(t('signedOut'));
     navigate('/auth');
   };
 
@@ -169,7 +169,7 @@ const SettingsPage = () => {
       const newCount = prev + 1;
       if (newCount >= 5) {
         setShowResetOnboarding(true);
-        toast.info('Debug options unlocked');
+        toast.info(t('debugOptionsUnlocked'));
         return 0;
       }
       return newCount;
@@ -181,7 +181,7 @@ const SettingsPage = () => {
   const handleResetOnboarding = () => {
     localStorage.removeItem('hasSeenOnboarding');
     localStorage.removeItem('onboardingData');
-    toast.success('Onboarding reset! Sign out and back in to see it.');
+    toast.success(t('onboardingReset'));
     setShowResetOnboarding(false);
   };
 
@@ -243,14 +243,14 @@ const SettingsPage = () => {
             )}
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-foreground">Night Mode</h3>
-            <p className="text-sm text-muted-foreground">Easier on your eyes in the dark</p>
+            <h3 className="font-semibold text-foreground">{t('nightMode')}</h3>
+            <p className="text-sm text-muted-foreground">{t('nightModeDesc')}</p>
           </div>
           <Switch 
             checked={theme === 'dark'}
             onCheckedChange={(checked) => {
               setTheme(checked ? 'dark' : 'light');
-              toast.success(checked ? 'Night mode enabled' : 'Light mode enabled');
+              toast.success(checked ? t('nightModeEnabled') : t('lightModeEnabled'));
             }}
           />
         </div>
@@ -262,8 +262,8 @@ const SettingsPage = () => {
             <Bell className="w-5 h-5 text-primary" />
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-foreground">Daily Reminder</h3>
-            <p className="text-sm text-muted-foreground">Get reminded to check in</p>
+            <h3 className="font-semibold text-foreground">{t('dailyReminder')}</h3>
+            <p className="text-sm text-muted-foreground">{t('dailyReminderDesc')}</p>
           </div>
           <Switch 
             checked={reminderSettings.enabled}
@@ -276,7 +276,7 @@ const SettingsPage = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm">Reminder time</span>
+                <span className="text-sm">{t('reminderTime')}</span>
               </div>
               <Input 
                 type="time"
@@ -290,7 +290,7 @@ const SettingsPage = () => {
               <div className="flex items-center gap-2 p-2 bg-primary/5 rounded-lg">
                 <CalendarClock className="w-4 h-4 text-primary" />
                 <span className="text-sm text-foreground">
-                  Next reminder: <span className="font-medium">{format(nextReminderTime, 'EEE, MMM d \'at\' h:mm a')}</span>
+                  {t('nextReminder', { time: format(nextReminderTime, 'EEE, MMM d \'at\' h:mm a') })}
                 </span>
               </div>
             )}
@@ -300,12 +300,12 @@ const SettingsPage = () => {
                 <div className="flex items-center gap-2">
                   <Smartphone className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm">
-                    Push notifications: {permissionStatus.granted ? (
-                      <span className="text-green-600 dark:text-green-400">Enabled</span>
+                    {t('pushNotifications')}: {permissionStatus.granted ? (
+                      <span className="text-green-600 dark:text-green-400">{t('enabled')}</span>
                     ) : permissionStatus.denied ? (
-                      <span className="text-red-600 dark:text-red-400">Denied</span>
+                      <span className="text-red-600 dark:text-red-400">{t('denied')}</span>
                     ) : (
-                      <span className="text-amber-600 dark:text-amber-400">Not enabled</span>
+                      <span className="text-amber-600 dark:text-amber-400">{t('notEnabled')}</span>
                     )}
                   </span>
                 </div>
@@ -316,11 +316,11 @@ const SettingsPage = () => {
                     onClick={handleEnableNotifications}
                     disabled={isRequestingPermission}
                   >
-                    {isRequestingPermission ? 'Enabling...' : 'Enable Notifications'}
+                    {isRequestingPermission ? t('enablingNotifications') : t('enableNotifications')}
                   </Button>
                 )}
                 {permissionStatus.denied && (
-                  <span className="text-xs text-muted-foreground">Open device Settings</span>
+                  <span className="text-xs text-muted-foreground">{t('openDeviceSettings')}</span>
                 )}
               </div>
             )}
@@ -333,21 +333,19 @@ const SettingsPage = () => {
                 className="w-full"
               >
                 <Bell className="w-4 h-4 mr-2" />
-                Send Test Notification
+                {t('sendTestNotification')}
               </Button>
             )}
             
             <p className="text-xs text-muted-foreground">
-              {isNative 
-                ? 'You\'ll receive a push notification at your scheduled time.'
-                : 'Reminder appears when you open the app after the scheduled time.'}
+              {isNative ? t('reminderNativeDesc') : t('reminderWebDesc')}
             </p>
             
             {isAndroid && (
               <div className="flex items-start gap-2 p-2 bg-amber-500/10 rounded-lg">
                 <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
                 <p className="text-xs text-amber-700 dark:text-amber-300">
-                  Due to Android battery optimization, notifications may occasionally be delayed by a few minutes.
+                  {t('androidBatteryWarning')}
                 </p>
               </div>
             )}
@@ -362,11 +360,11 @@ const SettingsPage = () => {
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-foreground">Cloud Sync</h3>
+              <h3 className="font-semibold text-foreground">{t('cloudSync')}</h3>
               {isSyncing && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              Your data is securely synced to the cloud. Log in on any device to access your progress.
+              {t('cloudSyncDesc')}
             </p>
           </div>
         </div>
@@ -378,10 +376,9 @@ const SettingsPage = () => {
             <Shield className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-semibold text-foreground">Your Privacy</h3>
+            <h3 className="font-semibold text-foreground">{t('privacy')}</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Your data is encrypted and only accessible by you.
-              Only your anonymous treatment votes are shared with the community.
+              {t('privacyDesc')}
             </p>
           </div>
         </div>
@@ -393,22 +390,22 @@ const SettingsPage = () => {
             <Info className="w-5 h-5 text-muted-foreground" />
           </div>
           <div>
-            <h3 className="font-semibold text-foreground">Your Data</h3>
-            <p className="text-sm text-muted-foreground">Synced across all your devices</p>
+            <h3 className="font-semibold text-foreground">{t('yourData')}</h3>
+            <p className="text-sm text-muted-foreground">{t('yourDataDesc')}</p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div className="text-center p-3 bg-muted/50 rounded-xl">
             <p className="text-xl font-bold text-primary">{photos.length}</p>
-            <p className="text-xs text-muted-foreground">Photos</p>
+            <p className="text-xs text-muted-foreground">{t('photos', { defaultValue: 'Photos' })}</p>
           </div>
           <div className="text-center p-3 bg-muted/50 rounded-xl">
             <p className="text-xl font-bold text-primary">{checkIns.length}</p>
-            <p className="text-xs text-muted-foreground">Check-ins</p>
+            <p className="text-xs text-muted-foreground">{t('checkIns', { defaultValue: 'Check-ins' })}</p>
           </div>
           <div className="text-center p-3 bg-muted/50 rounded-xl">
             <p className="text-xl font-bold text-primary">{journalEntries.length}</p>
-            <p className="text-xs text-muted-foreground">Journal</p>
+            <p className="text-xs text-muted-foreground">{t('journal', { defaultValue: 'Journal' })}</p>
           </div>
         </div>
       </div>
@@ -420,13 +417,13 @@ const SettingsPage = () => {
               <UserCog className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-foreground">Admin Panel</h3>
+            <h3 className="font-semibold text-foreground">{t('adminPanel')}</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Review and approve treatment suggestions from the community.
+              {t('adminPanelDesc')}
               </p>
               <Link to="/admin">
-                <Button variant="outline" size="sm" className="mt-3">
-                  Open Admin Panel
+              <Button variant="outline" size="sm" className="mt-3">
+                {t('openAdminPanel')}
                 </Button>
               </Link>
             </div>
@@ -441,20 +438,20 @@ const SettingsPage = () => {
               <Eye className="w-5 h-5 text-amber-500" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-foreground">Demo Mode</h3>
-              <p className="text-sm text-muted-foreground">Insights preview only - edit past data for demos</p>
+            <h3 className="font-semibold text-foreground">{t('demoMode')}</h3>
+            <p className="text-sm text-muted-foreground">{t('demoModeDesc')}</p>
             </div>
             <Switch 
               checked={isDemoMode}
               onCheckedChange={() => {
                 toggleDemoMode();
-                toast.success(isDemoMode ? 'Demo Mode disabled' : 'Demo Mode enabled');
+                toast.success(isDemoMode ? t('demoModeDisabled') : t('demoModeEnabled'));
               }}
             />
           </div>
           {isDemoMode && (
             <p className="text-xs text-amber-500 mt-2 pl-12">
-              Demo data is in-memory only and will reset on refresh.
+              {t('demoModeNote')}
             </p>
           )}
         </div>
@@ -469,7 +466,7 @@ const SettingsPage = () => {
             <RefreshCw className="w-5 h-5 text-primary" />
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-foreground">Version</h3>
+            <h3 className="font-semibold text-foreground">{t('version')}</h3>
             <p className="text-sm text-muted-foreground mt-1 font-mono">
               {currentVersion}
             </p>
@@ -484,9 +481,9 @@ const SettingsPage = () => {
               <RotateCcw className="w-5 h-5 text-amber-500" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-foreground">Debug: Reset Onboarding</h3>
+              <h3 className="font-semibold text-foreground">{t('resetOnboarding')}</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Clear onboarding state to test the flow again.
+                {t('resetOnboardingDesc')}
               </p>
               <Button 
                 variant="outline" 
@@ -494,7 +491,7 @@ const SettingsPage = () => {
                 className="mt-3 border-amber-500/50 text-amber-600"
                 onClick={handleResetOnboarding}
               >
-                Reset Onboarding
+                {t('resetOnboardingButton')}
               </Button>
             </div>
           </div>
@@ -502,13 +499,12 @@ const SettingsPage = () => {
       )}
 
       <div className="glass-card p-4">
-        <h3 className="font-semibold text-foreground mb-2">About TrackTSW</h3>
+        <h3 className="font-semibold text-foreground mb-2">{t('about')}</h3>
         <p className="text-sm text-muted-foreground">
-          A privacy-focused app to help you track your Topical Steroid Withdrawal journey. 
-          Remember: healing is not linear, and every day you're getting closer to healthy skin.
+          {t('aboutDesc')}
         </p>
         <p className="text-xs text-muted-foreground mt-3">
-          Version {currentVersion} • Made with care
+          {t('version')} {currentVersion} • {t('madeWithCare')}
         </p>
       </div>
 
@@ -521,9 +517,9 @@ const SettingsPage = () => {
             <Mail className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-semibold text-foreground">Contact Us</h3>
+            <h3 className="font-semibold text-foreground">{t('contactUs')}</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Questions, feedback, or feature requests? We'd love to hear from you.
+              {t('contactUsDesc')}
             </p>
             <p className="text-xs text-primary mt-2">contact@tracktsw.app</p>
           </div>
@@ -536,7 +532,7 @@ const SettingsPage = () => {
         onClick={handleLogout}
       >
         <LogOut className="w-4 h-4" />
-        Sign Out
+        {t('signOut')}
       </Button>
     </div>
   );
