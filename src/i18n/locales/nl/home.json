@@ -1,0 +1,23 @@
+{
+  "title": "TrackTSW",
+  "daysHealing": "days healing",
+  "started": "Started: {{date}}",
+  "trackJourney": "Track Your TSW Journey",
+  "trackJourneyDesc": "Set the date you stopped steroids to track your healing progress.",
+  "setStartDate": "Set Start Date",
+  "whenStopped": "When did you stop steroids?",
+  "saveDate": "Save Date",
+  "todaysStatus": "Today's Status",
+  "photos": "Photos",
+  "checkIns": "Check-ins",
+  "journal": "Journal",
+  "streak": "Streak",
+  "communityFavourites": "Community Favourites",
+  "noVotesYet": "No community votes yet.",
+  "beFirstToVote": "Be the first to vote →",
+  "helpful": "helpful",
+  "votes": "votes",
+  "journalQuickAccess": "Journal",
+  "writeAboutJourney": "Write about your journey",
+  "premium": "Premium"
+}

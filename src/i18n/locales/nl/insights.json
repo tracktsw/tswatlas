@@ -1,0 +1,41 @@
+{
+  "title": "Insights",
+  "subtitle": "Your healing journey at a glance",
+  "noData": "No check-in data yet",
+  "noDataDesc": "Start tracking to see your insights",
+  "startTracking": "Start your first check-in",
+  "timeRanges": {
+    "7d": "7 Days",
+    "30d": "30 Days",
+    "90d": "90 Days",
+    "all": "All Time"
+  },
+  "skinTrends": "Skin Trends",
+  "skinTrendsDesc": "Your skin feeling over time",
+  "moodTrends": "Mood Trends",
+  "moodTrendsDesc": "Your mood patterns over time",
+  "sleepTrends": "Sleep Trends",
+  "sleepTrendsDesc": "Your sleep quality over time",
+  "painTrends": "Pain Trends",
+  "painTrendsDesc": "Your pain levels over time",
+  "symptoms": "Symptoms",
+  "symptomsDesc": "Most common symptoms",
+  "triggers": "Trigger Patterns",
+  "triggersDesc": "What affects your skin",
+  "whatHelped": "What Helped",
+  "whatHelpedDesc": "Treatments that correlate with better days",
+  "averages": {
+    "skin": "Avg Skin",
+    "mood": "Avg Mood",
+    "sleep": "Avg Sleep",
+    "pain": "Avg Pain"
+  },
+  "trend": {
+    "improving": "Improving",
+    "stable": "Stable",
+    "declining": "Needs attention"
+  },
+  "premiumRequired": "Premium Required",
+  "premiumRequiredDesc": "Upgrade to Premium to unlock detailed insights and trends",
+  "upgrade": "Upgrade to Premium"
+}

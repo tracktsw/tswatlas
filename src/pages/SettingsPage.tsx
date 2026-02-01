@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock, Mail, Eye, Smartphone, RotateCcw, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock, Mail, Eye, Smartphone, RotateCcw, AlertCircle, Globe } from 'lucide-react';
 import { usePlatform } from '@/hooks/usePlatform';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { useUserData } from '@/contexts/UserDataContext';
 import { useDemoMode } from '@/contexts/DemoModeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SubscriptionCard from '@/components/SubscriptionCard';
@@ -17,11 +19,14 @@ import { useCheckInReminder } from '@/hooks/useCheckInReminder';
 import { useLocalNotifications } from '@/hooks/useLocalNotifications';
 import { scheduleCheckInReminders } from '@/utils/notificationScheduler';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 const SettingsPage = () => {
+  const { t } = useTranslation('settings');
   const { reminderSettings, updateReminderSettings, photos, checkIns, journalEntries, isLoading, isSyncing, userId } = useUserData();
   const { isAdmin, refreshSubscription } = useSubscription();
   const { isDemoMode, isAdmin: isDemoAdmin, toggleDemoMode } = useDemoMode();
+  const { language, setLanguage, supportedLanguages, isLoading: isLanguageLoading } = useLanguage();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -191,13 +196,42 @@ const SettingsPage = () => {
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
-          <h1 className="font-display text-2xl font-bold text-foreground">Settings</h1>
-          <p className="text-sm text-muted-foreground">Customize your experience</p>
+          <h1 className="font-display text-2xl font-bold text-foreground">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
         </div>
       </div>
 
       {/* All the content cards remain the same... */}
       <SubscriptionCard />
+
+      {/* Language Selector */}
+      <div className="glass-card p-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-full bg-primary/10">
+            <Globe className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-foreground">{t('language')}</h3>
+            <p className="text-sm text-muted-foreground mt-1">{t('languageDesc')}</p>
+            <Select 
+              value={language} 
+              onValueChange={(value) => setLanguage(value as any)}
+              disabled={isLanguageLoading}
+            >
+              <SelectTrigger className="w-full mt-3">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {supportedLanguages.map((lang) => (
+                  <SelectItem key={lang.code} value={lang.code}>
+                    {lang.nativeName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
 
       <div className="glass-card p-4">
         <div className="flex items-center gap-3">
