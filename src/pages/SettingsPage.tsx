@@ -1,15 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock, Mail, Eye, Smartphone, RotateCcw, AlertCircle, Globe } from 'lucide-react';
+import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock, Mail, Eye, Smartphone, RotateCcw, AlertCircle } from 'lucide-react';
 import { usePlatform } from '@/hooks/usePlatform';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { useUserData } from '@/contexts/UserDataContext';
 import { useDemoMode } from '@/contexts/DemoModeContext';
-import { useLanguage } from '@/contexts/LanguageContext';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import SubscriptionCard from '@/components/SubscriptionCard';
@@ -19,14 +17,11 @@ import { useCheckInReminder } from '@/hooks/useCheckInReminder';
 import { useLocalNotifications } from '@/hooks/useLocalNotifications';
 import { scheduleCheckInReminders } from '@/utils/notificationScheduler';
 import { format } from 'date-fns';
-import { useTranslation } from 'react-i18next';
 
 const SettingsPage = () => {
-  const { t } = useTranslation('settings');
   const { reminderSettings, updateReminderSettings, photos, checkIns, journalEntries, isLoading, isSyncing, userId } = useUserData();
   const { isAdmin, refreshSubscription } = useSubscription();
   const { isDemoMode, isAdmin: isDemoAdmin, toggleDemoMode } = useDemoMode();
-  const { language, setLanguage, supportedLanguages, isLoading: isLanguageLoading } = useLanguage();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -44,9 +39,9 @@ const SettingsPage = () => {
   const handleCheckForUpdates = async () => {
     const hasUpdate = await checkForUpdate(true);
     if (hasUpdate) {
-      toast.success(t('updateAvailable'));
+      toast.success('New version available! Tap to update.');
     } else {
-      toast.success(t('upToDate'));
+      toast.success('You are on the latest version.');
     }
   };
 
@@ -75,7 +70,7 @@ const SettingsPage = () => {
             false
           );
         }
-        toast.success(t('remindersDisabled'));
+        toast.success('Reminders disabled');
         return;
       }
 
@@ -84,7 +79,7 @@ const SettingsPage = () => {
         const status = await checkPermission();
         
         if (status.denied) {
-            toast.error(t('notificationsDenied'));
+          toast.error('Notifications are disabled. Please enable them in your device Settings.');
           return;
         }
         
@@ -92,7 +87,7 @@ const SettingsPage = () => {
         // but don't schedule native notifications yet
         if (status.prompt) {
           await updateReminderSettings({ ...reminderSettings, enabled: true });
-            toast.info(t('tapEnableNotifications'));
+          toast.info('Tap "Enable Notifications" below to receive push notifications.');
           return;
         }
         
@@ -111,7 +106,7 @@ const SettingsPage = () => {
       
       toast.success('Reminders enabled');
     } catch (error) {
-      toast.error(t('failedToUpdateSettings'));
+      toast.error('Failed to update settings');
     }
   };
 
@@ -126,9 +121,9 @@ const SettingsPage = () => {
           true
         );
       }
-      toast.success(t('notificationsEnabled'));
+      toast.success('Notifications enabled!');
     } else if (permissionStatus.denied) {
-      toast.error(t('notificationsDenied'));
+      toast.error('Notifications denied. Please enable them in your device Settings.');
     }
   };
 
@@ -141,22 +136,22 @@ const SettingsPage = () => {
         await scheduleCheckInReminders(time, true);
       }
     } catch (error) {
-      toast.error(t('failedToUpdateSettings'));
+      toast.error('Failed to update settings');
     }
   };
 
   const handleTestNotification = async () => {
     const success = await scheduleTestNotification();
     if (success) {
-      toast.success(t('testNotificationScheduled'));
+      toast.success('Test notification scheduled! It will appear in 5 seconds.');
     } else {
-      toast.error(t('testNotificationFailed'));
+      toast.error('Failed to schedule test notification');
     }
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    toast.success(t('signedOut'));
+    toast.success('Signed out successfully');
     navigate('/auth');
   };
 
@@ -169,7 +164,7 @@ const SettingsPage = () => {
       const newCount = prev + 1;
       if (newCount >= 5) {
         setShowResetOnboarding(true);
-        toast.info(t('debugOptionsUnlocked'));
+        toast.info('Debug options unlocked');
         return 0;
       }
       return newCount;
@@ -181,7 +176,7 @@ const SettingsPage = () => {
   const handleResetOnboarding = () => {
     localStorage.removeItem('hasSeenOnboarding');
     localStorage.removeItem('onboardingData');
-    toast.success(t('onboardingReset'));
+    toast.success('Onboarding reset! Sign out and back in to see it.');
     setShowResetOnboarding(false);
   };
 
@@ -196,42 +191,13 @@ const SettingsPage = () => {
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
-          <h1 className="font-display text-2xl font-bold text-foreground">{t('title')}</h1>
-          <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
+          <h1 className="font-display text-2xl font-bold text-foreground">Settings</h1>
+          <p className="text-sm text-muted-foreground">Customize your experience</p>
         </div>
       </div>
 
       {/* All the content cards remain the same... */}
       <SubscriptionCard />
-
-      {/* Language Selector */}
-      <div className="glass-card p-4">
-        <div className="flex items-start gap-3">
-          <div className="p-2 rounded-full bg-primary/10">
-            <Globe className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-foreground">{t('language')}</h3>
-            <p className="text-sm text-muted-foreground mt-1">{t('languageDesc')}</p>
-            <Select 
-              value={language} 
-              onValueChange={(value) => setLanguage(value as any)}
-              disabled={isLanguageLoading}
-            >
-              <SelectTrigger className="w-full mt-3">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {supportedLanguages.map((lang) => (
-                  <SelectItem key={lang.code} value={lang.code}>
-                    {lang.nativeName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
 
       <div className="glass-card p-4">
         <div className="flex items-center gap-3">
@@ -243,14 +209,14 @@ const SettingsPage = () => {
             )}
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-foreground">{t('nightMode')}</h3>
-            <p className="text-sm text-muted-foreground">{t('nightModeDesc')}</p>
+            <h3 className="font-semibold text-foreground">Night Mode</h3>
+            <p className="text-sm text-muted-foreground">Easier on your eyes in the dark</p>
           </div>
           <Switch 
             checked={theme === 'dark'}
             onCheckedChange={(checked) => {
               setTheme(checked ? 'dark' : 'light');
-              toast.success(checked ? t('nightModeEnabled') : t('lightModeEnabled'));
+              toast.success(checked ? 'Night mode enabled' : 'Light mode enabled');
             }}
           />
         </div>
@@ -262,8 +228,8 @@ const SettingsPage = () => {
             <Bell className="w-5 h-5 text-primary" />
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-foreground">{t('dailyReminder')}</h3>
-            <p className="text-sm text-muted-foreground">{t('dailyReminderDesc')}</p>
+            <h3 className="font-semibold text-foreground">Daily Reminder</h3>
+            <p className="text-sm text-muted-foreground">Get reminded to check in</p>
           </div>
           <Switch 
             checked={reminderSettings.enabled}
@@ -276,7 +242,7 @@ const SettingsPage = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm">{t('reminderTime')}</span>
+                <span className="text-sm">Reminder time</span>
               </div>
               <Input 
                 type="time"
@@ -290,7 +256,7 @@ const SettingsPage = () => {
               <div className="flex items-center gap-2 p-2 bg-primary/5 rounded-lg">
                 <CalendarClock className="w-4 h-4 text-primary" />
                 <span className="text-sm text-foreground">
-                  {t('nextReminder', { time: format(nextReminderTime, 'EEE, MMM d \'at\' h:mm a') })}
+                  Next reminder: <span className="font-medium">{format(nextReminderTime, 'EEE, MMM d \'at\' h:mm a')}</span>
                 </span>
               </div>
             )}
@@ -300,12 +266,12 @@ const SettingsPage = () => {
                 <div className="flex items-center gap-2">
                   <Smartphone className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm">
-                    {t('pushNotifications')}: {permissionStatus.granted ? (
-                      <span className="text-green-600 dark:text-green-400">{t('enabled')}</span>
+                    Push notifications: {permissionStatus.granted ? (
+                      <span className="text-green-600 dark:text-green-400">Enabled</span>
                     ) : permissionStatus.denied ? (
-                      <span className="text-red-600 dark:text-red-400">{t('denied')}</span>
+                      <span className="text-red-600 dark:text-red-400">Denied</span>
                     ) : (
-                      <span className="text-amber-600 dark:text-amber-400">{t('notEnabled')}</span>
+                      <span className="text-amber-600 dark:text-amber-400">Not enabled</span>
                     )}
                   </span>
                 </div>
@@ -316,11 +282,11 @@ const SettingsPage = () => {
                     onClick={handleEnableNotifications}
                     disabled={isRequestingPermission}
                   >
-                    {isRequestingPermission ? t('enablingNotifications') : t('enableNotifications')}
+                    {isRequestingPermission ? 'Enabling...' : 'Enable Notifications'}
                   </Button>
                 )}
                 {permissionStatus.denied && (
-                  <span className="text-xs text-muted-foreground">{t('openDeviceSettings')}</span>
+                  <span className="text-xs text-muted-foreground">Open device Settings</span>
                 )}
               </div>
             )}
@@ -333,19 +299,21 @@ const SettingsPage = () => {
                 className="w-full"
               >
                 <Bell className="w-4 h-4 mr-2" />
-                {t('sendTestNotification')}
+                Send Test Notification
               </Button>
             )}
             
             <p className="text-xs text-muted-foreground">
-              {isNative ? t('reminderNativeDesc') : t('reminderWebDesc')}
+              {isNative 
+                ? 'You\'ll receive a push notification at your scheduled time.'
+                : 'Reminder appears when you open the app after the scheduled time.'}
             </p>
             
             {isAndroid && (
               <div className="flex items-start gap-2 p-2 bg-amber-500/10 rounded-lg">
                 <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
                 <p className="text-xs text-amber-700 dark:text-amber-300">
-                  {t('androidBatteryWarning')}
+                  Due to Android battery optimization, notifications may occasionally be delayed by a few minutes.
                 </p>
               </div>
             )}
@@ -360,11 +328,11 @@ const SettingsPage = () => {
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-foreground">{t('cloudSync')}</h3>
+              <h3 className="font-semibold text-foreground">Cloud Sync</h3>
               {isSyncing && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              {t('cloudSyncDesc')}
+              Your data is securely synced to the cloud. Log in on any device to access your progress.
             </p>
           </div>
         </div>
@@ -376,9 +344,10 @@ const SettingsPage = () => {
             <Shield className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-semibold text-foreground">{t('privacy')}</h3>
+            <h3 className="font-semibold text-foreground">Your Privacy</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              {t('privacyDesc')}
+              Your data is encrypted and only accessible by you.
+              Only your anonymous treatment votes are shared with the community.
             </p>
           </div>
         </div>
@@ -390,22 +359,22 @@ const SettingsPage = () => {
             <Info className="w-5 h-5 text-muted-foreground" />
           </div>
           <div>
-            <h3 className="font-semibold text-foreground">{t('yourData')}</h3>
-            <p className="text-sm text-muted-foreground">{t('yourDataDesc')}</p>
+            <h3 className="font-semibold text-foreground">Your Data</h3>
+            <p className="text-sm text-muted-foreground">Synced across all your devices</p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div className="text-center p-3 bg-muted/50 rounded-xl">
             <p className="text-xl font-bold text-primary">{photos.length}</p>
-            <p className="text-xs text-muted-foreground">{t('photos', { defaultValue: 'Photos' })}</p>
+            <p className="text-xs text-muted-foreground">Photos</p>
           </div>
           <div className="text-center p-3 bg-muted/50 rounded-xl">
             <p className="text-xl font-bold text-primary">{checkIns.length}</p>
-            <p className="text-xs text-muted-foreground">{t('checkIns', { defaultValue: 'Check-ins' })}</p>
+            <p className="text-xs text-muted-foreground">Check-ins</p>
           </div>
           <div className="text-center p-3 bg-muted/50 rounded-xl">
             <p className="text-xl font-bold text-primary">{journalEntries.length}</p>
-            <p className="text-xs text-muted-foreground">{t('journal', { defaultValue: 'Journal' })}</p>
+            <p className="text-xs text-muted-foreground">Journal</p>
           </div>
         </div>
       </div>
@@ -417,13 +386,13 @@ const SettingsPage = () => {
               <UserCog className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1">
-            <h3 className="font-semibold text-foreground">{t('adminPanel')}</h3>
+              <h3 className="font-semibold text-foreground">Admin Panel</h3>
               <p className="text-sm text-muted-foreground mt-1">
-              {t('adminPanelDesc')}
+                Review and approve treatment suggestions from the community.
               </p>
               <Link to="/admin">
-              <Button variant="outline" size="sm" className="mt-3">
-                {t('openAdminPanel')}
+                <Button variant="outline" size="sm" className="mt-3">
+                  Open Admin Panel
                 </Button>
               </Link>
             </div>
@@ -438,20 +407,20 @@ const SettingsPage = () => {
               <Eye className="w-5 h-5 text-amber-500" />
             </div>
             <div className="flex-1">
-            <h3 className="font-semibold text-foreground">{t('demoMode')}</h3>
-            <p className="text-sm text-muted-foreground">{t('demoModeDesc')}</p>
+              <h3 className="font-semibold text-foreground">Demo Mode</h3>
+              <p className="text-sm text-muted-foreground">Insights preview only - edit past data for demos</p>
             </div>
             <Switch 
               checked={isDemoMode}
               onCheckedChange={() => {
                 toggleDemoMode();
-                toast.success(isDemoMode ? t('demoModeDisabled') : t('demoModeEnabled'));
+                toast.success(isDemoMode ? 'Demo Mode disabled' : 'Demo Mode enabled');
               }}
             />
           </div>
           {isDemoMode && (
             <p className="text-xs text-amber-500 mt-2 pl-12">
-              {t('demoModeNote')}
+              Demo data is in-memory only and will reset on refresh.
             </p>
           )}
         </div>
@@ -466,7 +435,7 @@ const SettingsPage = () => {
             <RefreshCw className="w-5 h-5 text-primary" />
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-foreground">{t('version')}</h3>
+            <h3 className="font-semibold text-foreground">Version</h3>
             <p className="text-sm text-muted-foreground mt-1 font-mono">
               {currentVersion}
             </p>
@@ -481,9 +450,9 @@ const SettingsPage = () => {
               <RotateCcw className="w-5 h-5 text-amber-500" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-foreground">{t('resetOnboarding')}</h3>
+              <h3 className="font-semibold text-foreground">Debug: Reset Onboarding</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                {t('resetOnboardingDesc')}
+                Clear onboarding state to test the flow again.
               </p>
               <Button 
                 variant="outline" 
@@ -491,7 +460,7 @@ const SettingsPage = () => {
                 className="mt-3 border-amber-500/50 text-amber-600"
                 onClick={handleResetOnboarding}
               >
-                {t('resetOnboardingButton')}
+                Reset Onboarding
               </Button>
             </div>
           </div>
@@ -499,12 +468,13 @@ const SettingsPage = () => {
       )}
 
       <div className="glass-card p-4">
-        <h3 className="font-semibold text-foreground mb-2">{t('about')}</h3>
+        <h3 className="font-semibold text-foreground mb-2">About TrackTSW</h3>
         <p className="text-sm text-muted-foreground">
-          {t('aboutDesc')}
+          A privacy-focused app to help you track your Topical Steroid Withdrawal journey. 
+          Remember: healing is not linear, and every day you're getting closer to healthy skin.
         </p>
         <p className="text-xs text-muted-foreground mt-3">
-          {t('version')} {currentVersion} • {t('madeWithCare')}
+          Version {currentVersion} • Made with care
         </p>
       </div>
 
@@ -517,9 +487,9 @@ const SettingsPage = () => {
             <Mail className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-semibold text-foreground">{t('contactUs')}</h3>
+            <h3 className="font-semibold text-foreground">Contact Us</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              {t('contactUsDesc')}
+              Questions, feedback, or feature requests? We'd love to hear from you.
             </p>
             <p className="text-xs text-primary mt-2">contact@tracktsw.app</p>
           </div>
@@ -532,7 +502,7 @@ const SettingsPage = () => {
         onClick={handleLogout}
       >
         <LogOut className="w-4 h-4" />
-        {t('signOut')}
+        Sign Out
       </Button>
     </div>
   );

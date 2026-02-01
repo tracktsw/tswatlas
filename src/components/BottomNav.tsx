@@ -3,16 +3,15 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Camera, CheckCircle, BarChart3, Users, Leaf } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils';
-import { useTranslation } from 'react-i18next';
 
-const navItemsBase = [
-  { path: '/', icon: Home, key: 'nav.home' },
-  { path: '/photos', icon: Camera, key: 'nav.photos' },
-  { path: '/check-in', icon: CheckCircle, key: 'nav.checkIn' },
-  { path: '/insights', icon: BarChart3, key: 'nav.insights' },
-  { path: '/community', icon: Users, key: 'nav.community' },
-  { path: '/coach', icon: Leaf, key: 'nav.coach' },
-] as const;
+const navItems = [
+  { path: '/', icon: Home, label: 'Home' },
+  { path: '/photos', icon: Camera, label: 'Photos' },
+  { path: '/check-in', icon: CheckCircle, label: 'Check-in' },
+  { path: '/insights', icon: BarChart3, label: 'Insights' },
+  { path: '/community', icon: Users, label: 'Community' },
+  { path: '/coach', icon: Leaf, label: 'Coach' },
+];
 
 const pageImports: Record<string, () => Promise<unknown>> = {
   '/': () => import('@/pages/HomePage'),
@@ -24,15 +23,9 @@ const pageImports: Record<string, () => Promise<unknown>> = {
 };
 
 const BottomNav = () => {
-  const { t } = useTranslation('common');
   const location = useLocation();
   const platform = Capacitor.getPlatform();
   const isAndroid = platform === 'android';
-
-  const navItems = useMemo(
-    () => navItemsBase.map((item) => ({ ...item, label: t(item.key) })),
-    [t]
-  );
 
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
@@ -40,7 +33,7 @@ const BottomNav = () => {
   const preloadedRoutes = useRef<Set<string>>(new Set());
 
   const activeIndex = useMemo(() => {
-    const index = navItemsBase.findIndex((item) => item.path === location.pathname);
+    const index = navItems.findIndex((item) => item.path === location.pathname);
     return index >= 0 ? index : 0;
   }, [location.pathname]);
 

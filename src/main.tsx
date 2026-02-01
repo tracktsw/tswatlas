@@ -2,7 +2,6 @@ import { createRoot } from "react-dom/client";
 import posthog from 'posthog-js';
 import App from "./App.tsx";
 import "./index.css";
-import "./i18n"; // Initialize i18n
 import { Capacitor } from '@capacitor/core';
 import { SafeArea } from 'capacitor-plugin-safe-area';
 

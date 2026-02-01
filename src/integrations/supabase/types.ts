@@ -290,7 +290,6 @@ export type Database = {
           custom_triggers: string[]
           evening_time: string
           id: string
-          language: string | null
           last_reminded_at: string | null
           morning_time: string
           reminders_enabled: boolean
@@ -307,7 +306,6 @@ export type Database = {
           custom_triggers?: string[]
           evening_time?: string
           id?: string
-          language?: string | null
           last_reminded_at?: string | null
           morning_time?: string
           reminders_enabled?: boolean
@@ -324,7 +322,6 @@ export type Database = {
           custom_triggers?: string[]
           evening_time?: string
           id?: string
-          language?: string | null
           last_reminded_at?: string | null
           morning_time?: string
           reminders_enabled?: boolean
