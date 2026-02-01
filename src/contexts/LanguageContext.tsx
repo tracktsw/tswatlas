@@ -34,7 +34,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           .from('user_settings')
           .select('language')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
         
         if (settings?.language) {
           const userLang = settings.language as SupportedLanguage;
@@ -58,7 +58,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           .from('user_settings')
           .select('language')
           .eq('user_id', session.user.id)
-          .single();
+          .maybeSingle();
         
         if (settings?.language) {
           const userLang = settings.language as SupportedLanguage;
