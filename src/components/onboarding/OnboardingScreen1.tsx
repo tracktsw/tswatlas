@@ -63,7 +63,7 @@ export const OnboardingScreen1: React.FC = () => {
         </div>
         <button
           onClick={handleSkip}
-          className="text-muted-foreground text-sm font-medium px-3 py-2 hover:text-foreground transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+          className="text-foreground text-sm font-semibold px-3 py-2 hover:text-foreground/80 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
           aria-label="Skip onboarding"
         >
           Skip
