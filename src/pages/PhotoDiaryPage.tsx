@@ -972,16 +972,11 @@ const PhotoDiaryPage = () => {
             variant="outline" 
             size="sm"
             className="rounded-xl gap-1.5"
-            onClick={() => isPremium ? setCompareMode(true) : setShowComparePaywall(true)}
+            onClick={() => setCompareMode(true)}
             disabled={photos.length < 2 || isSubscriptionLoading}
           >
-            {!isSubscriptionLoading && !isPremium && <Lock className="w-3.5 h-3.5" />}
+            <Sparkles className="w-3.5 h-3.5" />
             Compare
-            {!isSubscriptionLoading && !isPremium && (
-              <span className="text-[10px] font-semibold bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">
-                Premium
-              </span>
-            )}
           </Button>
         )}
       </div>
