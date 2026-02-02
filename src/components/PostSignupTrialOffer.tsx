@@ -13,7 +13,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { getTermsUrl, PRIVACY_POLICY_URL, type Platform } from '@/utils/platformLinks';
 import { cn } from '@/lib/utils';
 import { LeafIllustration } from '@/components/illustrations';
-import compassLogo from '@/assets/compass-logo.png';
+import trackTswLogo from '@/assets/tracktsw-logo-transparent.png';
 
 const POST_SIGNUP_OFFER_KEY = 'post_signup_trial_offer_shown';
 
@@ -58,20 +58,32 @@ export const PostSignupTrialOffer = ({ onContinue }: PostSignupTrialOfferProps) 
   }, [hasSeenOffer]);
 
   const handleStartTrial = async () => {
+    console.log('[PostSignupTrialOffer] handleStartTrial called', {
+      isNative,
+      isOfferingsReady,
+      platform,
+    });
+    
     setIsStarting(true);
     
     // On native, retry offerings if not ready
     if (isNative && !isOfferingsReady) {
+      console.log('[PostSignupTrialOffer] Native: offerings not ready, retrying...');
       await retryOfferings();
       setIsStarting(false);
       return;
     }
 
+    console.log('[PostSignupTrialOffer] Calling startPurchase...');
+    
     // startPurchase handles platform routing:
     // - iOS → RevenueCat IAP
     // - Android → RevenueCat Google Play Billing  
     // - Web → Stripe checkout redirect
     const result = await startPurchase();
+    
+    console.log('[PostSignupTrialOffer] startPurchase result:', result);
+    
     setIsStarting(false);
     
     // On native, success means purchase completed
@@ -116,8 +128,8 @@ export const PostSignupTrialOffer = ({ onContinue }: PostSignupTrialOfferProps) 
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 max-w-md mx-auto">
         {/* Logo */}
         <div className="mb-6 animate-fade-in">
-          <div className="w-20 h-20 rounded-3xl bg-white shadow-warm flex items-center justify-center">
-            <img src={compassLogo} alt="TrackTSW" className="w-16 h-16" />
+          <div className="w-20 h-20 rounded-3xl flex items-center justify-center">
+            <img src={trackTswLogo} alt="TrackTSW" className="w-20 h-20" />
           </div>
         </div>
 
