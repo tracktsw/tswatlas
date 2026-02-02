@@ -2,16 +2,20 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
+import { PostSignupTrialOffer } from '@/components/PostSignupTrialOffer';
 
 interface AuthGuardProps {
   children: React.ReactNode;
 }
 
 const STORAGE_KEY_SEEN = 'hasSeenOnboarding';
+const POST_SIGNUP_OFFER_SHOWN_KEY = 'post_signup_trial_offer_shown';
+const JUST_SIGNED_UP_KEY = 'just_signed_up';
 
 const AuthGuard = ({ children }: AuthGuardProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showPostSignupOffer, setShowPostSignupOffer] = useState(false);
   const navigate = useNavigate();
   const hasInitialized = useRef(false);
 
@@ -38,12 +42,27 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
         
         if (!session?.user) {
           redirectUnauthenticated();
+        } else {
+          // Check if this is a fresh signup - show post-signup offer
+          const justSignedUp = localStorage.getItem(JUST_SIGNED_UP_KEY) === 'true';
+          const hasSeenOffer = localStorage.getItem(POST_SIGNUP_OFFER_SHOWN_KEY) === 'true';
+          
+          if (justSignedUp && !hasSeenOffer) {
+            // Clear the just signed up flag and show the offer
+            localStorage.removeItem(JUST_SIGNED_UP_KEY);
+            setShowPostSignupOffer(true);
+          }
         }
       }
     );
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  const handleOfferContinue = () => {
+    localStorage.setItem(POST_SIGNUP_OFFER_SHOWN_KEY, 'true');
+    setShowPostSignupOffer(false);
+  };
 
   if (loading) {
     return (
@@ -55,6 +74,11 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
 
   if (!user) {
     return null;
+  }
+
+  // Show post-signup trial offer if applicable
+  if (showPostSignupOffer) {
+    return <PostSignupTrialOffer onContinue={handleOfferContinue} />;
   }
 
   return <>{children}</>;

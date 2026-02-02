@@ -5,6 +5,7 @@ import { useVirtualizedPhotos, VirtualPhoto, SortOrder, BodyPart as VBodyPart } 
 import { VirtualizedPhotoGrid } from '@/components/VirtualizedPhotoGrid';
 import { ComparisonViewer } from '@/components/ComparisonViewer';
 import { BatchUploadModal } from '@/components/BatchUploadModal';
+import { PhotoComparisonTeaser } from '@/components/PhotoComparisonTeaser';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogContentFullscreen, DialogDescription, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -1134,6 +1135,11 @@ const PhotoDiaryPage = () => {
             </p>
           </div>
         </div>
+      )}
+
+      {/* Photo Comparison Teaser - shows for free users with 2+ photos */}
+      {!isPremium && photos.length >= 2 && (
+        <PhotoComparisonTeaser photoCount={photos.length} isPremium={isPremium} />
       )}
 
       {/* Upgrade Prompt Dialog */}
