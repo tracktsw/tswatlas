@@ -1,138 +1,102 @@
 
-# Streamlined Onboarding Flow
+# Fix Post-Signup Trial Paywall Not Triggering Payment
 
-## The Problem
+## Problem Identified
+The console logs show the issue clearly:
+- `isNative: true` (iOS detected correctly)
+- `isOfferingsReady: false` (RevenueCat offerings haven't loaded yet)
+- `platform: "ios"`
 
-The current onboarding has 6 screens, and analytics show that very few users complete it. Users are dropping off before they even create an account.
+When the user clicks "Start Free Trial", the code calls `retryOfferings()` and then **returns early**, never calling `startPurchase()`. This is because RevenueCat is still initializing after the sign-up completes.
 
-## Current Flow (6 screens)
-1. **Screen 1**: Welcome / "Stop Guessing. Start Healing."
-2. **Screen 2**: Pain points list (4 cards about TSW struggles)
-3. **Screen 3**: Two feature screenshots (improvement + triggers)
-4. **Screen 4**: Two feature screenshots (food + product analysis)
-5. **Screen 5**: Two feature screenshots (symptoms + sleep)
-6. **Screen 6**: Survey questions (3 dropdowns about TSW impact)
+## Root Cause
+The `RevenueCatContext` starts initializing RevenueCat when the user signs in (via the auth state change listener). However, this initialization is asynchronous and takes time to:
+1. Configure RevenueCat with the user ID
+2. Fetch customer info
+3. Fetch offerings
 
-## Proposed New Flow (3 screens)
+The `PostSignupTrialOffer` component appears immediately after sign-up, before offerings are ready.
 
-Reduce from 6 screens to 3 screens by consolidating the feature showcases into a single carousel:
+## Solution
+Modify the `handleStartTrial` function in `PostSignupTrialOffer.tsx` to:
+1. **Wait for offerings to become ready** after retrying (instead of returning early)
+2. Add a reasonable timeout to prevent infinite waiting
+3. Proceed to call `startPurchase()` once offerings are ready
 
-| Screen | Content | Purpose |
-|--------|---------|---------|
-| **1** | Welcome + value prop | Hook them with the promise |
-| **2** | Feature carousel (all 6 screenshots) | Show the app's value quickly |
-| **3** | Quick survey (optional) | Gather user insights |
+## Files to Modify
+- `src/components/PostSignupTrialOffer.tsx`
 
----
+## Implementation Details
 
-## Screen-by-Screen Changes
-
-### Screen 1: Welcome (Keep mostly as-is)
-- Keep the animated bar chart and "Stop Guessing. Start Healing."
-- Change Skip button to black text for better visibility
-- Button: "See How It Works"
-
-### Screen 2: Feature Carousel (New - replaces screens 2-5)
-
-A swipeable carousel showing all 6 feature screenshots with:
-- **Main headline**: "Everything you need to understand your TSW"
-- **Carousel dots** at the bottom for navigation
-- **Auto-advance** every 4 seconds
-- **Swipe gestures** supported
-
-Each slide in the carousel:
-```text
-+-----------------------------------+
-|  [Screenshot image]               |
-|                                   |
-|  "Turn 'good days' into a         |
-|   repeatable strategy."           |
-+-----------------------------------+
-```
-
-The 6 carousel slides (using existing images + subheadings):
-1. onboarding-improvement.png - "Turn 'good days' into a repeatable strategy."
-2. onboarding-triggers.png - "The flares are loud. The data is louder."
-3. onboarding-food.png - "Log what you eat and see how your skin responds."
-4. onboarding-product.png - "Identify products that appear before flares."
-5. onboarding-symptoms.png - "Your symptoms are real. Your data makes them undeniable."
-6. onboarding-sleep.png - "Your flares are stealing your sleep."
-
-**Skip button**: Black text color (currently muted gray)
-
-### Screen 3: Quick Survey (Keep screen 6)
-- Keep the 3 survey questions
-- Make Skip button black
-- This is the final screen before account creation
-
----
-
-## Technical Implementation
-
-### Files to Modify
-
-| File | Changes |
-|------|---------|
-| `OnboardingContext.tsx` | Change `totalScreens` from 6 to 3 |
-| `OnboardingPage.tsx` | Update switch to only render 3 screens |
-| `OnboardingScreen1.tsx` | Make Skip button black |
-| `OnboardingScreen2.tsx` | **Replace entirely** with new carousel screen |
-| `OnboardingScreen6.tsx` | Rename to Screen3, update progress, make Skip black |
-| `OnboardingScreen3-5.tsx` | Delete (content merged into carousel) |
-| `index.ts` | Update exports |
-
-### New Screen 2 Component Structure
-
+### Updated handleStartTrial Logic:
 ```typescript
-// Uses existing embla-carousel-react
-import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
-
-const featureSlides = [
-  { image: improvementImage, headline: "Turn 'good days' into a repeatable strategy." },
-  { image: triggersImage, headline: "The flares are loud. The data is louder." },
-  { image: foodImage, headline: "Log what you eat and see how your skin responds." },
-  { image: productImage, headline: "Identify products that appear before flares." },
-  { image: symptomsImage, headline: "Your symptoms are real. Your data makes them undeniable." },
-  { image: sleepImage, headline: "Your flares are stealing your sleep." },
-];
-
-// Carousel with auto-play, dots indicator, and swipe support
-<Carousel opts={{ loop: true }} plugins={[Autoplay({ delay: 4000 })]}>
-  <CarouselContent>
-    {featureSlides.map((slide, i) => (
-      <CarouselItem key={i}>
-        <img src={slide.image} />
-        <p>{slide.headline}</p>
-      </CarouselItem>
-    ))}
-  </CarouselContent>
-  {/* Dot indicators */}
-</Carousel>
+const handleStartTrial = async () => {
+  console.log('[PostSignupTrialOffer] handleStartTrial called', {
+    isNative,
+    isOfferingsReady,
+    platform,
+  });
+  
+  setIsStarting(true);
+  
+  // On native, if offerings not ready, retry and wait for them
+  if (isNative && !isOfferingsReady) {
+    console.log('[PostSignupTrialOffer] Native: offerings not ready, retrying and waiting...');
+    await retryOfferings();
+    
+    // Wait for offerings to become ready (up to 10 seconds)
+    const maxWaitTime = 10000;
+    const checkInterval = 500;
+    const startTime = Date.now();
+    
+    while (!isOfferingsReady && Date.now() - startTime < maxWaitTime) {
+      await new Promise(resolve => setTimeout(resolve, checkInterval));
+      // Note: isOfferingsReady updates via React state
+    }
+    
+    // Check one more time if still not ready
+    if (!isOfferingsReady) {
+      console.log('[PostSignupTrialOffer] Offerings still not ready after waiting, showing error');
+      toast.error('Unable to load subscription options. Please try again.');
+      setIsStarting(false);
+      return;
+    }
+  }
+  
+  // Now proceed with purchase
+  console.log('[PostSignupTrialOffer] Calling startPurchase...');
+  const result = await startPurchase();
+  console.log('[PostSignupTrialOffer] startPurchase result:', result);
+  
+  setIsStarting(false);
+  
+  if (result.success) {
+    onContinue();
+  } else if (result.cancelled) {
+    // User cancelled, stay on screen
+  } else if (result.error) {
+    console.log('[PostSignupTrialOffer] Purchase error:', result.error);
+  }
+};
 ```
 
-### Skip Button Styling Update
+### Alternative (Cleaner) Approach
+Since React state won't update within the same function execution, we need a different approach:
 
-```typescript
-// Before (muted gray)
-className="text-muted-foreground text-sm font-medium ..."
+1. Create a ref to track whether we should proceed after offerings load
+2. Use a useEffect to watch for `isOfferingsReady` changes
+3. When offerings become ready and we're waiting, proceed with purchase
 
-// After (black/foreground)
-className="text-foreground text-sm font-semibold ..."
-```
+Or simpler:
+- After calling `retryOfferings()`, **don't return** - instead let `startPurchase()` run
+- The `startPurchase()` in `usePaymentRouter` already handles the case when offerings aren't ready and will show an appropriate error
 
-### Progress Bar Update
+The cleanest fix is to remove the early return after `retryOfferings()` and let the flow continue to `startPurchase()`, which will either work (if offerings loaded in time) or show an appropriate error message.
 
-The `OnboardingProgress` component will now show 2 total steps (screen 2 = step 1, screen 3 = step 2). Screen 1 has no progress bar (it's the intro).
+## Technical Approach (Recommended)
+Modify the flow to use a useEffect that watches `isOfferingsReady` and auto-triggers purchase when ready:
 
----
-
-## Summary
-
-| Metric | Before | After |
-|--------|--------|-------|
-| Total screens | 6 | 3 |
-| Time to account creation | ~30+ seconds | ~15 seconds |
-| Skip button visibility | Muted gray | Black (prominent) |
-| Feature showcase | 3 separate screens | 1 carousel screen |
-
-This reduces friction significantly while still showing all the app's value in a quick, swipeable format.
+1. Add a state `pendingPurchase` to track if user clicked "Start Trial" while offerings were loading
+2. When user clicks button and offerings not ready, set `pendingPurchase = true` and retry offerings
+3. Add a useEffect that watches `isOfferingsReady` - when it becomes true and `pendingPurchase` is true, call `startPurchase()`
+4. This provides a clean, reactive solution that works with React's state model
