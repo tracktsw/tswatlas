@@ -1,236 +1,138 @@
 
-# Multi-Language Support for TrackTSW
+# Streamlined Onboarding Flow
 
-## Overview
+## The Problem
 
-Implementing internationalization (i18n) to allow users to switch the app language to common European languages. The user would select their preferred language in Settings, and all UI text would update accordingly.
+The current onboarding has 6 screens, and analytics show that very few users complete it. Users are dropping off before they even create an account.
 
-## Supported Languages
+## Current Flow (6 screens)
+1. **Screen 1**: Welcome / "Stop Guessing. Start Healing."
+2. **Screen 2**: Pain points list (4 cards about TSW struggles)
+3. **Screen 3**: Two feature screenshots (improvement + triggers)
+4. **Screen 4**: Two feature screenshots (food + product analysis)
+5. **Screen 5**: Two feature screenshots (symptoms + sleep)
+6. **Screen 6**: Survey questions (3 dropdowns about TSW impact)
 
-- **English** (en) - Default
-- **German** (de) - Deutsch
-- **French** (fr) - Francais
-- **Spanish** (es) - Espanol
-- **Italian** (it) - Italiano
-- **Dutch** (nl) - Nederlands
-- **Portuguese** (pt) - Portugues
+## Proposed New Flow (3 screens)
 
-## Translation Accuracy
+Reduce from 6 screens to 3 screens by consolidating the feature showcases into a single carousel:
 
-**Short answer: Yes, translations can be highly accurate.**
-
-The approach:
-1. Use AI-assisted translation (Lovable AI) to generate initial translations for all ~400-500 text strings
-2. Translations will be reviewed for context-specific terminology (medical/skin care terms)
-3. The translation files are stored as JSON, making it easy to refine specific phrases later
-4. Community members who speak these languages could help validate translations
-
-**Important considerations:**
-- Medical/TSW terminology needs careful handling (e.g., "flare", "oozing", "topical steroid withdrawal")
-- Emoji/mood labels remain universal
-- Dates/times will auto-format based on locale (e.g., "13. Januar 2026" in German)
+| Screen | Content | Purpose |
+|--------|---------|---------|
+| **1** | Welcome + value prop | Hook them with the promise |
+| **2** | Feature carousel (all 6 screenshots) | Show the app's value quickly |
+| **3** | Quick survey (optional) | Gather user insights |
 
 ---
 
-## Architecture
+## Screen-by-Screen Changes
 
+### Screen 1: Welcome (Keep mostly as-is)
+- Keep the animated bar chart and "Stop Guessing. Start Healing."
+- Change Skip button to black text for better visibility
+- Button: "See How It Works"
+
+### Screen 2: Feature Carousel (New - replaces screens 2-5)
+
+A swipeable carousel showing all 6 feature screenshots with:
+- **Main headline**: "Everything you need to understand your TSW"
+- **Carousel dots** at the bottom for navigation
+- **Auto-advance** every 4 seconds
+- **Swipe gestures** supported
+
+Each slide in the carousel:
 ```text
-src/
-  i18n/
-    index.ts              # i18next configuration
-    locales/
-      en/
-        common.json       # General UI (buttons, labels, navigation)
-        checkin.json      # Check-in page specific
-        settings.json     # Settings page specific
-        insights.json     # Insights/charts
-        home.json         # Home page
-        ...
-      de/
-        common.json
-        checkin.json
-        ...
-      fr/
-        ...
-      (etc.)
++-----------------------------------+
+|  [Screenshot image]               |
+|                                   |
+|  "Turn 'good days' into a         |
+|   repeatable strategy."           |
++-----------------------------------+
 ```
+
+The 6 carousel slides (using existing images + subheadings):
+1. onboarding-improvement.png - "Turn 'good days' into a repeatable strategy."
+2. onboarding-triggers.png - "The flares are loud. The data is louder."
+3. onboarding-food.png - "Log what you eat and see how your skin responds."
+4. onboarding-product.png - "Identify products that appear before flares."
+5. onboarding-symptoms.png - "Your symptoms are real. Your data makes them undeniable."
+6. onboarding-sleep.png - "Your flares are stealing your sleep."
+
+**Skip button**: Black text color (currently muted gray)
+
+### Screen 3: Quick Survey (Keep screen 6)
+- Keep the 3 survey questions
+- Make Skip button black
+- This is the final screen before account creation
 
 ---
 
-## Implementation Steps
+## Technical Implementation
 
-### Step 1: Database Migration
+### Files to Modify
 
-Add a `language` column to `user_settings` to persist the user's choice:
+| File | Changes |
+|------|---------|
+| `OnboardingContext.tsx` | Change `totalScreens` from 6 to 3 |
+| `OnboardingPage.tsx` | Update switch to only render 3 screens |
+| `OnboardingScreen1.tsx` | Make Skip button black |
+| `OnboardingScreen2.tsx` | **Replace entirely** with new carousel screen |
+| `OnboardingScreen6.tsx` | Rename to Screen3, update progress, make Skip black |
+| `OnboardingScreen3-5.tsx` | Delete (content merged into carousel) |
+| `index.ts` | Update exports |
 
-```sql
-ALTER TABLE user_settings 
-ADD COLUMN language TEXT DEFAULT 'en';
-```
-
-### Step 2: Install i18next Dependencies
-
-- `i18next` - Core internationalization framework
-- `react-i18next` - React bindings for i18next
-- `i18next-browser-languagedetector` - Auto-detect browser language on first visit
-
-### Step 3: Create i18n Configuration
-
-Set up i18next with:
-- Fallback to English if translation missing
-- Lazy loading of language files
-- Integration with React context
-
-### Step 4: Extract All Hardcoded Strings
-
-This is the largest task. Every page contains hardcoded English text that needs extraction:
-
-| Page/Component | Estimated Strings |
-|----------------|-------------------|
-| HomePage | ~30 |
-| CheckInPage | ~80 |
-| SettingsPage | ~50 |
-| InsightsPage | ~40 |
-| PhotoDiaryPage | ~25 |
-| CommunityPage | ~30 |
-| JournalPage | ~20 |
-| CoachPage | ~15 |
-| BottomNav | 6 |
-| Onboarding | ~60 |
-| Common UI (buttons, toasts) | ~50 |
-| **Total** | **~400 strings** |
-
-**Before:**
-```typescript
-<h1>Settings</h1>
-<p>Customize your experience</p>
-```
-
-**After:**
-```typescript
-const { t } = useTranslation('settings');
-
-<h1>{t('title')}</h1>
-<p>{t('subtitle')}</p>
-```
-
-### Step 5: Create Translation Files
-
-Generate JSON files for each language with all extracted strings. Example structure:
-
-```json
-// en/settings.json
-{
-  "title": "Settings",
-  "subtitle": "Customize your experience",
-  "nightMode": "Night Mode",
-  "nightModeDesc": "Easier on your eyes in the dark",
-  "dailyReminder": "Daily Reminder",
-  "cloudSync": "Cloud Sync",
-  ...
-}
-```
-
-```json
-// de/settings.json
-{
-  "title": "Einstellungen",
-  "subtitle": "Personalisiere deine Erfahrung",
-  "nightMode": "Nachtmodus",
-  "nightModeDesc": "Schont deine Augen im Dunkeln",
-  "dailyReminder": "Tagliche Erinnerung",
-  "cloudSync": "Cloud-Synchronisierung",
-  ...
-}
-```
-
-### Step 6: Add Language Selector to Settings
-
-Add a new settings card with a language dropdown:
-
-```text
-+----------------------------------+
-|  [Globe Icon]  Language          |
-|  Choose your preferred language  |
-|  [Dropdown: English v]           |
-+----------------------------------+
-```
-
-When changed:
-1. Update `user_settings.language` in database
-2. Call `i18n.changeLanguage(selectedLang)`
-3. Show toast: "Language changed to Deutsch"
-
-### Step 7: Update Email Templates (Optional Enhancement)
-
-Emails could also be translated based on user's stored language preference:
-- Welcome email
-- Password reset email
-- Re-engagement email
-
-This would require the edge functions to check `user_settings.language` and select the appropriate template.
-
----
-
-## Technical Details
-
-### Language Context Provider
+### New Screen 2 Component Structure
 
 ```typescript
-// Wraps the app to provide language context
-<LanguageProvider>
-  <App />
-</LanguageProvider>
+// Uses existing embla-carousel-react
+import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
+
+const featureSlides = [
+  { image: improvementImage, headline: "Turn 'good days' into a repeatable strategy." },
+  { image: triggersImage, headline: "The flares are loud. The data is louder." },
+  { image: foodImage, headline: "Log what you eat and see how your skin responds." },
+  { image: productImage, headline: "Identify products that appear before flares." },
+  { image: symptomsImage, headline: "Your symptoms are real. Your data makes them undeniable." },
+  { image: sleepImage, headline: "Your flares are stealing your sleep." },
+];
+
+// Carousel with auto-play, dots indicator, and swipe support
+<Carousel opts={{ loop: true }} plugins={[Autoplay({ delay: 4000 })]}>
+  <CarouselContent>
+    {featureSlides.map((slide, i) => (
+      <CarouselItem key={i}>
+        <img src={slide.image} />
+        <p>{slide.headline}</p>
+      </CarouselItem>
+    ))}
+  </CarouselContent>
+  {/* Dot indicators */}
+</Carousel>
 ```
 
-The provider:
-- Syncs language preference with database
-- Loads user's saved language on login
-- Falls back to browser language for new users
+### Skip Button Styling Update
 
-### Date/Number Formatting
-
-Use `date-fns` locale support for proper date formatting:
 ```typescript
-import { de, fr, es } from 'date-fns/locale';
+// Before (muted gray)
+className="text-muted-foreground text-sm font-medium ..."
 
-format(date, 'MMMM d, yyyy', { locale: de })
-// Output: "13. Januar 2026"
+// After (black/foreground)
+className="text-foreground text-sm font-semibold ..."
 ```
 
-### Handling Dynamic Content
+### Progress Bar Update
 
-For user-generated content (notes, journal entries, treatment names):
-- These remain in the language the user wrote them
-- Only UI chrome/labels are translated
+The `OnboardingProgress` component will now show 2 total steps (screen 2 = step 1, screen 3 = step 2). Screen 1 has no progress bar (it's the intro).
 
 ---
 
-## Scope Summary
+## Summary
 
-| Component | Changes Required |
-|-----------|-----------------|
-| Database | Add `language` column |
-| Dependencies | Add i18next packages |
-| New Files | ~15 translation JSON files |
-| Modified Files | All pages and most components (~40 files) |
-| Settings Page | Add language selector UI |
-| Edge Functions (optional) | Template translations for emails |
+| Metric | Before | After |
+|--------|--------|-------|
+| Total screens | 6 | 3 |
+| Time to account creation | ~30+ seconds | ~15 seconds |
+| Skip button visibility | Muted gray | Black (prominent) |
+| Feature showcase | 3 separate screens | 1 carousel screen |
 
----
-
-## Timeline Estimate
-
-This is a significant undertaking:
-- **Phase 1** (Core setup): i18n configuration, language selector, 1-2 key pages translated
-- **Phase 2** (Full coverage): All pages and components converted
-- **Phase 3** (Polish): Date formatting, email translations, validation
-
----
-
-## Limitations
-
-1. **AI Coach responses** - These come from AI models and would remain in English (or the language the user writes in)
-2. **Treatment/symptom names from database** - Community-submitted treatments are in English; translating these would require a separate translation layer
-3. **Push notifications** - Would need native code updates for iOS/Android to support translated notification content
-
+This reduces friction significantly while still showing all the app's value in a quick, swipeable format.
