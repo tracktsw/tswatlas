@@ -10,6 +10,7 @@ import trackTswLogo from '@/assets/tracktsw-logo-transparent.png';
 import { usePlatform } from '@/hooks/usePlatform';
 import { useOnboardingSubmit } from '@/hooks/useOnboardingSubmit';
 import { hasPendingOnboardingSurvey, sendPendingOnboardingSurvey, identifyUser } from '@/utils/analytics';
+import { trackMetaOnboardingComplete } from '@/utils/metaAnalytics';
 
 
 type AuthMode = 'login' | 'signup' | 'forgot';
@@ -247,6 +248,9 @@ const AuthPage = () => {
               // Silently ignore errors - don't block signup
             });
           }
+          
+          // Fire Meta onboarding_complete event (only once per user, tracked via localStorage)
+          trackMetaOnboardingComplete();
         }
         
         toast.success('Account created! You can now sign in.');
