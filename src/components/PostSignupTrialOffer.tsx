@@ -46,6 +46,7 @@ export const PostSignupTrialOffer = ({ onContinue }: PostSignupTrialOfferProps) 
   } = usePaymentRouter();
 
   const [isStarting, setIsStarting] = useState(false);
+  const [pendingPurchase, setPendingPurchase] = useState(false);
 
   // Check if we should show this screen
   const hasSeenOffer = localStorage.getItem(POST_SIGNUP_OFFER_KEY);
@@ -57,6 +58,28 @@ export const PostSignupTrialOffer = ({ onContinue }: PostSignupTrialOfferProps) 
     }
   }, [hasSeenOffer]);
 
+  // Auto-trigger purchase when offerings become ready and we have a pending purchase
+  useEffect(() => {
+    const triggerPendingPurchase = async () => {
+      if (isOfferingsReady && pendingPurchase && !isPurchasing) {
+        console.log('[PostSignupTrialOffer] Offerings now ready, triggering pending purchase...');
+        setPendingPurchase(false);
+        
+        const result = await startPurchase();
+        console.log('[PostSignupTrialOffer] startPurchase result:', result);
+        
+        setIsStarting(false);
+        
+        if (result.success) {
+          onContinue();
+        }
+        // cancelled or error already handled by toast in usePaymentRouter
+      }
+    };
+    
+    triggerPendingPurchase();
+  }, [isOfferingsReady, pendingPurchase, isPurchasing, startPurchase, onContinue]);
+
   const handleStartTrial = async () => {
     console.log('[PostSignupTrialOffer] handleStartTrial called', {
       isNative,
@@ -66,36 +89,38 @@ export const PostSignupTrialOffer = ({ onContinue }: PostSignupTrialOfferProps) 
     
     setIsStarting(true);
     
-    // On native, retry offerings if not ready
+    // On native, if offerings not ready, set pending and wait for useEffect to trigger
     if (isNative && !isOfferingsReady) {
-      console.log('[PostSignupTrialOffer] Native: offerings not ready, retrying...');
+      console.log('[PostSignupTrialOffer] Native: offerings not ready, setting pending purchase...');
+      setPendingPurchase(true);
       await retryOfferings();
-      setIsStarting(false);
+      // Don't return - let the useEffect handle triggering the purchase when ready
+      // Add a timeout fallback
+      setTimeout(() => {
+        setPendingPurchase(current => {
+          if (current) {
+            console.log('[PostSignupTrialOffer] Timeout: offerings still not ready');
+            setIsStarting(false);
+            return false;
+          }
+          return current;
+        });
+      }, 10000);
       return;
     }
 
     console.log('[PostSignupTrialOffer] Calling startPurchase...');
     
-    // startPurchase handles platform routing:
-    // - iOS → RevenueCat IAP
-    // - Android → RevenueCat Google Play Billing  
-    // - Web → Stripe checkout redirect
     const result = await startPurchase();
     
     console.log('[PostSignupTrialOffer] startPurchase result:', result);
     
     setIsStarting(false);
     
-    // On native, success means purchase completed
-    // On web, success means redirect initiated (page navigates away)
     if (result.success) {
       onContinue();
-    } else if (result.cancelled) {
-      // User cancelled, stay on this screen
-    } else if (result.error) {
-      // Error already shown via toast in usePaymentRouter
-      console.log('[PostSignupTrialOffer] Purchase error:', result.error);
     }
+    // cancelled or error already handled by toast in usePaymentRouter
   };
 
   const handleRestore = async () => {
