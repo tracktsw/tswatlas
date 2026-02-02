@@ -6,8 +6,9 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Crown, Sparkles, Camera, Brain, BookOpen, BarChart3, ArrowRight, Loader2, RotateCcw } from 'lucide-react';
+import { Crown, Camera, Brain, BookOpen, BarChart3, ArrowRight, Loader2, RotateCcw, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 import { usePaymentRouter } from '@/hooks/usePaymentRouter';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getTermsUrl, PRIVACY_POLICY_URL, type Platform } from '@/utils/platformLinks';
@@ -21,11 +22,12 @@ interface PostSignupTrialOfferProps {
   onContinue: () => void;
 }
 
+// All icons use sage (green) color for consistency
 const premiumFeatures = [
-  { icon: Camera, label: 'Unlimited Photos', gradient: 'from-coral to-primary' },
-  { icon: BarChart3, label: 'Full Insights', gradient: 'from-sage to-anchor' },
-  { icon: BookOpen, label: 'Journal', gradient: 'from-honey to-coral' },
-  { icon: Brain, label: 'AI Coach', gradient: 'from-primary to-sage' },
+  { icon: Camera, label: 'Unlimited Photos' },
+  { icon: BarChart3, label: 'Full Insights' },
+  { icon: BookOpen, label: 'Journal' },
+  { icon: Brain, label: 'AI Coach' },
 ];
 
 export const PostSignupTrialOffer = ({ onContinue }: PostSignupTrialOfferProps) => {
@@ -64,6 +66,18 @@ export const PostSignupTrialOffer = ({ onContinue }: PostSignupTrialOfferProps) 
       await retryOfferings();
       setIsStarting(false);
       return;
+    }
+
+    // On web, we need to get the session and redirect to Stripe directly
+    // This bypasses the usePaymentRouter in case of any session timing issues
+    if (!isNative) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.email) {
+        const stripePaymentLink = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
+        const paymentUrl = `${stripePaymentLink}?prefilled_email=${encodeURIComponent(session.user.email)}`;
+        window.location.href = paymentUrl;
+        return;
+      }
     }
 
     const result = await startPurchase();
@@ -112,9 +126,9 @@ export const PostSignupTrialOffer = ({ onContinue }: PostSignupTrialOfferProps) 
         {/* Header */}
         <div className="text-center mb-8 animate-slide-up" style={{ animationDelay: '0.1s' }}>
           <div className="flex items-center justify-center gap-2 mb-3">
-            <Sparkles className="w-5 h-5 text-honey" />
-            <span className="text-sm font-semibold text-honey">Welcome to TrackTSW</span>
-            <Sparkles className="w-5 h-5 text-honey" />
+            <Leaf className="w-5 h-5 text-sage" />
+            <span className="text-sm font-semibold text-sage">Welcome to TrackTSW</span>
+            <Leaf className="w-5 h-5 text-sage" />
           </div>
           <h1 className="font-display text-3xl font-bold text-foreground mb-3">
             Start Your Healing Journey
@@ -131,11 +145,8 @@ export const PostSignupTrialOffer = ({ onContinue }: PostSignupTrialOfferProps) 
               key={feature.label}
               className="glass-card-warm p-4 text-center"
             >
-              <div className={cn(
-                "w-12 h-12 rounded-xl mx-auto mb-2 flex items-center justify-center bg-gradient-to-br",
-                feature.gradient
-              )}>
-                <feature.icon className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 rounded-xl mx-auto mb-2 flex items-center justify-center bg-sage/20">
+                <feature.icon className="w-6 h-6 text-sage" />
               </div>
               <p className="text-sm font-medium text-foreground">{feature.label}</p>
             </div>
