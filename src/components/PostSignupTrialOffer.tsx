@@ -8,7 +8,6 @@
 import { useState, useEffect } from 'react';
 import { Crown, Camera, Brain, BookOpen, BarChart3, ArrowRight, Loader2, RotateCcw, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
 import { usePaymentRouter } from '@/hooks/usePaymentRouter';
 import { useSubscription } from '@/hooks/useSubscription';
 import { getTermsUrl, PRIVACY_POLICY_URL, type Platform } from '@/utils/platformLinks';
@@ -68,23 +67,22 @@ export const PostSignupTrialOffer = ({ onContinue }: PostSignupTrialOfferProps) 
       return;
     }
 
-    // On web, we need to get the session and redirect to Stripe directly
-    // This bypasses the usePaymentRouter in case of any session timing issues
-    if (!isNative) {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.email) {
-        const stripePaymentLink = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
-        const paymentUrl = `${stripePaymentLink}?prefilled_email=${encodeURIComponent(session.user.email)}`;
-        window.location.href = paymentUrl;
-        return;
-      }
-    }
-
+    // startPurchase handles platform routing:
+    // - iOS → RevenueCat IAP
+    // - Android → RevenueCat Google Play Billing  
+    // - Web → Stripe checkout redirect
     const result = await startPurchase();
     setIsStarting(false);
     
-    if (result.success || result.cancelled) {
+    // On native, success means purchase completed
+    // On web, success means redirect initiated (page navigates away)
+    if (result.success) {
       onContinue();
+    } else if (result.cancelled) {
+      // User cancelled, stay on this screen
+    } else if (result.error) {
+      // Error already shown via toast in usePaymentRouter
+      console.log('[PostSignupTrialOffer] Purchase error:', result.error);
     }
   };
 
