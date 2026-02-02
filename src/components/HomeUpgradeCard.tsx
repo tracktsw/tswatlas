@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { Crown, Sparkles, Camera, Brain, ArrowRight } from 'lucide-react';
+import { Crown, Camera, Brain, ArrowRight, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
 import { TrialOfferModal } from '@/components/TrialOfferModal';
@@ -30,11 +30,6 @@ export const HomeUpgradeCard = () => {
       >
         {/* Decorative gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-honey/10 pointer-events-none" />
-        
-        {/* Sparkle decorations */}
-        <div className="absolute top-3 right-3 opacity-50">
-          <Sparkles className="w-5 h-5 text-honey" />
-        </div>
         
         <div className="relative flex items-start gap-4">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-coral flex items-center justify-center shrink-0 shadow-warm">
@@ -60,8 +55,8 @@ export const HomeUpgradeCard = () => {
                 <span>Photos</span>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Brain className="w-3.5 h-3.5 text-coral" />
-                <span>AI Coach</span>
+                <BarChart3 className="w-3.5 h-3.5 text-sage" />
+                <span>Insights</span>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
                 <span>+ more</span>

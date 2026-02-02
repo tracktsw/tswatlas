@@ -10,7 +10,7 @@
  */
 
 import { useState } from 'react';
-import { Crown, Sparkles, Camera, Brain, BookOpen, BarChart3, X, Loader2, RotateCcw, CheckCircle2 } from 'lucide-react';
+import { Crown, Camera, Brain, BookOpen, BarChart3, X, Loader2, RotateCcw, CheckCircle2, Leaf } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { usePaymentRouter } from '@/hooks/usePaymentRouter';
@@ -171,9 +171,9 @@ export const TrialOfferModal = ({
 
           {/* Trial badge */}
           <div className="flex items-center justify-center gap-2 py-2">
-            <Sparkles className="w-4 h-4 text-honey" />
+            <Leaf className="w-4 h-4 text-sage" />
             <span className="text-sm font-semibold text-foreground">14-Day Free Trial</span>
-            <Sparkles className="w-4 h-4 text-honey" />
+            <Leaf className="w-4 h-4 text-sage" />
           </div>
 
           {/* CTA Button */}
