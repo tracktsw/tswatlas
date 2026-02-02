@@ -2,7 +2,7 @@ import { ReactNode, useState, useEffect, useRef } from 'react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { usePaymentRouter } from '@/hooks/usePaymentRouter';
 import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
-import { Lock, Sparkles, Crown, Loader2, RotateCcw } from 'lucide-react';
+import { Lock, BookOpen, Camera, BarChart3, Brain, Users, Crown, Loader2, RotateCcw, LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -24,6 +24,17 @@ const getPaywallLocation = (pathname: string): 'coach' | 'insights' | 'photos' |
   if (pathname.includes('community')) return 'community';
   if (pathname.includes('settings')) return 'settings';
   return 'other';
+};
+
+// Get contextual icon for each feature
+const getFeatureIcon = (feature: string): LucideIcon => {
+  const lowerFeature = feature.toLowerCase();
+  if (lowerFeature.includes('journal')) return BookOpen;
+  if (lowerFeature.includes('photo')) return Camera;
+  if (lowerFeature.includes('insight')) return BarChart3;
+  if (lowerFeature.includes('coach')) return Brain;
+  if (lowerFeature.includes('community')) return Users;
+  return BookOpen; // Default to BookOpen instead of Sparkles
 };
 
 const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false }: PaywallGuardProps) => {
@@ -214,10 +225,12 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
   }
 
   // Full paywall screen
+  const FeatureIcon = getFeatureIcon(feature);
+  
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
       <div className="w-16 h-16 mb-4 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-        <Sparkles className="w-8 h-8 text-primary" />
+        <FeatureIcon className="w-8 h-8 text-primary" />
       </div>
       <h2 className="font-display text-xl font-bold text-foreground mb-2">
         Unlock {feature}
