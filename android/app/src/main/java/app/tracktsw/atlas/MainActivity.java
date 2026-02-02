@@ -6,6 +6,7 @@ import android.view.WindowManager;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
+import android.webkit.WebView;
 import androidx.core.view.WindowCompat;
 import com.getcapacitor.BridgeActivity;
 import com.facebook.FacebookSdk;
@@ -15,6 +16,7 @@ import android.util.Base64;
 
 public class MainActivity extends BridgeActivity {
     private static final String TAG = "TrackTSW_Meta";
+    private AppEventsLogger metaLogger;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,6 +29,7 @@ public class MainActivity extends BridgeActivity {
         // Initialize Meta SDK for Facebook Ads Attribution
         FacebookSdk.sdkInitialize(getApplicationContext());
         AppEventsLogger.activateApp(getApplication());
+        metaLogger = AppEventsLogger.newLogger(this);
         
         // Debug: Log SDK initialization status
         Log.d(TAG, "=== META SDK DEBUG ===");
@@ -48,6 +51,19 @@ public class MainActivity extends BridgeActivity {
         
         // That's it! The capacitor-plugin-safe-area handles all insets via CSS variables
         // No need to manually apply padding - this was causing the gap
+    }
+    
+    @Override
+    public void onStart() {
+        super.onStart();
+        
+        // Add JavaScript interface for Meta Analytics after bridge is ready
+        getBridge().getWebView().post(() -> {
+            WebView webView = getBridge().getWebView();
+            MetaAnalyticsPlugin metaPlugin = new MetaAnalyticsPlugin(metaLogger);
+            webView.addJavascriptInterface(metaPlugin, "MetaAnalytics");
+            Log.d(TAG, "=== Meta Analytics JS bridge installed ===");
+        });
     }
     
     private void printKeyHash() {

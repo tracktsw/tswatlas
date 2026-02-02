@@ -11,6 +11,7 @@ import { HeartIllustration, SunIllustration, LeafIllustration } from '@/componen
 import { SparkleEffect } from '@/components/SparkleEffect';
 import { severityColors, severityLabels } from '@/constants/severityColors';
 import { trackCheckInCompleted } from '@/utils/analytics';
+import { trackMetaCheckInCompleted } from '@/utils/metaAnalytics';
 import { useInAppReview } from '@/hooks/useInAppReview';
 import { CheckInDatePicker } from '@/components/CheckInDatePicker';
 import {
@@ -528,6 +529,7 @@ const CheckInPage = () => {
         
         // Track successful check-in (after DB insert succeeds)
         trackCheckInCompleted(isBackfillMode ? 'backfill' : 'daily');
+        trackMetaCheckInCompleted();
         
         // Request in-app review after 7th check-in (once per user)
         const newCheckInCount = checkIns.length + 1;

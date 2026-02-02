@@ -3,6 +3,7 @@ import Capacitor
 import FacebookCore
 import FacebookAEM  // Change from FBAEMKit to FacebookAEM
 import AppTrackingTransparency
+import WebKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -26,7 +27,31 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         print("App ID: \(Settings.shared.appID ?? "Not set")")
         
+        // Set up Meta event bridge for Capacitor webview
+        setupMetaEventBridge()
+        
         return true
+    }
+    
+    /// Sets up a JavaScript bridge to receive Meta events from the Capacitor webview
+    private func setupMetaEventBridge() {
+        // The bridge will be set up when the webview is ready
+        // We'll use WKScriptMessageHandler in the Capacitor bridge
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(webViewDidLoad),
+            name: NSNotification.Name("CapacitorWebViewDidLoad"),
+            object: nil
+        )
+    }
+    
+    @objc private func webViewDidLoad(_ notification: Notification) {
+        guard let webView = notification.object as? WKWebView else { return }
+        
+        // Add the message handler for Meta events
+        let contentController = webView.configuration.userContentController
+        contentController.add(MetaEventHandler(), name: "metaEvent")
+        print("=== Meta event bridge installed ===")
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
