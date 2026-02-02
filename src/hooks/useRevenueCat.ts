@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { trackMetaStartTrial, trackMetaSubscribe } from '@/utils/metaAnalytics';
 
 // RevenueCat types (since we import dynamically)
 interface PurchasesPackage {
@@ -555,6 +556,31 @@ export const useRevenueCat = () => {
         boundUserId: boundUserIdRef.current,
       });
       
+      // Fire Meta App Events for subscription tracking (only if premium is now active)
+      if (isPremiumNow && boundUserIdRef.current) {
+        const premiumEntitlement = resultCustomerInfo?.entitlements?.active?.[PREMIUM_ENTITLEMENT_ID];
+        const periodType = premiumEntitlement?.periodType;
+        const priceValue = monthly.product?.price;
+        const currency = monthly.product?.currencyCode;
+        
+        console.log('[RevenueCat] Checking Meta event conditions:', {
+          periodType,
+          priceValue,
+          currency,
+        });
+        
+        // TRIAL = periodType is 'trial' or 'intro'
+        // PAID = periodType is 'normal' (or any non-trial state)
+        if (periodType === 'trial' || periodType === 'intro') {
+          console.log('[RevenueCat] Firing Meta StartTrial event');
+          trackMetaStartTrial(boundUserIdRef.current);
+        } else {
+          // Direct purchase or trial conversion
+          console.log('[RevenueCat] Firing Meta Subscribe event');
+          trackMetaSubscribe(boundUserIdRef.current, priceValue, currency);
+        }
+      }
+      
       // Force sync with RevenueCat servers (belt and suspenders)
       console.log('[RevenueCat] Forcing sync with servers...');
       await Purchases.syncPurchases();
@@ -659,6 +685,21 @@ export const useRevenueCat = () => {
         originalAppUserId,
         currentUserId,
       });
+      
+      // Fire Meta Subscribe event if premium is restored (restored = already paid, not trial)
+      // We only fire Subscribe here since a restore means the trial period is over
+      if (isPremiumNow && currentUserId) {
+        const premiumEntitlement = restoredCustomerInfo?.entitlements?.active?.[PREMIUM_ENTITLEMENT_ID];
+        const periodType = premiumEntitlement?.periodType;
+        
+        console.log('[RevenueCat] Checking Meta event for restore:', { periodType });
+        
+        // Only fire Subscribe for restored paid subscriptions (not trials being restored)
+        if (periodType === 'normal') {
+          console.log('[RevenueCat] Firing Meta Subscribe event for restored subscription');
+          trackMetaSubscribe(currentUserId);
+        }
+      }
       
       setIsLoading(false);
       return { success: true, isPremiumNow };
