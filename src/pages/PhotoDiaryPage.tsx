@@ -1077,7 +1077,7 @@ const PhotoDiaryPage = () => {
               Free plan: {FREE_DAILY_PHOTO_LIMIT} photos per day
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Upgrade to Premium for unlimited photo uploads.
+              Upgrade to Premium for unlimited photo uploads and the ability to compare photos side by side.
             </p>
           </div>
           <div className="space-y-1.5">
@@ -1147,7 +1147,7 @@ const PhotoDiaryPage = () => {
           </DialogHeader>
           <div className="space-y-4 text-center">
             <p className="text-muted-foreground">
-              You've uploaded {FREE_DAILY_PHOTO_LIMIT} photos today. Upgrade to Premium for unlimited photo uploads!
+              You've uploaded {FREE_DAILY_PHOTO_LIMIT} photos today. Upgrade to Premium for unlimited photo uploads and the ability to compare photos side by side!
             </p>
             <div className="p-4 bg-muted/50 rounded-xl">
               <p className="text-sm text-muted-foreground">Your limit resets tomorrow</p>
