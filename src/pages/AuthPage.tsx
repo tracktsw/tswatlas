@@ -251,9 +251,12 @@ const AuthPage = () => {
           
           // Fire Meta onboarding_complete event (only once per user, tracked via localStorage)
           trackMetaOnboardingComplete();
+          
+          // Mark that user just signed up - AuthGuard will show trial offer on first login
+          localStorage.setItem('just_signed_up', 'true');
         }
         
-        toast.success('Account created! You can now sign in.');
+        toast.success('Account created! Check your email to verify, then sign in.');
         setMode('login');
       }
     } catch (error: any) {

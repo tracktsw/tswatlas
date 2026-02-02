@@ -9,10 +9,12 @@ import { format, isToday, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { HeartIllustration, SunIllustration, LeafIllustration } from '@/components/illustrations';
 import { SparkleEffect } from '@/components/SparkleEffect';
+import { FirstCheckInCelebration } from '@/components/FirstCheckInCelebration';
 import { severityColors, severityLabels } from '@/constants/severityColors';
 import { trackCheckInCompleted } from '@/utils/analytics';
 import { trackMetaCheckInCompleted } from '@/utils/metaAnalytics';
 import { useInAppReview } from '@/hooks/useInAppReview';
+import { useSubscription } from '@/hooks/useSubscription';
 import { CheckInDatePicker } from '@/components/CheckInDatePicker';
 import {
   AlertDialog,
@@ -91,6 +93,7 @@ const sleepOptions = [
 const CheckInPage = () => {
   const { checkIns, addCheckIn, updateCheckIn, deleteCheckIn, getCheckInForDate, customTreatments, addCustomTreatment, removeCustomTreatment, customTriggers, addCustomTrigger, removeCustomTrigger, getTodayCheckInCount } = useUserData();
   const { maybeRequestReview } = useInAppReview();
+  const { isPremium, isAdmin } = useSubscription();
   
   // Selected date for check-in (supports backfill)
   const [selectedDate, setSelectedDate] = useState<Date>(() => startOfDay(new Date()));
@@ -567,6 +570,9 @@ const CheckInPage = () => {
     <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto relative">
       {/* Sparkle celebration effect */}
       <SparkleEffect isActive={showSparkles} onComplete={() => setShowSparkles(false)} />
+      
+      {/* First check-in celebration modal (shows trial offer) */}
+      <FirstCheckInCelebration checkInCount={checkIns.length} isPremium={isPremium || isAdmin} />
       
       {/* Decorative elements */}
       <div className="decorative-blob w-32 h-32 bg-honey/30 -top-10 -left-10 fixed" />

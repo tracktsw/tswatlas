@@ -4,6 +4,7 @@ import { BookOpen, Settings, Calendar as CalendarIcon, Flame, Pencil, Leaf, Sun,
 import DailyInsight from '@/components/DailyInsight';
 import { LeafIllustration, PlantIllustration } from '@/components/illustrations';
 import StreakFire from '@/components/StreakFire';
+import HomeUpgradeCard from '@/components/HomeUpgradeCard';
 import compassLogo from '@/assets/compass-logo.png';
 import { useUserData } from '@/contexts/UserDataContext';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -345,6 +346,9 @@ const HomePage = () => {
       <div className="animate-slide-up" style={{ animationDelay: '0.25s' }}>
         <DailyInsight checkIns={checkIns} isPremium={isPremium} isSubscriptionLoading={isSubscriptionLoading} />
       </div>
+
+      {/* Premium Upgrade Card - shown for free users */}
+      <HomeUpgradeCard />
 
       {/* Journal Quick Access */}
       <Link 
