@@ -5,14 +5,19 @@
  * Events tracked:
  * - onboarding_complete: Fired once when user finishes onboarding (signup)
  * - checkin_completed: Fired when user completes a symptom check-in
+ * - StartTrial: Fired once when a free trial is successfully started
+ * - Subscribe: Fired once when a paid subscription is activated
  * 
  * NOTE: Purchase/subscription events are handled by RevenueCat server-side.
+ * The StartTrial and Subscribe events here supplement that for Meta Ads attribution.
  */
 
 import { Capacitor } from '@capacitor/core';
 
-// Storage key to prevent duplicate onboarding events
+// Storage keys to prevent duplicate events
 const ONBOARDING_EVENT_SENT_KEY = 'meta_onboarding_complete_sent';
+const START_TRIAL_SENT_KEY = 'meta_start_trial_sent';
+const SUBSCRIBE_SENT_KEY = 'meta_subscribe_sent';
 
 /**
  * Check if we're running on a native platform with Meta SDK available.
@@ -75,4 +80,58 @@ export function trackMetaOnboardingComplete(): void {
  */
 export function trackMetaCheckInCompleted(): void {
   logMetaEvent('checkin_completed');
+}
+
+/**
+ * Track free trial start.
+ * Called once after RevenueCat confirms a trial is active.
+ * Uses localStorage to prevent duplicates across app launches/restores.
+ * 
+ * @param userId - The user ID to associate the event with (prevents cross-user duplicates)
+ */
+export function trackMetaStartTrial(userId: string): void {
+  const key = `${START_TRIAL_SENT_KEY}_${userId}`;
+  
+  // Prevent duplicate events for this user
+  if (localStorage.getItem(key) === 'true') {
+    console.log('[Meta] StartTrial already sent for user, skipping');
+    return;
+  }
+
+  logMetaEvent('StartTrial');
+  
+  // Mark as sent for this user
+  localStorage.setItem(key, 'true');
+}
+
+/**
+ * Track paid subscription activation.
+ * Called once after RevenueCat confirms a paid subscription is active (trial conversion or direct purchase).
+ * Uses localStorage to prevent duplicates across app launches/restores.
+ * 
+ * @param userId - The user ID to associate the event with (prevents cross-user duplicates)
+ * @param value - Optional: the subscription value/price for attribution
+ * @param currency - Optional: currency code (e.g., 'USD', 'GBP')
+ */
+export function trackMetaSubscribe(userId: string, value?: number, currency?: string): void {
+  const key = `${SUBSCRIBE_SENT_KEY}_${userId}`;
+  
+  // Prevent duplicate events for this user
+  if (localStorage.getItem(key) === 'true') {
+    console.log('[Meta] Subscribe already sent for user, skipping');
+    return;
+  }
+
+  const params: Record<string, string | number> = {};
+  if (value !== undefined) {
+    params.value = value;
+  }
+  if (currency) {
+    params.currency = currency;
+  }
+
+  logMetaEvent('Subscribe', Object.keys(params).length > 0 ? params : undefined);
+  
+  // Mark as sent for this user
+  localStorage.setItem(key, 'true');
 }
