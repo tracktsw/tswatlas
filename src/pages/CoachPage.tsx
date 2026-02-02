@@ -1,5 +1,5 @@
 // CoachPage.tsx
-import { Brain } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { CoachChat } from '@/components/CoachChat';
 import { useAICoach } from '@/hooks/useAICoach';
 import PaywallGuard from '@/components/PaywallGuard';
@@ -29,7 +29,7 @@ const CoachPage = () => {
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-coral/20 to-coral-light flex items-center justify-center shadow-warm-sm">
-              <Brain className="w-5 h-5 text-coral" />
+              <Sparkles className="w-5 h-5 text-coral" />
             </div>
             <div>
               <h1 className="font-display font-bold text-lg text-foreground">AI Coach</h1>
