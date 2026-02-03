@@ -609,12 +609,12 @@ const InsightsPage = () => {
             onClick={() => setCalendarOpen(true)}
           >
             <Calendar className="w-5 h-5" />
-            View History Calendar
+            View Flare Calendar
           </Button>
           <DialogContent className="max-w-sm">
             <DialogHeader>
               <DialogTitle className="font-display text-xl">
-                {selectedDate ? format(selectedDate, 'EEEE, MMMM d, yyyy') : 'History Calendar'}
+                {selectedDate ? format(selectedDate, 'EEEE, MMMM d, yyyy') : 'Flare Calendar'}
               </DialogTitle>
             </DialogHeader>
             
