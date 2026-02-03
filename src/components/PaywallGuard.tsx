@@ -2,7 +2,7 @@ import { ReactNode, useState, useEffect, useRef } from 'react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { usePaymentRouter } from '@/hooks/usePaymentRouter';
 import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
-import { Lock, BookOpen, Camera, BarChart3, Brain, Users, Crown, Loader2, RotateCcw, LucideIcon } from 'lucide-react';
+import { Lock, AlertTriangle, Loader2, RotateCcw, LucideIcon, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -24,17 +24,6 @@ const getPaywallLocation = (pathname: string): 'coach' | 'insights' | 'photos' |
   if (pathname.includes('community')) return 'community';
   if (pathname.includes('settings')) return 'settings';
   return 'other';
-};
-
-// Get contextual icon for each feature
-const getFeatureIcon = (feature: string): LucideIcon => {
-  const lowerFeature = feature.toLowerCase();
-  if (lowerFeature.includes('journal')) return BookOpen;
-  if (lowerFeature.includes('photo')) return Camera;
-  if (lowerFeature.includes('insight')) return BarChart3;
-  if (lowerFeature.includes('coach')) return Brain;
-  if (lowerFeature.includes('community')) return Users;
-  return BookOpen; // Default to BookOpen instead of Sparkles
 };
 
 const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false }: PaywallGuardProps) => {
@@ -129,6 +118,13 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
 
   const isButtonLoading = isPurchasing || isRevenueCatLoading;
 
+  // Pattern discovery bullet points
+  const patternBullets = [
+    "What commonly precedes your flares",
+    "What's linked to longer vs shorter flares",
+    "What others often wish they'd stopped earlier",
+  ];
+
   // Blurred content overlay
   if (showBlurred) {
     return (
@@ -138,12 +134,14 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
         </div>
         <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-sm rounded-xl">
           <div className="text-center p-6 max-w-sm">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
-              <Lock className="w-6 h-6 text-primary" />
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-coral/10 flex items-center justify-center">
+              <AlertTriangle className="w-6 h-6 text-coral" />
             </div>
-            <h3 className="font-semibold text-foreground mb-1">Premium Feature</h3>
+            <h3 className="font-display font-bold text-foreground mb-1 text-lg">
+              Something you're doing could be making this worse
+            </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              {feature} is available with Premium.
+              We look for patterns in your check-ins and compare them with what others commonly report.
             </p>
             
             <Button
@@ -159,35 +157,36 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
                 </>
               ) : (
                 <>
-                  <Crown className="w-4 h-4" />
-                  Start 14-Day Free Trial · {priceString}/month
+                  Start 14-Day Free Trial – {priceString}/month
                 </>
               )}
             </Button>
             
-            <p className="text-xs text-muted-foreground mt-2">
-              {priceString}/month after 14-day free trial. Auto-renewable. Cancel anytime.
+            <p className="text-xs text-muted-foreground mt-3">
+              {priceString}/month after free trial · Cancel anytime
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Your tracking stays free either way.
             </p>
             
-            <p className="text-xs text-muted-foreground mt-1">
-              By subscribing, you agree to our{' '}
+            <p className="text-xs text-muted-foreground mt-2">
               <a 
                 href={getTermsUrl(platform as Platform)} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="underline text-primary"
+                className="underline"
               >
-                Terms of Use
-              </a>{' '}
-              and{' '}
+                Terms
+              </a>
+              {' · '}
               <a 
                 href={PRIVACY_POLICY_URL} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="underline text-primary"
+                className="underline"
               >
-                Privacy Policy
-              </a>.
+                Privacy
+              </a>
             </p>
 
             {/* Status message */}
@@ -224,22 +223,36 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
     );
   }
 
-  // Full paywall screen
-  const FeatureIcon = getFeatureIcon(feature);
-  
+  // Full paywall screen - new conversion-focused copy
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-      <div className="w-16 h-16 mb-4 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-        <FeatureIcon className="w-8 h-8 text-primary" />
+    <div className="flex flex-col items-center justify-center py-12 px-5 text-center max-w-md mx-auto">
+      {/* Icon */}
+      <div className="w-14 h-14 mb-5 rounded-full bg-coral/10 flex items-center justify-center">
+        <AlertTriangle className="w-7 h-7 text-coral" />
       </div>
-      <h2 className="font-display text-xl font-bold text-foreground mb-2">
-        Unlock {feature}
+      
+      {/* Headline - emotionally strong */}
+      <h2 className="font-display text-2xl font-bold text-foreground mb-3 leading-tight">
+        Your last flare may not have been random
       </h2>
-      <p className="text-muted-foreground mb-6 max-w-xs">
-        Get full access to all features including Photo Diary, full Insights, Community, Journal, and AI Coach.
+      
+      {/* Subheadline */}
+      <p className="text-muted-foreground mb-6 leading-relaxed">
+        We look for patterns in your check-ins—and compare them with what others commonly report—to help you spot what may be making things worse.
       </p>
       
-      <div className="space-y-3 w-full max-w-xs">
+      {/* Bullet points - concrete outcomes */}
+      <div className="w-full space-y-3 mb-6 text-left">
+        {patternBullets.map((bullet, index) => (
+          <div key={index} className="flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+            <span className="text-sm text-foreground">{bullet}</span>
+          </div>
+        ))}
+      </div>
+      
+      <div className="space-y-3 w-full">
+        {/* CTA Button with price */}
         <Button
           onClick={handleUpgrade}
           disabled={isButtonLoading}
@@ -254,35 +267,39 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
             </>
           ) : (
             <>
-              <Crown className="w-4 h-4" />
-              Start 14-Day Free Trial · {priceString}/month
+              Start 14-Day Free Trial – {priceString}/month
             </>
           )}
         </Button>
         
-        <p className="text-xs text-muted-foreground">
-          {priceString}/month after 14-day free trial. Auto-renewable. Cancel anytime.
-        </p>
+        {/* Reassurance text */}
+        <div className="space-y-1 pt-1">
+          <p className="text-xs text-muted-foreground">
+            {priceString}/month after free trial · Cancel anytime
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Your tracking stays free either way.
+          </p>
+        </div>
         
-        <p className="text-xs text-muted-foreground mt-1">
-          By subscribing, you agree to our{' '}
+        <p className="text-xs text-muted-foreground pt-1">
           <a 
             href={getTermsUrl(platform as Platform)} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="underline text-primary"
+            className="underline"
           >
-            Terms of Use
-          </a>{' '}
-          and{' '}
+            Terms
+          </a>
+          {' · '}
           <a 
             href={PRIVACY_POLICY_URL} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="underline text-primary"
+            className="underline"
           >
-            Privacy Policy
-          </a>.
+            Privacy
+          </a>
         </p>
 
         {/* Status message */}
