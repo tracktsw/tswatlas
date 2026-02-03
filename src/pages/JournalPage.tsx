@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import PaywallGuard from '@/components/PaywallGuard';
+
 import { LeafIllustration, HeartIllustration } from '@/components/illustrations';
 import { SparkleEffect } from '@/components/SparkleEffect';
 
@@ -81,7 +81,7 @@ const JournalPage = () => {
   };
 
   return (
-    <PaywallGuard feature="Journal">
+    <>
     <div className="px-4 py-6 space-y-6 max-w-lg mx-auto relative">
       {/* Sparkle celebration effect */}
       <SparkleEffect isActive={showSparkles} onComplete={() => setShowSparkles(false)} />
@@ -233,7 +233,7 @@ const JournalPage = () => {
         </div>
       )}
     </div>
-    </PaywallGuard>
+    </>
   );
 };
 
