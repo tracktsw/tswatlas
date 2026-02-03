@@ -417,73 +417,155 @@ const InsightsPage = () => {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: "easeOut", delay: 0.2 }}
-              className="bg-background/95 backdrop-blur-sm px-5 py-6 mx-4 max-w-sm rounded-2xl shadow-lg border border-border/50"
+              className="bg-background/95 backdrop-blur-sm px-5 py-6 mx-4 max-w-md rounded-2xl shadow-lg border border-border/50"
             >
               {/* Header */}
               <div className="text-center mb-5">
-                <h3 className="font-display font-bold text-xl text-foreground mb-1.5">
-                  Unlock your patterns
+                <h3 className="font-display font-bold text-lg text-foreground mb-2 leading-tight">
+                  Something you're doing may be worsening your flares
                 </h3>
-                <p className="text-muted-foreground text-sm">
-                  See what may be affecting your healing
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Premium helps you spot patterns linked to symptom worsening — using your check-ins and aggregated community data.
                 </p>
               </div>
 
-              {/* Premium Plan Card */}
-              <div className="bg-primary rounded-xl p-4 mb-5">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-display font-bold text-lg text-primary-foreground">Premium</span>
-                  <span className="text-xs bg-primary-foreground/20 text-primary-foreground px-2.5 py-1 rounded-full font-medium">
-                    14-day free trial
-                  </span>
+              {/* Plans Container */}
+              <div className="space-y-3 mb-5">
+                {/* Free Plan */}
+                <div className="border border-border rounded-xl p-3.5 bg-muted/30">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-display font-semibold text-base text-foreground">Free</span>
+                  </div>
+                  <p className="text-muted-foreground text-xs mb-2">
+                    Basic tracking and community access.
+                  </p>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li className="flex items-center gap-1.5">
+                      <span className="text-muted-foreground">✓</span> Daily check-ins
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <span className="text-muted-foreground">✓</span> Weekly overview
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <span className="text-muted-foreground">✓</span> Community access
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <span className="text-muted-foreground">✓</span> Limited photo uploads
+                    </li>
+                  </ul>
                 </div>
-                <p className="text-primary-foreground/80 text-sm">
-                  Full access to all pattern detection
-                </p>
+
+                {/* Premium Plan (highlighted) */}
+                <div className="border-2 border-primary rounded-xl p-3.5 bg-primary/5 relative">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-display font-bold text-base text-foreground">Premium</span>
+                    <span className="text-xs bg-primary text-primary-foreground px-2.5 py-1 rounded-full font-medium">
+                      14-day free trial
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground text-xs mb-2">
+                    Deeper monitoring to help identify what may be helping — or making things worse.
+                  </p>
+                  <ul className="text-xs text-foreground space-y-1">
+                    <li className="flex items-center gap-1.5">
+                      <span className="text-primary">✓</span> Daily check-ins
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <span className="text-primary">✓</span> Weekly overview
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <span className="text-primary">✓</span> Community access
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <span className="text-primary">✓</span> Unlimited photo uploads
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <span className="text-primary">✓</span> Photo comparison tool
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <span className="text-primary">✓</span> Full insights access
+                    </li>
+                    <li className="pl-4 text-muted-foreground text-xs">Treatment helping vs not helping</li>
+                    <li className="pl-4 text-muted-foreground text-xs">Trigger detection</li>
+                    <li className="pl-4 text-muted-foreground text-xs">Food & product analysis</li>
+                    <li className="pl-4 text-muted-foreground text-xs">Mood, pain, and sleep trends</li>
+                    <li className="flex items-center gap-1.5">
+                      <span className="text-primary">✓</span> AI coach access
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <span className="text-primary">✓</span> Journal access
+                    </li>
+                  </ul>
+                </div>
               </div>
 
               {/* Compare Features Table */}
               <div className="mb-5">
-                <h4 className="font-display font-semibold text-base text-foreground text-center mb-3">
-                  Compare Features
+                <h4 className="font-display font-semibold text-sm text-foreground text-center mb-3">
+                  Compare features
                 </h4>
-                <div className="border border-border rounded-xl overflow-hidden">
+                <div className="border border-border rounded-xl overflow-hidden text-xs">
                   {/* Table Header */}
                   <div className="grid grid-cols-3 bg-muted/50 border-b border-border">
-                    <div className="p-2.5"></div>
-                    <div className="p-2.5 text-center text-sm font-medium text-muted-foreground">Free</div>
-                    <div className="p-2.5 text-center text-sm font-semibold text-foreground bg-primary/5">Premium</div>
+                    <div className="p-2"></div>
+                    <div className="p-2 text-center font-medium text-muted-foreground">Free</div>
+                    <div className="p-2 text-center font-semibold text-foreground bg-primary/10">Premium</div>
                   </div>
                   {/* Feature Rows */}
                   <div className="grid grid-cols-3 border-b border-border">
-                    <div className="p-2.5 text-sm text-foreground">Daily check-ins</div>
-                    <div className="p-2.5 text-center text-muted-foreground">✓</div>
-                    <div className="p-2.5 text-center text-primary bg-primary/5">✓</div>
+                    <div className="p-2 text-foreground">Daily check-ins</div>
+                    <div className="p-2 text-center text-muted-foreground">✓</div>
+                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
                   </div>
                   <div className="grid grid-cols-3 border-b border-border">
-                    <div className="p-2.5 text-sm text-foreground">Weekly overview</div>
-                    <div className="p-2.5 text-center text-muted-foreground">✓</div>
-                    <div className="p-2.5 text-center text-primary bg-primary/5">✓</div>
+                    <div className="p-2 text-foreground">Weekly overview</div>
+                    <div className="p-2 text-center text-muted-foreground">✓</div>
+                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
                   </div>
                   <div className="grid grid-cols-3 border-b border-border">
-                    <div className="p-2.5 text-sm text-foreground">Flare patterns</div>
-                    <div className="p-2.5 text-center text-muted-foreground">—</div>
-                    <div className="p-2.5 text-center text-primary bg-primary/5">✓</div>
+                    <div className="p-2 text-foreground">Community access</div>
+                    <div className="p-2 text-center text-muted-foreground">✓</div>
+                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
                   </div>
                   <div className="grid grid-cols-3 border-b border-border">
-                    <div className="p-2.5 text-sm text-foreground">Trigger detection</div>
-                    <div className="p-2.5 text-center text-muted-foreground">—</div>
-                    <div className="p-2.5 text-center text-primary bg-primary/5">✓</div>
+                    <div className="p-2 text-foreground">Photo uploads</div>
+                    <div className="p-2 text-center text-muted-foreground">Limited</div>
+                    <div className="p-2 text-center text-primary bg-primary/5">Unlimited</div>
                   </div>
                   <div className="grid grid-cols-3 border-b border-border">
-                    <div className="p-2.5 text-sm text-foreground">Community trends</div>
-                    <div className="p-2.5 text-center text-muted-foreground">—</div>
-                    <div className="p-2.5 text-center text-primary bg-primary/5">✓</div>
+                    <div className="p-2 text-foreground">Photo comparison</div>
+                    <div className="p-2 text-center text-muted-foreground">–</div>
+                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
+                  </div>
+                  <div className="grid grid-cols-3 border-b border-border">
+                    <div className="p-2 text-foreground">Treatment impact insights</div>
+                    <div className="p-2 text-center text-muted-foreground">–</div>
+                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
+                  </div>
+                  <div className="grid grid-cols-3 border-b border-border">
+                    <div className="p-2 text-foreground">Trigger detection</div>
+                    <div className="p-2 text-center text-muted-foreground">–</div>
+                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
+                  </div>
+                  <div className="grid grid-cols-3 border-b border-border">
+                    <div className="p-2 text-foreground">Food & product analysis</div>
+                    <div className="p-2 text-center text-muted-foreground">–</div>
+                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
+                  </div>
+                  <div className="grid grid-cols-3 border-b border-border">
+                    <div className="p-2 text-foreground">Mood, pain & sleep trends</div>
+                    <div className="p-2 text-center text-muted-foreground">–</div>
+                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
+                  </div>
+                  <div className="grid grid-cols-3 border-b border-border">
+                    <div className="p-2 text-foreground">AI coach</div>
+                    <div className="p-2 text-center text-muted-foreground">–</div>
+                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
                   </div>
                   <div className="grid grid-cols-3">
-                    <div className="p-2.5 text-sm text-foreground">Photo diary</div>
-                    <div className="p-2.5 text-center text-muted-foreground">—</div>
-                    <div className="p-2.5 text-center text-primary bg-primary/5">✓</div>
+                    <div className="p-2 text-foreground">Journal access</div>
+                    <div className="p-2 text-center text-muted-foreground">–</div>
+                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
                   </div>
                 </div>
               </div>
@@ -516,9 +598,9 @@ const InsightsPage = () => {
                 {priceString}/month after free trial · Cancel anytime
               </p>
               <p className="text-xs text-muted-foreground mt-1 text-center">
-                Your tracking stays free either way.
+                Your tracking stays free whether you subscribe or not.
               </p>
-              <p className="text-xs text-muted-foreground mt-1 text-center">
+              <p className="text-xs text-muted-foreground mt-2 text-center">
                 <a 
                   href={getTermsUrl(platform as Platform)} 
                   target="_blank" 
