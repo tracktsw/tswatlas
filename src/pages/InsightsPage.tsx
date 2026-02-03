@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles, Eye, Pencil, Crown, Loader2, Flame, Activity, CalendarDays, Moon, Wand2, Trash2, RotateCcw, RefreshCw } from 'lucide-react';
+import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles, Eye, Pencil, Crown, Loader2, Flame, Activity, CalendarDays, Moon, Wand2, Trash2, RotateCcw, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useUserData, BodyPart, CheckIn } from '@/contexts/UserDataContext';
 import { useDemoMode } from '@/contexts/DemoModeContext';
 import { format, subDays, startOfDay, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isSameMonth, addMonths, subMonths, getDay, setMonth, setYear } from 'date-fns';
@@ -419,29 +419,29 @@ const InsightsPage = () => {
               transition={{ duration: 0.4, ease: "easeOut", delay: 0.2 }}
               className="bg-background/80 backdrop-blur-sm px-5 py-4 mx-4 max-w-sm text-center rounded-2xl shadow-sm border border-border/50"
             >
-              <div className="w-9 h-9 mx-auto rounded-xl bg-muted/60 flex items-center justify-center mb-3">
-                <Crown className="w-4 h-4 text-muted-foreground/70" />
+              <div className="w-10 h-10 mx-auto rounded-full bg-coral/10 flex items-center justify-center mb-3">
+                <AlertTriangle className="w-5 h-5 text-coral" />
               </div>
               
-              <h3 className="font-display font-semibold text-base text-foreground mb-1.5">
-                Your skin follows patterns. We can show you.
+              <h3 className="font-display font-bold text-lg text-foreground mb-2 leading-tight">
+                Your last flare may not have been random
               </h3>
-              <p className="text-muted-foreground text-sm mb-3 leading-relaxed">
-                Based on your check-ins, patterns are starting to form. Premium helps you understand what often precedes, worsens, or settles flares — using your own data.
+              <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
+                We look for patterns in your check-ins—and compare them with what others commonly report—to help you spot what may be making things worse.
               </p>
 
-              <ul className="text-left text-sm text-muted-foreground space-y-1.5 mb-4">
-                <li className="flex items-start gap-2">
-                  <span className="text-muted-foreground/60 mt-0.5">•</span>
-                  <span>What often appears before flares</span>
+              <ul className="text-left text-sm space-y-2 mb-4">
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                  <span className="text-foreground">What commonly precedes your flares</span>
                 </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-muted-foreground/60 mt-0.5">•</span>
-                  <span>What's linked to longer vs shorter flares</span>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                  <span className="text-foreground">What's linked to longer vs shorter flares</span>
                 </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-muted-foreground/60 mt-0.5">•</span>
-                  <span>What tends to coincide with calmer periods</span>
+                <li className="flex items-start gap-2.5">
+                  <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                  <span className="text-foreground">What others often wish they'd stopped earlier</span>
                 </li>
               </ul>
 
@@ -465,33 +465,34 @@ const InsightsPage = () => {
                   </>
                 ) : (
                   <>
-                    <Crown className="w-4 h-4" />
-                    Start 14-Day Free Trial · {priceString}/month
+                    Start 14-Day Free Trial – {priceString}/month
                   </>
                 )}
               </Button>
-              <p className="text-xs text-muted-foreground mt-1.5">
-                {priceString}/month after 14-day free trial. Auto-renewable. Cancel anytime.
+              <p className="text-xs text-muted-foreground mt-2">
+                {priceString}/month after free trial · Cancel anytime
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                By subscribing, you agree to our{' '}
+                Your tracking stays free either way.
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
                 <a 
                   href={getTermsUrl(platform as Platform)} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="underline text-primary"
+                  className="underline"
                 >
-                  Terms of Use
-                </a>{' '}
-                and{' '}
+                  Terms
+                </a>
+                {' · '}
                 <a 
                   href={PRIVACY_POLICY_URL} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="underline text-primary"
+                  className="underline"
                 >
-                  Privacy Policy
-                </a>.
+                  Privacy
+                </a>
               </p>
 
               {/* iOS: Retry button if offerings failed */}
