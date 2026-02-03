@@ -422,10 +422,12 @@ const InsightsPage = () => {
               {/* Header */}
               <div className="text-center mb-5">
                 <h3 className="font-display font-bold text-lg text-foreground mb-2 leading-tight">
-                  Something you're doing may be worsening your flares
+                  <span className="inline-block animate-pulse">⚡</span>
+                  {" "}Healing from Topical Steroid Withdrawal can be done much faster{" "}
+                  <span className="inline-block animate-pulse">⚡</span>
                 </h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">
-                  Premium helps you spot patterns linked to symptom worsening — using your check-ins and aggregated community data.
+                  Premium uses your check-ins to work out how to heal your TSW faster
                 </p>
               </div>
 
