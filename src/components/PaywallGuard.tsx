@@ -304,7 +304,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
             </div>
             <div className="grid grid-cols-3">
               <div className="p-2 text-foreground">Journal access</div>
-              <div className="p-2 text-center text-muted-foreground">✗</div>
+              <div className="p-2 text-center text-primary">✓</div>
               <div className="p-2 text-center text-primary bg-primary/5">✓</div>
             </div>
           </div>
