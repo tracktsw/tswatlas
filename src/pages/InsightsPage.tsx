@@ -412,38 +412,81 @@ const InsightsPage = () => {
 
         {/* Glass overlay with CTA for free users */}
         {!isPremium && !isSubscriptionLoading && (
-          <div className="absolute inset-0 flex items-start justify-center pt-8">
+          <div className="absolute inset-0 flex items-start justify-center pt-4">
             <motion.div 
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: "easeOut", delay: 0.2 }}
-              className="bg-background/80 backdrop-blur-sm px-5 py-4 mx-4 max-w-sm text-center rounded-2xl shadow-sm border border-border/50"
+              className="bg-background/95 backdrop-blur-sm px-5 py-6 mx-4 max-w-sm rounded-2xl shadow-lg border border-border/50"
             >
-              <div className="w-10 h-10 mx-auto rounded-full bg-coral/10 flex items-center justify-center mb-3">
-                <AlertTriangle className="w-5 h-5 text-coral" />
+              {/* Header */}
+              <div className="text-center mb-5">
+                <h3 className="font-display font-bold text-xl text-foreground mb-1.5">
+                  Unlock your patterns
+                </h3>
+                <p className="text-muted-foreground text-sm">
+                  See what may be affecting your healing
+                </p>
               </div>
-              
-              <h3 className="font-display font-bold text-lg text-foreground mb-2 leading-tight">
-                Your last flare may not have been random
-              </h3>
-              <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
-                We look for patterns in your check-ins—and compare them with what others commonly report—to help you spot what may be making things worse.
-              </p>
 
-              <ul className="text-left text-sm space-y-2 mb-4">
-                <li className="flex items-start gap-2.5">
-                  <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                  <span className="text-foreground">What commonly precedes your flares</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                  <span className="text-foreground">What's linked to longer vs shorter flares</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <CheckCircle className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                  <span className="text-foreground">What others often wish they'd stopped earlier</span>
-                </li>
-              </ul>
+              {/* Premium Plan Card */}
+              <div className="bg-primary rounded-xl p-4 mb-5">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-display font-bold text-lg text-primary-foreground">Premium</span>
+                  <span className="text-xs bg-primary-foreground/20 text-primary-foreground px-2.5 py-1 rounded-full font-medium">
+                    14-day free trial
+                  </span>
+                </div>
+                <p className="text-primary-foreground/80 text-sm">
+                  Full access to all pattern detection
+                </p>
+              </div>
+
+              {/* Compare Features Table */}
+              <div className="mb-5">
+                <h4 className="font-display font-semibold text-base text-foreground text-center mb-3">
+                  Compare Features
+                </h4>
+                <div className="border border-border rounded-xl overflow-hidden">
+                  {/* Table Header */}
+                  <div className="grid grid-cols-3 bg-muted/50 border-b border-border">
+                    <div className="p-2.5"></div>
+                    <div className="p-2.5 text-center text-sm font-medium text-muted-foreground">Free</div>
+                    <div className="p-2.5 text-center text-sm font-semibold text-foreground bg-primary/5">Premium</div>
+                  </div>
+                  {/* Feature Rows */}
+                  <div className="grid grid-cols-3 border-b border-border">
+                    <div className="p-2.5 text-sm text-foreground">Daily check-ins</div>
+                    <div className="p-2.5 text-center text-muted-foreground">✓</div>
+                    <div className="p-2.5 text-center text-primary bg-primary/5">✓</div>
+                  </div>
+                  <div className="grid grid-cols-3 border-b border-border">
+                    <div className="p-2.5 text-sm text-foreground">Weekly overview</div>
+                    <div className="p-2.5 text-center text-muted-foreground">✓</div>
+                    <div className="p-2.5 text-center text-primary bg-primary/5">✓</div>
+                  </div>
+                  <div className="grid grid-cols-3 border-b border-border">
+                    <div className="p-2.5 text-sm text-foreground">Flare patterns</div>
+                    <div className="p-2.5 text-center text-muted-foreground">—</div>
+                    <div className="p-2.5 text-center text-primary bg-primary/5">✓</div>
+                  </div>
+                  <div className="grid grid-cols-3 border-b border-border">
+                    <div className="p-2.5 text-sm text-foreground">Trigger detection</div>
+                    <div className="p-2.5 text-center text-muted-foreground">—</div>
+                    <div className="p-2.5 text-center text-primary bg-primary/5">✓</div>
+                  </div>
+                  <div className="grid grid-cols-3 border-b border-border">
+                    <div className="p-2.5 text-sm text-foreground">Community trends</div>
+                    <div className="p-2.5 text-center text-muted-foreground">—</div>
+                    <div className="p-2.5 text-center text-primary bg-primary/5">✓</div>
+                  </div>
+                  <div className="grid grid-cols-3">
+                    <div className="p-2.5 text-sm text-foreground">Photo diary</div>
+                    <div className="p-2.5 text-center text-muted-foreground">—</div>
+                    <div className="p-2.5 text-center text-primary bg-primary/5">✓</div>
+                  </div>
+                </div>
+              </div>
 
               {/* Subscribe Button */}
               <Button 
@@ -469,13 +512,13 @@ const InsightsPage = () => {
                   </>
                 )}
               </Button>
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-xs text-muted-foreground mt-2 text-center">
                 {priceString}/month after free trial · Cancel anytime
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1 text-center">
                 Your tracking stays free either way.
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1 text-center">
                 <a 
                   href={getTermsUrl(platform as Platform)} 
                   target="_blank" 
@@ -513,7 +556,7 @@ const InsightsPage = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="mt-2 gap-2 text-muted-foreground"
+                  className="mt-2 gap-2 text-muted-foreground w-full"
                   onClick={handleRestore}
                   disabled={isRestoring}
                 >
