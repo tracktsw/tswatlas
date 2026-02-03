@@ -422,9 +422,7 @@ const InsightsPage = () => {
               {/* Header */}
               <div className="text-center mb-5">
                 <h3 className="font-display font-bold text-lg text-foreground mb-2 leading-tight">
-                  <span className="inline-block animate-pulse">⚡</span>
-                  {" "}You Might Be Slowing Your Own TSW Recovery Without Realising It{" "}
-                  <span className="inline-block animate-pulse">⚡</span>
+                  You Might Be Slowing Your Own TSW Recovery Without Realising It
                 </h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">
                   Premium highlights behaviours and exposures commonly linked to flare worsening — so you can adjust earlier.
