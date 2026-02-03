@@ -223,10 +223,14 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
         {/* Header */}
         <div className="text-center mb-5">
           <h3 className="font-display font-bold text-lg text-foreground mb-2 leading-tight">
-            You Might Be Slowing Your Own TSW Recovery Without Realising It
+            {feature === 'AI Coach' 
+              ? 'Most People With TSW Miss the Things That Make It Worse'
+              : 'You Might Be Slowing Your Own TSW Recovery Without Realising It'}
           </h3>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Premium highlights behaviours and exposures commonly linked to flare worsening — so you can adjust earlier.
+            {feature === 'AI Coach'
+              ? 'Gain access to the AI coach powered by Gemini to make learning what you should do for your skin quick and easy.'
+              : 'Premium highlights behaviours and exposures commonly linked to flare worsening — so you can adjust earlier.'}
           </p>
         </div>
 
