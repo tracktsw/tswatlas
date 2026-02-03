@@ -2,7 +2,7 @@ import { ReactNode, useState, useEffect, useRef } from 'react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { usePaymentRouter } from '@/hooks/usePaymentRouter';
 import { useRevenueCatContext } from '@/contexts/RevenueCatContext';
-import { Lock, AlertTriangle, Loader2, RotateCcw, LucideIcon, CheckCircle } from 'lucide-react';
+import { Lock, AlertTriangle, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -118,13 +118,6 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
 
   const isButtonLoading = isPurchasing || isRevenueCatLoading;
 
-  // Pattern discovery bullet points
-  const patternBullets = [
-    "What commonly precedes your flares",
-    "What's linked to longer vs shorter flares",
-    "What others often wish they'd stopped earlier",
-  ];
-
   // Blurred content overlay
   if (showBlurred) {
     return (
@@ -223,42 +216,103 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
     );
   }
 
-  // Full paywall screen - new conversion-focused copy
+  // Full paywall screen - comparison table design
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-5 text-center max-w-md mx-auto">
-      {/* Icon */}
-      <div className="w-14 h-14 mb-5 rounded-full bg-coral/10 flex items-center justify-center">
-        <AlertTriangle className="w-7 h-7 text-coral" />
-      </div>
-      
-      {/* Headline - emotionally strong */}
-      <h2 className="font-display text-2xl font-bold text-foreground mb-3 leading-tight">
-        Your last flare may not have been random
-      </h2>
-      
-      {/* Subheadline */}
-      <p className="text-muted-foreground mb-6 leading-relaxed">
-        We look for patterns in your check-ins—and compare them with what others commonly report—to help you spot what may be making things worse.
-      </p>
-      
-      {/* Bullet points - concrete outcomes */}
-      <div className="w-full space-y-3 mb-6 text-left">
-        {patternBullets.map((bullet, index) => (
-          <div key={index} className="flex items-start gap-3">
-            <CheckCircle className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-            <span className="text-sm text-foreground">{bullet}</span>
+    <div className="flex flex-col items-center justify-center py-8 px-4">
+      <div className="bg-background/95 backdrop-blur-sm px-5 py-6 max-w-md rounded-2xl shadow-lg border border-border/50">
+        {/* Header */}
+        <div className="text-center mb-5">
+          <h3 className="font-display font-bold text-lg text-foreground mb-2 leading-tight">
+            You Might Be Slowing Your Own TSW Recovery Without Realising It
+          </h3>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Premium highlights behaviours and exposures commonly linked to flare worsening — so you can adjust earlier.
+          </p>
+        </div>
+
+        {/* Compare Features Table */}
+        <div className="mb-5">
+          <h4 className="font-display font-semibold text-sm text-foreground text-center mb-3">
+            Compare features
+          </h4>
+          <div className="border border-border rounded-xl overflow-hidden text-xs">
+            {/* Table Header */}
+            <div className="grid grid-cols-3 bg-muted/50 border-b border-border">
+              <div className="p-2"></div>
+              <div className="p-2 text-center font-medium text-muted-foreground">Free</div>
+              <div className="p-2 text-center font-semibold text-foreground bg-primary/10">Premium</div>
+            </div>
+            {/* Feature Rows */}
+            <div className="grid grid-cols-3 border-b border-border">
+              <div className="p-2 text-foreground">Daily check-ins</div>
+              <div className="p-2 text-center text-muted-foreground">✓</div>
+              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
+            </div>
+            <div className="grid grid-cols-3 border-b border-border">
+              <div className="p-2 text-foreground">Weekly overview</div>
+              <div className="p-2 text-center text-muted-foreground">✓</div>
+              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
+            </div>
+            <div className="grid grid-cols-3 border-b border-border">
+              <div className="p-2 text-foreground">Community access</div>
+              <div className="p-2 text-center text-muted-foreground">✓</div>
+              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
+            </div>
+            <div className="grid grid-cols-3 border-b border-border">
+              <div className="p-2 text-foreground">Photo uploads</div>
+              <div className="p-2 text-center text-muted-foreground">Limited</div>
+              <div className="p-2 text-center text-primary bg-primary/5">Unlimited</div>
+            </div>
+            <div className="grid grid-cols-3 border-b border-border">
+              <div className="p-2 text-foreground">Photo comparison</div>
+              <div className="p-2 text-center text-muted-foreground">–</div>
+              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
+            </div>
+            <div className="grid grid-cols-3 border-b border-border">
+              <div className="p-2 text-foreground">Treatment impact insights</div>
+              <div className="p-2 text-center text-muted-foreground">–</div>
+              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
+            </div>
+            <div className="grid grid-cols-3 border-b border-border">
+              <div className="p-2 text-foreground">Trigger detection</div>
+              <div className="p-2 text-center text-muted-foreground">–</div>
+              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
+            </div>
+            <div className="grid grid-cols-3 border-b border-border">
+              <div className="p-2 text-foreground">Food & product analysis</div>
+              <div className="p-2 text-center text-muted-foreground">–</div>
+              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
+            </div>
+            <div className="grid grid-cols-3 border-b border-border">
+              <div className="p-2 text-foreground">Mood, pain & sleep trends</div>
+              <div className="p-2 text-center text-muted-foreground">–</div>
+              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
+            </div>
+            <div className="grid grid-cols-3 border-b border-border">
+              <div className="p-2 text-foreground">Flare calendar</div>
+              <div className="p-2 text-center text-muted-foreground">–</div>
+              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
+            </div>
+            <div className="grid grid-cols-3 border-b border-border">
+              <div className="p-2 text-foreground">AI coach</div>
+              <div className="p-2 text-center text-muted-foreground">–</div>
+              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
+            </div>
+            <div className="grid grid-cols-3">
+              <div className="p-2 text-foreground">Journal access</div>
+              <div className="p-2 text-center text-muted-foreground">–</div>
+              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
+            </div>
           </div>
-        ))}
-      </div>
-      
-      <div className="space-y-3 w-full">
-        {/* CTA Button with price */}
-        <Button
-          onClick={handleUpgrade}
-          disabled={isButtonLoading}
-          variant="gold"
-          className="w-full gap-2"
-          size="lg"
+        </div>
+
+        {/* Subscribe Button */}
+        <Button 
+          onClick={handleUpgrade} 
+          disabled={isButtonLoading} 
+          variant="gold" 
+          className="w-full gap-2" 
+          size="default"
         >
           {isButtonLoading ? (
             <>
@@ -271,18 +325,13 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
             </>
           )}
         </Button>
-        
-        {/* Reassurance text */}
-        <div className="space-y-1 pt-1">
-          <p className="text-xs text-muted-foreground">
-            {priceString}/month after free trial · Cancel anytime
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Your tracking stays free either way.
-          </p>
-        </div>
-        
-        <p className="text-xs text-muted-foreground pt-1">
+        <p className="text-xs text-muted-foreground mt-2 text-center">
+          {priceString}/month after free trial · Cancel anytime
+        </p>
+        <p className="text-xs text-muted-foreground mt-1 text-center">
+          Your tracking stays free whether you subscribe or not.
+        </p>
+        <p className="text-xs text-muted-foreground mt-2 text-center">
           <a 
             href={getTermsUrl(platform as Platform)} 
             target="_blank" 
@@ -304,7 +353,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
 
         {/* Status message */}
         {statusMessage && (
-          <p className="text-sm text-muted-foreground">{statusMessage}</p>
+          <p className="text-sm text-muted-foreground mt-2 text-center">{statusMessage}</p>
         )}
 
         {/* Native: Restore purchases - only if logged in */}
@@ -312,7 +361,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
           <Button
             variant="ghost"
             size="sm"
-            className="gap-2 text-muted-foreground"
+            className="mt-2 gap-2 text-muted-foreground w-full"
             onClick={handleRestore}
             disabled={isRestoring}
           >
