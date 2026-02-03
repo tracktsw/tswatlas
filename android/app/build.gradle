@@ -8,8 +8,8 @@ android {
         applicationId "app.tracktsw.atlas"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 81
-        versionName "1.5.9"
+        versionCode 84
+        versionName "1.5.12"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         aaptOptions {
