@@ -265,42 +265,42 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
             </div>
             <div className="grid grid-cols-3 border-b border-border">
               <div className="p-2 text-foreground">Photo comparison</div>
-              <div className="p-2 text-center text-muted-foreground">–</div>
+              <div className="p-2 text-center text-muted-foreground">✗</div>
               <div className="p-2 text-center text-primary bg-primary/5">✓</div>
             </div>
             <div className="grid grid-cols-3 border-b border-border">
               <div className="p-2 text-foreground">Treatment impact insights</div>
-              <div className="p-2 text-center text-muted-foreground">–</div>
+              <div className="p-2 text-center text-muted-foreground">✗</div>
               <div className="p-2 text-center text-primary bg-primary/5">✓</div>
             </div>
             <div className="grid grid-cols-3 border-b border-border">
               <div className="p-2 text-foreground">Trigger detection</div>
-              <div className="p-2 text-center text-muted-foreground">–</div>
+              <div className="p-2 text-center text-muted-foreground">✗</div>
               <div className="p-2 text-center text-primary bg-primary/5">✓</div>
             </div>
             <div className="grid grid-cols-3 border-b border-border">
               <div className="p-2 text-foreground">Food & product analysis</div>
-              <div className="p-2 text-center text-muted-foreground">–</div>
+              <div className="p-2 text-center text-muted-foreground">✗</div>
               <div className="p-2 text-center text-primary bg-primary/5">✓</div>
             </div>
             <div className="grid grid-cols-3 border-b border-border">
               <div className="p-2 text-foreground">Mood, pain & sleep trends</div>
-              <div className="p-2 text-center text-muted-foreground">–</div>
+              <div className="p-2 text-center text-muted-foreground">✗</div>
               <div className="p-2 text-center text-primary bg-primary/5">✓</div>
             </div>
             <div className="grid grid-cols-3 border-b border-border">
               <div className="p-2 text-foreground">Flare calendar</div>
-              <div className="p-2 text-center text-muted-foreground">–</div>
+              <div className="p-2 text-center text-muted-foreground">✗</div>
               <div className="p-2 text-center text-primary bg-primary/5">✓</div>
             </div>
             <div className="grid grid-cols-3 border-b border-border">
               <div className="p-2 text-foreground">AI coach</div>
-              <div className="p-2 text-center text-muted-foreground">–</div>
+              <div className="p-2 text-center text-muted-foreground">✗</div>
               <div className="p-2 text-center text-primary bg-primary/5">✓</div>
             </div>
             <div className="grid grid-cols-3">
               <div className="p-2 text-foreground">Journal access</div>
-              <div className="p-2 text-center text-muted-foreground">–</div>
+              <div className="p-2 text-center text-muted-foreground">✗</div>
               <div className="p-2 text-center text-primary bg-primary/5">✓</div>
             </div>
           </div>
