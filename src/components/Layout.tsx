@@ -7,6 +7,7 @@ import { useUserData } from '@/contexts/UserDataContext';
 import { useLayout } from '@/contexts/LayoutContext';
 import { useIOSKeyboardContext } from '@/contexts/IOSKeyboardContext';
 import { initNotificationListeners, scheduleCheckInReminders } from '@/utils/notificationScheduler';
+import { initBeliefNotifications, markAppOpenedToday } from '@/utils/beliefNotificationScheduler';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { LocalNotifications } from '@capacitor/local-notifications';
@@ -46,6 +47,7 @@ const Layout = () => {
     }
   }, [userId, isLoading, reminderSettings.enabled, reminderSettings.reminderTime]);
 
+  // Initialize notification listeners for check-in reminders
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
@@ -55,6 +57,31 @@ const Layout = () => {
 
     return cleanup;
   }, [navigate]);
+
+  // Initialize belief reinforcement notifications
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let cleanup: (() => void) | undefined;
+
+    const init = async () => {
+      cleanup = await initBeliefNotifications();
+    };
+
+    init();
+
+    // Also mark app opened when coming to foreground
+    const listener = App.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) {
+        markAppOpenedToday();
+      }
+    });
+
+    return () => {
+      if (cleanup) cleanup();
+      listener.then(l => l.remove());
+    };
+  }, []);
 
   // Schedule notifications when settings change
   useEffect(() => {
