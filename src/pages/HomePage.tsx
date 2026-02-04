@@ -5,7 +5,6 @@ import DailyInsight from '@/components/DailyInsight';
 import { LeafIllustration, PlantIllustration } from '@/components/illustrations';
 import StreakFire from '@/components/StreakFire';
 import HomeUpgradeCard from '@/components/HomeUpgradeCard';
-import { NotificationOptInModal, shouldShowNotificationPrompt } from '@/components/NotificationOptInModal';
 import compassLogo from '@/assets/compass-logo.png';
 import { useUserData } from '@/contexts/UserDataContext';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -25,18 +24,6 @@ const HomePage = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     tswStartDate ? parseISO(tswStartDate) : undefined
   );
-  const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
-
-  // Show notification opt-in prompt on first visit after onboarding
-  useEffect(() => {
-    // Small delay to let the page render first
-    const timer = setTimeout(() => {
-      if (shouldShowNotificationPrompt()) {
-        setShowNotificationPrompt(true);
-      }
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
   
   const today = format(new Date(), 'yyyy-MM-dd');
   const todayCheckIns = checkIns.filter((c) => format(new Date(c.timestamp), 'yyyy-MM-dd') === today);
@@ -130,13 +117,7 @@ const HomePage = () => {
   // This provides a much faster perceived load time
 
   return (
-    <>
-      <NotificationOptInModal 
-        open={showNotificationPrompt} 
-        onOpenChange={setShowNotificationPrompt} 
-      />
-      
-      <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto relative">
+    <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto relative">
       {/* Sync indicator */}
       {isSyncing && (
         <div className="fixed top-4 right-4 bg-sage/10 text-sage text-xs px-3 py-1.5 rounded-full flex items-center gap-2 z-50">
@@ -387,7 +368,6 @@ const HomePage = () => {
         </div>
       </Link>
     </div>
-    </>
   );
 };
 

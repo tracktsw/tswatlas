@@ -11,6 +11,9 @@ import { usePlatform } from '@/hooks/usePlatform';
 import { useOnboardingSubmit } from '@/hooks/useOnboardingSubmit';
 import { hasPendingOnboardingSurvey, sendPendingOnboardingSurvey, identifyUser } from '@/utils/analytics';
 import { trackMetaOnboardingComplete } from '@/utils/metaAnalytics';
+import { Capacitor } from '@capacitor/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { scheduleCheckInReminders } from '@/utils/notificationScheduler';
 
 
 type AuthMode = 'login' | 'signup' | 'forgot';
@@ -196,6 +199,19 @@ const AuthPage = () => {
           }
         }
         
+        // Request notification permission on native platforms after login
+        if (Capacitor.isNativePlatform()) {
+          try {
+            const permResult = await LocalNotifications.requestPermissions();
+            if (permResult.display === 'granted') {
+              // Schedule daily reminders at default time (9:00 PM)
+              await scheduleCheckInReminders('21:00', true);
+            }
+          } catch (err) {
+            console.log('[AUTH] Notification permission request failed:', err);
+          }
+        }
+        
         toast.success('Welcome back!');
         navigate('/');
       } else {
@@ -254,6 +270,19 @@ const AuthPage = () => {
           
           // Mark that user just signed up - AuthGuard will show trial offer on first login
           localStorage.setItem('just_signed_up', 'true');
+          
+          // Request notification permission on native platforms after signup
+          if (Capacitor.isNativePlatform()) {
+            try {
+              const permResult = await LocalNotifications.requestPermissions();
+              if (permResult.display === 'granted') {
+                // Schedule daily reminders at default time (9:00 PM)
+                await scheduleCheckInReminders('21:00', true);
+              }
+            } catch (err) {
+              console.log('[AUTH] Notification permission request failed:', err);
+            }
+          }
         }
         
         toast.success('Account created! Check your email to verify, then sign in.');
