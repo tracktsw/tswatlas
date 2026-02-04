@@ -477,30 +477,29 @@ const SettingsPage = () => {
             </div>
           </div>
 
-          {isNative && permissionStatus.granted && (
-            <div className="glass-card p-4 border-amber-500/50">
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-full bg-amber-500/10">
-                  <Sparkles className="w-5 h-5 text-amber-500" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-foreground">Debug: Belief Notification</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Test the daily belief reinforcement notification system.
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="mt-3 border-amber-500/50 text-amber-600"
-                    onClick={handleTestBeliefNotification}
-                  >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Send Test Belief Notification
-                  </Button>
-                </div>
+          <div className="glass-card p-4 border-amber-500/50">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-full bg-amber-500/10">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-foreground">Debug: Belief Notification</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Test the daily belief reinforcement notification system.
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-3 border-amber-500/50 text-amber-600"
+                  onClick={handleTestBeliefNotification}
+                  disabled={!isNative}
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  {isNative ? 'Send Test Belief Notification' : 'Native only'}
+                </Button>
               </div>
             </div>
-          )}
+          </div>
         </>
       )}
 
