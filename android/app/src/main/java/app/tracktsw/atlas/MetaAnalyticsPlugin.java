@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
 
+import com.facebook.appevents.AppEventsConstants;
 import com.facebook.appevents.AppEventsLogger;
 
 import org.json.JSONException;
@@ -23,9 +24,31 @@ public class MetaAnalyticsPlugin {
         this.logger = logger;
     }
 
+    /**
+     * Maps JS event names to Facebook SDK standard event constants.
+     * Standard events are recognized by Meta for optimization and attribution.
+     */
+    private String mapToStandardEvent(String eventName) {
+        switch (eventName) {
+            case "StartTrial":
+                return AppEventsConstants.EVENT_NAME_START_TRIAL;
+            case "Subscribe":
+                return AppEventsConstants.EVENT_NAME_SUBSCRIBE;
+            case "CompletedRegistration":
+                return AppEventsConstants.EVENT_NAME_COMPLETED_REGISTRATION;
+            case "InitiatedCheckout":
+                return AppEventsConstants.EVENT_NAME_INITIATED_CHECKOUT;
+            case "Purchase":
+                return AppEventsConstants.EVENT_NAME_PURCHASED;
+            default:
+                return eventName; // Custom events
+        }
+    }
+
     @JavascriptInterface
     public void logEvent(String eventName, String parametersJson) {
-        Log.d(TAG, "Logging event: " + eventName + " with params: " + parametersJson);
+        String mappedEventName = mapToStandardEvent(eventName);
+        Log.d(TAG, "Logging event: " + eventName + " -> " + mappedEventName + " with params: " + parametersJson);
         
         try {
             Bundle params = new Bundle();
@@ -53,16 +76,16 @@ public class MetaAnalyticsPlugin {
             }
             
             if (params.isEmpty()) {
-                logger.logEvent(eventName);
+                logger.logEvent(mappedEventName);
             } else {
-                logger.logEvent(eventName, params);
+                logger.logEvent(mappedEventName, params);
             }
             
-            Log.d(TAG, "Event logged successfully: " + eventName);
+            Log.d(TAG, "Event logged successfully: " + mappedEventName);
         } catch (JSONException e) {
             Log.e(TAG, "Failed to parse parameters JSON: " + e.getMessage());
             // Still log the event without parameters
-            logger.logEvent(eventName);
+            logger.logEvent(mappedEventName);
         }
     }
 }
