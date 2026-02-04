@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock, Mail, Eye, Smartphone, RotateCcw, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock, Mail, Eye, Smartphone, RotateCcw, AlertCircle, Sparkles } from 'lucide-react';
 import { usePlatform } from '@/hooks/usePlatform';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTheme } from 'next-themes';
@@ -16,6 +16,7 @@ import { useAppUpdate } from '@/hooks/useAppUpdate';
 import { useCheckInReminder } from '@/hooks/useCheckInReminder';
 import { useLocalNotifications } from '@/hooks/useLocalNotifications';
 import { scheduleCheckInReminders } from '@/utils/notificationScheduler';
+import { scheduleTestBeliefNotification } from '@/utils/beliefNotificationScheduler';
 import { format } from 'date-fns';
 
 const SettingsPage = () => {
@@ -178,6 +179,15 @@ const SettingsPage = () => {
     localStorage.removeItem('onboardingData');
     toast.success('Onboarding reset! Sign out and back in to see it.');
     setShowResetOnboarding(false);
+  };
+
+  const handleTestBeliefNotification = async () => {
+    const result = await scheduleTestBeliefNotification();
+    if (result.success) {
+      toast.success(`Test belief notification scheduled! "${result.message}" will appear in 5 seconds.`);
+    } else {
+      toast.error(`Failed: ${result.message}`);
+    }
   };
 
   return (
@@ -444,27 +454,54 @@ const SettingsPage = () => {
       </div>
 
       {showResetOnboarding && (
-        <div className="glass-card p-4 border-amber-500/50">
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-full bg-amber-500/10">
-              <RotateCcw className="w-5 h-5 text-amber-500" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-foreground">Debug: Reset Onboarding</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Clear onboarding state to test the flow again.
-              </p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="mt-3 border-amber-500/50 text-amber-600"
-                onClick={handleResetOnboarding}
-              >
-                Reset Onboarding
-              </Button>
+        <>
+          <div className="glass-card p-4 border-amber-500/50">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-full bg-amber-500/10">
+                <RotateCcw className="w-5 h-5 text-amber-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-foreground">Debug: Reset Onboarding</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Clear onboarding state to test the flow again.
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-3 border-amber-500/50 text-amber-600"
+                  onClick={handleResetOnboarding}
+                >
+                  Reset Onboarding
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+
+          {isNative && permissionStatus.granted && (
+            <div className="glass-card p-4 border-amber-500/50">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-full bg-amber-500/10">
+                  <Sparkles className="w-5 h-5 text-amber-500" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-foreground">Debug: Belief Notification</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Test the daily belief reinforcement notification system.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-3 border-amber-500/50 text-amber-600"
+                    onClick={handleTestBeliefNotification}
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Send Test Belief Notification
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <div className="glass-card p-4">
