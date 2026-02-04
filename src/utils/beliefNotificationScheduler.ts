@@ -292,3 +292,51 @@ export async function cancelBeliefNotifications(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Schedule a test belief notification (fires in 5 seconds).
+ * Useful for testing on real devices.
+ */
+export async function scheduleTestBeliefNotification(): Promise<{ success: boolean; message: string }> {
+  if (!Capacitor.isNativePlatform()) {
+    return { success: false, message: 'Not a native platform' };
+  }
+
+  // Check permission
+  const permResult = await LocalNotifications.checkPermissions();
+  if (permResult.display !== 'granted') {
+    return { success: false, message: 'Notification permission not granted' };
+  }
+
+  // Ensure Android channel exists
+  await ensureAndroidChannel();
+
+  // Get a message
+  const { message } = getNextMessage();
+
+  try {
+    // Use a different ID so it doesn't conflict with the real scheduled one
+    const TEST_NOTIFICATION_ID = 9999;
+    
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: TEST_NOTIFICATION_ID,
+          title: 'TrackTSW',
+          body: message,
+          schedule: {
+            at: new Date(Date.now() + 5000), // 5 seconds from now
+          },
+          sound: 'default',
+          channelId: ANDROID_CHANNEL_ID,
+        },
+      ],
+    });
+
+    console.log(`[BELIEF NOTIFICATIONS] Test scheduled: "${message}"`);
+    return { success: true, message };
+  } catch (error) {
+    console.error('[BELIEF NOTIFICATIONS] Error scheduling test:', error);
+    return { success: false, message: 'Failed to schedule' };
+  }
+}
