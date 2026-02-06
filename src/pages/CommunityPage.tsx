@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import DiagonalBanner from '@/components/DiagonalBanner';
+import TreatmentStatusBadge from '@/components/TreatmentStatusBadge';
 
 
 interface Treatment {
@@ -397,15 +397,13 @@ const CommunityPage = () => {
               <div 
                 key={treatment.id} 
                 className={cn(
-                  'glass-card p-4 transition-all duration-300 animate-slide-up hover:shadow-warm relative overflow-hidden',
+                  'glass-card p-4 transition-all duration-300 animate-slide-up hover:shadow-warm',
                   treatment.userVote === 'helps' && 'ring-2 ring-primary',
                   treatment.userVote === 'neutral' && 'ring-2 ring-amber-500',
                   treatment.userVote === 'harms' && 'ring-2 ring-destructive'
                 )}
                 style={{ animationDelay: `${0.1 + index * 0.03}s` }}
               >
-                {/* Diagonal banner if present */}
-                <DiagonalBanner text={treatment.banner_text || ''} />
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -420,6 +418,7 @@ const CommunityPage = () => {
                         </span>
                       )}
                       <h3 className="font-display font-bold text-foreground">{treatment.name}</h3>
+                      <TreatmentStatusBadge text={treatment.banner_text} />
                     </div>
                     {treatment.description && (
                       <p className="text-sm text-muted-foreground mb-2">
