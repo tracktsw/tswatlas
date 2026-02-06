@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 const systemPrompt = `You're a friendly companion helping someone track their skin healing journey.
@@ -128,21 +128,23 @@ serve(async (req) => {
       }
 
       // Last 30 days summary
-      userContext += `\n## LAST 30 DAYS SUMMARY\n`;
-      userContext += `- Total check-ins: ${userData.last30Days?.checkInsCount || 0}\n`;
-      userContext += `- Average mood: ${userData.last30Days?.avgMood || 'N/A'}/5\n`;
-      userContext += `- Average skin rating: ${userData.last30Days?.avgSkin || 'N/A'}/5\n`;
-      userContext += `- Average sleep quality: ${userData.last30Days?.avgSleep !== null ? userData.last30Days.avgSleep + '/5' : 'No sleep data'}\n`;
-      
-      // Sleep analysis
-      if (userData.last30Days?.sleepAnalysis) {
-        const sa = userData.last30Days.sleepAnalysis;
-        userContext += `\n### Sleep Analysis:\n`;
-        userContext += `- Sleep entries: ${sa.entriesCount}\n`;
-        userContext += `- Average sleep score: ${sa.avgScore}/5\n`;
-        userContext += `- Sleep trend: ${sa.trend}\n`;
-        userContext += `- Poor sleep days (1-2): ${sa.lowSleepDays}\n`;
-        userContext += `- Good sleep days (4-5): ${sa.goodSleepDays}\n`;
+      if (userData.last30Days) {
+        userContext += `\n## LAST 30 DAYS SUMMARY\n`;
+        userContext += `- Total check-ins: ${userData.last30Days.checkInsCount || 0}\n`;
+        userContext += `- Average mood: ${userData.last30Days.avgMood || 'N/A'}/5\n`;
+        userContext += `- Average skin rating: ${userData.last30Days.avgSkin || 'N/A'}/5\n`;
+        userContext += `- Average sleep quality: ${userData.last30Days.avgSleep !== null && userData.last30Days.avgSleep !== undefined ? userData.last30Days.avgSleep + '/5' : 'No sleep data'}\n`;
+        
+        // Sleep analysis
+        if (userData.last30Days.sleepAnalysis) {
+          const sa = userData.last30Days.sleepAnalysis;
+          userContext += `\n### Sleep Analysis:\n`;
+          userContext += `- Sleep entries: ${sa.entriesCount}\n`;
+          userContext += `- Average sleep score: ${sa.avgScore}/5\n`;
+          userContext += `- Sleep trend: ${sa.trend}\n`;
+          userContext += `- Poor sleep days (1-2): ${sa.lowSleepDays}\n`;
+          userContext += `- Good sleep days (4-5): ${sa.goodSleepDays}\n`;
+        }
       }
 
       if (userData.last30Days?.symptomsSummary?.length > 0) {
