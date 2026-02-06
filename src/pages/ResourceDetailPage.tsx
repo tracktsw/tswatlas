@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { ExternalLink, ArrowLeft, Loader2, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface Resource {
   id: string;
@@ -44,18 +43,18 @@ const ResourceDetailPage = () => {
 
   if (isLoading) {
     return (
-      <div className="container max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto">
         <div className="flex items-center gap-3">
-          <Skeleton className="h-10 w-10 rounded-full" />
-          <Skeleton className="h-6 w-48" />
+          <div className="h-10 w-10 bg-muted animate-pulse rounded-full" />
+          <div className="h-6 w-48 bg-muted animate-pulse rounded" />
         </div>
-        <Skeleton className="h-4 w-32" />
+        <div className="h-4 w-32 bg-muted animate-pulse rounded" />
         <div className="space-y-3">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
+          <div className="h-4 w-full bg-muted animate-pulse rounded" />
+          <div className="h-4 w-full bg-muted animate-pulse rounded" />
+          <div className="h-4 w-3/4 bg-muted animate-pulse rounded" />
+          <div className="h-4 w-full bg-muted animate-pulse rounded" />
+          <div className="h-4 w-5/6 bg-muted animate-pulse rounded" />
         </div>
       </div>
     );
@@ -63,7 +62,7 @@ const ResourceDetailPage = () => {
 
   if (error || !resource) {
     return (
-      <div className="container max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto">
         <button
           onClick={handleBack}
           className="p-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
@@ -88,7 +87,7 @@ const ResourceDetailPage = () => {
   const isAiGenerated = !resource.custom_summary && resource.ai_summary;
 
   return (
-    <div className="container max-w-2xl mx-auto px-4 py-6">
+    <div className="px-4 md:px-8 lg:px-12 py-6 max-w-lg md:max-w-none mx-auto">
       {/* Header with back button */}
       <div className="flex items-start gap-3 mb-6">
         <button
