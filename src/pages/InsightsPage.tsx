@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles, Eye, Pencil, Crown, Loader2, Flame, Activity, CalendarDays, Moon, Wand2, Trash2, RotateCcw, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react';
+import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles, Eye, Pencil, Crown, Loader2, Flame, Activity, CalendarDays, Moon, Wand2, Trash2, RotateCcw, RefreshCw, AlertTriangle, CheckCircle, Lock } from 'lucide-react';
 import { useUserData, BodyPart, CheckIn } from '@/contexts/UserDataContext';
 import { useDemoMode } from '@/contexts/DemoModeContext';
 import { format, subDays, startOfDay, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isSameMonth, addMonths, subMonths, getDay, setMonth, setYear } from 'date-fns';
@@ -54,6 +55,73 @@ const bodyParts: { value: BodyPart; label: string; emoji: string }[] = [
 ];
 
 const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZudR12RBaH1cEveGH1gs01';
+
+// AI Coach Button Component
+const AICoachButton = ({ isPremium }: { isPremium: boolean }) => {
+  const navigate = useNavigate();
+  const { startPurchase, isPurchasing, isNative, isOfferingsReady, priceString } = usePaymentRouter();
+
+  const handleClick = async () => {
+    if (isPremium) {
+      navigate('/coach');
+    } else {
+      await startPurchase();
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: 0.05 }}
+      className="animate-slide-up"
+      style={{ animationDelay: '0.05s' }}
+    >
+      <button
+        onClick={handleClick}
+        disabled={isPurchasing || (!isPremium && isNative && !isOfferingsReady)}
+        className={cn(
+          "w-full glass-card p-4 flex items-center gap-4 transition-all duration-200",
+          isPremium 
+            ? "hover:shadow-warm-md active:scale-[0.98] cursor-pointer" 
+            : "cursor-pointer hover:shadow-md"
+        )}
+      >
+        <div className={cn(
+          "w-12 h-12 rounded-2xl flex items-center justify-center shadow-warm-sm",
+          isPremium 
+            ? "bg-gradient-to-br from-coral/20 to-coral-light" 
+            : "bg-muted/50"
+        )}>
+          {isPremium ? (
+            <Sparkles className="w-6 h-6 text-coral" />
+          ) : (
+            <Lock className="w-5 h-5 text-muted-foreground" />
+          )}
+        </div>
+        <div className="flex-1 text-left">
+          <div className="flex items-center gap-2">
+            <h3 className="font-display font-bold text-foreground">AI Coach</h3>
+            {!isPremium && (
+              <span className="text-xs bg-honey/20 text-honey-dark px-2 py-0.5 rounded-full font-medium">
+                Premium
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {isPremium 
+              ? "Get personalized insights from your data" 
+              : "Unlock personalized skin guidance"}
+          </p>
+        </div>
+        <ChevronRight className={cn(
+          "w-5 h-5",
+          isPremium ? "text-coral" : "text-muted-foreground"
+        )} />
+      </button>
+    </motion.div>
+  );
+};
 
 const InsightsPage = () => {
   const { checkIns: realCheckIns, photos } = useUserData();
@@ -312,6 +380,9 @@ const InsightsPage = () => {
 
       {/* Flare Status Badge */}
       <FlareStatusBadge />
+
+      {/* AI Coach Button */}
+      <AICoachButton isPremium={isPremium} />
 
       {/* Weekly Overview */}
       <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
