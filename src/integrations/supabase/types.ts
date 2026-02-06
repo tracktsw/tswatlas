@@ -47,6 +47,36 @@ export type Database = {
         }
         Relationships: []
       }
+      resource_suggestions: {
+        Row: {
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string
+          submitted_by: string | null
+          url: string
+        }
+        Insert: {
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by?: string | null
+          url: string
+        }
+        Update: {
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          submitted_by?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
       resources: {
         Row: {
           ai_summary: string | null
