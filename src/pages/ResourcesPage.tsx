@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { BookOpen, ChevronRight } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface Resource {
   id: string;
@@ -37,14 +36,14 @@ const ResourcesPage = () => {
 
   if (isLoading) {
     return (
-      <div className="container max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto">
         <div className="space-y-2">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-full max-w-md" />
+          <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+          <div className="h-4 w-full max-w-md bg-muted animate-pulse rounded" />
         </div>
         <div className="space-y-1">
           {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-16 rounded-lg" />
+            <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />
           ))}
         </div>
       </div>
@@ -53,14 +52,14 @@ const ResourcesPage = () => {
 
   if (error) {
     return (
-      <div className="container max-w-2xl mx-auto px-4 py-6">
+      <div className="px-4 md:px-8 lg:px-12 py-6 max-w-lg md:max-w-none mx-auto">
         <p className="text-destructive">Failed to load resources. Please try again.</p>
       </div>
     );
   }
 
   return (
-    <div className="container max-w-2xl mx-auto px-4 py-6 space-y-6">
+    <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto">
       <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">TSW Resources</h1>
         <p className="text-muted-foreground text-sm">
