@@ -517,14 +517,14 @@ const AdminPage = () => {
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Banner Text (optional)</label>
+              <label className="text-sm font-medium mb-1 block">Status badge text (optional)</label>
               <Input
                 value={formBannerText}
                 onChange={(e) => setFormBannerText(e.target.value)}
                 placeholder="e.g., Not to be used with CAP"
                 maxLength={40}
               />
-              <p className="text-xs text-muted-foreground mt-1">Displays as a diagonal ribbon on the card</p>
+              <p className="text-xs text-muted-foreground mt-1">Displays as an inline badge next to the name</p>
             </div>
             <Button 
               className="w-full" 
