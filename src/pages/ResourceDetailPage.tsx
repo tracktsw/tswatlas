@@ -43,7 +43,7 @@ const ResourceDetailPage = () => {
 
   if (isLoading) {
     return (
-      <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto">
+      <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto safe-area-inset-top">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 bg-muted animate-pulse rounded-full" />
           <div className="h-6 w-48 bg-muted animate-pulse rounded" />
@@ -62,7 +62,7 @@ const ResourceDetailPage = () => {
 
   if (error || !resource) {
     return (
-      <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto">
+      <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto safe-area-inset-top">
         <button
           onClick={handleBack}
           className="p-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
@@ -87,7 +87,7 @@ const ResourceDetailPage = () => {
   const isAiGenerated = !resource.custom_summary && resource.ai_summary;
 
   return (
-    <div className="px-4 md:px-8 lg:px-12 py-6 max-w-lg md:max-w-none mx-auto">
+    <div className="px-4 md:px-8 lg:px-12 py-6 max-w-lg md:max-w-none mx-auto safe-area-inset-top">
       {/* Header with back button */}
       <div className="flex items-start gap-3 mb-6">
         <button
