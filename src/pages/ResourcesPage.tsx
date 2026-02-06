@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { BookOpen, ChevronRight } from "lucide-react";
+import { decodeHtmlEntities } from "@/utils/htmlDecode";
 
 interface Resource {
   id: string;
@@ -79,7 +80,7 @@ const ResourcesPage = () => {
       ) : (
         <div className="glass-card divide-y divide-border">
           {resources.map((resource) => {
-            const title = resource.custom_title || resource.source_domain;
+            const title = decodeHtmlEntities(resource.custom_title) || resource.source_domain;
             
             return (
               <button

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ExternalLink, ArrowLeft, Loader2, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { decodeHtmlEntities } from "@/utils/htmlDecode";
 
 interface Resource {
   id: string;
@@ -80,8 +81,8 @@ const ResourceDetailPage = () => {
     );
   }
 
-  const title = resource.custom_title || resource.source_domain;
-  const summary = resource.custom_summary || resource.ai_summary;
+  const title = decodeHtmlEntities(resource.custom_title) || resource.source_domain;
+  const summary = decodeHtmlEntities(resource.custom_summary) || decodeHtmlEntities(resource.ai_summary);
   const isUnavailable = resource.summary_status === "unavailable" || (!summary && resource.summary_status !== "pending");
   const isPending = resource.summary_status === "pending";
   const isAiGenerated = !resource.custom_summary && resource.ai_summary;
