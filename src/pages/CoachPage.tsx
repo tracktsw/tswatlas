@@ -1,13 +1,19 @@
 // CoachPage.tsx
-import { Sparkles } from 'lucide-react';
+import { Sparkles, ArrowLeft } from 'lucide-react';
 import { CoachChat } from '@/components/CoachChat';
 import { useAICoach } from '@/hooks/useAICoach';
 import PaywallGuard from '@/components/PaywallGuard';
 import { Capacitor } from '@capacitor/core';
+import { useNavigate } from 'react-router-dom';
 
 const CoachPage = () => {
   const { messages, isLoading, sendMessage, clearChat } = useAICoach();
   const platform = Capacitor.getPlatform();
+  const navigate = useNavigate();
+
+  const handleBack = () => {
+    navigate('/insights');
+  };
 
   return (
     <PaywallGuard feature="AI Coach">
@@ -28,6 +34,13 @@ const CoachPage = () => {
           }}
         >
           <div className="flex items-center gap-3">
+            <button
+              onClick={handleBack}
+              className="p-2 -ml-2 rounded-full hover:bg-muted/80 transition-colors"
+              aria-label="Back to Insights"
+            >
+              <ArrowLeft className="w-5 h-5 text-foreground" />
+            </button>
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-coral/20 to-coral-light flex items-center justify-center shadow-warm-sm">
               <Sparkles className="w-5 h-5 text-coral" />
             </div>
