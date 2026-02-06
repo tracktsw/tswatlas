@@ -450,17 +450,18 @@ const AdminPage = () => {
       const currentResource = resources[currentIndex];
       const targetResource = resources[targetIndex];
       
-      // Swap sort_order values
+      // Use explicit index-based sort_order values to ensure proper ordering
+      // This fixes the issue when multiple resources have the same sort_order
       const { error: error1 } = await supabase
         .from('resources')
-        .update({ sort_order: targetResource.sort_order })
+        .update({ sort_order: targetIndex })
         .eq('id', currentResource.id);
       
       if (error1) throw error1;
       
       const { error: error2 } = await supabase
         .from('resources')
-        .update({ sort_order: currentResource.sort_order })
+        .update({ sort_order: currentIndex })
         .eq('id', targetResource.id);
       
       if (error2) throw error2;
