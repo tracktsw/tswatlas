@@ -28,6 +28,7 @@ interface Treatment {
   description: string | null;
   category: string;
   is_approved: boolean;
+  banner_text: string | null;
 }
 
 const CATEGORIES = ['moisture', 'therapy', 'bathing', 'relief', 'medication', 'lifestyle', 'supplements', 'protection', 'general'];
@@ -41,6 +42,7 @@ const AdminPage = () => {
   const [formName, setFormName] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formCategory, setFormCategory] = useState('general');
+  const [formBannerText, setFormBannerText] = useState('');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -173,7 +175,7 @@ const AdminPage = () => {
   });
 
   const addTreatmentMutation = useMutation({
-    mutationFn: async (data: { name: string; description: string; category: string }) => {
+    mutationFn: async (data: { name: string; description: string; category: string; banner_text: string }) => {
       const { error } = await supabase
         .from('treatments')
         .insert({
@@ -181,6 +183,7 @@ const AdminPage = () => {
           description: data.description.trim() || null,
           category: data.category,
           is_approved: true,
+          banner_text: data.banner_text.trim() || null,
         });
       
       if (error) throw error;
@@ -197,13 +200,14 @@ const AdminPage = () => {
   });
 
   const updateTreatmentMutation = useMutation({
-    mutationFn: async (data: { id: string; name: string; description: string; category: string }) => {
+    mutationFn: async (data: { id: string; name: string; description: string; category: string; banner_text: string }) => {
       const { error } = await supabase
         .from('treatments')
         .update({
           name: data.name.trim(),
           description: data.description.trim() || null,
           category: data.category,
+          banner_text: data.banner_text.trim() || null,
         })
         .eq('id', data.id);
       
@@ -224,6 +228,7 @@ const AdminPage = () => {
     setFormName('');
     setFormDescription('');
     setFormCategory('general');
+    setFormBannerText('');
   };
 
   const openEditModal = (treatment: Treatment) => {
@@ -231,6 +236,7 @@ const AdminPage = () => {
     setFormName(treatment.name);
     setFormDescription(treatment.description || '');
     setFormCategory(treatment.category);
+    setFormBannerText(treatment.banner_text || '');
   };
 
   const handleSubmit = () => {
@@ -245,12 +251,14 @@ const AdminPage = () => {
         name: formName,
         description: formDescription,
         category: formCategory,
+        banner_text: formBannerText,
       });
     } else {
       addTreatmentMutation.mutate({
         name: formName,
         description: formDescription,
         category: formCategory,
+        banner_text: formBannerText,
       });
     }
   };
@@ -507,6 +515,16 @@ const AdminPage = () => {
                 placeholder="Brief description..."
                 maxLength={500}
               />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Banner Text (optional)</label>
+              <Input
+                value={formBannerText}
+                onChange={(e) => setFormBannerText(e.target.value)}
+                placeholder="e.g., Not to be used with CAP"
+                maxLength={40}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Displays as a diagonal ribbon on the card</p>
             </div>
             <Button 
               className="w-full" 

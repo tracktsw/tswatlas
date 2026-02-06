@@ -111,6 +111,7 @@ export type Database = {
       }
       treatments: {
         Row: {
+          banner_text: string | null
           category: string
           created_at: string
           description: string | null
@@ -120,6 +121,7 @@ export type Database = {
           suggested_by: string | null
         }
         Insert: {
+          banner_text?: string | null
           category?: string
           created_at?: string
           description?: string | null
@@ -129,6 +131,7 @@ export type Database = {
           suggested_by?: string | null
         }
         Update: {
+          banner_text?: string | null
           category?: string
           created_at?: string
           description?: string | null
