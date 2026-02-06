@@ -356,6 +356,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
     'Swelling': 'bg-green-500',
     'Redness': 'bg-rose-500',
     'Insomnia': 'bg-gray-900',
+    'Jerking': 'bg-pink-500',
   };
 
   return (
@@ -607,6 +608,7 @@ const SymptomsInsights = ({ checkIns }: SymptomsInsightsProps) => {
                                   'Swelling': '#22c55e',
                                   'Redness': '#f43f5e',
                                   'Insomnia': '#1f2937',
+                                  'Jerking': '#ec4899',
                                 };
                                 
                                 return (

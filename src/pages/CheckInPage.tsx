@@ -67,7 +67,7 @@ const skinIntensityLabels = ['High-intensity', 'Active', 'Noticeable', 'Settling
 const skinIntensityValues = [4, 3, 2, 1, 0];
 const symptomsList = [
   'Burning', 'Itching', 'Thermodysregulation', 'Flaking',
-  'Oozing', 'Swelling', 'Redness'
+  'Oozing', 'Swelling', 'Redness', 'Jerking'
 ];
 
 // Common food suggestions for quick-tap

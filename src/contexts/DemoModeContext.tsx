@@ -28,7 +28,7 @@ interface DemoModeContextType {
 const DemoModeContext = createContext<DemoModeContextType | undefined>(undefined);
 
 // Sample data generation helpers
-const symptomsList = ['Burning', 'Itching', 'Thermodysregulation', 'Flaking', 'Oozing', 'Swelling', 'Redness'];
+const symptomsList = ['Burning', 'Itching', 'Thermodysregulation', 'Flaking', 'Oozing', 'Swelling', 'Redness', 'Jerking'];
 const triggersList = ['heat_sweat', 'stress', 'poor_sleep', 'shower_hard_water', 'weather_change', 'dust_pollen', 'friction_scratching'];
 const treatmentsList = ['nmt', 'moisturizer', 'rlt', 'salt_bath', 'cold_compress', 'antihistamine', 'exercise', 'meditation'];
 const foodsList = ['Dairy', 'Gluten', 'Eggs', 'Nuts', 'Sugar', 'Alcohol', 'Caffeine', 'Soy'];
