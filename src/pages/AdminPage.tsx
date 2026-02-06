@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Check, X, LogOut, Shield, Loader2, Trash2, Plus, Pencil, BookOpen, ExternalLink, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Check, X, LogOut, Shield, Loader2, Trash2, Plus, Pencil, BookOpen, ExternalLink, ChevronUp, ChevronDown, Lightbulb } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +42,14 @@ interface Resource {
   summary_status: string;
   created_at: string;
   sort_order: number;
+}
+
+interface ResourceSuggestion {
+  id: string;
+  url: string;
+  submitted_by: string | null;
+  submitted_at: string;
+  status: string;
 }
 
 const CATEGORIES = ['moisture', 'therapy', 'bathing', 'relief', 'medication', 'lifestyle', 'supplements', 'protection', 'general'];
@@ -137,6 +145,21 @@ const AdminPage = () => {
       
       if (error) throw error;
       return data as Resource[];
+    },
+    enabled: !!user && isAdmin,
+  });
+
+  // Resource suggestions query
+  const { data: resourceSuggestions, isLoading: loadingResourceSuggestions } = useQuery({
+    queryKey: ['resource-suggestions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('resource_suggestions')
+        .select('*')
+        .order('submitted_at', { ascending: false });
+      
+      if (error) throw error;
+      return data as ResourceSuggestion[];
     },
     enabled: !!user && isAdmin,
   });
@@ -451,6 +474,31 @@ const AdminPage = () => {
     },
   });
 
+  // Dismiss resource suggestion mutation
+  const dismissSuggestionMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { error } = await supabase
+        .from('resource_suggestions')
+        .update({ 
+          status: 'dismissed',
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: user?.id || null,
+        })
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['resource-suggestions'] });
+      toast.success('Suggestion dismissed');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to dismiss suggestion');
+    },
+  });
+
   const handleResourceSubmit = () => {
     if (!resourceUrl.trim()) {
       toast.error('URL is required');
@@ -573,9 +621,17 @@ const AdminPage = () => {
       </div>
 
       <Tabs defaultValue="treatments" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="treatments">Treatments</TabsTrigger>
           <TabsTrigger value="resources">Resources</TabsTrigger>
+          <TabsTrigger value="suggested" className="relative">
+            Suggested
+            {resourceSuggestions?.filter(s => s.status === 'pending').length ? (
+              <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                {resourceSuggestions.filter(s => s.status === 'pending').length}
+              </Badge>
+            ) : null}
+          </TabsTrigger>
         </TabsList>
 
         {/* Treatments Tab */}
@@ -835,6 +891,100 @@ const AdminPage = () => {
                 )}
               </div>
             ))
+          )}
+        </TabsContent>
+
+        {/* Suggested Resources Tab */}
+        <TabsContent value="suggested" className="space-y-4 mt-4">
+          <div className="space-y-2">
+            <h2 className="font-semibold text-lg flex items-center gap-2">
+              <Lightbulb className="w-5 h-5" />
+              Resource Suggestions
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              User-submitted article links for review. Add as a resource or dismiss.
+            </p>
+          </div>
+
+          {loadingResourceSuggestions ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : !resourceSuggestions || resourceSuggestions.length === 0 ? (
+            <div className="glass-card p-6 text-center text-muted-foreground">
+              No resource suggestions yet
+            </div>
+          ) : (
+            <>
+              {/* Pending suggestions */}
+              {resourceSuggestions.filter(s => s.status === 'pending').length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-muted-foreground">Pending Review</h3>
+                  {resourceSuggestions.filter(s => s.status === 'pending').map((suggestion) => (
+                    <div key={suggestion.id} className="glass-card p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <a 
+                            href={suggestion.url.startsWith('http') ? suggestion.url : `https://${suggestion.url}`}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-primary hover:underline break-all"
+                          >
+                            {suggestion.url}
+                          </a>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Submitted {new Date(suggestion.submitted_at).toLocaleDateString()} at {new Date(suggestion.submitted_at).toLocaleTimeString()}
+                          </p>
+                          {suggestion.submitted_by && (
+                            <p className="text-xs text-muted-foreground">
+                              User: {suggestion.submitted_by.slice(0, 8)}...
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex gap-2 shrink-0">
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setResourceUrl(suggestion.url);
+                              setShowResourceModal(true);
+                            }}
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Add
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-muted-foreground hover:text-destructive"
+                            onClick={() => dismissSuggestionMutation.mutate(suggestion.id)}
+                            disabled={dismissSuggestionMutation.isPending}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Reviewed suggestions */}
+              {resourceSuggestions.filter(s => s.status !== 'pending').length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-muted-foreground">Previously Reviewed</h3>
+                  {resourceSuggestions.filter(s => s.status !== 'pending').slice(0, 10).map((suggestion) => (
+                    <div key={suggestion.id} className="glass-card p-4 opacity-60">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm truncate flex-1">{suggestion.url}</span>
+                        <Badge variant="secondary" className="shrink-0">
+                          {suggestion.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
       </Tabs>
