@@ -12,6 +12,7 @@ interface Resource {
   ai_summary: string | null;
   summary_status: string;
   created_at: string;
+  sort_order: number;
 }
 
 const ResourcesPage = () => {
@@ -23,7 +24,7 @@ const ResourcesPage = () => {
       const { data, error } = await supabase
         .from("resources")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("sort_order", { ascending: true });
 
       if (error) throw error;
       return data as Resource[];

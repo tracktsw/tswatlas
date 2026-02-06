@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Check, X, LogOut, Shield, Loader2, Trash2, Plus, Pencil, BookOpen, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Check, X, LogOut, Shield, Loader2, Trash2, Plus, Pencil, BookOpen, ExternalLink, ChevronUp, ChevronDown } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +41,7 @@ interface Resource {
   ai_summary: string | null;
   summary_status: string;
   created_at: string;
+  sort_order: number;
 }
 
 const CATEGORIES = ['moisture', 'therapy', 'bathing', 'relief', 'medication', 'lifestyle', 'supplements', 'protection', 'general'];
@@ -125,14 +126,14 @@ const AdminPage = () => {
     enabled: !!user && isAdmin,
   });
 
-  // Resources query
+  // Resources query - sorted by admin-defined sort_order
   const { data: resources, isLoading: loadingResources } = useQuery({
     queryKey: ['admin-resources'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('resources')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('sort_order', { ascending: true });
       
       if (error) throw error;
       return data as Resource[];
@@ -409,6 +410,44 @@ const AdminPage = () => {
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to regenerate summary');
+    },
+  });
+
+  // Reorder resource mutation
+  const reorderResourceMutation = useMutation({
+    mutationFn: async ({ resourceId, direction }: { resourceId: string; direction: 'up' | 'down' }) => {
+      if (!resources) return;
+      
+      const currentIndex = resources.findIndex(r => r.id === resourceId);
+      if (currentIndex === -1) return;
+      
+      const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+      if (targetIndex < 0 || targetIndex >= resources.length) return;
+      
+      const currentResource = resources[currentIndex];
+      const targetResource = resources[targetIndex];
+      
+      // Swap sort_order values
+      const { error: error1 } = await supabase
+        .from('resources')
+        .update({ sort_order: targetResource.sort_order })
+        .eq('id', currentResource.id);
+      
+      if (error1) throw error1;
+      
+      const { error: error2 } = await supabase
+        .from('resources')
+        .update({ sort_order: currentResource.sort_order })
+        .eq('id', targetResource.id);
+      
+      if (error2) throw error2;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-resources'] });
+      queryClient.invalidateQueries({ queryKey: ['resources'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to reorder resource');
     },
   });
 
@@ -703,9 +742,30 @@ const AdminPage = () => {
               No resources added yet
             </div>
           ) : (
-            resources.map((resource) => (
+            resources.map((resource, index) => (
               <div key={resource.id} className="glass-card p-4 space-y-2">
                 <div className="flex items-start justify-between gap-2">
+                  {/* Reorder controls */}
+                  <div className="flex flex-col gap-0.5 shrink-0">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6"
+                      onClick={() => reorderResourceMutation.mutate({ resourceId: resource.id, direction: 'up' })}
+                      disabled={index === 0 || reorderResourceMutation.isPending}
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6"
+                      onClick={() => reorderResourceMutation.mutate({ resourceId: resource.id, direction: 'down' })}
+                      disabled={index === resources.length - 1 || reorderResourceMutation.isPending}
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium truncate">
                       {resource.custom_title || resource.source_domain}
@@ -740,7 +800,7 @@ const AdminPage = () => {
                     </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 ml-8">
                   <Badge 
                     variant={
                       resource.summary_status === 'completed' ? 'default' : 
@@ -769,7 +829,7 @@ const AdminPage = () => {
                   )}
                 </div>
                 {(resource.custom_summary || resource.ai_summary) && (
-                  <p className="text-xs text-muted-foreground line-clamp-3">
+                  <p className="text-xs text-muted-foreground line-clamp-3 ml-8">
                     {resource.custom_summary || resource.ai_summary}
                   </p>
                 )}
