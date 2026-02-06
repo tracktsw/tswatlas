@@ -534,6 +534,11 @@ const InsightsPage = () => {
                     <div className="p-2 text-center text-primary bg-primary/5">✓</div>
                   </div>
                   <div className="grid grid-cols-3 border-b border-border">
+                    <div className="p-2 text-foreground">Resources</div>
+                    <div className="p-2 text-center text-muted-foreground">✓</div>
+                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
+                  </div>
+                  <div className="grid grid-cols-3 border-b border-border">
                     <div className="p-2 text-foreground">Photo uploads</div>
                     <div className="p-2 text-center text-muted-foreground">Limited</div>
                     <div className="p-2 text-center text-primary bg-primary/5">Unlimited</div>
