@@ -54,6 +54,7 @@ export type Database = {
           custom_summary: string | null
           custom_title: string | null
           id: string
+          sort_order: number
           source_domain: string
           summary_status: string
           updated_at: string
@@ -65,6 +66,7 @@ export type Database = {
           custom_summary?: string | null
           custom_title?: string | null
           id?: string
+          sort_order?: number
           source_domain: string
           summary_status?: string
           updated_at?: string
@@ -76,6 +78,7 @@ export type Database = {
           custom_summary?: string | null
           custom_title?: string | null
           id?: string
+          sort_order?: number
           source_domain?: string
           summary_status?: string
           updated_at?: string
