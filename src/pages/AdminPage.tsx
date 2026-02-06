@@ -1096,8 +1096,7 @@ const AdminPage = () => {
                 value={resourceSummary}
                 onChange={(e) => setResourceSummary(e.target.value)}
                 placeholder="Leave empty for AI-generated summary (5-8 sentences)"
-                rows={4}
-                maxLength={1000}
+                rows={6}
               />
               <p className="text-xs text-muted-foreground mt-1">
                 If left empty, an AI summary will be generated automatically.
