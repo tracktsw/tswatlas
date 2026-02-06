@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Check, X, LogOut, Shield, Loader2, Trash2, Plus, Pencil } from 'lucide-react';
+import { ArrowLeft, Check, X, LogOut, Shield, Loader2, Trash2, Plus, Pencil, BookOpen, ExternalLink } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -31,6 +32,17 @@ interface Treatment {
   banner_text: string | null;
 }
 
+interface Resource {
+  id: string;
+  url: string;
+  source_domain: string;
+  custom_title: string | null;
+  custom_summary: string | null;
+  ai_summary: string | null;
+  summary_status: string;
+  created_at: string;
+}
+
 const CATEGORIES = ['moisture', 'therapy', 'bathing', 'relief', 'medication', 'lifestyle', 'supplements', 'protection', 'general'];
 
 const AdminPage = () => {
@@ -43,6 +55,14 @@ const AdminPage = () => {
   const [formDescription, setFormDescription] = useState('');
   const [formCategory, setFormCategory] = useState('general');
   const [formBannerText, setFormBannerText] = useState('');
+  
+  // Resource form state
+  const [showResourceModal, setShowResourceModal] = useState(false);
+  const [editingResource, setEditingResource] = useState<Resource | null>(null);
+  const [resourceUrl, setResourceUrl] = useState('');
+  const [resourceTitle, setResourceTitle] = useState('');
+  const [resourceSummary, setResourceSummary] = useState('');
+  
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -101,6 +121,21 @@ const AdminPage = () => {
       
       if (error) throw error;
       return data;
+    },
+    enabled: !!user && isAdmin,
+  });
+
+  // Resources query
+  const { data: resources, isLoading: loadingResources } = useQuery({
+    queryKey: ['admin-resources'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('resources')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data as Resource[];
     },
     enabled: !!user && isAdmin,
   });
@@ -231,12 +266,172 @@ const AdminPage = () => {
     setFormBannerText('');
   };
 
+  const resetResourceForm = () => {
+    setResourceUrl('');
+    setResourceTitle('');
+    setResourceSummary('');
+  };
+
   const openEditModal = (treatment: Treatment) => {
     setEditingTreatment(treatment);
     setFormName(treatment.name);
     setFormDescription(treatment.description || '');
     setFormCategory(treatment.category);
     setFormBannerText(treatment.banner_text || '');
+  };
+
+  const openEditResourceModal = (resource: Resource) => {
+    setEditingResource(resource);
+    setResourceUrl(resource.url);
+    setResourceTitle(resource.custom_title || '');
+    setResourceSummary(resource.custom_summary || '');
+  };
+
+  // Extract domain from URL
+  const extractDomain = (url: string): string => {
+    try {
+      const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
+      return parsed.hostname.replace('www.', '');
+    } catch {
+      return url;
+    }
+  };
+
+  // Add resource mutation
+  const addResourceMutation = useMutation({
+    mutationFn: async (data: { url: string; custom_title: string; custom_summary: string }) => {
+      const normalizedUrl = data.url.startsWith('http') ? data.url : `https://${data.url}`;
+      const sourceDomain = extractDomain(normalizedUrl);
+      
+      const { data: inserted, error } = await supabase
+        .from('resources')
+        .insert({
+          url: normalizedUrl,
+          source_domain: sourceDomain,
+          custom_title: data.custom_title.trim() || null,
+          custom_summary: data.custom_summary.trim() || null,
+          summary_status: data.custom_summary.trim() ? 'completed' : 'pending',
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // If no custom summary, trigger AI summarization
+      if (!data.custom_summary.trim()) {
+        supabase.functions.invoke('summarize-resource', {
+          body: { resourceId: inserted.id, url: normalizedUrl },
+        }).catch(console.error);
+      }
+      
+      return inserted;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-resources'] });
+      queryClient.invalidateQueries({ queryKey: ['resources'] });
+      toast.success('Resource added successfully');
+      resetResourceForm();
+      setShowResourceModal(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to add resource');
+    },
+  });
+
+  // Update resource mutation
+  const updateResourceMutation = useMutation({
+    mutationFn: async (data: { id: string; url: string; custom_title: string; custom_summary: string }) => {
+      const normalizedUrl = data.url.startsWith('http') ? data.url : `https://${data.url}`;
+      const sourceDomain = extractDomain(normalizedUrl);
+      
+      const { error } = await supabase
+        .from('resources')
+        .update({
+          url: normalizedUrl,
+          source_domain: sourceDomain,
+          custom_title: data.custom_title.trim() || null,
+          custom_summary: data.custom_summary.trim() || null,
+        })
+        .eq('id', data.id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-resources'] });
+      queryClient.invalidateQueries({ queryKey: ['resources'] });
+      toast.success('Resource updated successfully');
+      resetResourceForm();
+      setEditingResource(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to update resource');
+    },
+  });
+
+  // Delete resource mutation
+  const deleteResourceMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('resources')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-resources'] });
+      queryClient.invalidateQueries({ queryKey: ['resources'] });
+      toast.success('Resource removed');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to remove resource');
+    },
+  });
+
+  // Regenerate summary mutation
+  const regenerateSummaryMutation = useMutation({
+    mutationFn: async (resource: Resource) => {
+      await supabase
+        .from('resources')
+        .update({ summary_status: 'pending', ai_summary: null })
+        .eq('id', resource.id);
+      
+      const { error } = await supabase.functions.invoke('summarize-resource', {
+        body: { resourceId: resource.id, url: resource.url },
+      });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-resources'] });
+      queryClient.invalidateQueries({ queryKey: ['resources'] });
+      toast.success('Summary regeneration started');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to regenerate summary');
+    },
+  });
+
+  const handleResourceSubmit = () => {
+    if (!resourceUrl.trim()) {
+      toast.error('URL is required');
+      return;
+    }
+
+    if (editingResource) {
+      updateResourceMutation.mutate({
+        id: editingResource.id,
+        url: resourceUrl,
+        custom_title: resourceTitle,
+        custom_summary: resourceSummary,
+      });
+    } else {
+      addResourceMutation.mutate({
+        url: resourceUrl,
+        custom_title: resourceTitle,
+        custom_summary: resourceSummary,
+      });
+    }
   };
 
   const handleSubmit = () => {
@@ -330,7 +525,7 @@ const AdminPage = () => {
           </Link>
           <div>
             <h1 className="font-display text-2xl font-bold text-foreground">Admin Panel</h1>
-            <p className="text-sm text-muted-foreground">Manage treatment suggestions</p>
+            <p className="text-sm text-muted-foreground">Manage content</p>
           </div>
         </div>
         <Button variant="ghost" size="icon" onClick={handleLogout}>
@@ -338,137 +533,251 @@ const AdminPage = () => {
         </Button>
       </div>
 
-      {/* Pending Suggestions */}
-      <div className="space-y-3">
-        <h2 className="font-semibold text-lg flex items-center gap-2">
-          Pending Suggestions
-          {pendingSuggestions.length > 0 && (
-            <Badge variant="secondary">{pendingSuggestions.length}</Badge>
-          )}
-        </h2>
+      <Tabs defaultValue="treatments" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="treatments">Treatments</TabsTrigger>
+          <TabsTrigger value="resources">Resources</TabsTrigger>
+        </TabsList>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          </div>
-        ) : pendingSuggestions.length === 0 ? (
-          <div className="glass-card p-6 text-center text-muted-foreground">
-            No pending suggestions
-          </div>
-        ) : (
-          pendingSuggestions.map((suggestion) => (
-            <div key={suggestion.id} className="glass-card p-4 space-y-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold">{suggestion.name}</h3>
-                  <Badge variant="outline" className="mt-1">{suggestion.category}</Badge>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                    onClick={() => approveMutation.mutate(suggestion)}
-                    disabled={approveMutation.isPending}
-                  >
-                    <Check className="w-5 h-5" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => rejectMutation.mutate(suggestion.id)}
-                    disabled={rejectMutation.isPending}
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
-                </div>
-              </div>
-              {suggestion.description && (
-                <p className="text-sm text-muted-foreground">{suggestion.description}</p>
+        {/* Treatments Tab */}
+        <TabsContent value="treatments" className="space-y-6 mt-4">
+          {/* Pending Suggestions */}
+          <div className="space-y-3">
+            <h2 className="font-semibold text-lg flex items-center gap-2">
+              Pending Suggestions
+              {pendingSuggestions.length > 0 && (
+                <Badge variant="secondary">{pendingSuggestions.length}</Badge>
               )}
-              <p className="text-xs text-muted-foreground">
-                Submitted {new Date(suggestion.created_at).toLocaleDateString()}
-              </p>
-            </div>
-          ))
-        )}
-      </div>
+            </h2>
 
-      {/* Community Treatments */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-lg flex items-center gap-2">
-            Community Treatments
-            {treatments && treatments.length > 0 && (
-              <Badge variant="secondary">{treatments.length}</Badge>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : pendingSuggestions.length === 0 ? (
+              <div className="glass-card p-6 text-center text-muted-foreground">
+                No pending suggestions
+              </div>
+            ) : (
+              pendingSuggestions.map((suggestion) => (
+                <div key={suggestion.id} className="glass-card p-4 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold">{suggestion.name}</h3>
+                      <Badge variant="outline" className="mt-1">{suggestion.category}</Badge>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-primary hover:text-primary hover:bg-primary/10"
+                        onClick={() => approveMutation.mutate(suggestion)}
+                        disabled={approveMutation.isPending}
+                      >
+                        <Check className="w-5 h-5" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => rejectMutation.mutate(suggestion.id)}
+                        disabled={rejectMutation.isPending}
+                      >
+                        <X className="w-5 h-5" />
+                      </Button>
+                    </div>
+                  </div>
+                  {suggestion.description && (
+                    <p className="text-sm text-muted-foreground">{suggestion.description}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Submitted {new Date(suggestion.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              ))
             )}
-          </h2>
-          <Button size="sm" onClick={() => setShowAddModal(true)}>
-            <Plus className="w-4 h-4 mr-1" />
-            Add
-          </Button>
-        </div>
+          </div>
 
-        {loadingTreatments ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          </div>
-        ) : !treatments || treatments.length === 0 ? (
-          <div className="glass-card p-6 text-center text-muted-foreground">
-            No treatments in the community list
-          </div>
-        ) : (
-          treatments.map((treatment) => (
-            <div key={treatment.id} className="glass-card p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="font-medium">{treatment.name}</span>
-                  <Badge variant="outline" className="ml-2">{treatment.category}</Badge>
-                </div>
-                <div className="flex gap-1">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => openEditModal(treatment)}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => deleteTreatmentMutation.mutate(treatment.id)}
-                    disabled={deleteTreatmentMutation.isPending}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
+          {/* Community Treatments */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-lg flex items-center gap-2">
+                Community Treatments
+                {treatments && treatments.length > 0 && (
+                  <Badge variant="secondary">{treatments.length}</Badge>
+                )}
+              </h2>
+              <Button size="sm" onClick={() => setShowAddModal(true)}>
+                <Plus className="w-4 h-4 mr-1" />
+                Add
+              </Button>
+            </div>
+
+            {loadingTreatments ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
               </div>
-              {treatment.description && (
-                <p className="text-sm text-muted-foreground mt-2">{treatment.description}</p>
+            ) : !treatments || treatments.length === 0 ? (
+              <div className="glass-card p-6 text-center text-muted-foreground">
+                No treatments in the community list
+              </div>
+            ) : (
+              treatments.map((treatment) => (
+                <div key={treatment.id} className="glass-card p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-medium">{treatment.name}</span>
+                      <Badge variant="outline" className="ml-2">{treatment.category}</Badge>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => openEditModal(treatment)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => deleteTreatmentMutation.mutate(treatment.id)}
+                        disabled={deleteTreatmentMutation.isPending}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  {treatment.description && (
+                    <p className="text-sm text-muted-foreground mt-2">{treatment.description}</p>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Reviewed Suggestions */}
+          {reviewedSuggestions.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="font-semibold text-lg">Previously Reviewed</h2>
+              {reviewedSuggestions.slice(0, 5).map((suggestion) => (
+                <div key={suggestion.id} className="glass-card p-4 opacity-60">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{suggestion.name}</span>
+                    <Badge variant={suggestion.status === 'approved' ? 'default' : 'destructive'}>
+                      {suggestion.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Resources Tab */}
+        <TabsContent value="resources" className="space-y-4 mt-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-lg flex items-center gap-2">
+              <BookOpen className="w-5 h-5" />
+              Educational Resources
+              {resources && resources.length > 0 && (
+                <Badge variant="secondary">{resources.length}</Badge>
               )}
-            </div>
-          ))
-        )}
-      </div>
+            </h2>
+            <Button size="sm" onClick={() => setShowResourceModal(true)}>
+              <Plus className="w-4 h-4 mr-1" />
+              Add
+            </Button>
+          </div>
 
-      {/* Reviewed Suggestions */}
-      {reviewedSuggestions.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="font-semibold text-lg">Previously Reviewed</h2>
-          {reviewedSuggestions.slice(0, 5).map((suggestion) => (
-            <div key={suggestion.id} className="glass-card p-4 opacity-60">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">{suggestion.name}</span>
-                <Badge variant={suggestion.status === 'approved' ? 'default' : 'destructive'}>
-                  {suggestion.status}
-                </Badge>
-              </div>
+          <p className="text-sm text-muted-foreground">
+            Add external educational links. AI will auto-generate summaries unless you provide a custom one.
+          </p>
+
+          {loadingResources ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
-          ))}
-        </div>
-      )}
+          ) : !resources || resources.length === 0 ? (
+            <div className="glass-card p-6 text-center text-muted-foreground">
+              No resources added yet
+            </div>
+          ) : (
+            resources.map((resource) => (
+              <div key={resource.id} className="glass-card p-4 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium truncate">
+                      {resource.custom_title || resource.source_domain}
+                    </h3>
+                    <p className="text-xs text-muted-foreground truncate">{resource.source_domain}</p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      asChild
+                    >
+                      <a href={resource.url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => openEditResourceModal(resource)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => deleteResourceMutation.mutate(resource.id)}
+                      disabled={deleteResourceMutation.isPending}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge 
+                    variant={
+                      resource.summary_status === 'completed' ? 'default' : 
+                      resource.summary_status === 'pending' ? 'secondary' : 'outline'
+                    }
+                    className="text-[10px]"
+                  >
+                    {resource.summary_status === 'completed' ? 
+                      (resource.custom_summary ? 'Custom summary' : 'AI summary') : 
+                      resource.summary_status === 'pending' ? 'Generating...' : 'Unavailable'}
+                  </Badge>
+                  {resource.summary_status !== 'pending' && !resource.custom_summary && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => regenerateSummaryMutation.mutate(resource)}
+                      disabled={regenerateSummaryMutation.isPending}
+                    >
+                      {regenerateSummaryMutation.isPending ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        'Regenerate'
+                      )}
+                    </Button>
+                  )}
+                </div>
+                {(resource.custom_summary || resource.ai_summary) && (
+                  <p className="text-xs text-muted-foreground line-clamp-3">
+                    {resource.custom_summary || resource.ai_summary}
+                  </p>
+                )}
+              </div>
+            ))
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Add/Edit Treatment Modal */}
       <Dialog open={showAddModal || !!editingTreatment} onOpenChange={(open) => {
@@ -535,6 +844,64 @@ const AdminPage = () => {
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
               ) : null}
               {editingTreatment ? 'Save Changes' : 'Add Treatment'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add/Edit Resource Modal */}
+      <Dialog open={showResourceModal || !!editingResource} onOpenChange={(open) => {
+        if (!open) {
+          setShowResourceModal(false);
+          setEditingResource(null);
+          resetResourceForm();
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingResource ? 'Edit Resource' : 'Add Resource'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Website URL *</label>
+              <Input
+                type="url"
+                value={resourceUrl}
+                onChange={(e) => setResourceUrl(e.target.value)}
+                placeholder="https://example.com/article"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Custom title (optional)</label>
+              <Input
+                value={resourceTitle}
+                onChange={(e) => setResourceTitle(e.target.value)}
+                placeholder="Leave empty to auto-extract"
+                maxLength={200}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Custom summary (optional)</label>
+              <Textarea
+                value={resourceSummary}
+                onChange={(e) => setResourceSummary(e.target.value)}
+                placeholder="Leave empty for AI-generated summary (5-8 sentences)"
+                rows={4}
+                maxLength={1000}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                If left empty, an AI summary will be generated automatically.
+              </p>
+            </div>
+            <Button 
+              className="w-full" 
+              onClick={handleResourceSubmit}
+              disabled={addResourceMutation.isPending || updateResourceMutation.isPending}
+            >
+              {addResourceMutation.isPending || updateResourceMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
+              {editingResource ? 'Save Changes' : 'Add Resource'}
             </Button>
           </div>
         </DialogContent>

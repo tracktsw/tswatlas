@@ -47,6 +47,42 @@ export type Database = {
         }
         Relationships: []
       }
+      resources: {
+        Row: {
+          ai_summary: string | null
+          created_at: string
+          custom_summary: string | null
+          custom_title: string | null
+          id: string
+          source_domain: string
+          summary_status: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          ai_summary?: string | null
+          created_at?: string
+          custom_summary?: string | null
+          custom_title?: string | null
+          id?: string
+          source_domain: string
+          summary_status?: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          ai_summary?: string | null
+          created_at?: string
+          custom_summary?: string | null
+          custom_title?: string | null
+          id?: string
+          source_domain?: string
+          summary_status?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       treatment_suggestions: {
         Row: {
           category: string

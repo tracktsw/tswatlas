@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, Camera, CheckCircle, BarChart3, Users, Leaf } from 'lucide-react';
+import { Home, Camera, CheckCircle, BarChart3, Users, BookOpen, Leaf } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils';
 
@@ -10,6 +10,7 @@ const navItems = [
   { path: '/check-in', icon: CheckCircle, label: 'Check-in' },
   { path: '/insights', icon: BarChart3, label: 'Insights' },
   { path: '/community', icon: Users, label: 'Community' },
+  { path: '/resources', icon: BookOpen, label: 'Resources' },
   { path: '/coach', icon: Leaf, label: 'Coach' },
 ];
 
@@ -19,6 +20,7 @@ const pageImports: Record<string, () => Promise<unknown>> = {
   '/check-in': () => import('@/pages/CheckInPage'),
   '/insights': () => import('@/pages/InsightsPage'),
   '/community': () => import('@/pages/CommunityPage'),
+  '/resources': () => import('@/pages/ResourcesPage'),
   '/coach': () => import('@/pages/CoachPage'),
 };
 

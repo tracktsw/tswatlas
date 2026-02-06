@@ -40,6 +40,7 @@ const PhotoDiaryPage = lazy(() => import("@/pages/PhotoDiaryPage"));
 const CheckInPage = lazy(() => import("@/pages/CheckInPage"));
 const InsightsPage = lazy(() => import("@/pages/InsightsPage"));
 const CommunityPage = lazy(() => import("@/pages/CommunityPage"));
+const ResourcesPage = lazy(() => import("@/pages/ResourcesPage"));
 const JournalPage = lazy(() => import("@/pages/JournalPage"));
 const CoachPage = lazy(() => import("@/pages/CoachPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
@@ -196,6 +197,11 @@ const App = () => (
                       <Route path="community" element={
                         <Suspense fallback={<CommunityPageSkeleton />}>
                           <CommunityPage />
+                        </Suspense>
+                      } />
+                      <Route path="resources" element={
+                        <Suspense fallback={<GenericPageSkeleton />}>
+                          <ResourcesPage />
                         </Suspense>
                       } />
                       <Route path="journal" element={
