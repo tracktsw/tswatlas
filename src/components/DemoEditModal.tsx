@@ -52,7 +52,7 @@ const triggersList = [
 
 const symptomsList = [
   'Burning', 'Itching', 'Thermodysregulation', 'Flaking',
-  'Oozing', 'Swelling', 'Redness'
+  'Oozing', 'Swelling', 'Redness', 'Jerking'
 ];
 
 interface DemoEditModalProps {
