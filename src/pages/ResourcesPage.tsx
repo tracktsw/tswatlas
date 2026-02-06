@@ -36,7 +36,7 @@ const ResourcesPage = () => {
 
   if (isLoading) {
     return (
-      <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto">
+      <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto safe-area-inset-top">
         <div className="space-y-2">
           <div className="h-8 w-48 bg-muted animate-pulse rounded" />
           <div className="h-4 w-full max-w-md bg-muted animate-pulse rounded" />
@@ -52,14 +52,14 @@ const ResourcesPage = () => {
 
   if (error) {
     return (
-      <div className="px-4 md:px-8 lg:px-12 py-6 max-w-lg md:max-w-none mx-auto">
+      <div className="px-4 md:px-8 lg:px-12 py-6 max-w-lg md:max-w-none mx-auto safe-area-inset-top">
         <p className="text-destructive">Failed to load resources. Please try again.</p>
       </div>
     );
   }
 
   return (
-    <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto">
+    <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto safe-area-inset-top">
       <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">TSW Resources</h1>
         <p className="text-muted-foreground text-sm">
