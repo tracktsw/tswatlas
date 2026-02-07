@@ -135,6 +135,7 @@ const InsightsPage = () => {
     statusMessage,
     isOfferingsReady,
     priceString,
+    isTrialEligible,
     startPurchase,
     restorePurchases,
     retryOfferings,
@@ -600,13 +601,15 @@ const InsightsPage = () => {
                     Loading…
                   </>
                 ) : (
-                  <>
-                    Start 14-Day Free Trial – {priceString}/month
-                  </>
+                  isTrialEligible 
+                    ? `Start 14-Day Free Trial – ${priceString}/month`
+                    : `Subscribe – ${priceString}/month`
                 )}
               </Button>
               <p className="text-xs text-muted-foreground mt-2 text-center">
-                {priceString}/month after free trial · Cancel anytime
+                {isTrialEligible 
+                  ? `${priceString}/month after free trial · Cancel anytime`
+                  : `${priceString}/month · Cancel anytime`}
               </p>
               <p className="text-xs text-muted-foreground mt-1 text-center">
                 Your tracking stays free whether you subscribe or not.

@@ -128,6 +128,9 @@ const getOfferingIdentifier = () => {
   return 'default';
 };
 
+// Trial eligibility status from store
+export type TrialEligibilityStatus = 'unknown' | 'checking' | 'eligible' | 'ineligible';
+
 export interface RevenueCatState {
   isIOSNative: boolean;
   isInitialized: boolean;
@@ -143,6 +146,9 @@ export interface RevenueCatState {
   lastCustomerInfoRefresh: Date | null;
   // The internal user ID we initialized with - MUST match for premium access
   boundUserId: string | null;
+  // Trial eligibility - checked via store API
+  trialEligibilityStatus: TrialEligibilityStatus;
+  isTrialEligible: boolean;
 }
 
 export const useRevenueCat = () => {
@@ -165,6 +171,10 @@ export const useRevenueCat = () => {
   // This ref is cleared on logout and set on login
   const boundUserIdRef = useRef<string | null>(null);
   const [boundUserId, setBoundUserId] = useState<string | null>(null);
+  
+  // Trial eligibility - checked via store API (Apple/Google verified)
+  const [trialEligibilityStatus, setTrialEligibilityStatus] = useState<TrialEligibilityStatus>('unknown');
+  const [isTrialEligible, setIsTrialEligible] = useState(false);
 
   // Helper to check premium from CustomerInfo
   // CRITICAL: Also validates that the subscription belongs to the bound user
@@ -380,6 +390,9 @@ export const useRevenueCat = () => {
     setMonthlyPackage(null);
     setOfferingsStatus('idle');
     setOfferingsError(null);
+    // Reset trial eligibility on logout
+    setTrialEligibilityStatus('unknown');
+    setIsTrialEligible(false);
     
     // Clear localStorage cache on logout
     clearCachedRCState();
@@ -411,6 +424,54 @@ export const useRevenueCat = () => {
     } catch (error) {
       // Even on error, state is already cleared above
       console.error('[RevenueCat] RevenueCat logout error (state already cleared):', error);
+    }
+  }, []);
+
+  // Check trial/intro offer eligibility using store API
+  // CRITICAL: This uses Apple/Google store verification, NOT local flags
+  const checkTrialEligibility = useCallback(async (productIdentifier: string): Promise<boolean> => {
+    if (!getIsNativeMobile()) {
+      console.log('[RevenueCat] Trial eligibility check skipped - not native mobile');
+      return false;
+    }
+
+    try {
+      setTrialEligibilityStatus('checking');
+      console.log('[RevenueCat] Checking trial eligibility for product:', productIdentifier);
+      
+      const { Purchases, INTRO_ELIGIBILITY_STATUS } = await import('@revenuecat/purchases-capacitor');
+      
+      // Call RevenueCat's intro eligibility API - this checks with Apple/Google
+      const result = await Purchases.checkTrialOrIntroductoryPriceEligibility({
+        productIdentifiers: [productIdentifier],
+      });
+      
+      console.log('[RevenueCat] Trial eligibility result:', JSON.stringify(result, null, 2));
+      
+      // RevenueCat returns eligibility status for each product
+      // Status values: INTRO_ELIGIBILITY_STATUS_ELIGIBLE (2), INTRO_ELIGIBILITY_STATUS_INELIGIBLE (1), INTRO_ELIGIBILITY_STATUS_UNKNOWN (0)
+      const eligibility = result?.[productIdentifier];
+      
+      // Use the SDK enum for proper comparison
+      const isEligible = eligibility?.status === INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE;
+      
+      console.log('[RevenueCat] Trial eligibility:', { 
+        productIdentifier, 
+        status: eligibility?.status, 
+        statusName: Object.keys(INTRO_ELIGIBILITY_STATUS).find(k => (INTRO_ELIGIBILITY_STATUS as any)[k] === eligibility?.status),
+        isEligible 
+      });
+      
+      setIsTrialEligible(isEligible);
+      setTrialEligibilityStatus(isEligible ? 'eligible' : 'ineligible');
+      
+      return isEligible;
+    } catch (error) {
+      console.error('[RevenueCat] Error checking trial eligibility:', error);
+      // On error, default to unknown/ineligible to prevent showing trial messaging incorrectly
+      setTrialEligibilityStatus('unknown');
+      setIsTrialEligible(false);
+      return false;
     }
   }, []);
 
@@ -463,6 +524,12 @@ export const useRevenueCat = () => {
         productId: monthly.product?.identifier,
       });
 
+      // IMPORTANT: Check trial eligibility for the monthly product
+      // This uses store-verified eligibility from Apple/Google
+      if (monthly.product?.identifier) {
+        await checkTrialEligibility(monthly.product.identifier);
+      }
+
       setOfferingsStatus('ready');
       return defaultOffering;
     } catch (error: any) {
@@ -471,7 +538,7 @@ export const useRevenueCat = () => {
       setOfferingsError(error?.message ?? 'Failed to load subscription options.');
       return null;
     }
-  }, []);
+  }, [checkTrialEligibility]);
 
   // Purchase monthly package
   // CRITICAL: Requires user to be logged in first
@@ -735,7 +802,10 @@ export const useRevenueCat = () => {
     lastCustomerInfoRefresh: lastCustomerInfoRefresh?.toISOString() ?? null,
     activeEntitlements: Object.keys(customerInfo?.entitlements?.active || {}),
     premiumEntitlementId: PREMIUM_ENTITLEMENT_ID,
-  }), [isInitialized, offeringsStatus, offeringsError, currentOffering, isPremiumFromRC, appUserId, lastCustomerInfoRefresh, customerInfo]);
+    // Trial eligibility debugging
+    trialEligibilityStatus,
+    isTrialEligible,
+  }), [isInitialized, offeringsStatus, offeringsError, currentOffering, isPremiumFromRC, appUserId, lastCustomerInfoRefresh, customerInfo, trialEligibilityStatus, isTrialEligible]);
 
   return {
     isIOSNative: getIsNativeIOS(),
@@ -750,12 +820,16 @@ export const useRevenueCat = () => {
     appUserId,
     boundUserId,
     lastCustomerInfoRefresh,
+    // Trial eligibility (store-verified)
+    trialEligibilityStatus,
+    isTrialEligible,
     initialize,
     logout,
     fetchOfferings,
     purchaseMonthly,
     restorePurchases,
     refreshCustomerInfo,
+    checkTrialEligibility,
     getPriceString,
     getDebugInfo,
   };
