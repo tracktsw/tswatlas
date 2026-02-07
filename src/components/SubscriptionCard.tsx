@@ -19,6 +19,8 @@ const SubscriptionCard = () => {
     statusMessage,
     isOfferingsReady,
     priceString,
+    isTrialEligible,
+    isTrialEligibilityPending,
     startPurchase,
     restorePurchases,
     retryOfferings,
@@ -28,7 +30,8 @@ const SubscriptionCard = () => {
   
   // Prevent a brief non-premium flash on native while RevenueCat initializes/validates.
   const isNativePending = isNative && isUserLoggedIn && !revenueCat.isInitialized;
-  const isLoading = isBackendLoading || isNativePending;
+  // Also wait for trial eligibility to be determined
+  const isLoading = isBackendLoading || isNativePending || isTrialEligibilityPending;
 
   const handleUpgrade = async () => {
     console.log(`[SubscriptionCard] handleUpgrade on platform: ${platform}`);
@@ -174,13 +177,17 @@ const SubscriptionCard = () => {
             ) : (
               <>
                 <Crown className="w-4 h-4" />
-                Start 14-Day Free Trial · {priceString}/month
+                {isTrialEligible 
+                  ? `Start 14-Day Free Trial · ${priceString}/month`
+                  : `Subscribe – ${priceString}/month`}
               </>
             )}
           </Button>
           
           <p className="text-xs text-muted-foreground">
-            {priceString}/month after 14-day free trial. Auto-renewable. Cancel anytime.
+            {isTrialEligible 
+              ? `${priceString}/month after 14-day free trial. Auto-renewable. Cancel anytime.`
+              : `${priceString}/month. Auto-renewable. Cancel anytime.`}
           </p>
           
           <p className="text-xs text-muted-foreground mt-1">

@@ -6,18 +6,19 @@
  */
 
 import { useState } from 'react';
-import { Crown, Camera, Brain, ArrowRight, BarChart3 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Crown, Camera, BarChart3, ArrowRight } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
+import { usePaymentRouter } from '@/hooks/usePaymentRouter';
 import { TrialOfferModal } from '@/components/TrialOfferModal';
-import { cn } from '@/lib/utils';
 
 export const HomeUpgradeCard = () => {
   const { isPremium, isAdmin, isLoading } = useSubscription();
+  const { isTrialEligible, isTrialEligibilityPending, priceString } = usePaymentRouter();
   const [showTrialModal, setShowTrialModal] = useState(false);
 
   // Don't show for premium users or admins
-  if (isLoading || isPremium || isAdmin) {
+  // Also wait for trial eligibility to be determined to avoid text flash
+  if (isLoading || isPremium || isAdmin || isTrialEligibilityPending) {
     return null;
   }
 
@@ -38,14 +39,20 @@ export const HomeUpgradeCard = () => {
           
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-display font-bold text-foreground">Try Premium Free</h3>
-              <span className="text-xs bg-honey/20 text-honey-foreground px-2 py-0.5 rounded-full font-medium">
-                14 days
-              </span>
+              <h3 className="font-display font-bold text-foreground">
+                {isTrialEligible ? 'Try Premium Free' : 'Unlock Premium'}
+              </h3>
+              {isTrialEligible && (
+                <span className="text-xs bg-honey/20 text-honey-foreground px-2 py-0.5 rounded-full font-medium">
+                  14 days
+                </span>
+              )}
             </div>
             
             <p className="text-sm text-muted-foreground mb-3">
-              Unlock AI Coach, Photo Diary, full Insights & more.
+              {isTrialEligible 
+                ? 'Unlock AI Coach, Photo Diary, full Insights & more.'
+                : `Get AI Coach, Photo Diary & Insights for ${priceString}/month.`}
             </p>
             
             {/* Mini feature icons */}

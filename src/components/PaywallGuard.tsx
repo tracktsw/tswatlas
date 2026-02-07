@@ -39,6 +39,8 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
     statusMessage,
     isOfferingsReady,
     priceString,
+    isTrialEligible,
+    isTrialEligibilityPending,
     startPurchase,
     restorePurchases,
     retryOfferings,
@@ -54,7 +56,8 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
 
   // Prevent a brief paywall flash on native while RevenueCat initializes/validates.
   const isNativePending = isNative && isUserLoggedIn && !revenueCat.isInitialized;
-  const isLoading = isBackendLoading || isNativePending;
+  // Also wait for trial eligibility to be determined to prevent wrong text flashing
+  const isLoading = isBackendLoading || isNativePending || isTrialEligibilityPending;
 
   // Track paywall_shown once when paywall is actually displayed
   useEffect(() => {
@@ -118,6 +121,21 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
 
   const isButtonLoading = isPurchasing || isRevenueCatLoading;
 
+  // Dynamic CTA text based on trial eligibility
+  const getCtaText = () => {
+    if (isTrialEligible) {
+      return `Start 14-Day Free Trial – ${priceString}/month`;
+    }
+    return `Subscribe – ${priceString}/month`;
+  };
+
+  const getSecondaryText = () => {
+    if (isTrialEligible) {
+      return `${priceString}/month after free trial · Cancel anytime`;
+    }
+    return `${priceString}/month · Cancel anytime`;
+  };
+
   // Blurred content overlay
   if (showBlurred) {
     return (
@@ -149,14 +167,12 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
                   Processing…
                 </>
               ) : (
-                <>
-                  Start 14-Day Free Trial – {priceString}/month
-                </>
+                getCtaText()
               )}
             </Button>
             
             <p className="text-xs text-muted-foreground mt-3">
-              {priceString}/month after free trial · Cancel anytime
+              {getSecondaryText()}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               Your tracking stays free either way.
@@ -329,13 +345,11 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
               Processing…
             </>
           ) : (
-            <>
-              Start 14-Day Free Trial – {priceString}/month
-            </>
+            getCtaText()
           )}
         </Button>
         <p className="text-xs text-muted-foreground mt-2 text-center">
-          {priceString}/month after free trial · Cancel anytime
+          {getSecondaryText()}
         </p>
         <p className="text-xs text-muted-foreground mt-1 text-center">
           Your tracking stays free whether you subscribe or not.

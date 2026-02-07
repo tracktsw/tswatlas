@@ -47,6 +47,7 @@ export const TrialOfferModal = ({
     statusMessage,
     isOfferingsReady,
     priceString,
+    isTrialEligible,
     startPurchase,
     restorePurchases,
     retryOfferings,
@@ -65,7 +66,7 @@ export const TrialOfferModal = ({
       case 'photo-comparison':
         return '📸 See Your Progress';
       default:
-        return 'Unlock Premium';
+        return isTrialEligible ? 'Try Premium Free' : 'Unlock Premium';
     }
   };
 
@@ -73,13 +74,21 @@ export const TrialOfferModal = ({
     if (subtitle) return subtitle;
     switch (variant) {
       case 'post-signup':
-        return 'Start your healing journey with a 14-day free trial of all premium features.';
+        return isTrialEligible 
+          ? 'Start your healing journey with a 14-day free trial of all premium features.'
+          : `Unlock all premium features for just ${priceString}/month.`;
       case 'check-in-celebration':
-        return "You've taken the first step! Unlock powerful insights to understand your patterns.";
+        return isTrialEligible
+          ? "You've taken the first step! Unlock powerful insights to understand your patterns."
+          : `You've taken the first step! Unlock insights for ${priceString}/month.`;
       case 'photo-comparison':
-        return 'Compare photos side-by-side to visualize your healing progress over time.';
+        return isTrialEligible
+          ? 'Compare photos side-by-side to visualize your healing progress over time.'
+          : `Compare photos side-by-side for ${priceString}/month.`;
       default:
-        return 'Get unlimited access to all features with a 14-day free trial.';
+        return isTrialEligible
+          ? 'Get unlimited access to all features with a 14-day free trial.'
+          : `Get unlimited access to all features for ${priceString}/month.`;
     }
   };
 
@@ -169,12 +178,14 @@ export const TrialOfferModal = ({
             ))}
           </div>
 
-          {/* Trial badge */}
-          <div className="flex items-center justify-center gap-2 py-2">
-            <Leaf className="w-4 h-4 text-sage" />
-            <span className="text-sm font-semibold text-foreground">14-Day Free Trial</span>
-            <Leaf className="w-4 h-4 text-sage" />
-          </div>
+          {/* Trial badge - only show if eligible */}
+          {isTrialEligible && (
+            <div className="flex items-center justify-center gap-2 py-2">
+              <Leaf className="w-4 h-4 text-sage" />
+              <span className="text-sm font-semibold text-foreground">14-Day Free Trial</span>
+              <Leaf className="w-4 h-4 text-sage" />
+            </div>
+          )}
 
           {/* CTA Button */}
           <Button
@@ -192,7 +203,9 @@ export const TrialOfferModal = ({
             ) : (
               <>
                 <Crown className="w-4 h-4" />
-                Start Free Trial · Then {priceString}/month
+                {isTrialEligible 
+                  ? `Start Free Trial · Then ${priceString}/month`
+                  : `Subscribe – ${priceString}/month`}
               </>
             )}
           </Button>
@@ -233,7 +246,9 @@ export const TrialOfferModal = ({
 
           {/* Legal links */}
           <p className="text-[10px] text-center text-muted-foreground">
-            {priceString}/month after trial. Cancel anytime.{' '}
+            {isTrialEligible 
+              ? `${priceString}/month after trial. Cancel anytime.`
+              : `${priceString}/month. Cancel anytime.`}{' '}
             <a
               href={getTermsUrl(platform as Platform)}
               target="_blank"

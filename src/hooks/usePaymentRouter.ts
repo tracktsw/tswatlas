@@ -110,6 +110,19 @@ export const usePaymentRouter = () => {
     return '£5.99'; // Web Stripe price
   }, [isNative, revenueCatContext]);
 
+  // Trial eligibility - from RevenueCat on native, false on web (Stripe has no trial)
+  const isTrialEligible = useMemo(() => {
+    if (!isNative) return false; // Web/Stripe: no trial, show price only
+    return revenueCatContext.isTrialEligible;
+  }, [isNative, revenueCatContext.isTrialEligible]);
+
+  // Whether trial eligibility check is still pending (to avoid flash of wrong messaging)
+  const isTrialEligibilityPending = useMemo(() => {
+    if (!isNative) return false; // Web doesn't check
+    return revenueCatContext.trialEligibilityStatus === 'unknown' || 
+           revenueCatContext.trialEligibilityStatus === 'checking';
+  }, [isNative, revenueCatContext.trialEligibilityStatus]);
+
   /**
    * SINGLE ENTRY POINT FOR ALL PURCHASES
    * 
@@ -324,6 +337,10 @@ export const usePaymentRouter = () => {
     statusMessage,
     isOfferingsReady,
     priceString,
+    
+    // Trial eligibility (store-verified on native, false on web)
+    isTrialEligible,
+    isTrialEligibilityPending,
     
     // Actions
     startPurchase,

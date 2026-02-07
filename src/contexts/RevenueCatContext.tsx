@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, ReactNode, useState, useCallback } from 'react';
-import { useRevenueCat, getIsNativeIOS, getIsNativeMobile } from '@/hooks/useRevenueCat';
+import { useRevenueCat, getIsNativeIOS, getIsNativeMobile, type TrialEligibilityStatus } from '@/hooks/useRevenueCat';
 import { supabase } from '@/integrations/supabase/client';
 
 interface RevenueCatContextType {
@@ -17,6 +17,9 @@ interface RevenueCatContextType {
   lastCustomerInfoRefresh: Date | null;
   // Whether user is logged in (required for purchases)
   isUserLoggedIn: boolean;
+  // Trial eligibility (store-verified via Apple/Google)
+  trialEligibilityStatus: TrialEligibilityStatus;
+  isTrialEligible: boolean;
   fetchOfferings: () => Promise<any>;
   purchaseMonthly: () => Promise<{ success: boolean; error?: string; errorCode?: number; isPremiumNow?: boolean }>;
   restorePurchases: () => Promise<{ success: boolean; isPremiumNow: boolean; error?: string; isLinkedToOtherAccount?: boolean }>;
@@ -47,6 +50,9 @@ export const useRevenueCatContext = () => {
       boundUserId: null,
       lastCustomerInfoRefresh: null,
       isUserLoggedIn: false,
+      // Default trial eligibility for non-native/no context
+      trialEligibilityStatus: 'unknown' as TrialEligibilityStatus,
+      isTrialEligible: false,
       fetchOfferings: async () => null,
       purchaseMonthly: async () => ({ success: false, error: 'Not initialized', errorCode: undefined, isPremiumNow: false }),
       restorePurchases: async () => ({ success: false, isPremiumNow: false, error: 'Not initialized', isLinkedToOtherAccount: false }),
@@ -176,6 +182,9 @@ export const RevenueCatProvider = ({ children }: RevenueCatProviderProps) => {
     boundUserId: revenueCat.boundUserId,
     lastCustomerInfoRefresh: revenueCat.lastCustomerInfoRefresh,
     isUserLoggedIn,
+    // Trial eligibility from RevenueCat (store-verified)
+    trialEligibilityStatus: revenueCat.trialEligibilityStatus,
+    isTrialEligible: revenueCat.isTrialEligible,
     fetchOfferings: revenueCat.fetchOfferings,
     purchaseMonthly: revenueCat.purchaseMonthly,
     restorePurchases: revenueCat.restorePurchases,
