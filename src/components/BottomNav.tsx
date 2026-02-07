@@ -1,8 +1,9 @@
-import { useMemo, useRef, useState, useEffect } from 'react';
+import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Camera, CheckCircle, BarChart3, Users, BookOpen } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils';
+import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Home' },
@@ -26,11 +27,17 @@ const BottomNav = () => {
   const location = useLocation();
   const platform = Capacitor.getPlatform();
   const isAndroid = platform === 'android';
+  const { impact } = useHapticFeedback();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const [indicatorStyle, setIndicatorStyle] = useState({ x: 0, width: 0 });
   const preloadedRoutes = useRef<Set<string>>(new Set());
+  
+  // Haptic feedback on nav tap
+  const handleNavTap = useCallback(() => {
+    impact('light');
+  }, [impact]);
 
   const activeIndex = useMemo(() => {
     const index = navItems.findIndex((item) => item.path === location.pathname);
@@ -98,7 +105,7 @@ const BottomNav = () => {
         )}
       >
         <div
-          className="absolute top-1/2 h-[32px] bg-anchor/8 rounded-2xl pointer-events-none transition-all duration-300 ease-out"
+          className="absolute top-1/2 h-[32px] bg-anchor/8 rounded-2xl pointer-events-none transition-all duration-200 ease-out"
           style={{
             transform: `translate3d(${indicatorStyle.x}px, -50%, 0)`,
             width: `${indicatorStyle.width}px`,
@@ -116,18 +123,19 @@ const BottomNav = () => {
               ref={(el) => (itemRefs.current[index] = el)}
               onMouseEnter={() => handlePreload(path)}
               onTouchStart={() => handlePreload(path)}
+              onClick={handleNavTap}
               className={cn(
                 platform === 'ios'
-                  ? 'flex flex-col items-center gap-0.5 min-w-[56px] md:min-w-[72px] px-2 md:px-3 py-1 rounded-2xl transition-colors duration-200 z-10'
-                  : 'flex flex-col items-center gap-0.5 min-w-[56px] md:min-w-[72px] px-2 md:px-3 py-1.5 sm:py-2 rounded-2xl transition-colors duration-200 z-10',
+                  ? 'flex flex-col items-center gap-0.5 min-w-[56px] md:min-w-[72px] px-2 md:px-3 py-1 rounded-2xl transition-colors duration-150 z-10 touch-manipulation active:scale-[0.96]'
+                  : 'flex flex-col items-center gap-0.5 min-w-[56px] md:min-w-[72px] px-2 md:px-3 py-1.5 sm:py-2 rounded-2xl transition-colors duration-150 z-10 touch-manipulation active:scale-[0.96]',
                 isActive ? 'text-anchor' : 'text-muted-foreground hover:text-foreground'
               )}
             >
               <div
                 className={cn(
                   platform === 'ios'
-                    ? 'p-1 rounded-xl transition-all duration-200'
-                    : 'p-1 sm:p-1.5 md:p-2 rounded-xl transition-all duration-200',
+                    ? 'p-1 rounded-xl transition-all duration-150'
+                    : 'p-1 sm:p-1.5 md:p-2 rounded-xl transition-all duration-150',
                   isActive && 'bg-anchor/10'
                 )}
               >

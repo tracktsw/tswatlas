@@ -9,6 +9,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 
 interface CheckInDatePickerProps {
   selectedDate: Date;
@@ -23,8 +24,10 @@ export function CheckInDatePicker({
 }: CheckInDatePickerProps) {
   const [open, setOpen] = useState(false);
   const isTodaySelected = isToday(selectedDate);
+  const { selectionChanged } = useHapticFeedback();
 
   const handlePreviousDay = () => {
+    selectionChanged();
     const newDate = new Date(selectedDate);
     newDate.setDate(newDate.getDate() - 1);
     onDateChange(newDate);
@@ -35,6 +38,7 @@ export function CheckInDatePicker({
     newDate.setDate(newDate.getDate() + 1);
     // Don't allow future dates
     if (!isFuture(newDate)) {
+      selectionChanged();
       onDateChange(newDate);
     }
   };
@@ -56,7 +60,7 @@ export function CheckInDatePicker({
           variant="ghost"
           size="icon"
           onClick={handlePreviousDay}
-          className="h-9 w-9 rounded-xl"
+          className="h-11 w-11 rounded-xl touch-manipulation"
         >
           <ChevronLeft className="h-5 w-5" />
         </Button>
@@ -104,7 +108,7 @@ export function CheckInDatePicker({
           size="icon"
           onClick={handleNextDay}
           disabled={!canGoNext}
-          className="h-9 w-9 rounded-xl"
+          className="h-11 w-11 rounded-xl touch-manipulation"
         >
           <ChevronRight className={cn("h-5 w-5", !canGoNext && "opacity-30")} />
         </Button>
