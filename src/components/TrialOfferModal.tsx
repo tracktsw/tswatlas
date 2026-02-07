@@ -146,7 +146,7 @@ export const TrialOfferModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm p-0 overflow-hidden">
+      <DialogContent className="max-w-sm p-0 overflow-hidden max-h-[90dvh] overflow-y-auto">
         {/* Hero section with gradient */}
         <div className="bg-gradient-to-br from-primary/20 via-coral/10 to-honey/20 p-6 pb-4">
           <DialogHeader className="text-center space-y-2">
