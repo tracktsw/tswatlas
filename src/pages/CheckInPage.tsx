@@ -15,6 +15,7 @@ import { trackCheckInCompleted } from '@/utils/analytics';
 import { trackMetaCheckInCompleted } from '@/utils/metaAnalytics';
 import { useInAppReview } from '@/hooks/useInAppReview';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { CheckInDatePicker } from '@/components/CheckInDatePicker';
 import {
   AlertDialog,
@@ -94,6 +95,7 @@ const CheckInPage = () => {
   const { checkIns, addCheckIn, updateCheckIn, deleteCheckIn, getCheckInForDate, customTreatments, addCustomTreatment, removeCustomTreatment, customTriggers, addCustomTrigger, removeCustomTrigger, getTodayCheckInCount } = useUserData();
   const { maybeRequestReview } = useInAppReview();
   const { isPremium, isAdmin } = useSubscription();
+  const { impact, selectionChanged, notification } = useHapticFeedback();
   
   // Selected date for check-in (supports backfill)
   const [selectedDate, setSelectedDate] = useState<Date>(() => startOfDay(new Date()));
@@ -323,11 +325,13 @@ const CheckInPage = () => {
 
   const toggleTreatment = (id: string) => {
     if (isSaving) return;
+    impact('light');
     setSelectedTreatments((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
   };
 
   const toggleTrigger = (id: string) => {
     if (isSaving) return;
+    impact('light');
     setSelectedTriggers((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
   };
 
@@ -371,6 +375,7 @@ const CheckInPage = () => {
 
   const toggleSymptom = (symptom: string) => {
     if (isSaving) return;
+    selectionChanged();
     setSelectedSymptoms((prev) => {
       const existing = prev.find(s => s.symptom === symptom);
       if (existing) {
@@ -405,6 +410,7 @@ const CheckInPage = () => {
 
   const updateSymptomSeverity = (symptom: string, severity: 1 | 2 | 3) => {
     if (isSaving) return;
+    selectionChanged();
     setSelectedSymptoms((prev) =>
       prev.map((s) => (s.symptom === symptom ? { ...s, severity } : s))
     );
@@ -483,6 +489,9 @@ const CheckInPage = () => {
       return;
     }
 
+    // Haptic feedback on submit
+    impact('medium');
+    
     setIsSaving(true);
 
     // Process triggers: add food items and product items as prefixed entries
@@ -528,6 +537,7 @@ const CheckInPage = () => {
         }, clientRequestId, isBackfillMode ? selectedDate : undefined);
 
         setShowSparkles(true);
+        notification('success');
         toast.success(isBackfillMode ? 'Past entry saved' : 'Check-in saved');
         
         // Track successful check-in (after DB insert succeeds)
@@ -820,9 +830,12 @@ const CheckInPage = () => {
               {moodEmojis.map((emoji, idx) => (
                 <button
                   key={idx}
-                  onClick={() => setMood(idx + 1)}
+                  onClick={() => {
+                    selectionChanged();
+                    setMood(idx + 1);
+                  }}
                   className={cn(
-                    'flex-1 py-4 text-2xl rounded-2xl transition-all duration-300',
+                    'flex-1 py-4 text-2xl rounded-2xl transition-all duration-150 touch-manipulation active:scale-[0.96]',
                     mood === idx + 1 
                       ? 'bg-emerald-500/10 ring-2 ring-emerald-500/50 scale-110' 
                       : 'bg-muted/50 hover:bg-muted hover:scale-105'
@@ -843,9 +856,12 @@ const CheckInPage = () => {
               {skinEmojis.map((emoji, idx) => (
                 <button
                   key={idx}
-                  onClick={() => setSkinFeeling(idx + 1)}
+                  onClick={() => {
+                    selectionChanged();
+                    setSkinFeeling(idx + 1);
+                  }}
                   className={cn(
-                    'flex-1 flex flex-col items-center py-3 px-1 rounded-2xl transition-all duration-300',
+                    'flex-1 flex flex-col items-center py-3 px-1 rounded-2xl transition-all duration-150 touch-manipulation active:scale-[0.96]',
                     skinFeeling === idx + 1 
                       ? 'bg-emerald-500/10 ring-2 ring-emerald-500/50 scale-105' 
                       : 'bg-muted/50 hover:bg-muted hover:scale-102'
@@ -879,7 +895,7 @@ const CheckInPage = () => {
                   key={id}
                   onClick={() => toggleTreatment(id)}
                   className={cn(
-                    'glass-card px-3 py-2.5 text-left transition-all duration-300 hover:-translate-y-0.5',
+                    'glass-card px-3 py-2.5 text-left transition-all duration-150 hover:-translate-y-0.5 touch-manipulation active:scale-[0.97]',
                     selectedTreatments.includes(id) 
                       ? 'ring-2 ring-primary bg-primary/5 shadow-warm' 
                       : 'border-border/50 hover:bg-muted/50 hover:shadow-warm-sm'

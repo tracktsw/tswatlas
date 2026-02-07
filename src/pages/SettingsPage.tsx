@@ -15,6 +15,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useAppUpdate } from '@/hooks/useAppUpdate';
 import { useCheckInReminder } from '@/hooks/useCheckInReminder';
 import { useLocalNotifications } from '@/hooks/useLocalNotifications';
+import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { scheduleCheckInReminders } from '@/utils/notificationScheduler';
 import { scheduleTestBeliefNotification } from '@/utils/beliefNotificationScheduler';
 import { format } from 'date-fns';
@@ -29,6 +30,7 @@ const SettingsPage = () => {
   const { currentVersion, isChecking, checkForUpdate, performUpdate, updateAvailable } = useAppUpdate();
   const { isNative, permissionStatus, isRequestingPermission, checkPermission, requestPermission, scheduleTestNotification } = useLocalNotifications();
   const { isAndroid } = usePlatform();
+  const { selectionChanged, notification } = useHapticFeedback();
   
   // Get next reminder time for display
   const { nextReminderTime } = useCheckInReminder({
@@ -61,6 +63,9 @@ const SettingsPage = () => {
   }, [searchParams, refreshSubscription]);
 
   const handleToggleReminders = async (enabled: boolean) => {
+    // Haptic feedback on toggle
+    selectionChanged();
+    
     try {
       // If disabling, just disable
       if (!enabled) {
@@ -196,7 +201,7 @@ const SettingsPage = () => {
       <div className="flex items-center gap-3">
         <Link 
           to="/" 
-          className="p-2 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+          className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full bg-muted hover:bg-muted/80 transition-colors duration-150 touch-manipulation active:scale-[0.96]"
         >
           <ArrowLeft className="w-5 h-5" />
         </Link>
@@ -225,6 +230,7 @@ const SettingsPage = () => {
           <Switch 
             checked={theme === 'dark'}
             onCheckedChange={(checked) => {
+              selectionChanged();
               setTheme(checked ? 'dark' : 'light');
               toast.success(checked ? 'Night mode enabled' : 'Light mode enabled');
             }}
