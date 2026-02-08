@@ -5,7 +5,7 @@ import { format, eachWeekOfInterval, startOfWeek, endOfWeek, isWithinInterval } 
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const INSIGHTS_UNLOCK_THRESHOLD = 30;
 
@@ -341,16 +341,16 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
               <p className="text-xs text-muted-foreground">
                 Percentage of good skin days when using each treatment
               </p>
-              <Tooltip>
-                <TooltipTrigger asChild>
+              <Popover>
+                <PopoverTrigger asChild>
                   <button className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
                     <Info className="w-3.5 h-3.5" />
                   </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-[220px] text-xs">
+                </PopoverTrigger>
+                <PopoverContent side="top" className="max-w-[220px] text-xs p-3">
                   <p>Shows how often you had a good skin day (rating 4-5) when using each treatment. Higher % = more effective for you.</p>
-                </TooltipContent>
-              </Tooltip>
+                </PopoverContent>
+              </Popover>
             </div>
             {(showAllTreatments ? treatmentStats : treatmentStats.slice(0, TREATMENTS_INITIAL_DISPLAY)).map(({ id, label, count, effectiveness, hasHighCorrelation, correlationRatio }, index) => (
               <div 

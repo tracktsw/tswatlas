@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { BaselineConfidence } from '@/utils/flareStateEngine';
 import { analyzeFoodReactions, FoodAnalysisResult, FoodPattern, FoodConfidence } from '@/utils/foodAnalysis';
 import { analyzeProductReactions, ProductAnalysisResult, ProductPattern, ProductConfidence } from '@/utils/productAnalysis';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const triggersList = [
   // Environmental triggers
@@ -487,9 +487,9 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
       };
       const styles = getStyles();
       return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className={cn(
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className={cn(
               "inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full cursor-help",
               styles.bg,
               styles.text,
@@ -497,12 +497,12 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
             )}>
               <Info className="w-2.5 h-2.5" />
               {styles.label} confidence
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="max-w-[200px] text-xs">
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side="top" className="max-w-[200px] text-xs p-3">
             <p>{styles.tooltip}</p>
-          </TooltipContent>
-        </Tooltip>
+          </PopoverContent>
+        </Popover>
       );
     };
 
@@ -606,9 +606,9 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
       };
       const styles = getStyles();
       return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className={cn(
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className={cn(
               "inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full cursor-help",
               styles.bg,
               styles.text,
@@ -616,12 +616,12 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
             )}>
               <Info className="w-2.5 h-2.5" />
               {styles.label} confidence
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="max-w-[200px] text-xs">
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side="top" className="max-w-[200px] text-xs p-3">
             <p>{styles.tooltip}</p>
-          </TooltipContent>
-        </Tooltip>
+          </PopoverContent>
+        </Popover>
       );
     };
 
@@ -694,16 +694,16 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
             <p className="text-xs text-muted-foreground">
               Triggers correlated with worse-than-average skin days
             </p>
-            <Tooltip>
-              <TooltipTrigger asChild>
+            <Popover>
+              <PopoverTrigger asChild>
                 <button className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
                   <Info className="w-3.5 h-3.5" />
                 </button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-[220px] text-xs">
+              </PopoverTrigger>
+              <PopoverContent side="top" className="max-w-[220px] text-xs p-3">
                 <p>Shows how much worse your skin was on days with this trigger compared to your average. Higher % = stronger negative impact.</p>
-              </TooltipContent>
-            </Tooltip>
+              </PopoverContent>
+            </Popover>
           </div>
           {(showAllTriggers ? activePatterns : activePatterns.slice(0, TRIGGERS_INITIAL_DISPLAY)).map(({ id, label, uniqueDays, percentWorse, impactScore, isHighConfidence, trend }, index) => {
             const barWidth = (impactScore / maxImpact) * 100;
