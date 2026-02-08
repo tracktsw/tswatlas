@@ -717,13 +717,16 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
                     </span>
                     <TrendIndicator trend={trend} />
                   </div>
-                  <div className="text-right whitespace-nowrap">
+                  <div className="text-right whitespace-nowrap flex items-baseline gap-1">
                     {isHighConfidence ? (
-                      <span className="text-sm font-bold text-amber-600 dark:text-amber-400">{percentWorse}%</span>
+                      <>
+                        <span className="text-sm font-bold text-amber-600 dark:text-amber-400">{percentWorse}%</span>
+                        <span className="text-[10px] text-muted-foreground">worse</span>
+                      </>
                     ) : (
-                      <span className="text-xs text-muted-foreground font-medium">Early</span>
+                      <span className="text-xs text-muted-foreground font-medium">Early pattern</span>
                     )}
-                    <span className="text-xs text-muted-foreground/60 ml-1">({uniqueDays}d)</span>
+                    <span className="text-[10px] text-muted-foreground/60 ml-0.5">· {uniqueDays} days</span>
                   </div>
                 </div>
                 <div className="h-2.5 bg-muted/60 rounded-full overflow-hidden shadow-inner">

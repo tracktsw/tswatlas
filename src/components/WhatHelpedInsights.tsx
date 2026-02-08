@@ -336,6 +336,9 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
         {/* Primary View: Simple Treatment Effectiveness */}
         {treatmentStats.length > 0 ? (
           <div className="space-y-3">
+            <p className="text-xs text-muted-foreground mb-1">
+              Percentage of good skin days when using each treatment
+            </p>
             {(showAllTreatments ? treatmentStats : treatmentStats.slice(0, TREATMENTS_INITIAL_DISPLAY)).map(({ id, label, count, effectiveness, hasHighCorrelation, correlationRatio }, index) => (
               <div 
                 key={id} 
@@ -351,9 +354,10 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
                       </span>
                     )}
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex items-baseline gap-1">
                     <span className="text-sm font-bold text-primary">{effectiveness}%</span>
-                    <span className="text-xs text-muted-foreground ml-1">({count})</span>
+                    <span className="text-[10px] text-muted-foreground">good</span>
+                    <span className="text-[10px] text-muted-foreground/60 ml-0.5">· {count} uses</span>
                   </div>
                 </div>
                 <div className="h-2.5 bg-muted/60 rounded-full overflow-hidden shadow-inner">
