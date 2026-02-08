@@ -512,36 +512,51 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     return (
       <div
         className={cn(
-          "p-3 rounded-lg border animate-slide-up",
+          "p-3.5 rounded-xl border shadow-sm animate-slide-up transition-all duration-200 hover:shadow-md",
           styles.bg,
           styles.border,
-          food.confidence === 'low' && "opacity-75"
+          food.confidence === 'low' && "opacity-80"
         )}
         style={{ animationDelay: `${index * 0.05}s` }}
       >
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-foreground">🍽️ {food.name}</span>
-            <span className="text-xs text-muted-foreground">
-              {food.count} log{food.count !== 1 ? 's' : ''}
-            </span>
+            <div className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center text-sm">
+              🍽️
+            </div>
+            <div>
+              <span className="text-sm font-semibold text-foreground">{food.name}</span>
+              <span className="text-xs text-muted-foreground ml-1.5">
+                ({food.count})
+              </span>
+            </div>
           </div>
           {getConfidenceBadge(food.confidence)}
         </div>
         
-        <p className={cn("text-xs font-medium mb-1", styles.text)}>
+        <p className={cn("text-xs font-medium mb-2", styles.text)}>
           {styles.label}
         </p>
         
         {food.analyzableExposures > 0 && (
-          <p className="text-[10px] text-muted-foreground/70">
-            {food.daysWorseAfter > 0 && `${food.daysWorseAfter} worse`}
-            {food.daysWorseAfter > 0 && (food.daysBetterAfter > 0 || food.daysNeutralAfter > 0) && ' · '}
-            {food.daysBetterAfter > 0 && `${food.daysBetterAfter} better`}
-            {food.daysBetterAfter > 0 && food.daysNeutralAfter > 0 && ' · '}
-            {food.daysNeutralAfter > 0 && `${food.daysNeutralAfter} neutral`}
-            {' '}of {total} analyzed
-          </p>
+          <div className="flex items-center gap-1.5 text-[10px]">
+            {food.daysWorseAfter > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium">
+                {food.daysWorseAfter} worse
+              </span>
+            )}
+            {food.daysBetterAfter > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">
+                {food.daysBetterAfter} better
+              </span>
+            )}
+            {food.daysNeutralAfter > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+                {food.daysNeutralAfter} neutral
+              </span>
+            )}
+            <span className="text-muted-foreground/60 ml-1">of {total}</span>
+          </div>
         )}
       </div>
     );
@@ -614,24 +629,47 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     const total = product.daysWorseAfter + product.daysBetterAfter + product.daysNeutralAfter;
 
     return (
-      <div className={cn("p-3 rounded-lg border animate-slide-up", styles.bg, styles.border, product.confidence === 'low' && "opacity-75")} style={{ animationDelay: `${index * 0.05}s` }}>
+      <div 
+        className={cn(
+          "p-3.5 rounded-xl border shadow-sm animate-slide-up transition-all duration-200 hover:shadow-md", 
+          styles.bg, 
+          styles.border, 
+          product.confidence === 'low' && "opacity-80"
+        )} 
+        style={{ animationDelay: `${index * 0.05}s` }}
+      >
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-foreground">🧴 {product.name}</span>
-            <span className="text-xs text-muted-foreground">{product.count} log{product.count !== 1 ? 's' : ''}</span>
+            <div className="w-7 h-7 rounded-lg bg-purple-500/15 flex items-center justify-center text-sm">
+              🧴
+            </div>
+            <div>
+              <span className="text-sm font-semibold text-foreground">{product.name}</span>
+              <span className="text-xs text-muted-foreground ml-1.5">({product.count})</span>
+            </div>
           </div>
           {getConfidenceBadge(product.confidence)}
         </div>
-        <p className={cn("text-xs font-medium mb-1", styles.text)}>{styles.label}</p>
+        <p className={cn("text-xs font-medium mb-2", styles.text)}>{styles.label}</p>
         {product.analyzableExposures > 0 && (
-          <p className="text-[10px] text-muted-foreground/70">
-            {product.daysWorseAfter > 0 && `${product.daysWorseAfter} worse`}
-            {product.daysWorseAfter > 0 && (product.daysBetterAfter > 0 || product.daysNeutralAfter > 0) && ' · '}
-            {product.daysBetterAfter > 0 && `${product.daysBetterAfter} better`}
-            {product.daysBetterAfter > 0 && product.daysNeutralAfter > 0 && ' · '}
-            {product.daysNeutralAfter > 0 && `${product.daysNeutralAfter} neutral`}
-            {' '}of {total} analyzed
-          </p>
+          <div className="flex items-center gap-1.5 text-[10px]">
+            {product.daysWorseAfter > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium">
+                {product.daysWorseAfter} worse
+              </span>
+            )}
+            {product.daysBetterAfter > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">
+                {product.daysBetterAfter} better
+              </span>
+            )}
+            {product.daysNeutralAfter > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+                {product.daysNeutralAfter} neutral
+              </span>
+            )}
+            <span className="text-muted-foreground/60 ml-1">of {total}</span>
+          </div>
         )}
       </div>
     );
@@ -758,13 +796,13 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
       )}
 
       {/* Food Diary Analysis Section - Always show, with empty state if needed */}
-      <div className="glass-card p-5 space-y-3">
+      <div className="glass-card p-5 space-y-3 overflow-hidden">
         <button
           onClick={() => setShowFoodBreakdown(!showFoodBreakdown)}
-          className="flex items-center justify-between w-full"
+          className="flex items-center justify-between w-full group"
         >
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500/25 to-amber-500/10 shadow-sm group-hover:shadow-md transition-shadow">
               <UtensilsCrossed className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             </div>
             <div className="text-left">
@@ -780,16 +818,18 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
             </div>
           </div>
           <ChevronDown className={cn(
-            "w-4 h-4 text-muted-foreground transition-transform",
+            "w-4 h-4 text-muted-foreground transition-transform duration-200",
             showFoodBreakdown && "rotate-180"
           )} />
         </button>
         
         {showFoodBreakdown && (
-          <div className="space-y-3 pt-2 border-t border-muted/50">
+          <div className="space-y-3 pt-3 border-t border-border/30">
             {foodAnalysis.length === 0 ? (
-              <div className="text-center py-4">
-                <UtensilsCrossed className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+              <div className="text-center py-6">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-amber-500/15 to-amber-500/5 flex items-center justify-center">
+                  <UtensilsCrossed className="w-5 h-5 text-amber-500/50" />
+                </div>
                 <p className="text-sm text-muted-foreground font-medium">
                   No food diary entries yet
                 </p>
@@ -800,16 +840,16 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
             ) : (
               <>
                 {/* Disclaimer */}
-                <div className="flex items-start gap-2 p-2 bg-amber-50/50 dark:bg-amber-950/20 rounded-lg border border-amber-200/50 dark:border-amber-800/30">
-                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                  <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                <div className="flex items-start gap-2.5 p-3 bg-gradient-to-r from-amber-50/80 to-transparent dark:from-amber-950/30 dark:to-transparent rounded-xl border border-amber-200/40 dark:border-amber-800/30">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed">
                     Observations only — not medical advice. Correlation does not mean causation.
                   </p>
                 </div>
                 
                 {/* Analyzed foods with patterns */}
                 {analyzedFoods.length > 0 && (
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     {analyzedFoods.map((food, index) => (
                       <FoodAnalysisCard key={food.name} food={food} index={index} />
                     ))}
@@ -818,17 +858,18 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
                 
                 {/* Insufficient data foods */}
                 {insufficientDataFoods.length > 0 && (
-                  <div className="pt-2 border-t border-muted/30">
-                    <p className="text-xs text-muted-foreground mb-2 font-medium">
+                  <div className="pt-3 border-t border-border/30">
+                    <p className="text-xs text-muted-foreground mb-2.5 font-medium flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
                       Not enough data yet
                     </p>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-2">
                       {insufficientDataFoods.map((food) => (
                         <span
                           key={food.name}
-                          className="text-xs text-muted-foreground/70 bg-muted/30 px-2 py-1 rounded-full"
+                          className="text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full border border-border/50"
                         >
-                          {food.name} ({food.count} log{food.count !== 1 ? 's' : ''})
+                          {food.name} <span className="text-muted-foreground/60">({food.count})</span>
                         </span>
                       ))}
                     </div>
@@ -836,9 +877,9 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
                 )}
                 
                 {/* Footer explanation */}
-                <div className="flex items-start gap-2 pt-2 border-t border-muted/30">
-                  <Info className="w-3 h-3 text-muted-foreground/60 mt-0.5 flex-shrink-0" />
-                  <p className="text-[10px] text-muted-foreground/60">
+                <div className="flex items-start gap-2 pt-3 border-t border-border/30">
+                  <Info className="w-3.5 h-3.5 text-muted-foreground/50 mt-0.5 flex-shrink-0" />
+                  <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
                     Patterns based on symptoms 1-3 days after eating. Consult a healthcare provider before making dietary changes.
                   </p>
                 </div>
@@ -849,13 +890,13 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
       </div>
 
       {/* Product Diary Analysis Section - Always show, with empty state if needed */}
-      <div className="glass-card p-5 space-y-3">
+      <div className="glass-card p-5 space-y-3 overflow-hidden">
         <button
           onClick={() => setShowProductBreakdown(!showProductBreakdown)}
-          className="flex items-center justify-between w-full"
+          className="flex items-center justify-between w-full group"
         >
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500/25 to-purple-500/10 shadow-sm group-hover:shadow-md transition-shadow">
               <Package className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             </div>
             <div className="text-left">
@@ -871,16 +912,18 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
             </div>
           </div>
           <ChevronDown className={cn(
-            "w-4 h-4 text-muted-foreground transition-transform",
+            "w-4 h-4 text-muted-foreground transition-transform duration-200",
             showProductBreakdown && "rotate-180"
           )} />
         </button>
         
         {showProductBreakdown && (
-          <div className="space-y-3 pt-2 border-t border-muted/50">
+          <div className="space-y-3 pt-3 border-t border-border/30">
             {productAnalysis.length === 0 ? (
-              <div className="text-center py-4">
-                <Package className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+              <div className="text-center py-6">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-purple-500/15 to-purple-500/5 flex items-center justify-center">
+                  <Package className="w-5 h-5 text-purple-500/50" />
+                </div>
                 <p className="text-sm text-muted-foreground font-medium">
                   No product diary entries yet
                 </p>
@@ -891,16 +934,16 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
             ) : (
               <>
                 {/* Disclaimer */}
-                <div className="flex items-start gap-2 p-2 bg-purple-50/50 dark:bg-purple-950/20 rounded-lg border border-purple-200/50 dark:border-purple-800/30">
-                  <AlertCircle className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
-                  <p className="text-[10px] text-purple-700 dark:text-purple-300">
+                <div className="flex items-start gap-2.5 p-3 bg-gradient-to-r from-purple-50/80 to-transparent dark:from-purple-950/30 dark:to-transparent rounded-xl border border-purple-200/40 dark:border-purple-800/30">
+                  <AlertCircle className="w-4 h-4 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-[11px] text-purple-700 dark:text-purple-300 leading-relaxed">
                     Observations only — not medical advice. Correlation does not mean causation.
                   </p>
                 </div>
                 
                 {/* Analyzed products with patterns */}
                 {analyzedProducts.length > 0 && (
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     {analyzedProducts.map((product, index) => (
                       <ProductAnalysisCard key={product.name} product={product} index={index} />
                     ))}
@@ -909,17 +952,18 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
                 
                 {/* Insufficient data products */}
                 {insufficientDataProducts.length > 0 && (
-                  <div className="pt-2 border-t border-muted/30">
-                    <p className="text-xs text-muted-foreground mb-2 font-medium">
+                  <div className="pt-3 border-t border-border/30">
+                    <p className="text-xs text-muted-foreground mb-2.5 font-medium flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
                       Not enough data yet
                     </p>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-2">
                       {insufficientDataProducts.map((product) => (
                         <span
                           key={product.name}
-                          className="text-xs text-muted-foreground/70 bg-muted/30 px-2 py-1 rounded-full"
+                          className="text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full border border-border/50"
                         >
-                          {product.name} ({product.count} log{product.count !== 1 ? 's' : ''})
+                          {product.name} <span className="text-muted-foreground/60">({product.count})</span>
                         </span>
                       ))}
                     </div>
@@ -927,9 +971,9 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
                 )}
                 
                 {/* Footer explanation */}
-                <div className="flex items-start gap-2 pt-2 border-t border-muted/30">
-                  <Info className="w-3 h-3 text-muted-foreground/60 mt-0.5 flex-shrink-0" />
-                  <p className="text-[10px] text-muted-foreground/60">
+                <div className="flex items-start gap-2 pt-3 border-t border-border/30">
+                  <Info className="w-3.5 h-3.5 text-muted-foreground/50 mt-0.5 flex-shrink-0" />
+                  <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
                     Patterns based on symptoms 1-3 days after use. Consult a dermatologist before making product changes.
                   </p>
                 </div>
