@@ -242,7 +242,7 @@ const CommunityPage = () => {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="py-6 space-y-6 w-full max-w-lg md:max-w-none mx-auto px-safe md:px-8 lg:px-12 safe-area-inset-top relative overflow-hidden">
       {/* Decorative background elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-16 -right-16 w-56 h-56 bg-gradient-to-br from-terracotta/12 to-coral/8 rounded-full blur-3xl" />
@@ -251,8 +251,6 @@ const CommunityPage = () => {
           <PlantIllustration className="w-28 h-28" />
         </div>
       </div>
-      
-      <div className="py-6 space-y-6 w-full max-w-lg md:max-w-none mx-auto px-safe md:px-8 lg:px-12 relative">
         <div className="flex items-center justify-between animate-fade-in px-4">
           <div>
             <h1 className="font-display text-2xl font-bold text-foreground">Community</h1>
@@ -553,7 +551,6 @@ const CommunityPage = () => {
           </div>
         )}
       </div>
-    </div>
   );
 };
 
