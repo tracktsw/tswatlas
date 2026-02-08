@@ -2,12 +2,14 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { BookOpen, ChevronRight, Lightbulb, Loader2, X } from "lucide-react";
+import { BookOpen, ChevronRight, Lightbulb, Loader2, ExternalLink, Sparkles } from "lucide-react";
 import { decodeHtmlEntities } from "@/utils/htmlDecode";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { PlantIllustration, SparkleIllustration } from "@/components/illustrations";
 
 interface Resource {
   id: string;
@@ -20,6 +22,17 @@ interface Resource {
   created_at: string;
   sort_order: number;
 }
+
+// Domain icon mapping for visual variety
+const getDomainIcon = (domain: string): string => {
+  if (domain.includes('itsan')) return '🌍';
+  if (domain.includes('reddit')) return '💬';
+  if (domain.includes('youtube')) return '🎬';
+  if (domain.includes('pubmed') || domain.includes('ncbi')) return '🔬';
+  if (domain.includes('instagram')) return '📸';
+  if (domain.includes('facebook')) return '👥';
+  return '📄';
+};
 
 const ResourcesPage = () => {
   const navigate = useNavigate();
@@ -89,12 +102,12 @@ const ResourcesPage = () => {
     return (
       <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto safe-area-inset-top">
         <div className="space-y-2">
-          <div className="h-8 w-48 bg-muted animate-pulse rounded" />
-          <div className="h-4 w-full max-w-md bg-muted animate-pulse rounded" />
+          <div className="h-8 w-48 bg-muted animate-pulse rounded-lg" />
+          <div className="h-4 w-full max-w-md bg-muted animate-pulse rounded-lg" />
         </div>
-        <div className="space-y-1">
+        <div className="space-y-3">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />
+            <div key={i} className="h-20 bg-muted animate-pulse rounded-2xl" />
           ))}
         </div>
       </div>
@@ -104,59 +117,88 @@ const ResourcesPage = () => {
   if (error) {
     return (
       <div className="px-4 md:px-8 lg:px-12 py-6 max-w-lg md:max-w-none mx-auto safe-area-inset-top">
-        <p className="text-destructive">Failed to load resources. Please try again.</p>
+        <div className="glass-card-warm p-6 text-center">
+          <p className="text-destructive">Failed to load resources. Please try again.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto safe-area-inset-top">
-      <div className="flex items-start justify-between gap-4">
+    <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto safe-area-inset-top relative">
+      {/* Decorative elements */}
+      <div className="decorative-blob w-36 h-36 bg-honey/20 -top-10 -right-10 fixed" />
+      <div className="decorative-blob w-44 h-44 bg-primary/15 bottom-32 -left-16 fixed" />
+      <PlantIllustration variant="growing" className="w-16 h-20 fixed top-24 right-2 opacity-20 pointer-events-none" />
+      
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 animate-fade-in">
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight">TSW Resources</h1>
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-honey/30 to-honey/10 shadow-sm">
+              <BookOpen className="w-5 h-5 text-honey-dark" />
+            </div>
+            <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">TSW Resources</h1>
+          </div>
           <p className="text-muted-foreground text-sm">
-            Educational content about Topical Steroid Withdrawal. Tap any resource to learn more.
+            Educational content about Topical Steroid Withdrawal
           </p>
         </div>
         <Button
           variant="outline"
           size="sm"
           onClick={() => setShowSuggestModal(true)}
-          className="shrink-0"
+          className="shrink-0 gap-1.5 border-honey/30 hover:bg-honey/10 hover:border-honey/50"
         >
-          <Lightbulb className="w-4 h-4 mr-1" />
+          <Lightbulb className="w-4 h-4 text-honey" />
           Suggest
         </Button>
       </div>
 
       {!resources || resources.length === 0 ? (
-        <div className="glass-card py-12 text-center">
-          <BookOpen className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-          <p className="text-muted-foreground">No resources available yet.</p>
+        <div className="glass-card-warm py-12 text-center animate-slide-up">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-honey/20 to-coral/10 flex items-center justify-center">
+            <BookOpen className="h-7 w-7 text-honey" />
+          </div>
+          <p className="text-muted-foreground font-medium">No resources available yet.</p>
           <p className="text-sm text-muted-foreground/70 mt-1">
             Check back soon for educational content about TSW.
           </p>
         </div>
       ) : (
-        <div className="glass-card divide-y divide-border">
-          {resources.map((resource) => {
+        <div className="space-y-3">
+          {resources.map((resource, index) => {
             const title = decodeHtmlEntities(resource.custom_title) || resource.source_domain;
+            const icon = getDomainIcon(resource.source_domain);
             
             return (
               <button
                 key={resource.id}
                 onClick={() => handleResourceClick(resource.id)}
-                className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-muted/50 transition-colors first:rounded-t-lg last:rounded-b-lg"
+                className={cn(
+                  "w-full glass-card p-4 text-left transition-all duration-200 animate-slide-up",
+                  "hover:shadow-warm-md hover:scale-[1.01] active:scale-[0.99]",
+                  "group"
+                )}
+                style={{ animationDelay: `${index * 0.05}s` }}
               >
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-foreground line-clamp-2">
-                    {title}
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {resource.source_domain}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary/10 to-sage-light/50 flex items-center justify-center text-xl shrink-0 shadow-sm group-hover:shadow-md transition-shadow">
+                    {icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+                      {title}
+                    </h3>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <ExternalLink className="w-3 h-3 text-muted-foreground/50" />
+                      <p className="text-xs text-muted-foreground truncate">
+                        {resource.source_domain}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground/50 shrink-0 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                 </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
               </button>
             );
           })}
@@ -167,7 +209,10 @@ const ResourcesPage = () => {
       <Dialog open={showSuggestModal} onOpenChange={setShowSuggestModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Suggest an Article</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Lightbulb className="w-5 h-5 text-honey" />
+              Suggest an Article
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
@@ -179,6 +224,7 @@ const ResourcesPage = () => {
               placeholder="https://example.com/article"
               type="url"
               autoComplete="url"
+              className="h-11"
             />
             <Button 
               className="w-full" 
@@ -187,8 +233,10 @@ const ResourcesPage = () => {
             >
               {suggestMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : null}
-              Suggest
+              ) : (
+                <Sparkles className="w-4 h-4 mr-2" />
+              )}
+              Submit Suggestion
             </Button>
           </div>
         </DialogContent>
