@@ -350,14 +350,17 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
       <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
         <div className="flex items-center justify-between gap-2">
           <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-muted">
-              <Eye className="w-4 h-4 text-muted-foreground" />
+            <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-500/5 shadow-sm">
+              <Eye className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             </div>
             Patterns We're Watching
           </h3>
           <TimePeriodToggle />
         </div>
-        <div className="glass-card p-5">
+        <div className="glass-card p-6 text-center">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-amber-500/15 to-amber-500/5 flex items-center justify-center">
+            <Eye className="w-5 h-5 text-amber-500/60" />
+          </div>
           <p className="text-sm text-muted-foreground">
             Not enough data {timePeriod !== 'all' ? `in the last ${timePeriod === 'week' ? '7' : '30'} days` : ''} to identify clear trigger patterns.
           </p>
@@ -375,14 +378,17 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
       <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
         <div className="flex items-center justify-between gap-2">
           <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-muted">
-              <Eye className="w-4 h-4 text-muted-foreground" />
+            <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-500/5 shadow-sm">
+              <Eye className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             </div>
             Patterns We're Watching
           </h3>
           <TimePeriodToggle />
         </div>
-        <div className="glass-card p-5">
+        <div className="glass-card p-6 text-center">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-amber-500/15 to-amber-500/5 flex items-center justify-center">
+            <Eye className="w-5 h-5 text-amber-500/60" />
+          </div>
           <p className="text-sm text-muted-foreground">
             Start logging triggers in your daily check-ins to discover patterns over time.
           </p>
@@ -635,8 +641,8 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
     <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.25s' }}>
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-muted">
-            <Eye className="w-4 h-4 text-muted-foreground" />
+          <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-500/5 shadow-sm">
+            <Eye className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           </div>
           Patterns We're Watching
         </h3>
@@ -645,8 +651,8 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
       
       {/* Active Patterns */}
       {activePatterns.length > 0 && (
-        <div className="glass-card p-5 space-y-4">
-          <p className="text-xs text-muted-foreground">
+        <div className="glass-card p-5 space-y-3">
+          <p className="text-xs text-muted-foreground mb-1">
             Triggers correlated with worse-than-average skin days
           </p>
           {(showAllTriggers ? activePatterns : activePatterns.slice(0, TRIGGERS_INITIAL_DISPLAY)).map(({ id, label, uniqueDays, percentWorse, impactScore, isHighConfidence, trend }, index) => {
@@ -655,10 +661,15 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
             return (
               <div 
                 key={id} 
-                className="space-y-2 animate-slide-up"
+                className={cn(
+                  "p-3 rounded-xl transition-all duration-200 animate-slide-up",
+                  isHighConfidence 
+                    ? "bg-gradient-to-r from-amber-500/10 to-transparent" 
+                    : "bg-muted/30"
+                )}
                 style={{ animationDelay: `${0.3 + index * 0.03}s` }}
               >
-                <div className="flex justify-between items-center gap-2">
+                <div className="flex justify-between items-center gap-2 mb-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className={cn(
                       "font-semibold truncate",
@@ -668,21 +679,22 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
                     </span>
                     <TrendIndicator trend={trend} />
                   </div>
-                  <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">
-                    {isHighConfidence 
-                      ? `${percentWorse}% worse`
-                      : 'Early pattern'
-                    }
-                    <span className="text-muted-foreground/60 ml-1">({uniqueDays}d)</span>
-                  </span>
+                  <div className="text-right whitespace-nowrap">
+                    {isHighConfidence ? (
+                      <span className="text-sm font-bold text-amber-600 dark:text-amber-400">{percentWorse}%</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground font-medium">Early</span>
+                    )}
+                    <span className="text-xs text-muted-foreground/60 ml-1">({uniqueDays}d)</span>
+                  </div>
                 </div>
-                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                <div className="h-2.5 bg-muted/60 rounded-full overflow-hidden shadow-inner">
                   <div 
                     className={cn(
-                      "h-full rounded-full transition-all duration-700",
+                      "h-full rounded-full transition-all duration-700 ease-out",
                       isHighConfidence 
-                        ? "bg-gradient-to-r from-amber-500 to-amber-400" 
-                        : "bg-gradient-to-r from-muted-foreground/40 to-muted-foreground/30"
+                        ? "bg-gradient-to-r from-amber-500 via-amber-400 to-orange-400" 
+                        : "bg-gradient-to-r from-muted-foreground/40 to-muted-foreground/25"
                     )}
                     style={{ width: `${barWidth}%` }}
                   />
@@ -694,7 +706,7 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
           {activePatterns.length > TRIGGERS_INITIAL_DISPLAY && (
             <button
               onClick={() => setShowAllTriggers(!showAllTriggers)}
-              className="flex items-center justify-center gap-1.5 w-full py-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+              className="flex items-center justify-center gap-1.5 w-full py-2.5 mt-2 text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-500/5 rounded-lg transition-all duration-150"
             >
               {showAllTriggers ? (
                 <>
@@ -709,7 +721,7 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
               )}
             </button>
           )}
-          <p className="text-[10px] text-muted-foreground/70 mt-3 pt-3 border-t border-muted/50">
+          <p className="text-[10px] text-muted-foreground/70 mt-3 pt-3 border-t border-border/30">
             Based on repeated check-ins over time. Early data may be inconclusive.
           </p>
         </div>

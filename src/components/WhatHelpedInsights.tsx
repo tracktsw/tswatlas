@@ -326,35 +326,39 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
   return (
     <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
       <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
-        <div className="p-1.5 rounded-lg bg-coral/20">
+        <div className="p-2 rounded-xl bg-gradient-to-br from-coral/25 to-coral/10 shadow-sm">
           <Heart className="w-4 h-4 text-coral" />
         </div>
         What's Helping You
       </h3>
 
-      <div className="glass-card p-5 space-y-4">
+      <div className="glass-card p-5 space-y-3">
         {/* Primary View: Simple Treatment Effectiveness */}
         {treatmentStats.length > 0 ? (
-          <div className="space-y-4">
-            {(showAllTreatments ? treatmentStats : treatmentStats.slice(0, TREATMENTS_INITIAL_DISPLAY)).map(({ id, label, count, effectiveness, hasHighCorrelation, correlationRatio }) => (
-              <div key={id} className="space-y-2">
-                <div className="flex justify-between items-center">
+          <div className="space-y-3">
+            {(showAllTreatments ? treatmentStats : treatmentStats.slice(0, TREATMENTS_INITIAL_DISPLAY)).map(({ id, label, count, effectiveness, hasHighCorrelation, correlationRatio }, index) => (
+              <div 
+                key={id} 
+                className="group p-3 rounded-xl bg-gradient-to-r from-primary/5 to-transparent hover:from-primary/10 transition-all duration-200"
+              >
+                <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-foreground">{label}</span>
                     {hasHighCorrelation && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-600 font-medium flex items-center gap-0.5">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1 shadow-sm">
                         <TrendingUp className="w-2.5 h-2.5" />
                         {correlationRatio.toFixed(1)}x
                       </span>
                     )}
                   </div>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    {effectiveness}% good days ({count} uses)
-                  </span>
+                  <div className="text-right">
+                    <span className="text-sm font-bold text-primary">{effectiveness}%</span>
+                    <span className="text-xs text-muted-foreground ml-1">({count})</span>
+                  </div>
                 </div>
-                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                <div className="h-2.5 bg-muted/60 rounded-full overflow-hidden shadow-inner">
                   <div 
-                    className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-700"
+                    className="h-full bg-gradient-to-r from-primary via-primary/90 to-coral/70 rounded-full transition-all duration-700 ease-out"
                     style={{ width: `${effectiveness}%` }}
                   />
                 </div>
@@ -364,7 +368,7 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
             {treatmentStats.length > TREATMENTS_INITIAL_DISPLAY && (
               <button
                 onClick={() => setShowAllTreatments(!showAllTreatments)}
-                className="flex items-center justify-center gap-1.5 w-full py-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                className="flex items-center justify-center gap-1.5 w-full py-2.5 mt-2 text-xs font-medium text-primary hover:text-primary/80 hover:bg-primary/5 rounded-lg transition-all duration-150"
               >
                 {showAllTreatments ? (
                   <>
@@ -381,7 +385,10 @@ const WhatHelpedInsights = ({ checkIns }: WhatHelpedInsightsProps) => {
             )}
           </div>
         ) : (
-          <div className="text-center py-4">
+          <div className="text-center py-6">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-br from-coral/20 to-coral/5 flex items-center justify-center">
+              <Heart className="w-5 h-5 text-coral/60" />
+            </div>
             <p className="text-sm text-muted-foreground">
               Log treatments during check-ins to see what's helping you.
             </p>
