@@ -690,9 +690,21 @@ const TriggerPatternsInsights = ({ checkIns, baselineConfidence }: TriggerPatter
       {/* Active Patterns */}
       {activePatterns.length > 0 && (
         <div className="glass-card p-5 space-y-3">
-          <p className="text-xs text-muted-foreground mb-1">
-            Triggers correlated with worse-than-average skin days
-          </p>
+          <div className="flex items-center gap-1.5 mb-2">
+            <p className="text-xs text-muted-foreground">
+              Triggers correlated with worse-than-average skin days
+            </p>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+                  <Info className="w-3.5 h-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-[220px] text-xs">
+                <p>Shows how much worse your skin was on days with this trigger compared to your average. Higher % = stronger negative impact.</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
           {(showAllTriggers ? activePatterns : activePatterns.slice(0, TRIGGERS_INITIAL_DISPLAY)).map(({ id, label, uniqueDays, percentWorse, impactScore, isHighConfidence, trend }, index) => {
             const barWidth = (impactScore / maxImpact) * 100;
             
