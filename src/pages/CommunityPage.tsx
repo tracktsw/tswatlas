@@ -261,7 +261,7 @@ const CommunityPage = () => {
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="gap-1.5 rounded-xl bg-white/80 shadow-warm hover:shadow-warm-md hover:bg-white transition-all" 
+                className="gap-1.5 rounded-xl bg-card/80 shadow-warm hover:shadow-warm-md hover:bg-card transition-all" 
                 onClick={handleOpenSuggestion}
               >
                 <Plus className="w-4 h-4" />
@@ -357,9 +357,9 @@ const CommunityPage = () => {
                 onClick={() => handleCategorySelect('all')}
                 className={cn(
                   'rounded-full px-4 shrink-0 transition-all h-9',
-                  selectedCategory === 'all' 
-                    ? 'shadow-warm' 
-                    : 'bg-white/70 hover:bg-white/90 border-border/50'
+                    selectedCategory === 'all' 
+                      ? 'shadow-warm' 
+                      : 'bg-card/70 hover:bg-card/90 border-border/50'
                 )}
               >
                 All
@@ -374,7 +374,7 @@ const CommunityPage = () => {
                     'rounded-full px-4 shrink-0 transition-all h-9',
                     selectedCategory === cat.value 
                       ? 'shadow-warm' 
-                      : 'bg-white/70 hover:bg-white/90 border-border/50'
+                      : 'bg-card/70 hover:bg-card/90 border-border/50'
                   )}
                 >
                   {cat.label}
@@ -470,7 +470,7 @@ const CommunityPage = () => {
                       disabled={voteMutation.isPending}
                       className={cn(
                         'gap-1 rounded-xl text-xs px-2 h-9 transition-all',
-                        treatment.userVote !== 'helps' && 'bg-white/80 hover:bg-white border-border/50'
+                        treatment.userVote !== 'helps' && 'bg-card/80 hover:bg-card border-border/50'
                       )}
                     >
                       <ThumbsUp className={cn(
@@ -488,7 +488,7 @@ const CommunityPage = () => {
                         'gap-1 rounded-xl text-xs px-2 h-9 transition-all',
                         treatment.userVote === 'neutral' 
                           ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500'
-                          : 'bg-white/80 hover:bg-white border-border/50'
+                          : 'bg-card/80 hover:bg-card border-border/50'
                       )}
                     >
                       <Minus className="w-3.5 h-3.5" />
@@ -501,7 +501,7 @@ const CommunityPage = () => {
                       disabled={voteMutation.isPending}
                       className={cn(
                         'gap-1 rounded-xl text-xs px-2 h-9 transition-all',
-                        treatment.userVote !== 'harms' && 'bg-white/80 hover:bg-white border-border/50'
+                        treatment.userVote !== 'harms' && 'bg-card/80 hover:bg-card border-border/50'
                       )}
                     >
                       <ThumbsDown className={cn(
