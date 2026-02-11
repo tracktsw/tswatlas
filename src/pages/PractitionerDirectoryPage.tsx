@@ -17,11 +17,6 @@ interface Practitioner {
   website: string | null;
 }
 
-const SERVICE_LABELS: Record<string, string> = {
-  meditation: "Meditation",
-  cap_therapy: "CAP therapy",
-  naturopathy: "Naturopathy",
-};
 
 const PractitionerDirectoryPage = () => {
   const navigate = useNavigate();
@@ -132,7 +127,7 @@ const PractitionerDirectoryPage = () => {
                         variant="secondary"
                         className="text-[10px] px-1.5 py-0"
                       >
-                        {SERVICE_LABELS[service] || service}
+                        {service}
                       </Badge>
                     ))}
                     {practitioner.remote_available && (

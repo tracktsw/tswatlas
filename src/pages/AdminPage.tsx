@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -56,11 +55,6 @@ interface ResourceSuggestion {
 
 const CATEGORIES = ['moisture', 'therapy', 'bathing', 'relief', 'medication', 'lifestyle', 'supplements', 'protection', 'general'];
 
-const PRACTITIONER_SERVICES = [
-  { value: 'meditation', label: 'Meditation' },
-  { value: 'cap_therapy', label: 'CAP therapy' },
-  { value: 'naturopathy', label: 'Naturopathy' },
-];
 
 interface PractitionerForm {
   name: string;
@@ -1160,7 +1154,7 @@ const AdminPage = () => {
                     <div className="flex flex-wrap gap-1 mt-1">
                       {p.services?.map((s: string) => (
                         <Badge key={s} variant="secondary" className="text-[10px] px-1.5 py-0">
-                          {PRACTITIONER_SERVICES.find(ps => ps.value === s)?.label || s}
+                          {s}
                         </Badge>
                       ))}
                       {p.remote_available && (
@@ -1288,25 +1282,23 @@ const AdminPage = () => {
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Services *</label>
-              <div className="space-y-2">
-                {PRACTITIONER_SERVICES.map((service) => (
-                  <label key={service.value} className="flex items-center gap-2 cursor-pointer">
-                    <Checkbox
-                      checked={practitionerForm.services.includes(service.value)}
-                      onCheckedChange={(checked) => {
-                        setPractitionerForm(f => ({
-                          ...f,
-                          services: checked
-                            ? [...f.services, service.value]
-                            : f.services.filter(s => s !== service.value),
-                        }));
-                      }}
-                    />
-                    <span className="text-sm">{service.label}</span>
-                  </label>
-                ))}
-              </div>
+              <label className="text-sm font-medium mb-1 block">Services * (comma-separated)</label>
+              <Input
+                value={practitionerForm.services.join(', ')}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const services = raw.split(',').map(s => s.trimStart());
+                  setPractitionerForm(f => ({ ...f, services }));
+                }}
+                onBlur={() => {
+                  // Clean up on blur: trim and remove empty entries
+                  setPractitionerForm(f => ({
+                    ...f,
+                    services: f.services.map(s => s.trim()).filter(Boolean),
+                  }));
+                }}
+                placeholder="e.g. Meditation, CAP therapy, Naturopathy"
+              />
             </div>
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Remote available</label>
