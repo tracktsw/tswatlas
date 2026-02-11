@@ -18,6 +18,7 @@ interface Practitioner {
   services: string[];
   remote_available: boolean;
   about: string | null;
+  avatar_url: string | null;
 }
 
 
@@ -111,6 +112,17 @@ const PractitionerDetailPage = () => {
           >
             <ArrowLeft className="w-5 h-5 text-foreground/70" />
           </button>
+          {practitioner.avatar_url ? (
+            <img
+              src={practitioner.avatar_url}
+              alt={practitioner.name}
+              className="w-12 h-12 rounded-full object-cover shrink-0 shadow-sm"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/10 to-sage-light/50 flex items-center justify-center shrink-0 shadow-sm">
+              <Building2 className="w-6 h-6 text-primary" />
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold tracking-tight text-foreground leading-tight font-display">
               {practitioner.name}
