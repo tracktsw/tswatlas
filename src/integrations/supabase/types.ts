@@ -47,6 +47,60 @@ export type Database = {
         }
         Relationships: []
       }
+      practitioners: {
+        Row: {
+          about: string | null
+          city: string
+          contact_email: string | null
+          contact_phone: string | null
+          country: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          practitioner_type: string | null
+          remote_available: boolean
+          services: string[]
+          sort_order: number
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          about?: string | null
+          city: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          country: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          practitioner_type?: string | null
+          remote_available?: boolean
+          services?: string[]
+          sort_order?: number
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          about?: string | null
+          city?: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          country?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          practitioner_type?: string | null
+          remote_available?: boolean
+          services?: string[]
+          sort_order?: number
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       resource_suggestions: {
         Row: {
           id: string

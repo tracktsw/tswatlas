@@ -42,6 +42,8 @@ const InsightsPage = lazy(() => import("@/pages/InsightsPage"));
 const CommunityPage = lazy(() => import("@/pages/CommunityPage"));
 const ResourcesPage = lazy(() => import("@/pages/ResourcesPage"));
 const ResourceDetailPage = lazy(() => import("@/pages/ResourceDetailPage"));
+const PractitionerDirectoryPage = lazy(() => import("@/pages/PractitionerDirectoryPage"));
+const PractitionerDetailPage = lazy(() => import("@/pages/PractitionerDetailPage"));
 const JournalPage = lazy(() => import("@/pages/JournalPage"));
 const CoachPage = lazy(() => import("@/pages/CoachPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
@@ -208,6 +210,16 @@ const App = () => (
                       <Route path="resources/:id" element={
                         <Suspense fallback={<GenericPageSkeleton />}>
                           <ResourceDetailPage />
+                        </Suspense>
+                      } />
+                      <Route path="practitioners" element={
+                        <Suspense fallback={<GenericPageSkeleton />}>
+                          <PractitionerDirectoryPage />
+                        </Suspense>
+                      } />
+                      <Route path="practitioners/:id" element={
+                        <Suspense fallback={<GenericPageSkeleton />}>
+                          <PractitionerDetailPage />
                         </Suspense>
                       } />
                       <Route path="journal" element={

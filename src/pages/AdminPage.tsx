@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Check, X, LogOut, Shield, Loader2, Trash2, Plus, Pencil, BookOpen, ExternalLink, ChevronUp, ChevronDown, Lightbulb } from 'lucide-react';
+import { ArrowLeft, Check, X, LogOut, Shield, Loader2, Trash2, Plus, Pencil, BookOpen, ExternalLink, ChevronUp, ChevronDown, Lightbulb, Building2, Globe } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -54,6 +56,40 @@ interface ResourceSuggestion {
 
 const CATEGORIES = ['moisture', 'therapy', 'bathing', 'relief', 'medication', 'lifestyle', 'supplements', 'protection', 'general'];
 
+const PRACTITIONER_SERVICES = [
+  { value: 'meditation', label: 'Meditation' },
+  { value: 'cap_therapy', label: 'CAP therapy' },
+  { value: 'naturopathy', label: 'Naturopathy' },
+];
+
+interface PractitionerForm {
+  name: string;
+  practitioner_type: string;
+  city: string;
+  country: string;
+  website: string;
+  contact_email: string;
+  contact_phone: string;
+  services: string[];
+  remote_available: boolean;
+  about: string;
+  is_active: boolean;
+}
+
+const emptyPractitionerForm: PractitionerForm = {
+  name: '',
+  practitioner_type: '',
+  city: '',
+  country: '',
+  website: '',
+  contact_email: '',
+  contact_phone: '',
+  services: [],
+  remote_available: false,
+  about: '',
+  is_active: true,
+};
+
 const AdminPage = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -71,6 +107,10 @@ const AdminPage = () => {
   const [resourceUrl, setResourceUrl] = useState('');
   const [resourceTitle, setResourceTitle] = useState('');
   const [resourceSummary, setResourceSummary] = useState('');
+  // Practitioner state
+  const [showPractitionerModal, setShowPractitionerModal] = useState(false);
+  const [editingPractitioner, setEditingPractitioner] = useState<string | null>(null);
+  const [practitionerForm, setPractitionerForm] = useState<PractitionerForm>(emptyPractitionerForm);
   
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -163,6 +203,94 @@ const AdminPage = () => {
     },
     enabled: !!user && isAdmin,
   });
+
+  // Practitioners query
+  const { data: practitioners, isLoading: loadingPractitioners } = useQuery({
+    queryKey: ['admin-practitioners'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('practitioners')
+        .select('*')
+        .order('name', { ascending: true });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && isAdmin,
+  });
+
+  const addPractitionerMutation = useMutation({
+    mutationFn: async (form: PractitionerForm) => {
+      const { error } = await supabase
+        .from('practitioners')
+        .insert({
+          name: form.name.trim(),
+          practitioner_type: form.practitioner_type.trim() || null,
+          city: form.city.trim(),
+          country: form.country.trim(),
+          website: form.website.trim() || null,
+          contact_email: form.contact_email.trim() || null,
+          contact_phone: form.contact_phone.trim() || null,
+          services: form.services,
+          remote_available: form.remote_available,
+          about: form.about.trim() || null,
+          is_active: form.is_active,
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-practitioners'] });
+      queryClient.invalidateQueries({ queryKey: ['practitioners'] });
+      toast.success('Practitioner added');
+      setPractitionerForm(emptyPractitionerForm);
+      setShowPractitionerModal(false);
+    },
+    onError: (error: any) => toast.error(error.message || 'Failed to add practitioner'),
+  });
+
+  const updatePractitionerMutation = useMutation({
+    mutationFn: async ({ id, form }: { id: string; form: PractitionerForm }) => {
+      const { error } = await supabase
+        .from('practitioners')
+        .update({
+          name: form.name.trim(),
+          practitioner_type: form.practitioner_type.trim() || null,
+          city: form.city.trim(),
+          country: form.country.trim(),
+          website: form.website.trim() || null,
+          contact_email: form.contact_email.trim() || null,
+          contact_phone: form.contact_phone.trim() || null,
+          services: form.services,
+          remote_available: form.remote_available,
+          about: form.about.trim() || null,
+          is_active: form.is_active,
+        })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-practitioners'] });
+      queryClient.invalidateQueries({ queryKey: ['practitioners'] });
+      toast.success('Practitioner updated');
+      setPractitionerForm(emptyPractitionerForm);
+      setEditingPractitioner(null);
+    },
+    onError: (error: any) => toast.error(error.message || 'Failed to update practitioner'),
+  });
+
+  const deletePractitionerMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('practitioners').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-practitioners'] });
+      queryClient.invalidateQueries({ queryKey: ['practitioners'] });
+      toast.success('Practitioner removed');
+    },
+    onError: (error: any) => toast.error(error.message || 'Failed to remove practitioner'),
+  });
+
 
   const approveMutation = useMutation({
     mutationFn: async (suggestion: Suggestion) => {
@@ -622,9 +750,10 @@ const AdminPage = () => {
       </div>
 
       <Tabs defaultValue="treatments" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="treatments">Treatments</TabsTrigger>
           <TabsTrigger value="resources">Resources</TabsTrigger>
+          <TabsTrigger value="directory">Directory</TabsTrigger>
           <TabsTrigger value="suggested" className="relative">
             Suggested
             {resourceSuggestions?.filter(s => s.status === 'pending').length ? (
@@ -988,7 +1117,249 @@ const AdminPage = () => {
             </>
           )}
         </TabsContent>
+
+        {/* Directory Tab */}
+        <TabsContent value="directory" className="space-y-4 mt-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-lg flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              Practitioner Directory
+              {practitioners && practitioners.length > 0 && (
+                <Badge variant="secondary">{practitioners.length}</Badge>
+              )}
+            </h2>
+            <Button size="sm" onClick={() => {
+              setPractitionerForm(emptyPractitionerForm);
+              setShowPractitionerModal(true);
+            }}>
+              <Plus className="w-4 h-4 mr-1" />
+              Add
+            </Button>
+          </div>
+
+          {loadingPractitioners ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : !practitioners || practitioners.length === 0 ? (
+            <div className="glass-card p-6 text-center text-muted-foreground">
+              No practitioners added yet
+            </div>
+          ) : (
+            practitioners.map((p) => (
+              <div key={p.id} className="glass-card p-4 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium truncate">{p.name}</h3>
+                      {!p.is_active && (
+                        <Badge variant="outline" className="text-[10px] text-muted-foreground">Inactive</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{p.city}, {p.country}</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {p.services?.map((s: string) => (
+                        <Badge key={s} variant="secondary" className="text-[10px] px-1.5 py-0">
+                          {PRACTITIONER_SERVICES.find(ps => ps.value === s)?.label || s}
+                        </Badge>
+                      ))}
+                      {p.remote_available && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">
+                          <Globe className="w-2.5 h-2.5 mr-0.5" />
+                          Remote
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        setEditingPractitioner(p.id);
+                        setPractitionerForm({
+                          name: p.name,
+                          practitioner_type: p.practitioner_type || '',
+                          city: p.city,
+                          country: p.country,
+                          website: p.website || '',
+                          contact_email: p.contact_email || '',
+                          contact_phone: p.contact_phone || '',
+                          services: p.services || [],
+                          remote_available: p.remote_available,
+                          about: p.about || '',
+                          is_active: p.is_active,
+                        });
+                      }}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => deletePractitionerMutation.mutate(p.id)}
+                      disabled={deletePractitionerMutation.isPending}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </TabsContent>
       </Tabs>
+
+      {/* Practitioner Modal */}
+      <Dialog open={showPractitionerModal || !!editingPractitioner} onOpenChange={(open) => {
+        if (!open) {
+          setShowPractitionerModal(false);
+          setEditingPractitioner(null);
+          setPractitionerForm(emptyPractitionerForm);
+        }
+      }}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingPractitioner ? 'Edit Practitioner' : 'Add Practitioner'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Name *</label>
+              <Input
+                value={practitionerForm.name}
+                onChange={(e) => setPractitionerForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="Clinic or practitioner name"
+                maxLength={200}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Practitioner type</label>
+              <Input
+                value={practitionerForm.practitioner_type}
+                onChange={(e) => setPractitionerForm(f => ({ ...f, practitioner_type: e.target.value }))}
+                placeholder="e.g. Naturopath, Dermatologist"
+                maxLength={100}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium mb-1 block">City *</label>
+                <Input
+                  value={practitionerForm.city}
+                  onChange={(e) => setPractitionerForm(f => ({ ...f, city: e.target.value }))}
+                  placeholder="City"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Country *</label>
+                <Input
+                  value={practitionerForm.country}
+                  onChange={(e) => setPractitionerForm(f => ({ ...f, country: e.target.value }))}
+                  placeholder="Country"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Website</label>
+              <Input
+                type="url"
+                value={practitionerForm.website}
+                onChange={(e) => setPractitionerForm(f => ({ ...f, website: e.target.value }))}
+                placeholder="https://example.com"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Contact email</label>
+              <Input
+                type="email"
+                value={practitionerForm.contact_email}
+                onChange={(e) => setPractitionerForm(f => ({ ...f, contact_email: e.target.value }))}
+                placeholder="clinic@example.com"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Contact phone</label>
+              <Input
+                type="tel"
+                value={practitionerForm.contact_phone}
+                onChange={(e) => setPractitionerForm(f => ({ ...f, contact_phone: e.target.value }))}
+                placeholder="+1 234 567 8900"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Services *</label>
+              <div className="space-y-2">
+                {PRACTITIONER_SERVICES.map((service) => (
+                  <label key={service.value} className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={practitionerForm.services.includes(service.value)}
+                      onCheckedChange={(checked) => {
+                        setPractitionerForm(f => ({
+                          ...f,
+                          services: checked
+                            ? [...f.services, service.value]
+                            : f.services.filter(s => s !== service.value),
+                        }));
+                      }}
+                    />
+                    <span className="text-sm">{service.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Remote available</label>
+              <Switch
+                checked={practitionerForm.remote_available}
+                onCheckedChange={(checked) => setPractitionerForm(f => ({ ...f, remote_available: checked }))}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">About (optional)</label>
+              <Textarea
+                value={practitionerForm.about}
+                onChange={(e) => setPractitionerForm(f => ({ ...f, about: e.target.value }))}
+                placeholder="Brief description (max 500 characters)"
+                maxLength={500}
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground mt-1">{practitionerForm.about.length}/500</p>
+            </div>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Active (visible in directory)</label>
+              <Switch
+                checked={practitionerForm.is_active}
+                onCheckedChange={(checked) => setPractitionerForm(f => ({ ...f, is_active: checked }))}
+              />
+            </div>
+            <Button
+              className="w-full"
+              onClick={() => {
+                if (!practitionerForm.name.trim() || !practitionerForm.city.trim() || !practitionerForm.country.trim()) {
+                  toast.error('Name, city, and country are required');
+                  return;
+                }
+                if (practitionerForm.services.length === 0) {
+                  toast.error('At least one service is required');
+                  return;
+                }
+                if (editingPractitioner) {
+                  updatePractitionerMutation.mutate({ id: editingPractitioner, form: practitionerForm });
+                } else {
+                  addPractitionerMutation.mutate(practitionerForm);
+                }
+              }}
+              disabled={addPractitionerMutation.isPending || updatePractitionerMutation.isPending}
+            >
+              {(addPractitionerMutation.isPending || updatePractitionerMutation.isPending) && (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              )}
+              {editingPractitioner ? 'Save Changes' : 'Add Practitioner'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Add/Edit Treatment Modal */}
       <Dialog open={showAddModal || !!editingTreatment} onOpenChange={(open) => {
