@@ -1282,22 +1282,54 @@ const AdminPage = () => {
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Services * (comma-separated)</label>
+              <label className="text-sm font-medium mb-1 block">Services *</label>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {practitionerForm.services.filter(Boolean).map((service, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs font-medium px-2.5 py-1 rounded-full"
+                  >
+                    {service}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPractitionerForm(f => ({
+                          ...f,
+                          services: f.services.filter((_, i) => i !== idx),
+                        }))
+                      }
+                      className="ml-0.5 hover:text-destructive transition-colors"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
               <Input
-                value={practitionerForm.services.join(', ')}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  const services = raw.split(',').map(s => s.trimStart());
-                  setPractitionerForm(f => ({ ...f, services }));
+                placeholder="Type a service and press Enter"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    const val = (e.target as HTMLInputElement).value.trim();
+                    if (val) {
+                      setPractitionerForm(f => ({
+                        ...f,
+                        services: [...f.services.filter(Boolean), val],
+                      }));
+                      (e.target as HTMLInputElement).value = '';
+                    }
+                  }
                 }}
-                onBlur={() => {
-                  // Clean up on blur: trim and remove empty entries
-                  setPractitionerForm(f => ({
-                    ...f,
-                    services: f.services.map(s => s.trim()).filter(Boolean),
-                  }));
+                onBlur={(e) => {
+                  const val = e.target.value.trim();
+                  if (val) {
+                    setPractitionerForm(f => ({
+                      ...f,
+                      services: [...f.services.filter(Boolean), val],
+                    }));
+                    e.target.value = '';
+                  }
                 }}
-                placeholder="e.g. Meditation, CAP therapy, Naturopathy"
               />
             </div>
             <div className="flex items-center justify-between">
