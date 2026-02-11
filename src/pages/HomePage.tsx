@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { BookOpen, Settings, Calendar as CalendarIcon, Flame, Pencil, Leaf, Sun, Loader2, Crown, Trophy } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { BookOpen, Settings, Calendar as CalendarIcon, Flame, Pencil, Leaf, Sun, Loader2, Crown, Trophy, FileText } from 'lucide-react';
 import DailyInsight from '@/components/DailyInsight';
 import { LeafIllustration, PlantIllustration } from '@/components/illustrations';
 import StreakFire from '@/components/StreakFire';
@@ -349,6 +349,24 @@ const HomePage = () => {
 
       {/* Premium Upgrade Card - shown for free users */}
       <HomeUpgradeCard />
+
+      {/* Resources Quick Access */}
+      <Link 
+        to="/resources" 
+        className="glass-card p-5 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 animate-slide-up"
+        style={{ animationDelay: '0.3s' }}
+      >
+        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+          <FileText className="w-6 h-6 text-primary" />
+        </div>
+        <div className="flex-1">
+          <h4 className="font-display font-bold text-foreground">Resources</h4>
+          <p className="text-sm text-muted-foreground">Guides, research, and trusted TSW information</p>
+        </div>
+        <div className="w-8 h-8 rounded-lg bg-muted/60 flex items-center justify-center">
+          <span className="text-muted-foreground text-sm">→</span>
+        </div>
+      </Link>
 
       {/* Journal Quick Access */}
       <Link 
