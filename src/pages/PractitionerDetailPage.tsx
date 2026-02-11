@@ -187,7 +187,7 @@ const PractitionerDetailPage = () => {
               style={{ animationDelay: '0.1s' }}
               asChild
             >
-              <a href={practitioner.website.startsWith('http') ? practitioner.website : `https://${practitioner.website}`} target="_blank" rel="noopener noreferrer">
+              <a href={(() => { const url = practitioner.website!.trim(); return url.startsWith('http') ? url : `https://${url}`; })()} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-4 w-4" />
                 Visit website
               </a>
