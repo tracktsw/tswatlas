@@ -78,7 +78,7 @@ const PractitionerDetailPage = () => {
           >
             <ArrowLeft className="w-5 h-5 text-foreground/70" />
           </button>
-          <div className="glass-card py-12 text-center animate-fade-in">
+          <div className="glass-card py-12 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/30 flex items-center justify-center">
               <Building2 className="h-8 w-8 text-muted-foreground/50" />
             </div>
