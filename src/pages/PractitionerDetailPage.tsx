@@ -20,11 +20,6 @@ interface Practitioner {
   about: string | null;
 }
 
-const SERVICE_LABELS: Record<string, string> = {
-  meditation: "Meditation",
-  cap_therapy: "CAP therapy",
-  naturopathy: "Naturopathy",
-};
 
 const PractitionerDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -161,7 +156,7 @@ const PractitionerDetailPage = () => {
               <div className="flex flex-wrap gap-1.5">
                 {practitioner.services.map((service) => (
                   <Badge key={service} variant="secondary">
-                    {SERVICE_LABELS[service] || service}
+                    {service}
                   </Badge>
                 ))}
                 {practitioner.remote_available && (
