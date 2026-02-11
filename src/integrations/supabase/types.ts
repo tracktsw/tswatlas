@@ -50,6 +50,7 @@ export type Database = {
       practitioners: {
         Row: {
           about: string | null
+          avatar_url: string | null
           city: string
           contact_email: string | null
           contact_phone: string | null
@@ -67,6 +68,7 @@ export type Database = {
         }
         Insert: {
           about?: string | null
+          avatar_url?: string | null
           city: string
           contact_email?: string | null
           contact_phone?: string | null
@@ -84,6 +86,7 @@ export type Database = {
         }
         Update: {
           about?: string | null
+          avatar_url?: string | null
           city?: string
           contact_email?: string | null
           contact_phone?: string | null

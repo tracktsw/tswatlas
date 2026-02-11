@@ -15,6 +15,7 @@ interface Practitioner {
   services: string[];
   remote_available: boolean;
   website: string | null;
+  avatar_url: string | null;
 }
 
 
@@ -26,7 +27,7 @@ const PractitionerDirectoryPage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("practitioners")
-        .select("id, name, practitioner_type, city, country, services, remote_available, website")
+        .select("id, name, practitioner_type, city, country, services, remote_available, website, avatar_url")
         .eq("is_active", true)
         .order("name", { ascending: true });
 
@@ -113,9 +114,17 @@ const PractitionerDirectoryPage = () => {
               style={{ animationDelay: `${index * 0.05}s` }}
             >
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary/10 to-sage-light/50 flex items-center justify-center shrink-0 shadow-sm group-hover:shadow-md transition-shadow">
-                  <Building2 className="w-5 h-5 text-primary" />
-                </div>
+                {practitioner.avatar_url ? (
+                  <img
+                    src={practitioner.avatar_url}
+                    alt={practitioner.name}
+                    className="w-11 h-11 rounded-full object-cover shrink-0 shadow-sm group-hover:shadow-md transition-shadow"
+                  />
+                ) : (
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary/10 to-sage-light/50 flex items-center justify-center shrink-0 shadow-sm group-hover:shadow-md transition-shadow">
+                    <Building2 className="w-5 h-5 text-primary" />
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
                     {practitioner.name}

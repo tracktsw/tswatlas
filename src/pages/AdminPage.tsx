@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { ArrowLeft, Check, X, LogOut, Shield, Loader2, Trash2, Plus, Pencil, BookOpen, ExternalLink, ChevronUp, ChevronDown, Lightbulb, Building2, Globe } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Check, X, LogOut, Shield, Loader2, Trash2, Plus, Pencil, BookOpen, ExternalLink, ChevronUp, ChevronDown, Lightbulb, Building2, Globe, Upload, Image } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -68,6 +68,7 @@ interface PractitionerForm {
   remote_available: boolean;
   about: string;
   is_active: boolean;
+  avatar_url: string | null;
 }
 
 const emptyPractitionerForm: PractitionerForm = {
@@ -82,6 +83,7 @@ const emptyPractitionerForm: PractitionerForm = {
   remote_available: false,
   about: '',
   is_active: true,
+  avatar_url: null,
 };
 
 const AdminPage = () => {
@@ -105,6 +107,8 @@ const AdminPage = () => {
   const [showPractitionerModal, setShowPractitionerModal] = useState(false);
   const [editingPractitioner, setEditingPractitioner] = useState<string | null>(null);
   const [practitionerForm, setPractitionerForm] = useState<PractitionerForm>(emptyPractitionerForm);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -229,6 +233,7 @@ const AdminPage = () => {
           remote_available: form.remote_available,
           about: form.about.trim() || null,
           is_active: form.is_active,
+          avatar_url: form.avatar_url,
         });
       if (error) throw error;
     },
@@ -258,6 +263,7 @@ const AdminPage = () => {
           remote_available: form.remote_available,
           about: form.about.trim() || null,
           is_active: form.is_active,
+          avatar_url: form.avatar_url,
         })
         .eq('id', id);
       if (error) throw error;
@@ -1183,6 +1189,7 @@ const AdminPage = () => {
                           remote_available: p.remote_available,
                           about: p.about || '',
                           is_active: p.is_active,
+                          avatar_url: p.avatar_url || null,
                         });
                       }}
                     >
@@ -1226,6 +1233,120 @@ const AdminPage = () => {
                 placeholder="Clinic or practitioner name"
                 maxLength={200}
               />
+            </div>
+            {/* Avatar upload */}
+            <div>
+              <label className="text-sm font-medium mb-1 block">Avatar (optional)</label>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  
+                  const validTypes = ['image/png', 'image/jpeg', 'image/webp'];
+                  if (!validTypes.includes(file.type)) {
+                    toast.error('Only PNG, JPG, or WebP images are accepted');
+                    return;
+                  }
+                  
+                  setAvatarUploading(true);
+                  try {
+                    // Create a square-cropped, compressed version
+                    const bitmap = await createImageBitmap(file);
+                    const size = Math.min(bitmap.width, bitmap.height);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 400;
+                    canvas.height = 400;
+                    const ctx = canvas.getContext('2d')!;
+                    const sx = (bitmap.width - size) / 2;
+                    const sy = (bitmap.height - size) / 2;
+                    ctx.drawImage(bitmap, sx, sy, size, size, 0, 0, 400, 400);
+                    
+                    const blob = await new Promise<Blob>((resolve) =>
+                      canvas.toBlob((b) => resolve(b!), 'image/webp', 0.85)
+                    );
+                    
+                    const fileName = `${Date.now()}.webp`;
+                    
+                    // Delete old avatar if exists
+                    if (practitionerForm.avatar_url) {
+                      const oldPath = practitionerForm.avatar_url.split('/practitioner-avatars/')[1];
+                      if (oldPath) {
+                        await supabase.storage.from('practitioner-avatars').remove([oldPath]);
+                      }
+                    }
+                    
+                    const { error: uploadError } = await supabase.storage
+                      .from('practitioner-avatars')
+                      .upload(fileName, blob, { contentType: 'image/webp', upsert: true });
+                    
+                    if (uploadError) throw uploadError;
+                    
+                    const { data: { publicUrl } } = supabase.storage
+                      .from('practitioner-avatars')
+                      .getPublicUrl(fileName);
+                    
+                    setPractitionerForm(f => ({ ...f, avatar_url: publicUrl }));
+                    toast.success('Avatar uploaded');
+                  } catch (err: any) {
+                    toast.error(err.message || 'Failed to upload avatar');
+                  } finally {
+                    setAvatarUploading(false);
+                    if (avatarInputRef.current) avatarInputRef.current.value = '';
+                  }
+                }}
+              />
+              <div className="flex items-center gap-3">
+                {practitionerForm.avatar_url ? (
+                  <img
+                    src={practitionerForm.avatar_url}
+                    alt="Avatar preview"
+                    className="w-14 h-14 rounded-full object-cover border-2 border-border"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center border-2 border-dashed border-border">
+                    <Image className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={avatarUploading}
+                    onClick={() => avatarInputRef.current?.click()}
+                  >
+                    {avatarUploading ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                    ) : (
+                      <Upload className="w-4 h-4 mr-1" />
+                    )}
+                    {practitionerForm.avatar_url ? 'Replace' : 'Upload'}
+                  </Button>
+                  {practitionerForm.avatar_url && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive"
+                      onClick={async () => {
+                        const oldPath = practitionerForm.avatar_url!.split('/practitioner-avatars/')[1];
+                        if (oldPath) {
+                          await supabase.storage.from('practitioner-avatars').remove([oldPath]);
+                        }
+                        setPractitionerForm(f => ({ ...f, avatar_url: null }));
+                        toast.success('Avatar removed');
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Remove
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Practitioner type</label>
