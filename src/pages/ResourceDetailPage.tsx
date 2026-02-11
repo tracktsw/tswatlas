@@ -81,7 +81,7 @@ const ResourceDetailPage = () => {
         <div className="px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto safe-area-inset-top relative">
           <button
             onClick={handleBack}
-            className="p-2.5 rounded-full bg-white/80 shadow-warm hover:bg-white transition-all active:scale-95 touch-manipulation"
+            className="p-2.5 rounded-full bg-card/80 shadow-warm hover:bg-card transition-all active:scale-95 touch-manipulation"
           >
             <ArrowLeft className="w-5 h-5 text-foreground/70" />
           </button>
@@ -121,7 +121,7 @@ const ResourceDetailPage = () => {
         <div className="flex items-start gap-3 mb-6 animate-fade-in">
           <button
             onClick={handleBack}
-            className="p-2.5 rounded-full bg-white/80 shadow-warm hover:bg-white hover:shadow-warm-md transition-all active:scale-95 touch-manipulation shrink-0 mt-0.5"
+            className="p-2.5 rounded-full bg-card/80 shadow-warm hover:bg-card hover:shadow-warm-md transition-all active:scale-95 touch-manipulation shrink-0 mt-0.5"
           >
             <ArrowLeft className="w-5 h-5 text-foreground/70" />
           </button>
