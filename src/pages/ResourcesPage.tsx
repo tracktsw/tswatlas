@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { BookOpen, ChevronRight, Lightbulb, Loader2, ExternalLink, Sparkles } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronRight, Lightbulb, Loader2, ExternalLink, Sparkles } from "lucide-react";
 import { decodeHtmlEntities } from "@/utils/htmlDecode";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -133,16 +133,24 @@ const ResourcesPage = () => {
       
       {/* Header */}
       <div className="flex items-start justify-between gap-4 animate-fade-in">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-honey/30 to-honey/10 shadow-sm">
-              <BookOpen className="w-5 h-5 text-honey-dark" />
+        <div className="flex items-start gap-3">
+          <button
+            onClick={() => navigate('/')}
+            className="p-2.5 rounded-full bg-card/80 shadow-warm hover:bg-card hover:shadow-warm-md transition-all active:scale-95 touch-manipulation shrink-0 mt-0.5"
+          >
+            <ArrowLeft className="w-5 h-5 text-foreground/70" />
+          </button>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-honey/30 to-honey/10 shadow-sm">
+                <BookOpen className="w-5 h-5 text-honey-dark" />
+              </div>
+              <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">TSW Resources</h1>
             </div>
-            <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">TSW Resources</h1>
+            <p className="text-muted-foreground text-sm">
+              Educational content about Topical Steroid Withdrawal
+            </p>
           </div>
-          <p className="text-muted-foreground text-sm">
-            Educational content about Topical Steroid Withdrawal
-          </p>
         </div>
         <Button
           variant="outline"
