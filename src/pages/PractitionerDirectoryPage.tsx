@@ -78,10 +78,13 @@ const PractitionerDirectoryPage = () => {
             TSW Practitioner Directory
           </h1>
         </div>
+        <p className="text-sm text-muted-foreground">
+          A curated directory of TSW-focused practitioners
+        </p>
         <div className="flex items-start gap-1.5 text-muted-foreground">
           <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
           <p className="text-xs">
-            Listings are paid placements. TrackTSW does not rank or endorse practitioners.
+            Practitioners offering TSW-related services can request a listing via the email in Settings.
           </p>
         </div>
       </div>
