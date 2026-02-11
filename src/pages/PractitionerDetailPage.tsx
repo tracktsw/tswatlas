@@ -194,10 +194,6 @@ const PractitionerDetailPage = () => {
             </Button>
           )}
 
-          {/* Disclaimer */}
-          <p className="text-xs text-muted-foreground text-center animate-fade-in" style={{ animationDelay: '0.15s' }}>
-            This is a paid listing. TrackTSW does not verify or endorse this practitioner.
-          </p>
         </div>
       </div>
     </div>
