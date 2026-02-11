@@ -104,7 +104,7 @@ const PractitionerDetailPage = () => {
 
       <div className="px-4 md:px-8 lg:px-12 py-6 max-w-lg md:max-w-none mx-auto safe-area-inset-top relative">
         {/* Header with back button */}
-        <div className="flex items-start gap-3 mb-6 animate-fade-in">
+        <div className="flex items-start gap-3 mb-6">
           <button
             onClick={handleBack}
             className="p-2.5 rounded-full bg-card/80 shadow-warm hover:bg-card hover:shadow-warm-md transition-all active:scale-95 touch-manipulation shrink-0 mt-0.5"
@@ -125,7 +125,7 @@ const PractitionerDetailPage = () => {
 
         <div className="space-y-4">
           {/* Details card */}
-          <div className="glass-card p-6 space-y-4 animate-slide-up" style={{ animationDelay: '0.05s' }}>
+          <div className="glass-card p-6 space-y-4">
             {/* Location */}
             <div className="flex items-center gap-2 text-sm text-foreground/90">
               <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -183,8 +183,7 @@ const PractitionerDetailPage = () => {
           {practitioner.website && (
             <Button
               variant="default"
-              className="w-full gap-2 h-12 text-base font-semibold shadow-warm hover:shadow-warm-md transition-all animate-slide-up"
-              style={{ animationDelay: '0.1s' }}
+              className="w-full gap-2 h-12 text-base font-semibold shadow-warm hover:shadow-warm-md transition-all"
               asChild
             >
               <a href={(() => { const url = practitioner.website!.trim(); return url.startsWith('http') ? url : `https://${url}`; })()} target="_blank" rel="noopener noreferrer">
