@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles, Eye, Pencil, Crown, Loader2, Flame, Activity, CalendarDays, Moon, Wand2, Trash2, RotateCcw, RefreshCw, AlertTriangle, CheckCircle, Lock } from 'lucide-react';
+import { BarChart3, TrendingUp, Calendar, Heart, ChevronLeft, ChevronRight, Sparkles, Eye, Pencil, Crown, Loader2, Flame, Activity, CalendarDays, Moon, Wand2, Trash2, RotateCcw, RefreshCw, AlertTriangle, CheckCircle, Lock, FileDown } from 'lucide-react';
 import { useUserData, BodyPart, CheckIn } from '@/contexts/UserDataContext';
 import { useDemoMode } from '@/contexts/DemoModeContext';
 import { format, subDays, startOfDay, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isSameMonth, addMonths, subMonths, getDay, setMonth, setYear } from 'date-fns';
@@ -27,6 +27,7 @@ import { toast } from 'sonner';
 import { useFlareState } from '@/hooks/useFlareState';
 import { InsightsPageSkeleton } from '@/components/skeletons/PageSkeletons';
 import { trackInsightsClicked } from '@/utils/analytics';
+import ExportDataModal from '@/components/ExportDataModal';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
@@ -147,6 +148,7 @@ const InsightsPage = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [demoEditDate, setDemoEditDate] = useState<Date | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
   
   // Track insights page view (once per session)
   const hasTrackedRef = useRef(false);
@@ -323,16 +325,26 @@ const InsightsPage = () => {
       
       {/* Header */}
       <div className="animate-fade-in">
-        <div className="flex items-center gap-2">
-          <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">Insights</h1>
-          {isDemoMode && isAdmin && (
-            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
-              <Eye className="w-3 h-3 mr-1" />
-              Demo Preview
-            </Badge>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="font-display text-2xl font-bold text-foreground text-warm-shadow">Insights</h1>
+              {isDemoMode && isAdmin && (
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
+                  <Eye className="w-3 h-3 mr-1" />
+                  Demo Preview
+                </Badge>
+              )}
+            </div>
+            <p className="text-muted-foreground">Your healing patterns</p>
+          </div>
+          {isPremium && (
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setExportOpen(true)}>
+              <FileDown className="w-4 h-4" />
+              Export
+            </Button>
           )}
         </div>
-        <p className="text-muted-foreground">Your healing patterns</p>
         
         {/* Demo Mode Controls */}
         {isDemoMode && isAdmin && (
@@ -1032,6 +1044,8 @@ const InsightsPage = () => {
           existingSkin={weeklyData.find(d => format(d.date, 'yyyy-MM-dd') === format(demoEditDate, 'yyyy-MM-dd'))?.avgSkin}
         />
       )}
+
+      <ExportDataModal open={exportOpen} onOpenChange={setExportOpen} />
     </div>
   );
 };
