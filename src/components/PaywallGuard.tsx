@@ -13,6 +13,7 @@ interface PaywallGuardProps {
   children: ReactNode;
   feature?: string;
   showBlurred?: boolean;
+  onDismiss?: () => void;
 }
 
 // Map route paths to paywall locations
@@ -26,7 +27,7 @@ const getPaywallLocation = (pathname: string): 'coach' | 'insights' | 'photos' |
   return 'other';
 };
 
-const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false }: PaywallGuardProps) => {
+const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false, onDismiss }: PaywallGuardProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const revenueCat = useRevenueCatContext();
@@ -358,6 +359,14 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
               </>
             )}
           </Button>
+        )}
+        {onDismiss && (
+          <button
+            onClick={onDismiss}
+            className="mt-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Not now
+          </button>
         )}
         </div>
       </div>
