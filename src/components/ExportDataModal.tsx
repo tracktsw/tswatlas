@@ -71,12 +71,12 @@ const ExportDataModal = ({ open, onOpenChange }: ExportDataModalProps) => {
 
       if (exportType === 'csv') {
         const csv = generateCSV(options);
-        downloadCSV(csv, `tsw-atlas-export_${dateLabel}.csv`);
-        toast.success('CSV downloaded successfully.');
+        await downloadCSV(csv, `TrackTSW_Data_${dateLabel}.csv`);
+        toast.success('CSV exported successfully.');
       } else {
         const doc = generateClinicianPDF(options);
-        downloadPDF(doc, `tracktsw-clinician-summary_${dateLabel}.pdf`);
-        toast.success('PDF downloaded successfully.');
+        await downloadPDF(doc, `TrackTSW_Summary_${dateLabel}.pdf`);
+        toast.success('PDF exported successfully.');
       }
       onOpenChange(false);
     } catch (err) {
