@@ -496,7 +496,7 @@ const InsightsPage = () => {
       {/* Paywall Modal - auto-opens after 2s for free users */}
       {!isPremium && !isSubscriptionLoading && (
         <Dialog open={paywallOpen} onOpenChange={setPaywallOpen}>
-          <DialogContent className="max-w-md max-h-[90dvh] overflow-y-auto p-0 border-0 bg-transparent shadow-none [&>button]:hidden">
+          <DialogContent className="max-w-md max-h-[90dvh] overflow-y-auto p-0 border-0 bg-transparent shadow-none [&>button]:hidden focus:outline-none focus:ring-0 outline-none ring-0">
             <PaywallGuard feature="Insights" onDismiss={() => setPaywallOpen(false)}>
               <div />
             </PaywallGuard>
