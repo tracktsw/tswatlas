@@ -363,7 +363,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false,
         {onDismiss && (
           <button
             onClick={onDismiss}
-            className="mt-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="mt-3 text-sm text-muted-foreground hover:text-foreground transition-colors w-full text-center"
           >
             Not now
           </button>
