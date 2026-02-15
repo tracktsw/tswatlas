@@ -28,6 +28,8 @@ import { useFlareState } from '@/hooks/useFlareState';
 import { InsightsPageSkeleton } from '@/components/skeletons/PageSkeletons';
 import { trackInsightsClicked } from '@/utils/analytics';
 import ExportDataModal from '@/components/ExportDataModal';
+import PaywallGuard from '@/components/PaywallGuard';
+import LockedInsightsPreview from '@/components/insights/LockedInsightsPreview';
 
 const moodEmojis = ['😢', '😕', '😐', '🙂', '😊'];
 const skinEmojis = ['🔴', '🟠', '🟡', '🟢', '💚'];
@@ -149,6 +151,7 @@ const InsightsPage = () => {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [demoEditDate, setDemoEditDate] = useState<Date | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
   
   // Track insights page view (once per session)
   const hasTrackedRef = useRef(false);
@@ -158,6 +161,14 @@ const InsightsPage = () => {
       hasTrackedRef.current = true;
     }
   }, [isBackendLoading]);
+
+  // Auto-show paywall modal after 2 seconds for free users
+  useEffect(() => {
+    if (!isBackendLoading && !isPremiumFromBackend && !isAdmin && realCheckIns.length > 0) {
+      const timer = setTimeout(() => setPaywallOpen(true), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isBackendLoading, isPremiumFromBackend, isAdmin, realCheckIns.length]);
 
   // Premium is enforced by backend for ALL platforms.
   const isPremium = isAdmin || isPremiumFromBackend;
@@ -467,222 +478,31 @@ const InsightsPage = () => {
       </div>
 
       {/* Premium Features Section */}
-      <div className="relative animate-slide-up" style={{ animationDelay: '0.15s' }}>
-        {/* Content - blurred for free users */}
-        <div className={cn(
-          "space-y-6 transition-all duration-500",
-          !isPremium && !isSubscriptionLoading && "blur-[6px] pointer-events-none select-none"
-        )}>
-          {/* What's Helping - Unified Component */}
-          <WhatHelpedInsights checkIns={checkIns} />
-
-          {/* Trigger Patterns */}
-          <TriggerPatternsInsights checkIns={checkIns} baselineConfidence={baselineConfidence} />
-
-          {/* Symptoms Insights */}
-          <SymptomsInsights checkIns={checkIns} />
-
-          {/* Mood Trends */}
-          <MoodTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
-
-          {/* Sleep Trends */}
-          <SleepTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
-
-          {/* Pain Trends */}
-          <PainTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
-        </div>
-
-        {/* Glass overlay with CTA for free users */}
-        {!isPremium && !isSubscriptionLoading && (
-          <div className="absolute inset-0 flex items-start justify-center pt-4">
-            <motion.div 
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: "easeOut", delay: 0.2 }}
-              className="bg-background/95 backdrop-blur-sm px-5 py-6 mx-4 max-w-md rounded-2xl shadow-lg border border-border/50"
-            >
-              {/* Header */}
-              <div className="text-center mb-5">
-                <h3 className="font-display font-bold text-lg text-foreground mb-2 leading-tight">
-                  You Might Be Slowing Your Own TSW Recovery Without Realising It
-                </h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  Premium highlights behaviours and exposures commonly linked to flare worsening — so you can adjust earlier.
-                </p>
-              </div>
-
-              {/* Compare Features Table */}
-              <div className="mb-5">
-                <h4 className="font-display font-semibold text-sm text-foreground text-center mb-3">
-                  Compare features
-                </h4>
-                <div className="border border-border rounded-xl overflow-hidden text-xs">
-                  {/* Table Header */}
-                  <div className="grid grid-cols-3 bg-muted/50 border-b border-border">
-                    <div className="p-2"></div>
-                    <div className="p-2 text-center font-medium text-muted-foreground">Free</div>
-                    <div className="p-2 text-center font-semibold text-foreground bg-primary/10">Premium</div>
-                  </div>
-                  {/* Feature Rows */}
-                  <div className="grid grid-cols-3 border-b border-border">
-                    <div className="p-2 text-foreground">Daily check-ins</div>
-                    <div className="p-2 text-center text-muted-foreground">✓</div>
-                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-                  </div>
-                  <div className="grid grid-cols-3 border-b border-border">
-                    <div className="p-2 text-foreground">Weekly overview</div>
-                    <div className="p-2 text-center text-muted-foreground">✓</div>
-                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-                  </div>
-                  <div className="grid grid-cols-3 border-b border-border">
-                    <div className="p-2 text-foreground">Community access</div>
-                    <div className="p-2 text-center text-muted-foreground">✓</div>
-                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-                  </div>
-                  <div className="grid grid-cols-3 border-b border-border">
-                    <div className="p-2 text-foreground">Journal access</div>
-                    <div className="p-2 text-center text-muted-foreground">✓</div>
-                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-                  </div>
-                  <div className="grid grid-cols-3 border-b border-border">
-                    <div className="p-2 text-foreground">Resources</div>
-                    <div className="p-2 text-center text-muted-foreground">✓</div>
-                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-                  </div>
-                  <div className="grid grid-cols-3 border-b border-border">
-                    <div className="p-2 text-foreground">Photo uploads</div>
-                    <div className="p-2 text-center text-muted-foreground">Limited</div>
-                    <div className="p-2 text-center text-primary bg-primary/5">Unlimited</div>
-                  </div>
-                  <div className="grid grid-cols-3 border-b border-border">
-                    <div className="p-2 text-foreground">Photo comparison</div>
-                    <div className="p-2 text-center text-muted-foreground">✗</div>
-                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-                  </div>
-                  <div className="grid grid-cols-3 border-b border-border">
-                    <div className="p-2 text-foreground">Treatment impact insights</div>
-                    <div className="p-2 text-center text-muted-foreground">✗</div>
-                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-                  </div>
-                  <div className="grid grid-cols-3 border-b border-border">
-                    <div className="p-2 text-foreground">Trigger detection</div>
-                    <div className="p-2 text-center text-muted-foreground">✗</div>
-                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-                  </div>
-                  <div className="grid grid-cols-3 border-b border-border">
-                    <div className="p-2 text-foreground">Food & product analysis</div>
-                    <div className="p-2 text-center text-muted-foreground">✗</div>
-                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-                  </div>
-                  <div className="grid grid-cols-3 border-b border-border">
-                    <div className="p-2 text-foreground">Mood, pain & sleep trends</div>
-                    <div className="p-2 text-center text-muted-foreground">✗</div>
-                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-                  </div>
-                  <div className="grid grid-cols-3 border-b border-border">
-                    <div className="p-2 text-foreground">Flare calendar</div>
-                    <div className="p-2 text-center text-muted-foreground">✗</div>
-                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-                  </div>
-                  <div className="grid grid-cols-3">
-                    <div className="p-2 text-foreground">AI coach</div>
-                    <div className="p-2 text-center text-muted-foreground">✗</div>
-                    <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Subscribe Button */}
-              <Button 
-                onClick={handleUpgrade} 
-                disabled={isPurchasing || (isNative && !isOfferingsReady)} 
-                variant="gold" 
-                className="w-full gap-2" 
-                size="default"
-              >
-                {isPurchasing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Processing…
-                  </>
-                ) : isNative && !isOfferingsReady ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Loading…
-                  </>
-                ) : (
-                  isTrialEligible 
-                    ? `Start 14-Day Free Trial – ${priceString}/month`
-                    : `Subscribe – ${priceString}/month`
-                )}
-              </Button>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                {isTrialEligible 
-                  ? `${priceString}/month after free trial · Cancel anytime`
-                  : `${priceString}/month · Cancel anytime`}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1 text-center">
-                Your tracking stays free whether you subscribe or not.
-              </p>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                <a 
-                  href={getTermsUrl(platform as Platform)} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="underline"
-                >
-                  Terms
-                </a>
-                {' · '}
-                <a 
-                  href={PRIVACY_POLICY_URL} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="underline"
-                >
-                  Privacy
-                </a>
-              </p>
-
-              {/* iOS: Retry button if offerings failed */}
-              {isNative && !isOfferingsReady && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full mt-2 gap-2"
-                  onClick={handleRetryOfferings}
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Retry loading
-                </Button>
-              )}
-
-              {/* iOS: Restore purchases */}
-              {isNative && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2 gap-2 text-muted-foreground w-full"
-                  onClick={handleRestore}
-                  disabled={isRestoring}
-                >
-                  {isRestoring ? (
-                    <>
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      Restoring…
-                    </>
-                  ) : (
-                    <>
-                      <RotateCcw className="w-3 h-3" />
-                      Restore purchases
-                    </>
-                  )}
-                </Button>
-              )}
-            </motion.div>
+      <div className="animate-slide-up" style={{ animationDelay: '0.15s' }}>
+        {isPremium ? (
+          <div className="space-y-6">
+            <WhatHelpedInsights checkIns={checkIns} />
+            <TriggerPatternsInsights checkIns={checkIns} baselineConfidence={baselineConfidence} />
+            <SymptomsInsights checkIns={checkIns} />
+            <MoodTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
+            <SleepTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
+            <PainTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
           </div>
-        )}
+        ) : !isSubscriptionLoading ? (
+          <LockedInsightsPreview />
+        ) : null}
       </div>
+
+      {/* Paywall Modal - auto-opens after 2s for free users */}
+      {!isPremium && !isSubscriptionLoading && (
+        <Dialog open={paywallOpen} onOpenChange={setPaywallOpen}>
+          <DialogContent className="max-w-md p-0 border-0 bg-transparent shadow-none [&>button]:z-50">
+            <PaywallGuard feature="Insights">
+              <div />
+            </PaywallGuard>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Calendar Button - Premium only */}
       {isPremium && (
