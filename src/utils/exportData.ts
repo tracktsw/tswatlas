@@ -1006,16 +1006,65 @@ const countItems = (items: string[]): [string, number][] => {
 
 // ─── Download helpers ─────────────────────────────────────────
 
-export const downloadCSV = (csv: string, filename: string) => {
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  triggerDownload(blob, filename);
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+
+const isNativePlatform = () => Capacitor.isNativePlatform();
+
+/**
+ * Export a CSV string. On native, saves to Documents and opens share sheet.
+ * On web, falls back to blob download.
+ */
+export const downloadCSV = async (csv: string, filename: string) => {
+  if (isNativePlatform()) {
+    const base64 = btoa(unescape(encodeURIComponent(csv)));
+    await saveAndShare(base64, filename, 'text/csv');
+  } else {
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    triggerBlobDownload(blob, filename);
+  }
 };
 
-export const downloadPDF = (doc: jsPDF, filename: string) => {
-  doc.save(filename);
+/**
+ * Export a jsPDF doc. On native, saves to Documents and opens share sheet.
+ * On web, falls back to jsPDF save.
+ */
+export const downloadPDF = async (doc: jsPDF, filename: string) => {
+  if (isNativePlatform()) {
+    // jsPDF output as base64 string
+    const base64 = doc.output('datauristring').split(',')[1];
+    await saveAndShare(base64, filename, 'application/pdf');
+  } else {
+    doc.save(filename);
+  }
 };
 
-const triggerDownload = (blob: Blob, filename: string) => {
+/**
+ * Native path: write base64 to Documents, then open the OS share sheet.
+ */
+const saveAndShare = async (base64Data: string, filename: string, _mimeType: string) => {
+  const writeResult = await Filesystem.writeFile({
+    path: filename,
+    data: base64Data,
+    directory: Directory.Documents,
+  });
+
+  // Get a file:// URI that the native share sheet can use
+  const uriResult = await Filesystem.getUri({
+    path: filename,
+    directory: Directory.Documents,
+  });
+
+  await Share.share({
+    title: filename,
+    url: uriResult.uri,
+    dialogTitle: 'Share ' + filename,
+  });
+};
+
+/** Web-only fallback using a temporary <a> element. */
+const triggerBlobDownload = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
