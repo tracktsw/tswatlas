@@ -1,5 +1,5 @@
 import { CheckIn } from '@/contexts/UserDataContext';
-import { format } from 'date-fns';
+import { format, addDays, startOfDay, endOfDay, min, max } from 'date-fns';
 import jsPDF from 'jspdf';
 
 export interface ExportOptions {
@@ -151,6 +151,112 @@ export const generateClinicianPDF = ({ checkIns, startDate, endDate, includeNote
   }
   y += 5;
 
+  // Weekly trends section
+  const weeks = groupByWeek(filtered, startDate, endDate);
+  if (weeks.length > 1) {
+    addPageIfNeeded(20 + weeks.length * 7);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Weekly Trends', margin, y);
+    y += 7;
+
+    // Table header
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    const cols = ['Week', 'Entries', 'Mood', 'Skin', 'Pain', 'Sleep'];
+    const colWidths = [32, 16, 22, 22, 22, 22];
+    let xPos = margin;
+    cols.forEach((col, i) => {
+      doc.text(col, xPos, y);
+      xPos += colWidths[i];
+    });
+    y += 1;
+    doc.setDrawColor(180);
+    doc.line(margin, y, margin + colWidths.reduce((a, b) => a + b, 0), y);
+    y += 4;
+
+    // Table rows
+    doc.setFont('helvetica', 'normal');
+    weeks.forEach((week, idx) => {
+      addPageIfNeeded(7);
+      xPos = margin;
+      const weekLabel = `${format(week.start, 'dd MMM')} – ${format(week.end, 'dd MMM')}`;
+      const wMood = avg(week.checkIns.map((c) => c.mood));
+      const wSkin = avg(week.checkIns.map((c) => c.skinFeeling));
+      const wPainEntries = week.checkIns.filter((c) => c.painScore != null);
+      const wPain = wPainEntries.length ? avg(wPainEntries.map((c) => c.painScore!)) : null;
+      const wSleepEntries = week.checkIns.filter((c) => c.sleepScore != null);
+      const wSleep = wSleepEntries.length ? avg(wSleepEntries.map((c) => c.sleepScore!)) : null;
+
+      const trendArrow = (current: number | null, prevWeek: typeof weeks[0] | undefined, getter: (c: CheckIn) => number | null | undefined): string => {
+        if (current === null || !prevWeek) return '';
+        const prevEntries = prevWeek.checkIns.map(getter).filter((v): v is number => v != null);
+        if (prevEntries.length === 0) return '';
+        const prev = avg(prevEntries);
+        const diff = current - prev;
+        if (Math.abs(diff) < 0.1) return ' →';
+        return diff > 0 ? ` ↑${Math.abs(diff).toFixed(1)}` : ` ↓${Math.abs(diff).toFixed(1)}`;
+      };
+
+      const prevWeek = idx > 0 ? weeks[idx - 1] : undefined;
+      const values = [
+        weekLabel,
+        String(week.checkIns.length),
+        `${wMood.toFixed(1)}${trendArrow(wMood, prevWeek, (c) => c.mood)}`,
+        `${wSkin.toFixed(1)}${trendArrow(wSkin, prevWeek, (c) => c.skinFeeling)}`,
+        wPain !== null ? `${wPain.toFixed(1)}${trendArrow(wPain, prevWeek, (c) => c.painScore)}` : '–',
+        wSleep !== null ? `${wSleep.toFixed(1)}${trendArrow(wSleep, prevWeek, (c) => c.sleepScore)}` : '–',
+      ];
+
+      values.forEach((val, i) => {
+        doc.text(val, xPos, y);
+        xPos += colWidths[i];
+      });
+      y += 5;
+    });
+
+    // Overall change summary
+    if (weeks.length >= 2) {
+      y += 3;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'italic');
+      const firstWeek = weeks[0];
+      const lastWeek = weeks[weeks.length - 1];
+      const changeLine = (label: string, first: number, last: number, scale: string): string => {
+        const diff = last - first;
+        const direction = diff > 0 ? 'increased' : diff < 0 ? 'decreased' : 'unchanged';
+        return `${label}: ${direction}${diff !== 0 ? ` by ${Math.abs(diff).toFixed(1)}` : ''} (${first.toFixed(1)} → ${last.toFixed(1)} / ${scale})`;
+      };
+
+      const fMood = avg(firstWeek.checkIns.map((c) => c.mood));
+      const lMood = avg(lastWeek.checkIns.map((c) => c.mood));
+      addPageIfNeeded(8);
+      doc.text(changeLine('Mood', fMood, lMood, '5'), margin, y);
+      y += 4;
+
+      const fSkin = avg(firstWeek.checkIns.map((c) => c.skinFeeling));
+      const lSkin = avg(lastWeek.checkIns.map((c) => c.skinFeeling));
+      doc.text(changeLine('Skin feeling', fSkin, lSkin, '5'), margin, y);
+      y += 4;
+
+      const fPainE = firstWeek.checkIns.filter((c) => c.painScore != null);
+      const lPainE = lastWeek.checkIns.filter((c) => c.painScore != null);
+      if (fPainE.length && lPainE.length) {
+        doc.text(changeLine('Pain', avg(fPainE.map((c) => c.painScore!)), avg(lPainE.map((c) => c.painScore!)), '10'), margin, y);
+        y += 4;
+      }
+
+      const fSleepE = firstWeek.checkIns.filter((c) => c.sleepScore != null);
+      const lSleepE = lastWeek.checkIns.filter((c) => c.sleepScore != null);
+      if (fSleepE.length && lSleepE.length) {
+        doc.text(changeLine('Sleep', avg(fSleepE.map((c) => c.sleepScore!)), avg(lSleepE.map((c) => c.sleepScore!)), '5'), margin, y);
+        y += 4;
+      }
+      doc.setFont('helvetica', 'normal');
+    }
+    y += 5;
+  }
+
   // Top treatments
   const treatmentCounts = countItems(filtered.flatMap((c) => c.treatments));
   if (treatmentCounts.length > 0) {
@@ -253,6 +359,35 @@ const filterCheckIns = (checkIns: CheckIn[], startDate: Date, endDate: Date): Ch
 };
 
 const avg = (nums: number[]): number => (nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0);
+
+interface WeekBucket {
+  start: Date;
+  end: Date;
+  checkIns: CheckIn[];
+}
+
+const groupByWeek = (checkIns: CheckIn[], rangeStart: Date, rangeEnd: Date): WeekBucket[] => {
+  const weeks: WeekBucket[] = [];
+  let current = startOfDay(rangeStart);
+  const finalEnd = endOfDay(rangeEnd);
+
+  while (current < finalEnd) {
+    const weekEnd = min([addDays(current, 6), finalEnd]);
+    const bucket: WeekBucket = {
+      start: current,
+      end: weekEnd,
+      checkIns: checkIns.filter((c) => {
+        const d = new Date(c.timestamp);
+        return d >= current && d <= endOfDay(weekEnd);
+      }),
+    };
+    if (bucket.checkIns.length > 0) {
+      weeks.push(bucket);
+    }
+    current = addDays(current, 7);
+  }
+  return weeks;
+};
 
 const countItems = (items: string[]): [string, number][] => {
   const counts: Record<string, number> = {};
