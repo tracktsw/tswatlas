@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock, Mail, Eye, Smartphone, RotateCcw, AlertCircle, Sparkles } from 'lucide-react';
+import { ArrowLeft, Bell, Clock, Shield, Info, UserCog, LogOut, Cloud, Loader2, Moon, Sun, RefreshCw, CalendarClock, Mail, Eye, Smartphone, RotateCcw, AlertCircle, Sparkles, FileDown } from 'lucide-react';
 import { usePlatform } from '@/hooks/usePlatform';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTheme } from 'next-themes';
@@ -19,6 +19,7 @@ import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { scheduleCheckInReminders } from '@/utils/notificationScheduler';
 import { scheduleTestBeliefNotification } from '@/utils/beliefNotificationScheduler';
 import { format } from 'date-fns';
+import ExportDataModal from '@/components/ExportDataModal';
 
 const SettingsPage = () => {
   const { reminderSettings, updateReminderSettings, photos, checkIns, journalEntries, isLoading, isSyncing, userId } = useUserData();
@@ -164,6 +165,7 @@ const SettingsPage = () => {
   // Hidden debug feature: long-press version to reset onboarding
   const [versionTapCount, setVersionTapCount] = useState(0);
   const [showResetOnboarding, setShowResetOnboarding] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const handleVersionTap = useCallback(() => {
     setVersionTapCount(prev => {
@@ -394,6 +396,26 @@ const SettingsPage = () => {
           </div>
         </div>
       </div>
+
+
+      <div className="glass-card p-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-full bg-primary/10">
+            <FileDown className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-foreground">Export My Data</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Download your check-in data as a clinician PDF summary or raw CSV.
+            </p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => setExportOpen(true)}>
+              Export Data
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <ExportDataModal open={exportOpen} onOpenChange={setExportOpen} />
 
       {isAdmin && (
         <div className="glass-card p-4">
