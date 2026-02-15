@@ -489,7 +489,7 @@ const InsightsPage = () => {
             <PainTrendsInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
           </div>
         ) : !isSubscriptionLoading ? (
-          <LockedInsightsPreview />
+          <LockedInsightsPreview checkIns={checkIns} />
         ) : null}
       </div>
 
