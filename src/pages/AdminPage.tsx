@@ -209,7 +209,7 @@ const AdminPage = () => {
       const { data, error } = await supabase
         .from('practitioners')
         .select('*')
-        .order('name', { ascending: true });
+        .order('sort_order', { ascending: true });
       
       if (error) throw error;
       return data;
@@ -276,6 +276,43 @@ const AdminPage = () => {
       setEditingPractitioner(null);
     },
     onError: (error: any) => toast.error(error.message || 'Failed to update practitioner'),
+  });
+
+  // Reorder practitioner mutation
+  const reorderPractitionerMutation = useMutation({
+    mutationFn: async ({ practitionerId, direction }: { practitionerId: string; direction: 'up' | 'down' }) => {
+      if (!practitioners) return;
+      
+      const currentIndex = practitioners.findIndex(p => p.id === practitionerId);
+      if (currentIndex === -1) return;
+      
+      const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+      if (targetIndex < 0 || targetIndex >= practitioners.length) return;
+      
+      const currentPractitioner = practitioners[currentIndex];
+      const targetPractitioner = practitioners[targetIndex];
+      
+      const { error: error1 } = await supabase
+        .from('practitioners')
+        .update({ sort_order: targetIndex })
+        .eq('id', currentPractitioner.id);
+      
+      if (error1) throw error1;
+      
+      const { error: error2 } = await supabase
+        .from('practitioners')
+        .update({ sort_order: currentIndex })
+        .eq('id', targetPractitioner.id);
+      
+      if (error2) throw error2;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-practitioners'] });
+      queryClient.invalidateQueries({ queryKey: ['practitioners'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to reorder practitioner');
+    },
   });
 
   const deletePractitionerMutation = useMutation({
@@ -1172,6 +1209,26 @@ const AdminPage = () => {
                     </div>
                   </div>
                   <div className="flex gap-1 shrink-0">
+                    <div className="flex flex-col">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6"
+                        onClick={() => reorderPractitionerMutation.mutate({ practitionerId: p.id, direction: 'up' })}
+                        disabled={practitioners.indexOf(p) === 0 || reorderPractitionerMutation.isPending}
+                      >
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6"
+                        onClick={() => reorderPractitionerMutation.mutate({ practitionerId: p.id, direction: 'down' })}
+                        disabled={practitioners.indexOf(p) === practitioners.length - 1 || reorderPractitionerMutation.isPending}
+                      >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                     <Button
                       size="icon"
                       variant="ghost"

@@ -29,7 +29,7 @@ const PractitionerDirectoryPage = () => {
         .from("practitioners")
         .select("id, name, practitioner_type, city, country, services, remote_available, website, avatar_url")
         .eq("is_active", true)
-        .order("name", { ascending: true });
+        .order("sort_order", { ascending: true });
 
       if (error) throw error;
       return data as Practitioner[];
