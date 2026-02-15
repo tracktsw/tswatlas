@@ -338,12 +338,10 @@ const InsightsPage = () => {
             </div>
             <p className="text-muted-foreground">Your healing patterns</p>
           </div>
-          {isPremium && (
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setExportOpen(true)}>
-              <FileDown className="w-4 h-4" />
-              Export
-            </Button>
-          )}
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setExportOpen(true)}>
+            {isPremium ? <FileDown className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+            Export
+          </Button>
         </div>
         
         {/* Demo Mode Controls */}
