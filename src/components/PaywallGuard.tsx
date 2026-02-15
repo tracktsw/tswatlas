@@ -234,10 +234,10 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
 
   // Full paywall screen - comparison table design
   return (
-    <div className="flex flex-col items-center justify-center py-8 px-4">
-      <div className="bg-background/95 backdrop-blur-sm px-5 py-6 max-w-md rounded-2xl shadow-lg border border-border/50">
+    <div className="flex flex-col items-center justify-center py-4 px-4">
+      <div className="bg-background/95 backdrop-blur-sm px-5 py-5 max-w-md rounded-2xl shadow-lg border border-border/50 flex flex-col max-h-[85dvh]">
         {/* Header */}
-        <div className="text-center mb-5">
+        <div className="text-center mb-4 flex-shrink-0">
           <h3 className="font-display font-bold text-lg text-foreground mb-2 leading-tight">
             {feature === 'AI Coach' 
               ? 'Most People With TSW Miss the Things That Make It Worse'
@@ -250,94 +250,47 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
           </p>
         </div>
 
-        {/* Compare Features Table */}
-        <div className="mb-5">
-          <h4 className="font-display font-semibold text-sm text-foreground text-center mb-3">
+        {/* Compare Features Table - scrollable */}
+        <div className="mb-4 overflow-y-auto flex-1 min-h-0">
+          <h4 className="font-display font-semibold text-sm text-foreground text-center mb-3 sticky top-0 bg-background/95 py-1">
             Compare features
           </h4>
           <div className="border border-border rounded-xl overflow-hidden text-xs">
             {/* Table Header */}
             <div className="grid grid-cols-3 bg-muted/50 border-b border-border">
-              <div className="p-2"></div>
-              <div className="p-2 text-center font-medium text-muted-foreground">Free</div>
-              <div className="p-2 text-center font-semibold text-foreground bg-primary/10">Premium</div>
+              <div className="p-1.5"></div>
+              <div className="p-1.5 text-center font-medium text-muted-foreground">Free</div>
+              <div className="p-1.5 text-center font-semibold text-foreground bg-primary/10">Premium</div>
             </div>
             {/* Feature Rows */}
-            <div className="grid grid-cols-3 border-b border-border">
-              <div className="p-2 text-foreground">Daily check-ins</div>
-              <div className="p-2 text-center text-muted-foreground">✓</div>
-              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-            </div>
-            <div className="grid grid-cols-3 border-b border-border">
-              <div className="p-2 text-foreground">Weekly overview</div>
-              <div className="p-2 text-center text-muted-foreground">✓</div>
-              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-            </div>
-            <div className="grid grid-cols-3 border-b border-border">
-              <div className="p-2 text-foreground">Community access</div>
-              <div className="p-2 text-center text-muted-foreground">✓</div>
-              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-            </div>
-            <div className="grid grid-cols-3 border-b border-border">
-              <div className="p-2 text-foreground">Journal access</div>
-              <div className="p-2 text-center text-muted-foreground">✓</div>
-              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-            </div>
-            <div className="grid grid-cols-3 border-b border-border">
-              <div className="p-2 text-foreground">Resources</div>
-              <div className="p-2 text-center text-muted-foreground">✓</div>
-              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-            </div>
-            <div className="grid grid-cols-3 border-b border-border">
-              <div className="p-2 text-foreground">Export insight data</div>
-              <div className="p-2 text-center text-muted-foreground">✗</div>
-              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-            </div>
-            <div className="grid grid-cols-3 border-b border-border">
-              <div className="p-2 text-foreground">Photo uploads</div>
-              <div className="p-2 text-center text-muted-foreground">Limited</div>
-              <div className="p-2 text-center text-primary bg-primary/5">Unlimited</div>
-            </div>
-            <div className="grid grid-cols-3 border-b border-border">
-              <div className="p-2 text-foreground">Photo comparison</div>
-              <div className="p-2 text-center text-muted-foreground">✗</div>
-              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-            </div>
-            <div className="grid grid-cols-3 border-b border-border">
-              <div className="p-2 text-foreground">Treatment impact insights</div>
-              <div className="p-2 text-center text-muted-foreground">✗</div>
-              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-            </div>
-            <div className="grid grid-cols-3 border-b border-border">
-              <div className="p-2 text-foreground">Trigger detection</div>
-              <div className="p-2 text-center text-muted-foreground">✗</div>
-              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-            </div>
-            <div className="grid grid-cols-3 border-b border-border">
-              <div className="p-2 text-foreground">Food & product analysis</div>
-              <div className="p-2 text-center text-muted-foreground">✗</div>
-              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-            </div>
-            <div className="grid grid-cols-3 border-b border-border">
-              <div className="p-2 text-foreground">Mood, pain & sleep trends</div>
-              <div className="p-2 text-center text-muted-foreground">✗</div>
-              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-            </div>
-            <div className="grid grid-cols-3 border-b border-border">
-              <div className="p-2 text-foreground">Flare calendar</div>
-              <div className="p-2 text-center text-muted-foreground">✗</div>
-              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-            </div>
-            <div className="grid grid-cols-3">
-              <div className="p-2 text-foreground">AI coach</div>
-              <div className="p-2 text-center text-muted-foreground">✗</div>
-              <div className="p-2 text-center text-primary bg-primary/5">✓</div>
-            </div>
+            {[
+              { label: 'Daily check-ins', free: '✓', premium: '✓' },
+              { label: 'Weekly overview', free: '✓', premium: '✓' },
+              { label: 'Community access', free: '✓', premium: '✓' },
+              { label: 'Journal access', free: '✓', premium: '✓' },
+              { label: 'Resources', free: '✓', premium: '✓' },
+              { label: 'Export insight data', free: '✗', premium: '✓' },
+              { label: 'Photo uploads', free: 'Limited', premium: 'Unlimited' },
+              { label: 'Photo comparison', free: '✗', premium: '✓' },
+              { label: 'Treatment impact insights', free: '✗', premium: '✓' },
+              { label: 'Trigger detection', free: '✗', premium: '✓' },
+              { label: 'Food & product analysis', free: '✗', premium: '✓' },
+              { label: 'Mood, pain & sleep trends', free: '✗', premium: '✓' },
+              { label: 'Flare calendar', free: '✗', premium: '✓' },
+              { label: 'AI coach', free: '✗', premium: '✓' },
+            ].map((row, i, arr) => (
+              <div key={row.label} className={`grid grid-cols-3 ${i < arr.length - 1 ? 'border-b border-border' : ''}`}>
+                <div className="p-1.5 text-foreground">{row.label}</div>
+                <div className="p-1.5 text-center text-muted-foreground">{row.free}</div>
+                <div className="p-1.5 text-center text-primary bg-primary/5">{row.premium}</div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Subscribe Button */}
-        <Button 
+        {/* Subscribe Button - pinned at bottom */}
+        <div className="flex-shrink-0">
+        <Button
           onClick={handleUpgrade} 
           disabled={isButtonLoading} 
           variant="gold" 
@@ -406,6 +359,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false 
             )}
           </Button>
         )}
+        </div>
       </div>
     </div>
   );
