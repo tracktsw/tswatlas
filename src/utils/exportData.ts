@@ -289,7 +289,7 @@ export const generateClinicianPDF = ({ checkIns, startDate, endDate, includeNote
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(GREY);
-  doc.text('All findings are self-reported associations only. This report does not constitute medical advice or diagnosis.', M + 4, y + 6);
+  doc.text('All findings are patterns from your self-reported logs. This report does not constitute medical advice or diagnosis.', M + 4, y + 6);
   doc.setTextColor(BLACK);
   y += 16;
 
@@ -394,7 +394,7 @@ export const generateClinicianPDF = ({ checkIns, startDate, endDate, includeNote
         const x = chartLeft + padding + xRatio * (chartW - padding * 2);
         const vals = week.checkIns.map(getter).filter((v): v is number => v != null);
         doc.text('W' + (idx + 1), x, y + chartH + 3.5, { align: 'center' });
-        doc.text('n=' + vals.length, x, y + chartH + 6.5, { align: 'center' });
+        doc.text('days:' + vals.length, x, y + chartH + 6.5, { align: 'center' });
       });
 
       doc.setTextColor(BLACK);
@@ -435,7 +435,7 @@ export const generateClinicianPDF = ({ checkIns, startDate, endDate, includeNote
     doc.text('DAYS', colDays, y);
     doc.text('% DAYS', colPct, y);
     doc.text('NEXT-DAY SKIN CHG', colDelta, y);
-    doc.text('CONF', colConf, y);
+    doc.text('DATA', colConf, y);
     y += 2;
     drawHr(0.5);
     doc.setTextColor(BLACK);
@@ -473,7 +473,7 @@ export const generateClinicianPDF = ({ checkIns, startDate, endDate, includeNote
         deltaStr = sign + delta.toFixed(2);
         confidence = nextDaySkinScores.length >= 10 ? 'High' : nextDaySkinScores.length >= 5 ? 'Medium' : 'Low';
       } else {
-        deltaStr = 'Insuff. data';
+        deltaStr = 'Not enough data';
       }
 
       // Truncate long names
@@ -488,12 +488,13 @@ export const generateClinicianPDF = ({ checkIns, startDate, endDate, includeNote
       doc.text(pctDays + '%', colPct, y);
       doc.text(deltaStr, colDelta, y);
 
-      // Confidence color
+      // Data amount color
+      const dataLabel = confidence === 'High' ? 'Lots' : confidence === 'Medium' ? 'Some' : 'Not much';
       doc.setFontSize(8);
       if (confidence === 'High') doc.setTextColor(34, 139, 34);
       else if (confidence === 'Medium') doc.setTextColor(180, 130, 20);
       else doc.setTextColor(GREY, GREY, GREY);
-      doc.text(confidence, colConf, y);
+      doc.text(dataLabel, colConf, y);
       doc.setTextColor(BLACK);
       doc.setFontSize(9);
       y += 5.5;
@@ -526,7 +527,7 @@ export const generateClinicianPDF = ({ checkIns, startDate, endDate, includeNote
       doc.roundedRect(M, y, usable, boxH, 2, 2, 'F');
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text('What Seems to Help (association, 5+ data points)', M + 4, y + 5);
+      doc.text('What Seems to Help (based on your logs, 5+ days of data)', M + 4, y + 5);
       doc.setFont('helvetica', 'normal');
       helpfulTreatments.forEach(([rawName], i) => {
         doc.text('- ' + humanize(rawName), M + 6, y + 10 + i * 5);
@@ -552,10 +553,11 @@ export const generateClinicianPDF = ({ checkIns, startDate, endDate, includeNote
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(GREY);
   const legendLines = [
-    'How to read: Skin score is 1-5 (higher = better skin day). Delta = Avg skin on exposed days minus Avg skin on unexposed days.',
-    'A negative delta means skin was worse on days this item was present (potential trigger).',
-    'A positive delta means skin was better on days this item was present (potential helper).',
-    'Confidence: High = 10+ exposed days, Medium = 5-9, Low = fewer than 5. All findings are observational associations only.',
+    'How to read: Skin score is 1-5 (higher = better skin day).',
+    'Difference = average skin score when you logged this minus average score when you did not.',
+    'A negative difference means skin was often worse on days this showed up (based on your logs).',
+    'A positive difference means skin was often better on days this showed up (based on your logs).',
+    'Lots of data = 10+ days, Some data = 5-9 days, Not much data = under 5 days.',
   ];
   legendLines.forEach((line) => {
     doc.text(line, M, y);
@@ -601,7 +603,7 @@ export const generateClinicianPDF = ({ checkIns, startDate, endDate, includeNote
       if (exposedScores.length >= 2 && unexposedScores.length >= 2) {
         const avgExp = avg(exposedScores);
         const avgUnexp = avg(unexposedScores);
-        const conf: AssocData['confidence'] = exposedScores.length >= 10 ? 'High' : exposedScores.length >= 5 ? 'Medium' : 'Low';
+        const conf: AssocData['confidence'] = exposedScores.length >= 10 ? 'High' : exposedScores.length >= 5 ? 'Medium' : 'Low'; // thresholds unchanged
         const cleanName = prefixToStrip ? trigger.replace(new RegExp('^(' + prefixToStrip + ')'), '') : trigger;
         result.push({
           name: humanize(cleanName),
@@ -643,13 +645,13 @@ export const generateClinicianPDF = ({ checkIns, startDate, endDate, includeNote
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(GREY);
-    doc.text('ITEM', aColItem, y);
-    doc.text('EXP DAYS', aColExp, y);
-    doc.text('UNEXP', aColUnexp, y);
-    doc.text('AVG (EXP)', aColAvgE, y);
-    doc.text('AVG (UNEXP)', aColAvgU, y);
-    doc.text('DELTA', aColDelta, y);
-    doc.text('CONF', aColConf, y);
+    doc.text('THING LOGGED', aColItem, y);
+    doc.text('DAYS ON', aColExp, y);
+    doc.text('DAYS OFF', aColUnexp, y);
+    doc.text('AVG SKIN ON', aColAvgE, y);
+    doc.text('AVG SKIN OFF', aColAvgU, y);
+    doc.text('DIFF', aColDelta, y);
+    doc.text('DATA', aColConf, y);
     y += 2;
     drawHr(0.5);
     doc.setTextColor(BLACK);
@@ -673,19 +675,20 @@ export const generateClinicianPDF = ({ checkIns, startDate, endDate, includeNote
       doc.text(a.avgExposed.toFixed(1), aColAvgE, y);
       doc.text(a.avgUnexposed.toFixed(1), aColAvgU, y);
 
-      // Delta with color
+      // Difference with color
       const sign = a.delta > 0 ? '+' : '';
-      const deltaText = sign + a.delta.toFixed(2);
+      const diffText = sign + a.delta.toFixed(2);
       if (a.delta < -0.1) doc.setTextColor(200, 50, 50);
       else if (a.delta > 0.1) doc.setTextColor(34, 139, 34);
       else doc.setTextColor(BLACK);
-      doc.text(deltaText, aColDelta, y);
+      doc.text(diffText, aColDelta, y);
 
-      // Confidence
+      // How much data
+      const dataLabel = a.confidence === 'High' ? 'Lots' : a.confidence === 'Medium' ? 'Some' : 'Not much';
       if (a.confidence === 'High') doc.setTextColor(34, 139, 34);
       else if (a.confidence === 'Medium') doc.setTextColor(180, 130, 20);
       else doc.setTextColor(GREY, GREY, GREY);
-      doc.text(a.confidence, aColConf, y);
+      doc.text(dataLabel, aColConf, y);
       doc.setTextColor(BLACK);
       y += 5;
     });
@@ -696,7 +699,7 @@ export const generateClinicianPDF = ({ checkIns, startDate, endDate, includeNote
     renderAssocTable(associations);
   } else {
     doc.setFontSize(10);
-    doc.text('No trigger data with sufficient sample size to compute associations.', M, y);
+    doc.text('Not enough trigger data to show patterns.', M, y);
     y += 8;
   }
 
@@ -832,7 +835,7 @@ export const generateClinicianPDF = ({ checkIns, startDate, endDate, includeNote
 
       weekSeverity.slice(0, 3).forEach((w) => {
         needsNewPage(6);
-        doc.text('- ' + w.label + ' -- avg skin ' + w.avgSkin.toFixed(1) + '/5 (n=' + w.n + ')', M + 2, y);
+        doc.text('- ' + w.label + ' -- avg skin ' + w.avgSkin.toFixed(1) + '/5 (days: ' + w.n + ')', M + 2, y);
         y += 5;
       });
       y += 3;
@@ -882,11 +885,11 @@ export const generateClinicianPDF = ({ checkIns, startDate, endDate, includeNote
     'Sleep Quality (1-5): Self-reported sleep quality. 1 = Very poor, 5 = Very good.',
     'Mood (1-5): Self-reported mood. 1 = Very low, 5 = Very good.',
     'Skin Intensity (0-4): Self-reported flare intensity. 0 = Calm, 4 = High-intensity.',
-    '"Association" means a pattern observed in self-reported data. It does not imply causation.',
+    'Patterns shown here are based on your logged data. They do not imply cause and effect.',
     'Next-day Skin Change: Difference between avg skin score on the day after treatment vs on treatment day.',
-    'Confidence: High = 10+ data points, Medium = 5-9, Low = fewer than 5.',
-    'Missing data: Metrics with fewer than 3 data points are labelled "Insufficient data".',
-    'Delta: Avg skin (exposed days) minus Avg skin (unexposed days). Negative = worse skin when exposed.',
+    'How much data: Lots = 10+ days, Some = 5-9 days, Not much = under 5 days.',
+    'Missing data: Metrics with fewer than 3 entries are labelled "Not enough data".',
+    'Difference: Avg skin score on days you logged this minus avg score on days you did not.',
   ];
 
   definitions.forEach((def) => {
@@ -901,7 +904,7 @@ export const generateClinicianPDF = ({ checkIns, startDate, endDate, includeNote
   // Final disclaimer
   needsNewPage(18);
   doc.setFillColor(255, 248, 230);
-  const disclaimerText = 'Disclaimer: This report is generated from self-reported data collected via the TrackTSW app. All trigger, treatment, and helper findings are observational associations and do not imply causation. This report is not a medical diagnosis and should be reviewed in context by a qualified clinician.';
+  const disclaimerText = 'Disclaimer: This report is generated from self-reported data collected via the TrackTSW app. All trigger, treatment, and helper findings are patterns observed in your logs and do not imply cause and effect. This report is not a medical diagnosis and should be reviewed in context by a qualified clinician.';
   const dLines = doc.splitTextToSize(disclaimerText, usable - 8);
   const disclaimerH = dLines.length * 3.5 + 6;
   doc.roundedRect(M, y, usable, disclaimerH, 2, 2, 'F');
