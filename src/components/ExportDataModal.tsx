@@ -75,7 +75,7 @@ const ExportDataModal = ({ open, onOpenChange }: ExportDataModalProps) => {
         toast.success('CSV downloaded successfully.');
       } else {
         const doc = generateClinicianPDF(options);
-        downloadPDF(doc, `tsw-atlas-clinician-summary_${dateLabel}.pdf`);
+        downloadPDF(doc, `tracktsw-clinician-summary_${dateLabel}.pdf`);
         toast.success('PDF downloaded successfully.');
       }
       onOpenChange(false);
