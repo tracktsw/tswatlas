@@ -165,7 +165,7 @@ const InsightsPage = () => {
   // Auto-show paywall modal after 2 seconds for free users
   useEffect(() => {
     if (!isBackendLoading && !isPremiumFromBackend && !isAdmin && realCheckIns.length > 0) {
-      const timer = setTimeout(() => setPaywallOpen(true), 2000);
+      const timer = setTimeout(() => setPaywallOpen(true), 5000);
       return () => clearTimeout(timer);
     }
   }, [isBackendLoading, isPremiumFromBackend, isAdmin, realCheckIns.length]);
