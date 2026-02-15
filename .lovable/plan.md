@@ -1,84 +1,38 @@
 
 
-# TSW Practitioner Directory
+# Fix Paywall Modal Overflow on Mobile
 
-## Overview
-Add a new "Practitioners" page to the app that displays a directory of clinics/practitioners supporting TSW patients. The page will sit next to Resources in the bottom navigation. It includes a detail page for each clinic and an admin management tab.
+## Problem
+The paywall modal content is taller than the screen, causing it to be cut off. The feature comparison table has many rows, and combined with the header, button, and footer text, it exceeds the viewport height.
 
-## Database
+## Solution
+Make the `DialogContent` wrapper on the Insights page constrain the paywall to fit within the screen by adding a max height and making the inner content scrollable.
 
-### New table: `practitioners`
+## Changes
 
-| Column | Type | Nullable | Default | Notes |
-|---|---|---|---|---|
-| id | uuid | No | gen_random_uuid() | Primary key |
-| name | text | No | - | Clinic/practitioner name |
-| practitioner_type | text | Yes | - | e.g. "Naturopath", "Dermatologist" |
-| city | text | No | - | City location |
-| country | text | No | - | Country location |
-| website | text | Yes | - | Clinic website URL |
-| contact_email | text | Yes | - | Email (one contact method) |
-| contact_phone | text | Yes | - | Phone (one contact method) |
-| services | text[] | No | '{}' | Array of enum-like values: 'meditation', 'cap_therapy', 'naturopathy' |
-| remote_available | boolean | No | false | Whether remote sessions are offered |
-| about | text | Yes | - | Optional description, max 500 chars |
-| is_active | boolean | No | true | Admin toggle for visibility |
-| sort_order | integer | No | 0 | For future use |
-| created_at | timestamptz | No | now() | |
-| updated_at | timestamptz | No | now() | |
+### 1. `src/pages/InsightsPage.tsx` (line 499)
+Update the `DialogContent` className to constrain max height to `90dvh` (90% of dynamic viewport height) and enable vertical scrolling:
 
-### RLS Policies
-- **SELECT**: Anyone can view active practitioners (`is_active = true`)
-- **INSERT/UPDATE/DELETE**: Admin only (using existing `has_role` function)
+```tsx
+<DialogContent className="max-w-md max-h-[90dvh] overflow-y-auto p-0 border-0 bg-transparent shadow-none [&>button]:z-50">
+```
 
-### Trigger
-- Reuse existing `update_updated_at_column` trigger for the `updated_at` field
+### 2. `src/components/PaywallGuard.tsx` (line 237)
+Remove the vertical padding from the full paywall wrapper so it fits tighter inside the dialog, and make the inner card scrollable if needed:
 
-## New Files
+- Change the outer wrapper from `py-8 px-4` to `py-4 px-4` to reduce wasted space
+- Add `max-h-[85dvh] overflow-y-auto` to the inner card container so the feature table scrolls within bounds while the subscribe button stays visible
 
-### 1. `src/pages/PractitionerDirectoryPage.tsx`
-- Uses the exact same layout container as ResourcesPage: `px-4 md:px-8 lg:px-12 py-6 space-y-6 max-w-lg md:max-w-none mx-auto safe-area-inset-top`
-- Same decorative background blobs and PlantIllustration pattern
-- Header with Lucide `Building2` icon (no emojis), matching the Resources page header style
-- Small disclaimer text below the header: "Listings are paid placements. TrackTSW does not rank or endorse practitioners."
-- Fetches practitioners ordered alphabetically by name, filtered to `is_active = true`
-- Each clinic rendered as a `glass-card` button (same as resource cards) with:
-  - Clinic name (bold) and City, Country subtitle
-  - Service pills using `Badge` components
-  - "Remote" badge if applicable
-  - ChevronRight arrow on the right
-  - Staggered `animate-slide-up` animations
-- Empty state matching the Resources empty state pattern
-- Loading skeleton matching the Resources loading pattern
+Alternatively (simpler approach): reduce cell padding in the comparison table from `p-2` to `p-1.5` and reduce text size to make everything fit. However, the scrollable approach is more robust across all screen sizes.
 
-### 2. `src/pages/PractitionerDetailPage.tsx`
-- Uses the same detail-page layout as `ResourceDetailPage.tsx`
-- Same decorative background, back button style, and glass-card content area
-- Displays: name, practitioner type, city + country, website link, contact method, services as badges, about section
-- "Visit website" button styled identically to the "Read full source" button on ResourceDetailPage
-- No booking links, reviews, ratings, or recommendations
+### Recommended approach
+Combine both:
+1. Add `max-h-[90dvh] overflow-y-auto` to the `DialogContent` in InsightsPage
+2. Reduce outer padding in PaywallGuard from `py-8` to `py-4`
+3. Make the feature table area scrollable with a sticky subscribe button at the bottom -- this way the CTA is always visible without scrolling
 
-## Modified Files
+### Detailed implementation
+- In `PaywallGuard.tsx`, restructure the full paywall layout so the subscribe button and footer are pinned at the bottom using `flex flex-col` with the table area in a scrollable middle section
+- The header and CTA button remain fixed/visible; only the comparison table scrolls if the content overflows
+- This ensures the user never has to scroll to find the subscribe button
 
-### 3. `src/App.tsx`
-- Add lazy import for `PractitionerDirectoryPage` and `PractitionerDetailPage`
-- Add routes: `/practitioners` and `/practitioners/:id` inside the protected layout routes
-
-### 4. `src/components/BottomNav.tsx`
-- Add nav item for Practitioners between Resources and the end, using `Building2` icon with label "Directory"
-- Add preload entry for `/practitioners`
-- This will make 7 nav items total
-
-### 5. `src/pages/AdminPage.tsx`
-- Add a 4th tab "Directory" to the existing Tabs component (change `grid-cols-3` to `grid-cols-4`)
-- Admin can: add, edit, delete/deactivate practitioners
-- Form fields: name, practitioner_type, city, country, website, contact_email, contact_phone, services (multi-select checkboxes), remote_available (switch), about (textarea with 500 char limit), is_active toggle
-- Services are fixed options: Meditation, CAP therapy, Naturopathy
-- List view shows all practitioners (including inactive, marked with a badge)
-
-## Technical Details
-
-- Services stored as a PostgreSQL text array, validated in the UI to only allow the three fixed values
-- The structured data approach (separate city/country columns, services array) makes it straightforward to add filters later without schema changes
-- Alphabetical ordering is handled by the database query (`ORDER BY name ASC`)
-- No search or filters in v1, but the schema supports adding them without refactoring
