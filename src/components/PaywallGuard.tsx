@@ -252,7 +252,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false,
         </div>
 
         {/* Compare Features Table - scrollable */}
-        <div className="mb-4 overflow-y-auto flex-1 min-h-0">
+        <div className="mb-4 overflow-y-auto flex-1 min-h-0 relative">
           <h4 className="font-display font-semibold text-sm text-foreground text-center mb-3 sticky top-0 bg-background/95 py-1">
             Compare features
           </h4>
@@ -270,8 +270,9 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false,
               { label: 'Community access', free: '✓', premium: '✓' },
               { label: 'Journal access', free: '✓', premium: '✓' },
               { label: 'Resources', free: '✓', premium: '✓' },
-              { label: 'Export insight data', free: '✗', premium: '✓' },
+              { label: 'Directory', free: '✓', premium: '✓' },
               { label: 'Photo uploads', free: 'Limited', premium: 'Unlimited' },
+              { label: 'Export insight data', free: '✗', premium: '✓' },
               { label: 'Photo comparison', free: '✗', premium: '✓' },
               { label: 'Treatment impact insights', free: '✗', premium: '✓' },
               { label: 'Trigger detection', free: '✗', premium: '✓' },
@@ -287,6 +288,8 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false,
               </div>
             ))}
           </div>
+          {/* Scroll fade indicator */}
+          <div className="sticky bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-background/95 to-transparent pointer-events-none" />
         </div>
 
         {/* Subscribe Button - pinned at bottom */}
