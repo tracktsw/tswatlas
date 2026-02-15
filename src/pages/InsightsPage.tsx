@@ -496,7 +496,7 @@ const InsightsPage = () => {
       {/* Paywall Modal - auto-opens after 2s for free users */}
       {!isPremium && !isSubscriptionLoading && (
         <Dialog open={paywallOpen} onOpenChange={setPaywallOpen}>
-          <DialogContent className="max-w-md max-h-[90dvh] overflow-y-auto p-0 border-0 bg-transparent shadow-none [&>button]:z-50 [&>button]:top-2 [&>button]:right-2 [&>button]:bg-transparent [&>button]:border-0 [&>button]:shadow-none [&>button]:text-muted-foreground [&>button]:hover:text-foreground [&>button]:h-8 [&>button]:w-8 [&>button]:[&>svg]:h-5 [&>button]:[&>svg]:w-5">
+          <DialogContent className="max-w-md max-h-[90dvh] overflow-y-auto p-0 border-0 bg-transparent shadow-none [&>button]:z-50 [&>button]:top-6 [&>button]:right-6 [&>button]:bg-transparent [&>button]:border-0 [&>button]:shadow-none [&>button]:text-foreground [&>button]:hover:text-foreground/70 [&>button]:h-8 [&>button]:w-8 [&>button]:[&>svg]:h-5 [&>button]:[&>svg]:w-5">
             <PaywallGuard feature="Insights">
               <div />
             </PaywallGuard>
