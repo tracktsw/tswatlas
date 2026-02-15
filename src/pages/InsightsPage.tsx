@@ -349,7 +349,7 @@ const InsightsPage = () => {
             </div>
             <p className="text-muted-foreground">Your healing patterns</p>
           </div>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setExportOpen(true)}>
+          <Button variant="outline" size="sm" className={cn("gap-1.5", !isPremium && "opacity-50 cursor-not-allowed")} onClick={() => { if (isPremium) setExportOpen(true); }}>
             {isPremium ? <FileDown className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
             Export
           </Button>
