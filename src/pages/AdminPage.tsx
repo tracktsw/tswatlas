@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Check, X, LogOut, Shield, Loader2, Trash2, Plus, Pencil, BookOpen, ExternalLink, ChevronUp, ChevronDown, Lightbulb, Building2, Globe, Upload, Image } from 'lucide-react';
+import { ArrowLeft, Check, X, LogOut, Shield, Loader2, Trash2, Plus, Pencil, BookOpen, ExternalLink, ChevronUp, ChevronDown, Lightbulb, Building2, Globe, Upload, Image, BarChart3, Users, Activity, CreditCard } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -213,6 +214,24 @@ const AdminPage = () => {
       
       if (error) throw error;
       return data;
+    },
+    enabled: !!user && isAdmin,
+  });
+
+  // Dashboard metrics query
+  const { data: metrics, isLoading: loadingMetrics } = useQuery({
+    queryKey: ['admin-metrics'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_admin_metrics');
+      if (error) throw error;
+      return data as {
+        total_users: number;
+        dau_today: number;
+        active_subscriptions: number;
+        total_checkins: number;
+        new_users_today: number;
+        daily_breakdown: Array<{ day: string; dau: number; checkins: number }>;
+      };
     },
     enabled: !!user && isAdmin,
   });
@@ -786,8 +805,9 @@ const AdminPage = () => {
         </Button>
       </div>
 
-      <Tabs defaultValue="treatments" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="dashboard" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="treatments">Treatments</TabsTrigger>
           <TabsTrigger value="resources">Resources</TabsTrigger>
           <TabsTrigger value="directory">Directory</TabsTrigger>
@@ -800,6 +820,81 @@ const AdminPage = () => {
             ) : null}
           </TabsTrigger>
         </TabsList>
+
+        {/* Dashboard Tab */}
+        <TabsContent value="dashboard" className="space-y-6 mt-4">
+          {loadingMetrics ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : metrics ? (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="glass-card p-4 space-y-1">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Users className="w-4 h-4" />
+                    <span className="text-xs font-medium">Total Users</span>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">{metrics.total_users}</p>
+                  {metrics.new_users_today > 0 && (
+                    <p className="text-xs text-primary">+{metrics.new_users_today} today</p>
+                  )}
+                </div>
+                <div className="glass-card p-4 space-y-1">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Activity className="w-4 h-4" />
+                    <span className="text-xs font-medium">DAU Today</span>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">{metrics.dau_today}</p>
+                </div>
+                <div className="glass-card p-4 space-y-1">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <CreditCard className="w-4 h-4" />
+                    <span className="text-xs font-medium">Active Subs</span>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">{metrics.active_subscriptions}</p>
+                </div>
+                <div className="glass-card p-4 space-y-1">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <BarChart3 className="w-4 h-4" />
+                    <span className="text-xs font-medium">Total Check-ins</span>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">{metrics.total_checkins.toLocaleString()}</p>
+                </div>
+              </div>
+
+              {/* 7-Day Activity Chart */}
+              <div className="glass-card p-4 space-y-3">
+                <h3 className="font-semibold text-sm text-foreground">7-Day Activity</h3>
+                {metrics.daily_breakdown.length > 0 ? (
+                  <div className="h-52">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={metrics.daily_breakdown.map(d => ({
+                        ...d,
+                        day: new Date(d.day).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+                      }))}>
+                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                        <XAxis dataKey="day" tick={{ fontSize: 10 }} />
+                        <YAxis tick={{ fontSize: 10 }} />
+                        <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                        <Bar dataKey="dau" name="Active Users" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="checkins" name="Check-ins" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} opacity={0.5} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">No activity data in the last 7 days</p>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="glass-card p-6 text-center text-muted-foreground">
+              Failed to load metrics
+            </div>
+          )}
+        </TabsContent>
 
         {/* Treatments Tab */}
         <TabsContent value="treatments" className="space-y-6 mt-4">
