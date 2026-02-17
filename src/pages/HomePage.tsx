@@ -5,6 +5,7 @@ import DailyInsight from '@/components/DailyInsight';
 import { LeafIllustration, PlantIllustration } from '@/components/illustrations';
 import StreakFire from '@/components/StreakFire';
 import HomeUpgradeCard from '@/components/HomeUpgradeCard';
+import AppDownloadBanner from '@/components/AppDownloadBanner';
 import compassLogo from '@/assets/compass-logo.png';
 import { useUserData } from '@/contexts/UserDataContext';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -133,6 +134,9 @@ const HomePage = () => {
       {/* Subtle leaf motif */}
       <LeafIllustration variant="branch" className="w-20 h-16 fixed top-20 right-2 opacity-20 pointer-events-none" />
       
+      {/* App Download Banner - web only */}
+      <AppDownloadBanner />
+
       {/* Header */}
       <div className="flex items-center justify-between animate-fade-in">
         <div className="flex items-center gap-3">
