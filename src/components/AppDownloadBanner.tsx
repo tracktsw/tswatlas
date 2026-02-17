@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { X, Smartphone } from 'lucide-react';
 import { usePlatform } from '@/hooks/usePlatform';
 
-const APP_STORE_URL = 'https://apps.apple.com/app/tracktsw/id6743955989';
+const APP_STORE_URL = 'https://apps.apple.com/us/app/tracktsw/id6757331400';
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=app.tracktsw.atlas';
 
 const DISMISS_KEY = 'app_download_banner_dismissed_at';
