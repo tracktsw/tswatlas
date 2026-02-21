@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
-import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown, X, ImagePlus, CalendarIcon, ArrowUpDown, ArrowDown, ArrowUp, Loader2, RotateCcw, RefreshCw } from 'lucide-react';
+import { Camera, Plus, Trash2, Image, Sparkles, Lock, Crown, X, ImagePlus, CalendarIcon, ArrowUpDown, ArrowDown, ArrowUp, Loader2, RotateCcw, RefreshCw, Upload } from 'lucide-react';
 import { useUserData, BodyPart, Photo } from '@/contexts/UserDataContext';
 import { useVirtualizedPhotos, VirtualPhoto, SortOrder, BodyPart as VBodyPart } from '@/hooks/useVirtualizedPhotos';
 import { VirtualizedPhotoGrid } from '@/components/VirtualizedPhotoGrid';
@@ -373,6 +373,7 @@ const PhotoDiaryPage = () => {
   
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const batchInputRef = useRef<HTMLInputElement>(null);
 
   // Get user ID for virtualized photos hook
   useEffect(() => {
@@ -1546,6 +1547,7 @@ const PhotoDiaryPage = () => {
               </div>
               <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleCameraCapture} className="hidden" />
               <input type="file" accept="image/*,image/heic,image/heif,image/vnd.android.heic,.heic,.heif" ref={galleryInputRef} onChange={handleGallerySelect} className="hidden" />
+              <input type="file" accept="image/*,image/heic,image/heif,image/vnd.android.heic,.heic,.heif" multiple ref={batchInputRef} onChange={handleBatchFileSelect} className="hidden" />
               <div className="grid grid-cols-2 gap-3">
                 <Button variant="default" className="h-11 gap-2" onClick={() => cameraInputRef.current?.click()} disabled={singleUpload.isUploading}>
                   <Camera className="w-5 h-5" />Take Photo
@@ -1554,6 +1556,20 @@ const PhotoDiaryPage = () => {
                   <ImagePlus className="w-5 h-5" />Gallery
                 </Button>
               </div>
+              {isPremium && (
+                <Button 
+                  variant="outline" 
+                  className="w-full h-11 gap-2 border-primary/30 text-primary hover:bg-primary/5"
+                  onClick={() => batchInputRef.current?.click()}
+                  disabled={singleUpload.isUploading}
+                >
+                  <Upload className="w-5 h-5" />
+                  Batch Upload
+                  <span className="text-[10px] font-semibold bg-primary/15 text-primary px-1.5 py-0.5 rounded-full ml-1">
+                    Premium
+                  </span>
+                </Button>
+              )}
             </div>
           )}
         </DialogContent>
