@@ -1535,7 +1535,7 @@ const PhotoDiaryPage = () => {
               </div>
               <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleCameraCapture} className="hidden" />
               <input type="file" accept="image/*,image/heic,image/heif,image/vnd.android.heic,.heic,.heif" ref={galleryInputRef} onChange={handleGallerySelect} className="hidden" />
-              <input type="file" accept="image/*,image/heic,image/heif,image/vnd.android.heic,.heic,.heif" multiple ref={batchInputRef} onChange={handleBatchFileSelect} className="hidden" />
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,image/heic,image/heif,image/vnd.android.heic,.heic,.heif,.jpg,.jpeg,.png,.webp,.gif" multiple ref={batchInputRef} onChange={handleBatchFileSelect} className="hidden" />
               <div className="grid grid-cols-2 gap-3">
                 <Button variant="default" className="h-11 gap-2" onClick={() => cameraInputRef.current?.click()} disabled={singleUpload.isUploading}>
                   <Camera className="w-5 h-5" />Take Photo
