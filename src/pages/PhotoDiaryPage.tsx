@@ -1544,20 +1544,35 @@ const PhotoDiaryPage = () => {
                   <ImagePlus className="w-5 h-5" />Gallery
                 </Button>
               </div>
-              {isPremium && (
-                <Button 
-                  variant="outline" 
-                  className="w-full h-11 gap-2 border-primary/30 text-primary hover:bg-primary/5"
-                  onClick={() => batchInputRef.current?.click()}
-                  disabled={singleUpload.isUploading}
-                >
+              <Button 
+                variant="outline" 
+                className={cn(
+                  "w-full h-11 gap-2",
+                  isPremium 
+                    ? "border-primary/30 text-primary hover:bg-primary/5" 
+                    : "border-muted-foreground/20 text-muted-foreground"
+                )}
+                onClick={() => {
+                  if (isPremium) {
+                    batchInputRef.current?.click();
+                  } else {
+                    setShowUpgradePrompt(true);
+                  }
+                }}
+                disabled={singleUpload.isUploading}
+              >
+                {isPremium ? (
                   <Upload className="w-5 h-5" />
-                  Batch Upload
+                ) : (
+                  <Lock className="w-5 h-5" />
+                )}
+                Batch Upload
+                {!isPremium && (
                   <span className="text-[10px] font-semibold bg-primary/15 text-primary px-1.5 py-0.5 rounded-full ml-1">
                     Premium
                   </span>
-                </Button>
-              )}
+                )}
+              </Button>
             </div>
           )}
         </DialogContent>
