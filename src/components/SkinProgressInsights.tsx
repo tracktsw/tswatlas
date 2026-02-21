@@ -222,12 +222,12 @@ const SkinProgressInsights = ({ checkIns, dailyFlareStates }: SkinProgressInsigh
                 {/* Fixed Y-axis */}
                 <div className="h-48 flex-shrink-0" style={{ width: 40 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData.slice(0, 1)} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+                    <LineChart data={[{ label: '', skinScore: 1 }, { label: ' ', skinScore: 5 }]} margin={{ top: 10, right: 0, left: 0, bottom: 18 }}>
                       <YAxis
                         domain={[1, 5]}
                         ticks={[1, 2, 3, 4, 5]}
                         tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                        axisLine={{ stroke: 'hsl(var(--border))' }}
+                        axisLine={false}
                         tickLine={false}
                         width={30}
                         tickFormatter={value => skinEmojis[value - 1] || ''}
@@ -239,9 +239,9 @@ const SkinProgressInsights = ({ checkIns, dailyFlareStates }: SkinProgressInsigh
                 </div>
                 {/* Scrollable chart area */}
                 <div className="flex-1 overflow-x-auto pb-2">
-                  <div className="h-48" style={{ minWidth: `${Math.max(chartData.length * 50, 300)}px` }}>
+                  <div className="h-48" style={{ minWidth: `${Math.max(chartData.length * 70, 300)}px` }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <LineChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
                         {flarePeriods.map((period, idx) => (
                           <ReferenceArea key={idx} x1={period.start} x2={period.end} y1={1} y2={5} fill="#ef4444" fillOpacity={0.25} />
                         ))}
