@@ -21,6 +21,7 @@ import SleepTrendsInsights from '@/components/SleepTrendsInsights';
 import PainTrendsInsights from '@/components/PainTrendsInsights';
 import MoodTrendsInsights from '@/components/MoodTrendsInsights';
 import WhatHelpedInsights from '@/components/WhatHelpedInsights';
+import SkinProgressInsights from '@/components/SkinProgressInsights';
 import { FlareStatusBadge } from '@/components/FlareStatusBadge';
 import { severityColors, severityLabels } from '@/constants/severityColors';
 import { toast } from 'sonner';
@@ -481,6 +482,7 @@ const InsightsPage = () => {
       <div className="animate-slide-up" style={{ animationDelay: '0.15s' }}>
         {isPremium ? (
           <div className="space-y-6">
+            <SkinProgressInsights checkIns={checkIns} dailyFlareStates={dailyFlareStates} />
             <WhatHelpedInsights checkIns={checkIns} />
             <TriggerPatternsInsights checkIns={checkIns} baselineConfidence={baselineConfidence} />
             <SymptomsInsights checkIns={checkIns} />
