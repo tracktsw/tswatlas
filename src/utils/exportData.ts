@@ -412,8 +412,146 @@ export const generateClinicianPDF = ({ checkIns, startDate, endDate, includeNote
   }
 
   // ================================================================
-  // PAGE 3: TREATMENTS & ADHERENCE
+  // PAGE 2b: SKIN PROGRESS
   // ================================================================
+
+  doc.addPage();
+  y = M;
+  sectionHeading('Skin Progress');
+
+  // --- Trend Summary ---
+  const skinCheckIns = filtered.filter(c => c.skinFeeling != null);
+  if (skinCheckIns.length >= 3) {
+    const skinScores = skinCheckIns.map(c => c.skinFeeling);
+    const firstThird = skinScores.slice(0, Math.ceil(skinScores.length / 3));
+    const lastThird = skinScores.slice(-Math.ceil(skinScores.length / 3));
+    const avgFirst = avg(firstThird);
+    const avgLast = avg(lastThird);
+    const diff = avgLast - avgFirst;
+
+    let trendText = 'Stable';
+    if (diff > 0.3) trendText = 'Improving';
+    else if (diff < -0.3) trendText = 'Worsening';
+
+    doc.setFillColor(LIGHT_BG_R, LIGHT_BG_G, LIGHT_BG_B);
+    doc.roundedRect(M, y, usable, 22, 2, 2, 'F');
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(GREY);
+    doc.text('TREND SUMMARY', M + 4, y + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(BLACK);
+    doc.setFontSize(10);
+    doc.text('Direction: ' + trendText, M + 4, y + 12);
+    doc.setFontSize(9);
+    doc.text(
+      'Start avg: ' + avgFirst.toFixed(1) + '/5  |  Current avg: ' + avgLast.toFixed(1) + '/5  |  Change: ' + (diff > 0 ? '+' : '') + diff.toFixed(2),
+      M + 4, y + 18
+    );
+    y += 28;
+  } else {
+    doc.setFontSize(10);
+    doc.text('Not enough skin data for a trend summary (need at least 3 entries).', M, y);
+    y += 8;
+  }
+
+  // --- Monthly Averages Table ---
+  if (skinCheckIns.length > 0) {
+    needsNewPage(20);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(BLACK);
+    doc.text('Monthly Averages', M, y);
+    y += 6;
+
+    // Build monthly buckets
+    const monthlyBuckets: Record<string, number[]> = {};
+    skinCheckIns.forEach(c => {
+      const monthKey = format(new Date(c.timestamp), 'yyyy-MM');
+      if (!monthlyBuckets[monthKey]) monthlyBuckets[monthKey] = [];
+      monthlyBuckets[monthKey].push(c.skinFeeling);
+    });
+    const sortedMonths = Object.keys(monthlyBuckets).sort();
+
+    // Table header
+    const mColMonth = M;
+    const mColAvg = M + 45;
+    const mColEntries = M + 75;
+    const mColRange = M + 105;
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(GREY);
+    doc.text('MONTH', mColMonth, y);
+    doc.text('AVG SKIN', mColAvg, y);
+    doc.text('ENTRIES', mColEntries, y);
+    doc.text('RANGE', mColRange, y);
+    y += 2;
+    drawHr(0.5);
+    doc.setTextColor(BLACK);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    sortedMonths.forEach(monthKey => {
+      needsNewPage(7);
+      const scores = monthlyBuckets[monthKey];
+      const monthAvg = avg(scores);
+      const minScore = Math.min(...scores);
+      const maxScore = Math.max(...scores);
+      const monthLabel = format(new Date(monthKey + '-01'), 'MMM yyyy');
+
+      doc.text(monthLabel, mColMonth, y);
+      doc.text(monthAvg.toFixed(1) + '/5', mColAvg, y);
+      doc.text(String(scores.length), mColEntries, y);
+      doc.text(minScore + ' - ' + maxScore, mColRange, y);
+      y += 5.5;
+    });
+    y += 5;
+  }
+
+  // --- Daily Skin Scores ---
+  if (skinCheckIns.length > 0) {
+    needsNewPage(20);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(BLACK);
+    doc.text('Daily Skin Scores', M, y);
+    y += 6;
+
+    const dailySkin = buildDailySkinMap(skinCheckIns);
+    const sortedDays = Object.keys(dailySkin).sort();
+
+    const dColDate = M;
+    const dColScore = M + 40;
+    const dColLabel = M + 65;
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(GREY);
+    doc.text('DATE', dColDate, y);
+    doc.text('AVG SCORE', dColScore, y);
+    doc.text('LEVEL', dColLabel, y);
+    y += 2;
+    drawHr(0.5);
+    doc.setTextColor(BLACK);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    sortedDays.forEach(date => {
+      needsNewPage(5);
+      const score = dailySkin[date];
+      const rounded = Math.round(score);
+      const label = rounded <= 1 ? 'Severe' : rounded <= 2 ? 'Bad' : rounded <= 3 ? 'Okay' : rounded <= 4 ? 'Good' : 'Great';
+      const dateLabel = format(new Date(date), 'dd MMM yyyy');
+
+      doc.text(dateLabel, dColDate, y);
+      doc.text(score.toFixed(1) + '/5', dColScore, y);
+      doc.text(label, dColLabel, y);
+      y += 4.5;
+    });
+    y += 3;
+  }
+
 
   doc.addPage();
   y = M;
