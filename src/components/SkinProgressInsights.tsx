@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { TrendingUp } from 'lucide-react';
 import { CheckIn } from '@/contexts/UserDataContext';
-import { format, subDays, startOfDay } from 'date-fns';
+import { format, subDays, startOfDay, startOfWeek, endOfWeek, eachWeekOfInterval, eachDayOfInterval, eachMonthOfInterval, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceLine, ReferenceArea, Tooltip } from 'recharts';
 import { DailyFlareState } from '@/utils/flareStateEngine';
 import { cn } from '@/lib/utils';
@@ -35,23 +35,67 @@ const SkinProgressInsights = ({ checkIns, dailyFlareStates }: SkinProgressInsigh
     return checkIns.filter(c => c.skinFeeling !== null && c.skinFeeling !== undefined).length;
   }, [checkIns]);
 
-  // Group by date, average skinFeeling
+  // Group data by the same granularity as severity trends
   const skinData = useMemo(() => {
-    const byDate = new Map<string, { total: number; count: number }>();
-    filteredCheckIns.forEach(c => {
-      const dateStr = format(new Date(c.timestamp), 'yyyy-MM-dd');
-      const existing = byDate.get(dateStr);
-      if (existing) {
-        existing.total += c.skinFeeling;
-        existing.count++;
-      } else {
-        byDate.set(dateStr, { total: c.skinFeeling, count: 1 });
-      }
-    });
-    return Array.from(byDate.entries())
-      .map(([date, { total, count }]) => ({ date, skinScore: total / count }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-  }, [filteredCheckIns]);
+    const now = new Date();
+
+    if (timeRange === '7') {
+      // Daily granularity – label like severity trends: "EEE" (Mon, Tue…)
+      const startDate = subDays(startOfDay(now), 6);
+      const days = eachDayOfInterval({ start: startDate, end: now });
+      return days
+        .map(day => {
+          const dayStart = startOfDay(day);
+          const dayEnd = new Date(dayStart);
+          dayEnd.setHours(23, 59, 59, 999);
+          const dayCheckIns = filteredCheckIns.filter(c => {
+            const d = new Date(c.timestamp);
+            return isWithinInterval(d, { start: dayStart, end: dayEnd });
+          });
+          if (dayCheckIns.length === 0) return null;
+          const avg = dayCheckIns.reduce((s, c) => s + c.skinFeeling, 0) / dayCheckIns.length;
+          return { label: format(day, 'EEE'), skinScore: avg, dateRaw: format(day, 'yyyy-MM-dd') };
+        })
+        .filter((d): d is NonNullable<typeof d> => Boolean(d));
+    } else if (timeRange === '30') {
+      // Weekly granularity – label: "MMM d"
+      const startDate = startOfWeek(subDays(now, 29), { weekStartsOn: 0 });
+      const weeks = eachWeekOfInterval({ start: startDate, end: now }, { weekStartsOn: 0 });
+      return weeks
+        .map(weekStart => {
+          const weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 });
+          const weekCheckIns = filteredCheckIns.filter(c => {
+            const d = new Date(c.timestamp);
+            return isWithinInterval(d, { start: weekStart, end: weekEnd });
+          });
+          if (weekCheckIns.length === 0) return null;
+          const avg = weekCheckIns.reduce((s, c) => s + c.skinFeeling, 0) / weekCheckIns.length;
+          return { label: format(weekStart, 'MMM d'), skinScore: avg, dateRaw: format(weekStart, 'yyyy-MM-dd') };
+        })
+        .filter((w): w is NonNullable<typeof w> => Boolean(w));
+    } else {
+      // Monthly granularity – label: "MMM yy"
+      if (filteredCheckIns.length === 0) return [];
+      const oldest = filteredCheckIns.reduce((min, c) => {
+        const d = new Date(c.timestamp);
+        return d < min ? d : min;
+      }, new Date());
+      const startDate = startOfMonth(oldest);
+      const months = eachMonthOfInterval({ start: startDate, end: now });
+      return months
+        .map(monthStart => {
+          const monthEnd = endOfMonth(monthStart);
+          const monthCheckIns = filteredCheckIns.filter(c => {
+            const d = new Date(c.timestamp);
+            return isWithinInterval(d, { start: monthStart, end: monthEnd });
+          });
+          if (monthCheckIns.length === 0) return null;
+          const avg = monthCheckIns.reduce((s, c) => s + c.skinFeeling, 0) / monthCheckIns.length;
+          return { label: format(monthStart, 'MMM yy'), skinScore: avg, dateRaw: format(monthStart, 'yyyy-MM-dd') };
+        })
+        .filter((m): m is NonNullable<typeof m> => Boolean(m));
+    }
+  }, [filteredCheckIns, timeRange]);
 
   // Flare state lookup
   const flareStateByDate = useMemo(() => {
@@ -65,11 +109,11 @@ const SkinProgressInsights = ({ checkIns, dailyFlareStates }: SkinProgressInsigh
     const periods: { start: string; end: string }[] = [];
     let current: { start: string; end: string } | null = null;
     skinData.forEach(entry => {
-      const fs = flareStateByDate.get(entry.date);
+      const fs = flareStateByDate.get(entry.dateRaw);
       const isFlaring = fs?.isInFlareEpisode || fs?.flareState === 'active_flare' || fs?.flareState === 'early_flare';
       if (isFlaring) {
-        if (!current) current = { start: entry.date, end: entry.date };
-        else current.end = entry.date;
+        if (!current) current = { start: entry.label, end: entry.label };
+        else current.end = entry.label;
       } else if (current) {
         periods.push(current);
         current = null;
@@ -79,23 +123,16 @@ const SkinProgressInsights = ({ checkIns, dailyFlareStates }: SkinProgressInsigh
     return periods;
   }, [skinData, flareStateByDate]);
 
-  // Chart data
+  // Use labels as chart dataKey
   const chartData = useMemo(() => {
     return skinData.map(entry => ({
-      date: entry.date,
-      displayDate: format(new Date(entry.date), 'd'),
+      label: entry.label,
       skinScore: entry.skinScore,
+      dateRaw: entry.dateRaw,
     }));
   }, [skinData]);
 
-  // Tick interval
-  const tickInterval = useMemo(() => {
-    const len = chartData.length;
-    if (len <= 7) return 0;
-    if (len <= 14) return 1;
-    if (len <= 21) return 2;
-    return Math.floor(len / 7) - 1;
-  }, [chartData.length]);
+  const needsScroll = timeRange === 'all' && chartData.length > 12;
 
   // Summary
   const summary = useMemo(() => {
@@ -180,8 +217,8 @@ const SkinProgressInsights = ({ checkIns, dailyFlareStates }: SkinProgressInsigh
           </div>
         ) : (
           <>
-            <div className={cn('w-full', timeRange === 'all' && chartData.length > 31 ? 'overflow-x-auto' : '')}>
-              <div className="h-48" style={{ minWidth: timeRange === 'all' && chartData.length > 31 ? `${chartData.length * 18}px` : '100%' }}>
+             <div className={cn('w-full', needsScroll ? 'overflow-x-auto pb-2' : '')}>
+               <div className="h-48" style={{ minWidth: needsScroll ? `${Math.max(chartData.length * 50, 300)}px` : '100%' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     {flarePeriods.map((period, idx) => (
@@ -196,12 +233,11 @@ const SkinProgressInsights = ({ checkIns, dailyFlareStates }: SkinProgressInsigh
                       />
                     ))}
                     <XAxis
-                      dataKey="date"
-                      tickFormatter={value => format(new Date(value), 'd')}
+                      dataKey="label"
                       tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                       axisLine={{ stroke: 'hsl(var(--border))' }}
                       tickLine={false}
-                      interval={tickInterval}
+                      interval={0}
                     />
                     <YAxis
                       domain={[1, 5]}
@@ -219,7 +255,7 @@ const SkinProgressInsights = ({ checkIns, dailyFlareStates }: SkinProgressInsigh
                         const idx = Math.round(data.skinScore) - 1;
                         return (
                           <div className="bg-background/95 backdrop-blur-sm border border-border rounded-lg px-3 py-2 shadow-lg">
-                            <p className="text-xs text-muted-foreground">{format(new Date(data.date), 'MMM d, yyyy')}</p>
+                            <p className="text-xs text-muted-foreground">{data.label}</p>
                             <p className="text-sm font-medium text-foreground">
                               Skin: {skinLabels[idx]} ({data.skinScore.toFixed(1)}/5)
                             </p>
@@ -240,6 +276,11 @@ const SkinProgressInsights = ({ checkIns, dailyFlareStates }: SkinProgressInsigh
                   </LineChart>
                 </ResponsiveContainer>
               </div>
+              {needsScroll && (
+                <p className="text-[9px] text-muted-foreground/60 text-center mt-1">
+                  ← Scroll to see all {chartData.length} months →
+                </p>
+              )}
             </div>
 
             {flarePeriods.length > 0 && (
