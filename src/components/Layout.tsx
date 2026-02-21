@@ -127,7 +127,7 @@ const Layout = () => {
       <main
         className={cn(
           'flex-1 min-h-0 overscroll-contain',
-          isIOS && isKeyboardOpen ? 'overflow-hidden' : 'overflow-y-auto',
+          'overflow-y-auto overscroll-contain',
 
           // iOS unchanged: still needs room for FIXED BottomNav
           !hideBottomNav && !isAndroid && 'pb-20',
