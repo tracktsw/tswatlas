@@ -133,7 +133,11 @@ const Layout = () => {
           !hideBottomNav && !isAndroid && 'pb-20',
 
           // Android: BottomNav is NOT fixed anymore, so no padding needed
-          !hideBottomNav && isAndroid && 'pb-0'
+          !hideBottomNav && isAndroid && 'pb-0',
+
+          // When keyboard is open on iOS, hide bottom nav space and add
+          // extra bottom padding so content can scroll above the keyboard
+          isIOS && isKeyboardOpen && '!pb-64'
         )}
       >
         <Outlet />

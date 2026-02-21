@@ -111,9 +111,9 @@ export function IOSKeyboardProvider({ children }: { children: React.ReactNode })
     };
   }, [isIOS, handleViewportChange]);
 
-  // Focus-based detection (reliable fallback for iOS WebViews)
+  // Focus-based detection (reliable fallback for iOS/Android WebViews)
   useEffect(() => {
-    if (!isIOS) return;
+    if (!isIOS && !isAndroid) return;
 
     let blurTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -128,9 +128,27 @@ export function IOSKeyboardProvider({ children }: { children: React.ReactNode })
         // After keyboard animates open, scroll the focused element into view
         // so it isn't hidden behind the keyboard
         const target = e.target as HTMLElement;
-        setTimeout(() => {
-          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 350);
+        // Use multiple attempts to account for keyboard animation timing
+        const scrollIntoViewSafely = () => {
+          // Find the scrollable parent (main element)
+          const scrollParent = target.closest('main') || target.closest('[class*="overflow-y-auto"]');
+          if (scrollParent) {
+            const targetRect = target.getBoundingClientRect();
+            const scrollParentRect = scrollParent.getBoundingClientRect();
+            // Calculate where the target is relative to the visible scroll area
+            // We want it roughly in the upper-middle third of the visible area
+            const visibleHeight = scrollParentRect.height;
+            const targetTop = targetRect.top - scrollParentRect.top;
+            const desiredPosition = visibleHeight * 0.3; // 30% from top of visible area
+            const scrollAdjustment = targetTop - desiredPosition;
+            
+            scrollParent.scrollBy({ top: scrollAdjustment, behavior: 'smooth' });
+          } else {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        };
+        setTimeout(scrollIntoViewSafely, 300);
+        setTimeout(scrollIntoViewSafely, 600);
       }
     };
 
