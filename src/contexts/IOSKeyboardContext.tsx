@@ -124,6 +124,13 @@ export function IOSKeyboardProvider({ children }: { children: React.ReactNode })
       }
       if (isTextInputElement(e.target as Element)) {
         setIsTextInputFocused(true);
+        
+        // After keyboard animates open, scroll the focused element into view
+        // so it isn't hidden behind the keyboard
+        const target = e.target as HTMLElement;
+        setTimeout(() => {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 350);
       }
     };
 
