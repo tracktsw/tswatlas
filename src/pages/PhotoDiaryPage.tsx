@@ -688,22 +688,6 @@ const PhotoDiaryPage = () => {
   const handleBatchFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
     
-    // Reset input immediately to allow re-selecting same files
-    e.target.value = '';
-    
-    // Debug: log file selection
-    if (import.meta.env.DEV) {
-      console.log('[BatchUpload] File input change event fired');
-      console.log('[BatchUpload] FileList:', fileList);
-      console.log('[BatchUpload] Number of files:', fileList?.length ?? 0);
-      
-      if (fileList && fileList.length > 0) {
-        Array.from(fileList).forEach((f, i) => {
-          console.log(`[BatchUpload] File ${i + 1}:`, f.name, 'type:', f.type, 'size:', f.size);
-        });
-      }
-    }
-    
     if (!fileList || fileList.length === 0) {
       if (import.meta.env.DEV) {
         console.error('[BatchUpload] No files detected in selection');
@@ -712,8 +696,12 @@ const PhotoDiaryPage = () => {
       return;
     }
     
-    // Convert FileList to array
+    // Convert FileList to array BEFORE resetting input
+    // (some mobile browsers clear FileList when input value is reset)
     const filesArray = Array.from(fileList);
+    
+    // Reset input after copying files to allow re-selecting same files
+    e.target.value = '';
 
     let filesToUpload: File[];
 
