@@ -75,6 +75,17 @@ const LockedInsightsPreview = ({ checkIns }: LockedInsightsPreviewProps) => {
 
   return (
     <div className="space-y-6 pointer-events-none select-none">
+      {/* Skin Progress */}
+      <div className="glass-card p-5 space-y-3">
+        <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-primary/20">
+            <TrendingUp className="w-4 h-4 text-primary" />
+          </div>
+          Skin Progress
+        </h3>
+        <AnimatingGraph points={21} min={1} max={5} color="#22c55e" height={130} />
+      </div>
+
       {/* What's Helping */}
       <div className="glass-card p-5 space-y-4">
         <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
