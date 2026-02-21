@@ -1,31 +1,62 @@
 
 
-# Grant 1-Year Premium to haroontester@live.co.uk
+# Skin Progress Graph
 
-## What needs to happen
+## Overview
+Add a new "Skin Progress" line chart component placed just above the "What's Helping" section on the Insights page. It will plot the user's `skinFeeling` score (1-5) over time, with a time range toggle (7 days / 30 days / All time) and horizontal scrolling for large datasets.
 
-The database insert was proposed previously but was never executed. We need to add a single row to the `user_subscriptions` table.
+## Data Source
+- Uses `skinFeeling` from each `CheckIn` (values 1-5, where 1 = worst, 5 = best)
+- Groups by date, averaging multiple check-ins per day
+- Includes flare period shading (same pattern as Mood/Sleep/Pain trends)
 
-## Database Change
+## UI Design
+- Glass card matching existing insight cards
+- Icon: a line chart or trending-up icon in a green/primary tinted badge
+- Time range toggle buttons: "Last 7 days", "Last 30 days", "All time" (same style as Symptoms component)
+- Recharts `LineChart` with:
+  - Y-axis: 1-5 with skin emoji labels (matching the weekly overview emojis)
+  - X-axis: dates with day numbers
+  - Custom tooltip showing date and skin score
+  - Flare period `ReferenceArea` shading
+  - Horizontal scroll for "All time" when there are many data points
+- Summary text below the chart (e.g., average trend direction)
 
-Insert one record for user ID `46c4cbbc-9387-42e9-b1f9-715e73569ad2`:
+## Files to Create/Modify
 
-- **status**: `active`
-- **current_period_start**: now
-- **current_period_end**: 1 year from now (February 20, 2027)
+### New file: `src/components/SkinProgressInsights.tsx`
+- New component following the same patterns as `MoodTrendsInsights` and `SymptomsInsights`
+- Props: `checkIns: CheckIn[]`, `dailyFlareStates: DailyFlareState[]`
+- Time range state with 7/30/all toggle
+- Computes daily average `skinFeeling`, filters by time range
+- Renders a scrollable Recharts `LineChart`
+- Shows flare period shading via `ReferenceArea`
+- Includes a brief summary (e.g., "Your skin has been improving over the last 7 days")
 
-## Automatic Expiry
+### Modified file: `src/pages/InsightsPage.tsx`
+- Import `SkinProgressInsights`
+- Place it in the premium section just before `WhatHelpedInsights` (line ~484)
+- Also add a blurred/locked preview version in `LockedInsightsPreview` for non-premium users
 
-No code changes needed. The `check-subscription` backend function already checks `current_period_end > now()`. After the year is up, the user automatically reverts to the free tier.
+### Modified file: `src/components/insights/LockedInsightsPreview.tsx`
+- Add a "Skin Progress" card with an `AnimatingGraph` placeholder, placed before the "What's Helping" section
 
 ## Technical Details
 
-A single SQL migration:
-
 ```text
-INSERT INTO user_subscriptions (user_id, status, current_period_start, current_period_end)
-VALUES ('46c4cbbc-9387-42e9-b1f9-715e73569ad2', 'active', now(), now() + interval '1 year');
+Premium section order (InsightsPage.tsx, line ~483):
+  1. SkinProgressInsights    <-- NEW
+  2. WhatHelpedInsights
+  3. TriggerPatternsInsights
+  4. SymptomsInsights
+  5. MoodTrendsInsights
+  6. SleepTrendsInsights
+  7. PainTrendsInsights
 ```
 
-No frontend or backend code changes required. The user will need to refresh/re-login to see the updated premium status.
-
+The component will reuse:
+- `recharts` (LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea, ReferenceLine)
+- `date-fns` for date filtering and formatting
+- `DailyFlareState` from `flareStateEngine` for flare shading
+- The same time-range button pattern from `SymptomsInsights`
+- The same scrollable container pattern from `SymptomsInsights` severity trends for "All time" view
