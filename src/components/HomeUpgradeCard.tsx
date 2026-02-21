@@ -51,8 +51,8 @@ export const HomeUpgradeCard = () => {
             
             <p className="text-sm text-muted-foreground mb-3">
               {isTrialEligible 
-                ? 'Unlock AI Coach, Photo Diary, full Insights & more.'
-                : `Get AI Coach, Photo Diary & Insights for ${priceString}/month.`}
+                ? 'Unlock TrackTSW Coach, Photo Diary, full Insights & more.'
+                : `Get TrackTSW Coach, Photo Diary & Insights for ${priceString}/month.`}
             </p>
             
             {/* Mini feature icons */}
