@@ -29,7 +29,7 @@ const premiumFeatures = [
   { icon: Camera, label: 'Unlimited Photo Diary', description: 'Track your skin progress' },
   { icon: BarChart3, label: 'Full Insights', description: 'See what helps you heal' },
   { icon: BookOpen, label: 'Journal', description: 'Document your journey' },
-  { icon: Brain, label: 'AI Coach', description: 'Personalized guidance' },
+  { icon: Brain, label: 'TrackTSW Coach', description: 'Personalized guidance' },
 ];
 
 export const TrialOfferModal = ({

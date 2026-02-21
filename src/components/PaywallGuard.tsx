@@ -240,13 +240,13 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false,
         {/* Header */}
         <div className="text-center mb-4 flex-shrink-0">
           <h3 className="font-display font-bold text-lg text-foreground mb-2 leading-tight">
-            {feature === 'AI Coach' 
+            {feature === 'TrackTSW Coach' 
               ? 'Most People With TSW Miss the Things That Make It Worse'
               : 'You Might Be Slowing Your Own TSW Recovery Without Realising It'}
           </h3>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            {feature === 'AI Coach'
-              ? 'Gain access to the AI coach powered by Gemini to make learning what you should do for your skin quick and easy.'
+            {feature === 'TrackTSW Coach'
+              ? 'Gain access to the TrackTSW Coach to make learning what you should do for your skin quick and easy.'
               : 'Premium highlights behaviours and exposures commonly linked to flare worsening — so you can adjust earlier.'}
           </p>
         </div>
@@ -279,7 +279,7 @@ const PaywallGuard = ({ children, feature = 'This feature', showBlurred = false,
               { label: 'Food & product analysis', free: '✗', premium: '✓' },
               { label: 'Mood, pain & sleep trends', free: '✗', premium: '✓' },
               { label: 'Flare calendar', free: '✗', premium: '✓' },
-              { label: 'AI coach', free: '✗', premium: '✓' },
+              { label: 'TrackTSW Coach', free: '✗', premium: '✓' },
             ].map((row, i, arr) => (
               <div key={row.label} className={`grid grid-cols-3 ${i < arr.length - 1 ? 'border-b border-border' : ''}`}>
                 <div className="p-1.5 text-foreground">{row.label}</div>

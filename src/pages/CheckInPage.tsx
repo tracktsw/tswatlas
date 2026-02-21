@@ -1597,7 +1597,7 @@ const CheckInPage = () => {
                 {isBackfillMode ? 'Notes for this day (optional)' : "Today's notes (optional)"}
               </h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Your AI Coach uses these notes to give you personalised advice
+                Your TrackTSW Coach uses these notes to give you personalised advice
               </p>
             </div>
             <AndroidSafeTextarea 

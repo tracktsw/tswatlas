@@ -105,7 +105,7 @@ const AICoachButton = ({ isPremium }: { isPremium: boolean }) => {
         </div>
         <div className="flex-1 text-left">
           <div className="flex items-center gap-2">
-            <h3 className="font-display font-bold text-foreground">AI Coach</h3>
+            <h3 className="font-display font-bold text-foreground">TrackTSW Coach</h3>
             {!isPremium && (
               <span className="text-xs bg-honey/20 text-honey-dark px-2 py-0.5 rounded-full font-medium">
                 Premium

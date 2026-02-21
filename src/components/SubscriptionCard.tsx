@@ -159,7 +159,7 @@ const SubscriptionCard = () => {
         <div className="flex-1">
           <h3 className="font-semibold text-foreground">Upgrade to Premium</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Unlock Photo Diary, full Insights, Community, Journal, and AI Coach.
+            Unlock Photo Diary, full Insights, Community, Journal, and TrackTSW Coach.
           </p>
           
           <Button 

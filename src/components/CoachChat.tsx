@@ -74,7 +74,7 @@ export function CoachChat({ messages, isLoading, onSendMessage, onClearChat }: C
                 <Sparkles className="w-8 h-8 text-primary" />
               </div>
 
-              <h2 className="font-display font-semibold text-lg mb-2">Ask your AI Coach</h2>
+              <h2 className="font-display font-semibold text-lg mb-2">Ask your TrackTSW Coach</h2>
               <p className="text-sm text-muted-foreground mb-6 max-w-xs">
                 Get insights from your check-ins, photos, and trends.
               </p>

@@ -16,7 +16,7 @@ const CoachPage = () => {
   };
 
   return (
-    <PaywallGuard feature="AI Coach">
+    <PaywallGuard feature="TrackTSW Coach">
       <div 
         className="flex flex-col h-full relative bg-background overflow-hidden"
         style={{ overscrollBehavior: 'none' }}
@@ -45,7 +45,7 @@ const CoachPage = () => {
               <Sparkles className="w-5 h-5 text-coral" />
             </div>
             <div>
-              <h1 className="font-display font-bold text-lg text-foreground">AI Coach</h1>
+              <h1 className="font-display font-bold text-lg text-foreground">TrackTSW Coach</h1>
               <p className="text-xs text-muted-foreground">Objective insights from your data</p>
             </div>
           </div>
