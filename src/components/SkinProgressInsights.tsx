@@ -217,20 +217,73 @@ const SkinProgressInsights = ({ checkIns, dailyFlareStates }: SkinProgressInsigh
           </div>
         ) : (
           <>
-             <div className={cn('w-full', needsScroll ? 'overflow-x-auto pb-2' : '')}>
-               <div className="h-48" style={{ minWidth: needsScroll ? `${Math.max(chartData.length * 50, 300)}px` : '100%' }}>
+            {needsScroll ? (
+              <div className="flex w-full">
+                {/* Fixed Y-axis */}
+                <div className="h-48 flex-shrink-0" style={{ width: 40 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData.slice(0, 1)} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+                      <YAxis
+                        domain={[1, 5]}
+                        ticks={[1, 2, 3, 4, 5]}
+                        tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                        axisLine={{ stroke: 'hsl(var(--border))' }}
+                        tickLine={false}
+                        width={30}
+                        tickFormatter={value => skinEmojis[value - 1] || ''}
+                      />
+                      <XAxis dataKey="label" hide />
+                      <Line dataKey="skinScore" hide />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Scrollable chart area */}
+                <div className="flex-1 overflow-x-auto pb-2">
+                  <div className="h-48" style={{ minWidth: `${Math.max(chartData.length * 50, 300)}px` }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                        {flarePeriods.map((period, idx) => (
+                          <ReferenceArea key={idx} x1={period.start} x2={period.end} y1={1} y2={5} fill="#ef4444" fillOpacity={0.25} />
+                        ))}
+                        <XAxis
+                          dataKey="label"
+                          tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                          axisLine={{ stroke: 'hsl(var(--border))' }}
+                          tickLine={false}
+                          interval={0}
+                        />
+                        <YAxis domain={[1, 5]} hide />
+                        <Tooltip
+                          content={({ active, payload }) => {
+                            if (!active || !payload?.length) return null;
+                            const data = payload[0].payload;
+                            const idx = Math.round(data.skinScore) - 1;
+                            return (
+                              <div className="bg-background/95 backdrop-blur-sm border border-border rounded-lg px-3 py-2 shadow-lg">
+                                <p className="text-xs text-muted-foreground">{data.label}</p>
+                                <p className="text-sm font-medium text-foreground">
+                                  Skin: {skinLabels[idx]} ({data.skinScore.toFixed(1)}/5)
+                                </p>
+                              </div>
+                            );
+                          }}
+                        />
+                        <ReferenceLine y={3} stroke="hsl(var(--border))" strokeDasharray="3 3" />
+                        <Line type="monotone" dataKey="skinScore" stroke={lineColor} strokeWidth={2} dot={{ fill: lineColor, strokeWidth: 0, r: 3 }} activeDot={{ r: 5, fill: lineColor }} connectNulls />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <p className="text-[9px] text-muted-foreground/60 text-center mt-1">
+                    ← Scroll to see all {chartData.length} months →
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     {flarePeriods.map((period, idx) => (
-                      <ReferenceArea
-                        key={idx}
-                        x1={period.start}
-                        x2={period.end}
-                        y1={1}
-                        y2={5}
-                        fill="#ef4444"
-                        fillOpacity={0.25}
-                      />
+                      <ReferenceArea key={idx} x1={period.start} x2={period.end} y1={1} y2={5} fill="#ef4444" fillOpacity={0.25} />
                     ))}
                     <XAxis
                       dataKey="label"
@@ -264,24 +317,11 @@ const SkinProgressInsights = ({ checkIns, dailyFlareStates }: SkinProgressInsigh
                       }}
                     />
                     <ReferenceLine y={3} stroke="hsl(var(--border))" strokeDasharray="3 3" />
-                    <Line
-                      type="monotone"
-                      dataKey="skinScore"
-                      stroke={lineColor}
-                      strokeWidth={2}
-                      dot={{ fill: lineColor, strokeWidth: 0, r: 3 }}
-                      activeDot={{ r: 5, fill: lineColor }}
-                      connectNulls
-                    />
+                    <Line type="monotone" dataKey="skinScore" stroke={lineColor} strokeWidth={2} dot={{ fill: lineColor, strokeWidth: 0, r: 3 }} activeDot={{ r: 5, fill: lineColor }} connectNulls />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-              {needsScroll && (
-                <p className="text-[9px] text-muted-foreground/60 text-center mt-1">
-                  ← Scroll to see all {chartData.length} months →
-                </p>
-              )}
-            </div>
+            )}
 
             {flarePeriods.length > 0 && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
